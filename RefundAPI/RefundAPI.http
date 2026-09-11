@@ -1,0 +1,6 @@
+@RefundAPI_HostAddress = http://localhost:5011
+
+GET {{RefundAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
