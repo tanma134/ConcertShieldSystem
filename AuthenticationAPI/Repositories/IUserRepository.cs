@@ -15,6 +15,8 @@ namespace AuthenticationAPI.Repositories
         Task<RefreshToken?> GetRefreshTokenByHashAsync(string tokenHash);
         Task RevokeRefreshTokenAsync(string tokenHash);
 
+        Task<List<User>> GetAllAsync();
+        Task<User?> GetByPhoneAsync(string phone);
         Task SaveChangesAsync();
     }
 }

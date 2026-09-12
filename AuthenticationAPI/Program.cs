@@ -89,9 +89,18 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("CanManageUsers", policy => policy.RequireRole("Admin"));
 });
 
+//Them service
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+builder.Services.AddScoped<IRoleService, RoleService>();
+
+
+
+
 var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {

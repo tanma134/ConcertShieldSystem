@@ -1,0 +1,27 @@
+﻿using System;
+
+namespace AuthenticationAPI.DTOs
+{
+    public class UserDTO
+    {
+        public int UserId { get; set; }
+
+        public string Email { get; set; } = null!;
+
+        public string FullName { get; set; } = null!;
+
+        public string? PhoneNumber { get; set; }
+
+        public string? AvatarUrl { get; set; }
+
+        public string? RoleName { get; set; }
+
+        public bool IsVerified { get; set; }
+
+        public string EkycStatus { get; set; } = null!;
+
+        public DateTime CreatedAt { get; set; }
+
+        public bool IsActive { get; set; }
+    }
+}

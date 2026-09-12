@@ -71,6 +71,19 @@ namespace AuthenticationAPI.Repositories
                 await _context.SaveChangesAsync();
             }
         }
+        public async Task<List<User>> GetAllAsync()
+        {
+            return await _context.Users
+                .Include(u => u.UserRoles)
+                    .ThenInclude(ur => ur.Role)
+                .ToListAsync();
+        }
+
+        public async Task<User?> GetByPhoneAsync(string phone)
+        {
+            return await _context.Users
+                .FirstOrDefaultAsync(u => u.PhoneNumber == phone);
+        }
 
         public async Task SaveChangesAsync()
         {
