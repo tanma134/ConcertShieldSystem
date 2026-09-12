@@ -7,7 +7,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/auth/register",
@@ -20,7 +20,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/auth/verify-email",
@@ -33,7 +33,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/auth/login",
@@ -46,7 +46,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/auth/refresh",
@@ -59,7 +59,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/auth/logout",
@@ -73,10 +73,23 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/auth/forgot-password",
+            "UpstreamHttpMethod": [ "Post" ]
+        },
+        {
+            "Key": "identity-verify-reset-otp",
+            "DownstreamPathTemplate": "/api/auth/verify-reset-otp",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7058
+                }
+            ],
+            "UpstreamPathTemplate": "/api/auth/verify-reset-otp",
             "UpstreamHttpMethod": [ "Post" ]
         },
         {
@@ -86,7 +99,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/auth/reset-password",
@@ -99,7 +112,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/auth/me",
@@ -113,7 +126,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/users/me",
@@ -127,7 +140,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/roles",
@@ -141,7 +154,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/roles/{id}",
@@ -155,7 +168,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/auth/users",
@@ -169,7 +182,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/auth/users/{id}",
@@ -183,7 +196,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/auth/users/{id}/status",
@@ -197,7 +210,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/admin/stats",
@@ -211,7 +224,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/admin/reports/top-events",
@@ -225,7 +238,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/auth/google",
@@ -238,7 +251,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/auth/users/{id}/reactivate",
@@ -252,7 +265,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/roles/{id}/permissions",
@@ -267,7 +280,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/ekyc/scan-cccd",
@@ -281,7 +294,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/ekyc/verify-face",
@@ -295,7 +308,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/ekyc/status",
@@ -309,7 +322,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/ekyc/{id}/manual-review",
@@ -324,7 +337,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/organizer-requests",
@@ -338,7 +351,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/organizer-requests/{id}/approve",
@@ -352,7 +365,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/organizer-requests/{id}/reject",
@@ -367,7 +380,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/audit-logs",
@@ -381,7 +394,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/audit-logs/export",
@@ -395,7 +408,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/fraud-alerts",
@@ -409,7 +422,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/fraud-alerts/{id}",
@@ -423,7 +436,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/fraud-alerts/{id}/block",
@@ -437,7 +450,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/fraud-alerts/{id}/restore",
@@ -451,7 +464,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/risk-scoring-rules",
@@ -465,7 +478,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/system-parameters",
@@ -479,80 +492,12 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7243
+                    "Port": 7058
                 }
             ],
             "UpstreamPathTemplate": "/api/system-health",
             "UpstreamHttpMethod": [ "Get" ],
             "AuthenticationOptions": { "AuthenticationProviderKey": "Bearer" }
-        },
-
-        {
-            "Key": "category-list",
-            "DownstreamPathTemplate": "/api/categories",
-            "DownstreamScheme": "https",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "localhost",
-                    "Port": 7020
-                }
-            ],
-            "UpstreamPathTemplate": "/api/categories",
-            "UpstreamHttpMethod": [ "Get" ]
-        },
-        {
-            "Key": "category-by-id",
-            "DownstreamPathTemplate": "/api/categories/{id}",
-            "DownstreamScheme": "https",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "localhost",
-                    "Port": 7020
-                }
-            ],
-            "UpstreamPathTemplate": "/api/categories/{id}",
-            "UpstreamHttpMethod": [ "Get" ]
-        },
-        {
-            "Key": "category-create",
-            "DownstreamPathTemplate": "/api/categories",
-            "DownstreamScheme": "https",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "localhost",
-                    "Port": 7020
-                }
-            ],
-            "UpstreamPathTemplate": "/api/categories",
-            "UpstreamHttpMethod": [ "Post" ],
-            "AuthenticationOptions": { "AuthenticationProviderKey": "Bearer" }
-        },
-        {
-            "Key": "category-update-delete",
-            "DownstreamPathTemplate": "/api/categories/{id}",
-            "DownstreamScheme": "https",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "localhost",
-                    "Port": 7020
-                }
-            ],
-            "UpstreamPathTemplate": "/api/categories/{id}",
-            "UpstreamHttpMethod": [ "Put", "Delete" ],
-            "AuthenticationOptions": { "AuthenticationProviderKey": "Bearer" }
-        },
-        {
-            "Key": "category-odata",
-            "DownstreamPathTemplate": "/odata/categories",
-            "DownstreamScheme": "https",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "localhost",
-                    "Port": 7020
-                }
-            ],
-            "UpstreamPathTemplate": "/odata/categories",
-            "UpstreamHttpMethod": [ "Get" ]
         },
 
         {
