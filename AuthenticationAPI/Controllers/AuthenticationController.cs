@@ -9,10 +9,14 @@ namespace AuthenticationAPI.Controllers
     public class AuthenticationController : ControllerBase
     {
         private readonly IAuthenticationService _authService;
+        private readonly ILogger<AuthenticationController> _logger;
 
-        public AuthenticationController(IAuthenticationService authService)
+        public AuthenticationController(
+            IAuthenticationService authService,
+            ILogger<AuthenticationController> logger)
         {
             _authService = authService;
+            _logger = logger;
         }
 
         [HttpPost("register")]
@@ -21,15 +25,16 @@ namespace AuthenticationAPI.Controllers
             try
             {
                 await _authService.RegisterAsync(dto);
-                return Ok(new { message = "Registration successful. Please check your email for the OTP verification code." });
+                return Ok(new { message = "Registration successful. Please check your email for the verification OTP code." });
             }
             catch (InvalidOperationException ex)
             {
                 return BadRequest(new { message = ex.Message });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return StatusCode(500, new { message = "An error occurred. Please try again." });
+                _logger.LogError(ex, "Unexpected error during registration for email {Email}", dto?.Email);
+                return StatusCode(500, new { message = "An unexpected error occurred while processing your registration. Please try again later." });
             }
         }
 
@@ -39,7 +44,7 @@ namespace AuthenticationAPI.Controllers
             try
             {
                 await _authService.VerifyEmailAsync(dto);
-                return Ok(new { message = "Email verified successfully. Your account is now active." });
+                return Ok(new { message = "Email verified successfully. Your account has been activated." });
             }
             catch (KeyNotFoundException ex)
             {
@@ -53,9 +58,10 @@ namespace AuthenticationAPI.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return StatusCode(500, new { message = "An error occurred. Please try again." });
+                _logger.LogError(ex, "Unexpected error during email verification for email {Email}", dto?.Email);
+                return StatusCode(500, new { message = "An unexpected error occurred while verifying your email. Please try again later." });
             }
         }
 
@@ -79,9 +85,10 @@ namespace AuthenticationAPI.Controllers
             {
                 return Unauthorized(new { message = ex.Message });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return StatusCode(500, new { message = "An error occurred. Please try again." });
+                _logger.LogError(ex, "Unexpected error during login for email {Email}", dto?.Email);
+                return StatusCode(500, new { message = "An unexpected error occurred while logging in. Please try again later." });
             }
         }
 
@@ -101,9 +108,10 @@ namespace AuthenticationAPI.Controllers
             {
                 return Unauthorized(new { message = ex.Message });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return StatusCode(500, new { message = "An error occurred. Please try again." });
+                _logger.LogError(ex, "Unexpected error during token refresh");
+                return StatusCode(500, new { message = "An unexpected error occurred while refreshing your session. Please try again later." });
             }
         }
 
@@ -119,9 +127,10 @@ namespace AuthenticationAPI.Controllers
             {
                 return NotFound(new { message = ex.Message });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return StatusCode(500, new { message = "An error occurred. Please try again." });
+                _logger.LogError(ex, "Unexpected error during logout");
+                return StatusCode(500, new { message = "An unexpected error occurred while logging out. Please try again later." });
             }
         }
 
@@ -131,11 +140,12 @@ namespace AuthenticationAPI.Controllers
             try
             {
                 await _authService.ForgotPasswordAsync(dto);
-                return Ok(new { message = "If this email is registered, you will receive an OTP to reset your password." });
+                return Ok(new { message = "If this email is registered, you will receive an OTP code to reset your password." });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return StatusCode(500, new { message = "An error occurred. Please try again." });
+                _logger.LogError(ex, "Unexpected error during forgot-password request for email {Email}", dto?.Email);
+                return StatusCode(500, new { message = "An unexpected error occurred while processing your request. Please try again later." });
             }
         }
 
@@ -155,9 +165,10 @@ namespace AuthenticationAPI.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return StatusCode(500, new { message = "An error occurred. Please try again." });
+                _logger.LogError(ex, "Unexpected error during reset-OTP verification for email {Email}", dto?.Email);
+                return StatusCode(500, new { message = "An unexpected error occurred while verifying the OTP. Please try again later." });
             }
         }
 
@@ -167,7 +178,7 @@ namespace AuthenticationAPI.Controllers
             try
             {
                 await _authService.ResetPasswordAsync(dto);
-                return Ok(new { message = "Password has been reset successfully. You can now log in with your new password." });
+                return Ok(new { message = "Password reset successfully. You can now log in with your new password." });
             }
             catch (KeyNotFoundException ex)
             {
@@ -177,9 +188,10 @@ namespace AuthenticationAPI.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return StatusCode(500, new { message = "An error occurred. Please try again." });
+                _logger.LogError(ex, "Unexpected error during password reset for email {Email}", dto?.Email);
+                return StatusCode(500, new { message = "An unexpected error occurred while resetting your password. Please try again later." });
             }
         }
     }
