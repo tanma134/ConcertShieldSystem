@@ -12,5 +12,6 @@ namespace AuthenticationAPI.Services
         Task ForgotPasswordAsync(ForgotPasswordDTO dto);
         Task<VerifyResetOtpResponseDTO> VerifyResetOtpAsync(VerifyResetOtpDTO dto);
         Task ResetPasswordAsync(ResetPasswordDTO dto);
+        Task<LoginResponseDTO> GoogleLoginAsync(GoogleLoginDTO dto);
     }
 }

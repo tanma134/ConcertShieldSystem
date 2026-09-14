@@ -194,5 +194,27 @@ namespace AuthenticationAPI.Controllers
                 return StatusCode(500, new { message = "An unexpected error occurred while resetting your password. Please try again later." });
             }
         }
+        [HttpPost("google")]
+        public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginDTO dto)
+        {
+            try
+            {
+                var result = await _authService.GoogleLoginAsync(dto);
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error during Google login");
+                return StatusCode(500, new { message = "An unexpected error occurred while logging in with Google. Please try again later." });
+            }
+        }
     }
 }

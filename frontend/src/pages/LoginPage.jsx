@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google";
 import authApi from "../api/authApi";
 import { useAuth } from "../context/AuthContext";
 import "../styles/auth.css";
@@ -10,6 +11,7 @@ export default function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -27,6 +29,22 @@ export default function LoginPage() {
       setError(err.response?.data?.message || "Login failed. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setError("");
+    setGoogleLoading(true);
+    try {
+      const res = await authApi.loginWithGoogle({
+        idToken: credentialResponse.credential,
+      });
+      login(res.data);
+      navigate("/");
+    } catch (err) {
+      setError(err.response?.data?.message || "Google login failed. Please try again.");
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -64,6 +82,19 @@ export default function LoginPage() {
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
+
+        <div className="auth-divider">or</div>
+
+        <div className="google-login-wrapper">
+          {googleLoading ? (
+            <p>Logging in with Google...</p>
+          ) : (
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => setError("Google login failed. Please try again.")}
+            />
+          )}
+        </div>
 
         <div className="auth-links">
           <Link to="/forgot-password">Forgot Password?</Link>
