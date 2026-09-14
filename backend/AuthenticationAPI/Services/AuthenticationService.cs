@@ -7,6 +7,7 @@ using AuthenticationAPI.Models;
 using AuthenticationAPI.Repositories;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
+using Google.Apis.Auth;
 
 namespace AuthenticationAPI.Services
 {
@@ -19,9 +20,6 @@ namespace AuthenticationAPI.Services
         private readonly ILogger<AuthenticationService> _logger;
 
         private const string DefaultRoleName = "User";
-
-        // Shared message for the reset-password flow, so we don't leak
-        // whether a given email exists in the system.
         private const string GenericOtpInvalidMessage = "Invalid or expired OTP.";
 
         public AuthenticationService(
@@ -102,7 +100,9 @@ namespace AuthenticationAPI.Services
                 OtpHash = null,
                 OtpExpiredAt = null,
                 EkycStatus = "NotSubmitted",
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                AuthProvider = "local",
+                HasPassword = true
             };
 
             await _userRepository.AddAsync(user);
@@ -130,6 +130,13 @@ namespace AuthenticationAPI.Services
 
             if (!user.IsActive)
                 throw new UnauthorizedAccessException("Your account has been locked. Please contact the administrator.");
+
+            if (!user.HasPassword)
+            {
+                _logger.LogWarning("Login failed: {Email} has no local password (registered via {Provider}).", dto.Email, user.AuthProvider);
+                throw new UnauthorizedAccessException(
+                    "This account was created with Google Sign-In. Please log in with Google, or use 'Forgot Password' to set a password.");
+            }
 
             if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
             {
@@ -159,7 +166,16 @@ namespace AuthenticationAPI.Services
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
                 AccessTokenExpiresAt = accessTokenExpiry,
-                Roles = user.UserRoles.Select(ur => ur.Role.RoleName).ToList()
+                Roles = user.UserRoles.Select(ur => ur.Role.RoleName).ToList(),
+                User = new UserInfoDTO
+                {
+                    UserId = user.UserId,
+                    Email = user.Email,
+                    FullName = user.FullName,
+                    AvatarUrl = user.AvatarUrl,
+                    AuthProvider = user.AuthProvider,
+                    HasPassword = user.HasPassword
+                }
             };
         }
 
@@ -170,8 +186,6 @@ namespace AuthenticationAPI.Services
             var tokenEntity = await _userRepository.GetRefreshTokenByHashAsync(tokenHash)
                 ?? throw new KeyNotFoundException("Invalid refresh token.");
 
-            // The token was already revoked but is being reused -> possible sign of
-            // token theft/replay. Revoke all sessions for this user as a precaution.
             if (tokenEntity.IsRevoked)
             {
                 _logger.LogWarning(
@@ -195,7 +209,6 @@ namespace AuthenticationAPI.Services
 
             var (accessToken, accessTokenExpiry) = GenerateAccessToken(tokenEntity.User);
 
-            // Rotate the refresh token: revoke the old one, issue a new one.
             await _userRepository.RevokeRefreshTokenAsync(tokenHash);
 
             string newRefreshToken = GenerateRefreshToken();
@@ -213,7 +226,6 @@ namespace AuthenticationAPI.Services
             {
                 AccessToken = accessToken,
                 AccessTokenExpiresAt = accessTokenExpiry,
-                // Requires RefreshResponseDTO to have a RefreshToken field so the client can update it.
                 RefreshToken = newRefreshToken
             };
         }
@@ -236,8 +248,6 @@ namespace AuthenticationAPI.Services
         {
             var user = await _userRepository.GetByEmailAsync(dto.Email);
 
-            // Deliberately stay silent if the email doesn't exist or isn't verified,
-            // to avoid revealing which emails are registered in the system.
             if (user == null || !user.IsVerified)
             {
                 _logger.LogInformation("Forgot-password request for a non-existent/unverified email: {Email}.", dto.Email);
@@ -257,8 +267,6 @@ namespace AuthenticationAPI.Services
         {
             var user = await _userRepository.GetByEmailAsync(dto.Email);
 
-            // Use one shared message for "account not found" and "wrong OTP"
-            // to avoid revealing which emails exist in the system.
             if (user == null || string.IsNullOrEmpty(user.OtpHash) || user.OtpHash != HashValue(dto.OTP))
             {
                 _logger.LogWarning("Password reset OTP verification failed for {Email}.", dto.Email);
@@ -297,8 +305,6 @@ namespace AuthenticationAPI.Services
             string cacheKey = $"reset_token:{dto.Email}";
             bool hasValidCache = _cache.TryGetValue(cacheKey, out string? storedHash) && storedHash != null;
 
-            // Use one shared message for every failure reason (user not found,
-            // token expired, token mismatch) to avoid leaking account information.
             if (user == null || !hasValidCache || storedHash != HashValue(dto.ResetToken))
             {
                 _logger.LogWarning("Password reset failed for {Email}: reset token invalid or expired.", dto.Email);
@@ -306,13 +312,11 @@ namespace AuthenticationAPI.Services
             }
 
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            user.HasPassword = true; // account nay da co password that, du tao qua Google hay khong
             await _userRepository.SaveChangesAsync();
 
             _cache.Remove(cacheKey);
 
-            // Important: revoke all old refresh tokens after a password change,
-            // so that if the account was ever compromised, the attacker can't
-            // keep using an old token.
             // TODO: requires a RevokeAllRefreshTokensAsync(int userId) method on IUserRepository
             // await _userRepository.RevokeAllRefreshTokensAsync(user.UserId);
 
@@ -351,6 +355,110 @@ namespace AuthenticationAPI.Services
                 signingCredentials: creds);
 
             return (new JwtSecurityTokenHandler().WriteToken(token), expiry);
+        }
+
+        public async Task<LoginResponseDTO> GoogleLoginAsync(GoogleLoginDTO dto)
+        {
+            GoogleJsonWebSignature.Payload payload;
+            try
+            {
+                var settings = new GoogleJsonWebSignature.ValidationSettings
+                {
+                    Audience = new[] { _configuration["Google:ClientId"]! }
+                };
+                payload = await GoogleJsonWebSignature.ValidateAsync(dto.IdToken, settings);
+            }
+            catch (InvalidJwtException ex)
+            {
+                _logger.LogWarning(ex, "Google login failed: invalid ID token.");
+                throw new UnauthorizedAccessException("Invalid Google token.");
+            }
+
+            if (!payload.EmailVerified)
+            {
+                _logger.LogWarning("Google login failed: email {Email} not verified by Google.", payload.Email);
+                throw new UnauthorizedAccessException("Google email is not verified.");
+            }
+
+            var user = await _userRepository.GetByEmailAsync(payload.Email);
+
+            if (user == null)
+            {
+                var role = await _userRepository.GetRoleByNameAsync(DefaultRoleName)
+                    ?? throw new InvalidOperationException($"Default role '{DefaultRoleName}' is not seeded in the database.");
+
+                user = new User
+                {
+                    Email = payload.Email,
+                    FullName = payload.Name ?? payload.Email,
+                    AvatarUrl = payload.Picture,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()),
+                    IsVerified = true,
+                    IsActive = true,
+                    EkycStatus = "NotSubmitted",
+                    CreatedAt = DateTime.UtcNow,
+                    AuthProvider = "google",
+                    HasPassword = false
+                };
+
+                await _userRepository.AddAsync(user);
+                await _userRepository.SaveChangesAsync();
+
+                await _userRepository.AddUserRoleAsync(new UserRole
+                {
+                    UserId = user.UserId,
+                    RoleId = role.RoleId,
+                    AssignedAt = DateTime.UtcNow
+                });
+                await _userRepository.SaveChangesAsync();
+
+                _logger.LogInformation("New account created via Google login: {Email} (UserId={UserId}).", user.Email, user.UserId);
+            }
+            else
+            {
+                if (!user.IsActive)
+                    throw new UnauthorizedAccessException("Your account has been locked. Please contact the administrator.");
+
+                if (!user.IsVerified)
+                {
+                    user.IsVerified = true;
+                    await _userRepository.SaveChangesAsync();
+                }
+            }
+
+            user = await _userRepository.GetByEmailAsync(user.Email) ?? user;
+
+            var (accessToken, accessTokenExpiry) = GenerateAccessToken(user);
+            string refreshToken = GenerateRefreshToken();
+
+            await _userRepository.AddRefreshTokenAsync(new RefreshToken
+            {
+                UserId = user.UserId,
+                TokenHash = HashValue(refreshToken),
+                ExpiresAt = DateTime.UtcNow.AddDays(
+                    _configuration.GetValue<int>("JwtSettings:RefreshTokenExpiryDays")),
+                CreatedAt = DateTime.UtcNow,
+                IsRevoked = false
+            });
+
+            _logger.LogInformation("Google login successful: {Email} (UserId={UserId}).", user.Email, user.UserId);
+
+            return new LoginResponseDTO
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
+                AccessTokenExpiresAt = accessTokenExpiry,
+                Roles = user.UserRoles.Select(ur => ur.Role.RoleName).ToList(),
+                User = new UserInfoDTO
+                {
+                    UserId = user.UserId,
+                    Email = user.Email,
+                    FullName = user.FullName,
+                    AvatarUrl = user.AvatarUrl,
+                    AuthProvider = user.AuthProvider,
+                    HasPassword = user.HasPassword
+                }
+            };
         }
 
         private static string GenerateRefreshToken()

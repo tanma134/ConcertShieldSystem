@@ -28,6 +28,8 @@ public partial class User
     public DateTime CreatedAt { get; set; }
 
     public bool IsActive { get; set; }
+    public string AuthProvider { get; set; } = "local";
+    public bool HasPassword { get; set; } = true;
 
     public virtual ICollection<EkycVerification> EkycVerifications { get; set; } = new List<EkycVerification>();
 

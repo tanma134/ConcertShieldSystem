@@ -131,7 +131,7 @@ using (var scope = app.Services.CreateScope())
             {
                 Email = adminEmail,
                 FullName = "System Administrator",
-                PhoneNumber = "+84123456789",
+                PhoneNumber = "0123456789",
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
                 IsVerified = true,
                 IsActive = true,

@@ -226,8 +226,15 @@ public partial class AuthenticationDbContext : DbContext
                 .HasMaxLength(256)
                 .HasColumnName("otp_hash");
             entity.Property(e => e.PasswordHash).HasColumnName("password_hash");
-            entity.Property(e => e.PhoneNumber)
+            entity.Property(e => e.AuthProvider)
                 .HasMaxLength(20)
+                .HasDefaultValueSql("'local'::character varying")
+                .HasColumnName("auth_provider");
+            entity.Property(e => e.HasPassword)
+                .HasDefaultValue(true)
+                .HasColumnName("has_password");
+            entity.Property(e => e.PhoneNumber)
+                .HasMaxLength(10)
                 .HasColumnName("phone_number");
         });
 
