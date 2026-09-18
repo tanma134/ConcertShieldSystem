@@ -97,7 +97,8 @@ builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IRoleService, RoleService>();
-
+builder.Services.AddScoped<IOrganizerRequestRepository, OrganizerRequestRepository>();
+builder.Services.AddScoped<IOrganizerRequestService, OrganizerRequestService>();
 
 
 

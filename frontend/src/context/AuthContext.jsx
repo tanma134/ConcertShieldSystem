@@ -39,6 +39,8 @@ export function AuthProvider({ children }) {
   const isOrganizer = roles.includes("Organizer");
   const isAdmin = roles.includes("Admin");
 
+  const isAdmin = roles.some((r) => r.toLowerCase() === "admin");
+
   return (
     <AuthContext.Provider
       value={{ user, roles, login, logout, isAuthenticated, isOrganizer, isAdmin }}

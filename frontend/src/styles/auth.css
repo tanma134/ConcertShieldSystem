@@ -1,13 +1,15 @@
 :root {
-  --auth-primary: #a855f7;
-  --auth-primary-2: #ec4899;
-  --auth-gradient: linear-gradient(135deg, #7c3aed 0%, #c026d3 55%, #ec4899 100%);
-  --auth-bg: #0a0812;
-  --auth-surface: #171223;
-  --auth-border: #2a2340;
-  --auth-text: #f5f3fb;
-  --auth-text-muted: #a89db8;
-  --auth-primary-light: rgba(192, 38, 211, 0.14);
+  --auth-bg: #0d0d0d;
+  --auth-card: #161616;
+  --auth-line: #2a2a2a;
+  --auth-field-bg: #1e1e1e;
+  --auth-primary: #e84393;
+  --auth-primary-dark: #d43585;
+  --auth-primary-light: rgba(232, 67, 147, 0.12);
+  --auth-text: #ffffff;
+  --auth-text-muted: #888888;
+  --auth-text-faint: #555555;
+  --auth-border: #2a2a2a;
   --auth-radius: 16px;
 }
 
@@ -17,12 +19,37 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 32px 24px;
-  background:
-    radial-gradient(650px 420px at 15% 10%, rgba(124, 58, 237, 0.32), transparent 60%),
-    radial-gradient(550px 380px at 90% 90%, rgba(236, 72, 153, 0.22), transparent 60%),
-    var(--auth-bg);
+  padding: 24px;
+  background: var(--auth-bg);
   font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-wrapper::before {
+  content: '';
+  position: absolute;
+  top: -120px;
+  right: -80px;
+  width: 380px;
+  height: 380px;
+  background: #7c3aed;
+  opacity: 0.07;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.auth-wrapper::after {
+  content: '';
+  position: absolute;
+  bottom: -100px;
+  left: -80px;
+  width: 320px;
+  height: 320px;
+  background: var(--auth-primary);
+  opacity: 0.06;
+  border-radius: 50%;
+  pointer-events: none;
 }
 
 .auth-logo {
@@ -49,11 +76,14 @@
 
 .auth-card {
   width: 100%;
-  background: var(--auth-surface);
-  border: 1px solid var(--auth-border);
-  padding: 40px 36px;
+  max-width: 380px;
+  background: var(--auth-card);
+  border: 0.5px solid var(--auth-line);
+  padding: 36px 32px;
   border-radius: var(--auth-radius);
-  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.55);
+  box-shadow: none;
+  position: relative;
+  z-index: 1;
   animation: auth-card-in 0.35s ease;
   box-sizing: border-box;
 }
@@ -71,7 +101,7 @@
 
 .auth-card h2 {
   margin: 0 0 4px;
-  font-size: 23px;
+  font-size: 22px;
   font-weight: 700;
   text-align: center;
   color: var(--auth-text);
@@ -80,9 +110,9 @@
 
 .auth-card h2 + p,
 .auth-subtitle {
-  margin: 0 0 26px;
+  margin: 0 0 28px;
   text-align: center;
-  font-size: 13.5px;
+  font-size: 14px;
   color: var(--auth-text-muted);
 }
 
@@ -95,36 +125,38 @@
   font-size: 13px;
   margin-bottom: 6px;
   color: var(--auth-text-muted);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .auth-field input {
   width: 100%;
-  padding: 11px 14px;
-  border: 1.5px solid var(--auth-border);
-  border-radius: 9px;
-  font-size: 14px;
+  height: 42px;
+  padding: 0 12px;
+  border: 0.5px solid var(--auth-line);
+  border-radius: 8px;
+  font-size: 14.5px;
   color: var(--auth-text);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--auth-field-bg);
   box-sizing: border-box;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .auth-field input::placeholder {
-  color: #6c6480;
+  color: var(--auth-text-faint);
 }
 
 .auth-field input:focus {
-  outline: none;
   border-color: var(--auth-primary);
-  background: rgba(168, 85, 247, 0.06);
-  box-shadow: 0 0 0 4px var(--auth-primary-light);
+  background: var(--auth-field-bg);
+  box-shadow: 0 0 0 3px var(--auth-primary-light);
 }
 
 .auth-button {
   width: 100%;
-  padding: 12px;
-  background: var(--auth-gradient);
+  height: 44px;
+  padding: 0;
+  background: var(--auth-primary);
   color: #fff;
   border: none;
   border-radius: 9px;
@@ -132,22 +164,29 @@
   font-weight: 600;
   letter-spacing: 0.01em;
   cursor: pointer;
-  margin-top: 8px;
-  box-shadow: 0 10px 22px -8px rgba(192, 38, 211, 0.55);
-  transition: transform 0.12s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  margin-top: 4px;
+  box-shadow: none;
+  transition: background 0.2s ease, transform 0.1s ease;
 }
 
 .auth-button:hover:not(:disabled) {
-  filter: brightness(1.08);
-  box-shadow: 0 12px 26px -8px rgba(192, 38, 211, 0.7);
+  background: var(--auth-primary-dark);
+  filter: none;
+  box-shadow: none;
 }
 
 .auth-button:active:not(:disabled) {
-  transform: translateY(1px) scale(0.995);
+  transform: scale(0.99);
+}
+
+.auth-button:focus-visible {
+  outline: 2px solid var(--auth-primary);
+  outline-offset: 2px;
 }
 
 .auth-button:disabled {
-  background: #352d47;
+  background: #333333;
+  color: var(--auth-text-faint);
   box-shadow: none;
   cursor: not-allowed;
   color: var(--auth-text-muted);
@@ -166,22 +205,22 @@
 }
 
 .auth-error {
-  background: rgba(220, 38, 38, 0.12);
-  color: #fca5a5;
-  border-left-color: #dc2626;
+  background: rgba(232, 67, 147, 0.08);
+  color: #ff7fb0;
+  border-left-color: var(--auth-primary);
 }
 
 .auth-success {
-  background: rgba(22, 163, 74, 0.12);
-  color: #86efac;
-  border-left-color: #16a34a;
+  background: rgba(34, 197, 94, 0.08);
+  color: #4ade80;
+  border-left-color: #22c55e;
 }
 
 .auth-links {
   text-align: center;
-  margin-top: 20px;
-  font-size: 13px;
-  color: var(--auth-text-muted);
+  margin-top: 22px;
+  font-size: 13.5px;
+  color: var(--auth-text-faint);
 }
 
 .auth-links a {
@@ -197,31 +236,22 @@
 .auth-divider {
   text-align: center;
   margin: 16px 0;
-  color: var(--auth-text-muted);
+  color: var(--auth-text-faint);
   font-size: 13px;
-  position: relative;
-}
-
-.auth-divider::before,
-.auth-divider::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  width: 38%;
-  height: 1px;
-  background: var(--auth-border);
-}
-
-.auth-divider::before {
-  left: 0;
-}
-
-.auth-divider::after {
-  right: 0;
 }
 
 .google-login-wrapper {
   display: flex;
   justify-content: center;
   margin-bottom: 16px;
+}
+
+@media (max-width: 420px) {
+  .auth-card { padding: 28px 22px; }
+}
+.auth-fullscreen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
 }
