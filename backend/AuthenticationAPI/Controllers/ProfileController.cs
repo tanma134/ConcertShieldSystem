@@ -96,5 +96,17 @@ namespace AuthenticationAPI.Controllers
 
             return Ok(result.Profile);
         }
+
+        [HttpPost("me/avatar")]
+        [RequestSizeLimit(5 * 1024 * 1024)]
+        public async Task<IActionResult> UploadAvatar([FromForm(Name = "file")] IFormFile file)
+        {
+            var value = User.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(value, out var userId)) return Unauthorized(new { message = "User id claim is missing." });
+            try { return Ok(await _profileService.UploadAvatarAsync(userId, file)); }
+            catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+            catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+            catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+        }
     }
 }

@@ -85,6 +85,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("Customer", policy => policy.RequireRole("Customer"));
+    options.AddPolicy("User", policy => policy.RequireAuthenticatedUser());
     options.AddPolicy("CanViewUsers", policy => policy.RequireRole("Admin", "Staff"));
     options.AddPolicy("CanManageUsers", policy => policy.RequireRole("Admin"));
 });
@@ -99,10 +100,17 @@ builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IOrganizerRequestRepository, OrganizerRequestRepository>();
 builder.Services.AddScoped<IOrganizerRequestService, OrganizerRequestService>();
+builder.Services.AddScoped<IAvatarStorageService, AvatarStorageService>();
 
 
 
 var app = builder.Build();
+
+using (var schemaScope = app.Services.CreateScope())
+{
+    var db = schemaScope.ServiceProvider.GetRequiredService<AuthenticationDbContext>();
+    await db.Database.ExecuteSqlRawAsync("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_public_id text;");
+}
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AuthenticationDbContext>();

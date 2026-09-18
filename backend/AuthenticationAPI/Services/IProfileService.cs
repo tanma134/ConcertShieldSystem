@@ -13,5 +13,7 @@ namespace AuthenticationAPI.Services
                 string? email,
                 string? userId,
                 UpdateProfileDTO dto);
+
+        Task<ProfileDTO> UploadAvatarAsync(int userId, IFormFile file);
     }
 }

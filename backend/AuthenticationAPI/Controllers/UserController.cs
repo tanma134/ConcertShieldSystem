@@ -45,25 +45,43 @@ namespace AuthenticationAPI.Controllers
         [HttpPut("users/{id}")]
         public async Task<IActionResult> UpdateUser(
             int id,
-            [FromBody] UserDTO dto)
+            [FromBody] UpdateUserDTO dto)
         {
-            var result = await _userService.UpdateUserAsync(id, dto);
+            var currentUserIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                ?? User.FindFirst("sub")?.Value;
+            int? currentUserId = int.TryParse(currentUserIdString, out var parsedCurrentUserId) ? parsedCurrentUserId : null;
+
+            var result = await _userService.UpdateUserAsync(id, dto, currentUserId);
 
             if (!result.Success)
             {
                 if (result.Message == "User not found.")
-                    return NotFound(new
-                    {
-                        message = result.Message
-                    });
+                    return NotFound(new { message = result.Message });
 
-                return BadRequest(new
-                {
-                    message = result.Message
-                });
+                return BadRequest(new { message = result.Message });
             }
 
             return NoContent();
+        }
+
+        [HttpPost("users/{id}/assign-role")]
+        public async Task<IActionResult> AssignRole(int id, [FromBody] UserRoleAssignmentDTO dto)
+        {
+            var currentUserIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                ?? User.FindFirst("sub")?.Value;
+            int? currentUserId = int.TryParse(currentUserIdString, out var parsedCurrentUserId) ? parsedCurrentUserId : null;
+
+            var result = await _userService.AssignRoleAsync(id, dto.RoleId, currentUserId);
+
+            if (!result.Success)
+            {
+                if (result.Message == "User not found.")
+                    return NotFound(new { message = result.Message });
+
+                return BadRequest(new { message = result.Message });
+            }
+
+            return Ok(result.Data);
         }
 
         // Block / Unblock User
@@ -72,44 +90,11 @@ namespace AuthenticationAPI.Controllers
             int id,
             [FromBody] int status)
         {
-            var result =
-                await _userService.UpdateUserStatusAsync(id, status);
+            var currentUserIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                ?? User.FindFirst("sub")?.Value;
+            int? currentUserId = int.TryParse(currentUserIdString, out var parsedCurrentUserId) ? parsedCurrentUserId : null;
 
-            if (!result.Success)
-            {
-                if (result.Message == "User not found.")
-                    return NotFound(new
-                    {
-                        message = result.Message
-                    });
-
-                return BadRequest(new
-                {
-                    message = result.Message
-                });
-            }
-
-            return Ok(new
-            {
-                message = result.Message,
-                isActive = result.IsActive
-            });
-        }
-
-        /// <summary>
-        /// Grants a role to a user ADDITIVELY (existing roles are preserved).
-        /// EventAPI calls this with the approving Admin's bearer token right after a
-        /// concert is approved, so the owner becomes Customer + Organizer.
-        /// </summary>
-        [HttpPost("users/{id}/roles")]
-        public async Task<IActionResult> AddRole(
-            int id,
-            [FromBody] AddRoleDTO dto)
-        {
-            if (string.IsNullOrWhiteSpace(dto?.RoleName))
-                return BadRequest(new { message = "RoleName is required." });
-
-            var result = await _userService.AddRoleAsync(id, dto.RoleName);
+            var result = await _userService.UpdateUserStatusAsync(id, status, currentUserId);
 
             if (!result.Success)
             {
@@ -122,8 +107,7 @@ namespace AuthenticationAPI.Controllers
             return Ok(new
             {
                 message = result.Message,
-                userId = id,
-                roles = result.Roles
+                isActive = result.IsActive
             });
         }
     }

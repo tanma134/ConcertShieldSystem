@@ -34,7 +34,7 @@ export default function AdminLoginPage() {
       }
 
       login(res.data);
-      navigate("/admin/organizer-requests");
+      navigate("/admin");
     } catch (err) {
       setError(err.response?.data?.message || "Login failed. Please try again.");
     } finally {

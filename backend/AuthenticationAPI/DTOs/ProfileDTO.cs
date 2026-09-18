@@ -14,6 +14,10 @@
 
         public string? AvatarUrl { get; set; }
 
+        public bool IsVerified { get; set; }
+
+        public string? EkycStatus { get; set; }
+
         public DateTime CreatedAt { get; set; }
     }
 }

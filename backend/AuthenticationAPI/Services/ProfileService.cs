@@ -6,10 +6,23 @@ namespace AuthenticationAPI.Services
     public class ProfileService : IProfileService
     {
         private readonly IUserRepository _userRepository;
+        private readonly IAvatarStorageService _avatarStorage;
 
-        public ProfileService(IUserRepository userRepository)
+        public ProfileService(IUserRepository userRepository, IAvatarStorageService avatarStorage)
         {
             _userRepository = userRepository;
+            _avatarStorage = avatarStorage;
+        }
+
+        public async Task<ProfileDTO> UploadAvatarAsync(int userId, IFormFile file)
+        {
+            var user = await _userRepository.GetByIdAsync(userId)
+                ?? throw new KeyNotFoundException("User not found.");
+            var upload = await _avatarStorage.UploadAsync(file, user.AvatarPublicId);
+            user.AvatarUrl = upload.SecureUrl;
+            user.AvatarPublicId = upload.PublicId;
+            await _userRepository.SaveChangesAsync();
+            return MapToProfileDTO(user);
         }
 
         // ==========================================
@@ -166,6 +179,10 @@ namespace AuthenticationAPI.Services
                 PhoneNumber = user.PhoneNumber,
 
                 AvatarUrl = user.AvatarUrl,
+
+                IsVerified = user.IsVerified,
+
+                EkycStatus = user.EkycStatus,
 
                 CreatedAt = user.CreatedAt,
 

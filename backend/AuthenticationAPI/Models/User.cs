@@ -17,6 +17,8 @@ public partial class User
 
     public string? AvatarUrl { get; set; }
 
+    public string? AvatarPublicId { get; set; }
+
     public bool IsVerified { get; set; }
 
     public string? OtpHash { get; set; }

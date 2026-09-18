@@ -52,11 +52,13 @@ namespace AuthenticationAPI.Controllers
                 });
             }
 
-            return CreatedAtAction(
-                nameof(Get),
-                new { id = ((dynamic)result.Data).RoleId },
-                result.Data
-            );
+            if (result.Data is not null)
+            {
+                var roleId = ((dynamic)result.Data).RoleId;
+                return CreatedAtAction(nameof(Get), new { id = roleId }, result.Data);
+            }
+
+            return Ok(result.Data);
         }
 
         [HttpPut("{id}")]

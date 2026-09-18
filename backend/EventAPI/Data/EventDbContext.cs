@@ -284,6 +284,7 @@ namespace EventAPI.Data
                 entity.Property(e => e.EventId).HasColumnName("event_id");
                 entity.Property(e => e.UserId).HasColumnName("user_id");
                 entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
+                entity.HasIndex(e => new { e.UserId, e.EventId }).IsUnique().HasDatabaseName("uq_wishlists_user_event");
 
                 entity.HasOne(d => d.Event)
                     .WithMany(p => p.Wishlists)

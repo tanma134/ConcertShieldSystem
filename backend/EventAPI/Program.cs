@@ -20,6 +20,7 @@ builder.Services.AddScoped<IEventImageRepository, EventImageRepository>();
 builder.Services.AddScoped<ITicketTypeRepository, TicketTypeRepository>();
 builder.Services.AddScoped<IRefundPolicyRepository, RefundPolicyRepository>();
 builder.Services.AddScoped<ISeatingRepository, SeatingRepository>();
+builder.Services.AddScoped<IWishlistRepository, WishlistRepository>();
 
 // Services
 builder.Services.AddScoped<IEventService, EventService>();
@@ -28,6 +29,7 @@ builder.Services.AddScoped<IEventImageService, EventImageService>();
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 builder.Services.AddScoped<IRefundPolicyService, RefundPolicyService>();
 builder.Services.AddScoped<ISeatingService, SeatingService>();
+builder.Services.AddScoped<IWishlistService, WishlistService>();
 builder.Services.AddScoped<IEventSubmissionValidator, EventSubmissionValidator>();
 
 // Calls AuthenticationAPI to grant the Organizer role once a concert is approved.
@@ -131,6 +133,12 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<EventDbContext>();
+    await db.Database.ExecuteSqlRawAsync("CREATE UNIQUE INDEX IF NOT EXISTS uq_wishlists_user_event ON wishlists(user_id, event_id);");
+}
 
 if (app.Environment.IsDevelopment())
 {

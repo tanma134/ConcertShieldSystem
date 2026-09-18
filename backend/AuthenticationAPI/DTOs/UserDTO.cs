@@ -14,7 +14,7 @@ namespace AuthenticationAPI.DTOs
 
         public string? AvatarUrl { get; set; }
 
-        public string? RoleName { get; set; }
+        public List<RoleDTO> Roles { get; set; } = new();
 
         public bool IsVerified { get; set; }
 
