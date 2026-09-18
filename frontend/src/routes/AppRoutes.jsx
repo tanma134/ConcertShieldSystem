@@ -7,6 +7,10 @@ import VerifyResetOtpPage from "../pages/VerifyResetOtpPage";
 import ResetPasswordPage from "../pages/ResetPasswordPage";
 import HomePage from "../pages/HomePage";
 import ProtectedRoute from "./ProtectedRoute";
+import AdminLoginPage from "../pages/AdminLoginPage";
+import AdminRoute from "./AdminRoute";
+import OrganizerRequestsAdminPage from "../pages/admin/OrganizerRequestsAdminPage";
+import RequestOrganizerPage from "../pages/RequestOrganizerPage";
 
 export default function AppRoutes() {
   return (
@@ -24,6 +28,27 @@ export default function AppRoutes() {
           <ProtectedRoute>
             <HomePage />
           </ProtectedRoute>
+        }
+      />
+
+      {/* User gui yeu cau tro thanh Organizer */}
+      <Route
+        path="/organizer/request"
+        element={
+          <ProtectedRoute>
+            <RequestOrganizerPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Khu vuc Admin */}
+      <Route path="/admin/login" element={<AdminLoginPage />} />
+      <Route
+        path="/admin/organizer-requests"
+        element={
+          <AdminRoute>
+            <OrganizerRequestsAdminPage />
+          </AdminRoute>
         }
       />
     </Routes>

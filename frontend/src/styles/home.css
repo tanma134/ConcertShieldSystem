@@ -1,0 +1,142 @@
+:root {
+  --home-bg: #0d0d0d;
+  --home-card: #161616;
+  --home-line: #2a2a2a;
+  --home-primary: #e84393;
+  --home-primary-dark: #d43585;
+  --home-text: #ffffff;
+  --home-text-muted: #888888;
+  --home-text-faint: #555555;
+  --home-radius: 16px;
+}
+
+.home-page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--home-bg);
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.home-page::before {
+  content: "";
+  position: absolute;
+  top: -120px;
+  right: -80px;
+  width: 380px;
+  height: 380px;
+  background: #7c3aed;
+  opacity: 0.07;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.home-page::after {
+  content: "";
+  position: absolute;
+  bottom: -100px;
+  left: -80px;
+  width: 320px;
+  height: 320px;
+  background: var(--home-primary);
+  opacity: 0.06;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.home-card {
+  width: 100%;
+  max-width: 460px;
+  background: var(--home-card);
+  border: 0.5px solid var(--home-line);
+  border-radius: var(--home-radius);
+  padding: 40px 36px;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.home-avatar {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--home-primary), #7c3aed);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.home-greeting {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+}
+
+.home-subtitle {
+  font-size: 14px;
+  color: var(--home-text-muted);
+  margin: 0 0 32px;
+}
+
+.home-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.home-button {
+  height: 44px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, transform 0.1s ease, border-color 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.home-button--primary {
+  background: var(--home-primary);
+  color: #fff;
+}
+
+.home-button--primary:hover {
+  background: var(--home-primary-dark);
+}
+
+.home-button--ghost {
+  background: transparent;
+  border: 0.5px solid var(--home-line);
+  color: var(--home-text);
+}
+
+.home-button--ghost:hover {
+  border-color: var(--home-text-muted);
+  background: #1e1e1e;
+}
+
+.home-button:active {
+  transform: scale(0.99);
+}
+
+@media (max-width: 420px) {
+  .home-card {
+    padding: 32px 24px;
+  }
+}

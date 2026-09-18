@@ -8,12 +8,21 @@ export function AuthProvider({ children }) {
     return saved ? JSON.parse(saved) : null;
   });
 
-  const login = ({ user, accessToken, refreshToken }) => {
+  const [roles, setRoles] = useState(() => {
+    const saved = localStorage.getItem("roles");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const login = ({ user, accessToken, refreshToken, roles }) => {
     localStorage.setItem("accessToken", accessToken);
     if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
     if (user) {
       localStorage.setItem("user", JSON.stringify(user));
       setUser(user);
+    }
+    if (roles) {
+      localStorage.setItem("roles", JSON.stringify(roles));
+      setRoles(roles);
     }
   };
 
@@ -21,13 +30,17 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("user");
+    localStorage.removeItem("roles");
     setUser(null);
+    setRoles([]);
   };
 
   const isAuthenticated = !!localStorage.getItem("accessToken");
 
+  const isAdmin = roles.some((r) => r.toLowerCase() === "admin");
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, roles, login, logout, isAuthenticated, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );
