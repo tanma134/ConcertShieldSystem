@@ -329,9 +329,8 @@
             "UpstreamHttpMethod": [ "Get", "Post" ],
             "AuthenticationOptions": { "AuthenticationProviderKey": "Bearer" }
         },
-
         {
-            "Key": "organizer-request-create",
+            "Key": "organizer-request-list-create",
             "DownstreamPathTemplate": "/api/organizer-requests",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
@@ -345,8 +344,8 @@
             "AuthenticationOptions": { "AuthenticationProviderKey": "Bearer" }
         },
         {
-            "Key": "organizer-request-approve",
-            "DownstreamPathTemplate": "/api/organizer-requests/{id}/approve",
+            "Key": "organizer-request-me",
+            "DownstreamPathTemplate": "/api/organizer-requests/me",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
                 {
@@ -354,13 +353,13 @@
                     "Port": 7058
                 }
             ],
-            "UpstreamPathTemplate": "/api/organizer-requests/{id}/approve",
-            "UpstreamHttpMethod": [ "Post" ],
+            "UpstreamPathTemplate": "/api/organizer-requests/me",
+            "UpstreamHttpMethod": [ "Get" ],
             "AuthenticationOptions": { "AuthenticationProviderKey": "Bearer" }
         },
         {
-            "Key": "organizer-request-reject",
-            "DownstreamPathTemplate": "/api/organizer-requests/{id}/reject",
+            "Key": "organizer-request-get-by-id",
+            "DownstreamPathTemplate": "/api/organizer-requests/{id}",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
                 {
@@ -368,11 +367,24 @@
                     "Port": 7058
                 }
             ],
-            "UpstreamPathTemplate": "/api/organizer-requests/{id}/reject",
-            "UpstreamHttpMethod": [ "Post" ],
+            "UpstreamPathTemplate": "/api/organizer-requests/{id}",
+            "UpstreamHttpMethod": [ "Get" ],
             "AuthenticationOptions": { "AuthenticationProviderKey": "Bearer" }
         },
-
+        {
+            "Key": "organizer-request-review",
+            "DownstreamPathTemplate": "/api/organizer-requests/{id}/review",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7058
+                }
+            ],
+            "UpstreamPathTemplate": "/api/organizer-requests/{id}/review",
+            "UpstreamHttpMethod": [ "Put" ],
+            "AuthenticationOptions": { "AuthenticationProviderKey": "Bearer" }
+        },
         {
             "Key": "admin-audit-logs",
             "DownstreamPathTemplate": "/api/audit-logs",

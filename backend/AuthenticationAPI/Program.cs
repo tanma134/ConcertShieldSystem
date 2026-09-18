@@ -97,7 +97,8 @@ builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IRoleService, RoleService>();
-
+builder.Services.AddScoped<IOrganizerRequestRepository, OrganizerRequestRepository>();
+builder.Services.AddScoped<IOrganizerRequestService, OrganizerRequestService>();
 
 
 
@@ -115,11 +116,11 @@ using (var scope = app.Services.CreateScope())
             Console.WriteLine("Created role: Admin");
         }
 
-        if (!context.Roles.Any(r => r.RoleName == "User"))
+        if (!context.Roles.Any(r => r.RoleName == "Customer"))
         {
-            context.Roles.Add(new Role { RoleName = "User" });
+            context.Roles.Add(new Role { RoleName = "Customer" });
             context.SaveChanges();
-            Console.WriteLine("Created role: User");
+            Console.WriteLine("Created role: Customer");
         }
 
         var adminRole = context.Roles.First(r => r.RoleName == "Admin");
