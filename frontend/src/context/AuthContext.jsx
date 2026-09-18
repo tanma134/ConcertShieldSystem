@@ -7,13 +7,22 @@ export function AuthProvider({ children }) {
     const saved = localStorage.getItem("user");
     return saved ? JSON.parse(saved) : null;
   });
+  const [roles, setRoles] = useState(() => {
+    const saved = localStorage.getItem("roles");
+    return saved ? JSON.parse(saved) : [];
+  });
 
-  const login = ({ user, accessToken, refreshToken }) => {
+  // LoginResponseDTO carries roles alongside the user, not inside it - keep both.
+  const login = ({ user, accessToken, refreshToken, roles: newRoles }) => {
     localStorage.setItem("accessToken", accessToken);
     if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
     if (user) {
       localStorage.setItem("user", JSON.stringify(user));
       setUser(user);
+    }
+    if (newRoles) {
+      localStorage.setItem("roles", JSON.stringify(newRoles));
+      setRoles(newRoles);
     }
   };
 
@@ -21,13 +30,19 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("user");
+    localStorage.removeItem("roles");
     setUser(null);
+    setRoles([]);
   };
 
   const isAuthenticated = !!localStorage.getItem("accessToken");
+  const isOrganizer = roles.includes("Organizer");
+  const isAdmin = roles.includes("Admin");
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated }}>
+    <AuthContext.Provider
+      value={{ user, roles, login, logout, isAuthenticated, isOrganizer, isAdmin }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -36,7 +51,7 @@ export function AuthProvider({ children }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error("useAuth phải được dùng bên trong AuthProvider");
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

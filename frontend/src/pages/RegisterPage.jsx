@@ -35,63 +35,70 @@ export default function RegisterPage() {
 
   return (
     <div className="auth-wrapper">
-      <div className="auth-card">
-        <h2>Create an account</h2>
+      <div className="auth-card-wrap">
+        <Link to="/" className="auth-logo">
+          Concert<span>Shield</span>
+        </Link>
 
-        {error && <div className="auth-error">{error}</div>}
+        <div className="auth-card">
+          <h2>Create Account</h2>
+          <p className="auth-subtitle">Join ConcertShield for faster ticket booking</p>
 
-        <form onSubmit={handleSubmit}>
-          <div className="auth-field">
-            <label>Full Name</label>
-            <input
-              type="text"
-              name="fullName"
-              value={form.fullName}
-              onChange={handleChange}
-              required
-            />
+          {error && <div className="auth-error">{error}</div>}
+
+          <form onSubmit={handleSubmit}>
+            <div className="auth-field">
+              <label>Full Name</label>
+              <input
+                type="text"
+                name="fullName"
+                value={form.fullName}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div className="auth-field">
+              <label>Email</label>
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div className="auth-field">
+              <label>Phone Number</label>
+              <input
+                type="tel"
+                name="phoneNumber"
+                value={form.phoneNumber}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div className="auth-field">
+              <label>Password</label>
+              <input
+                type="password"
+                name="password"
+                value={form.password}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <button className="auth-button" type="submit" disabled={loading}>
+              {loading ? "Processing..." : "Sign Up"}
+            </button>
+          </form>
+
+          <div className="auth-links">
+            Already have an account? <Link to="/login">Log In</Link>
           </div>
-
-          <div className="auth-field">
-            <label>Email</label>
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="auth-field">
-            <label>Phone Number</label>
-            <input
-              type="tel"
-              name="phoneNumber"
-              value={form.phoneNumber}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="auth-field">
-            <label>Password</label>
-            <input
-              type="password"
-              name="password"
-              value={form.password}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <button className="auth-button" type="submit" disabled={loading}>
-            {loading ? "Processing..." : "Register"}
-          </button>
-        </form>
-
-        <div className="auth-links">
-          Already have an account? <Link to="/login">Login</Link>
         </div>
       </div>
     </div>

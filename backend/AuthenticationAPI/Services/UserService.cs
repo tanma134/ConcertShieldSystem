@@ -156,5 +156,48 @@ namespace AuthenticationAPI.Services
                 user.IsActive
             );
         }
+
+        public async Task<(bool Success, string Message, List<string> Roles)>
+            AddRoleAsync(int userId, string roleName)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+
+            if (user == null)
+                return (false, "User not found.", new List<string>());
+
+            var role = await _userRepository.GetRoleByNameAsync(roleName);
+
+            if (role == null)
+                return (false, $"Role '{roleName}' not found.", new List<string>());
+
+            // Additive, NOT a replacement: the user keeps every role they already had.
+            var alreadyHasRole = user.UserRoles.Any(ur => ur.RoleId == role.RoleId);
+
+            if (!alreadyHasRole)
+            {
+                await _userRepository.AddUserRoleAsync(new Models.UserRole
+                {
+                    UserId = user.UserId,
+                    RoleId = role.RoleId,
+                    AssignedAt = DateTime.UtcNow
+                });
+
+                await _userRepository.SaveChangesAsync();
+            }
+
+            var refreshed = await _userRepository.GetByIdAsync(userId);
+            var roles = refreshed!.UserRoles
+                .Select(ur => ur.Role.RoleName)
+                .OrderBy(r => r)
+                .ToList();
+
+            return (
+                true,
+                alreadyHasRole
+                    ? $"User already had the '{roleName}' role."
+                    : $"Role '{roleName}' granted.",
+                roles
+            );
+        }
     }
 }

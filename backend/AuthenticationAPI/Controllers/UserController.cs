@@ -95,5 +95,36 @@ namespace AuthenticationAPI.Controllers
                 isActive = result.IsActive
             });
         }
+
+        /// <summary>
+        /// Grants a role to a user ADDITIVELY (existing roles are preserved).
+        /// EventAPI calls this with the approving Admin's bearer token right after a
+        /// concert is approved, so the owner becomes Customer + Organizer.
+        /// </summary>
+        [HttpPost("users/{id}/roles")]
+        public async Task<IActionResult> AddRole(
+            int id,
+            [FromBody] AddRoleDTO dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto?.RoleName))
+                return BadRequest(new { message = "RoleName is required." });
+
+            var result = await _userService.AddRoleAsync(id, dto.RoleName);
+
+            if (!result.Success)
+            {
+                if (result.Message == "User not found.")
+                    return NotFound(new { message = result.Message });
+
+                return BadRequest(new { message = result.Message });
+            }
+
+            return Ok(new
+            {
+                message = result.Message,
+                userId = id,
+                roles = result.Roles
+            });
+        }
     }
 }
