@@ -25,29 +25,38 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="auth-wrapper">
-      <div className="auth-card">
-        <h2>Forgot Password</h2>
+      <div className="auth-card-wrap">
+        <Link to="/" className="auth-logo">
+          Concert<span>Shield</span>
+        </Link>
 
-        {error && <div className="auth-error">{error}</div>}
+        <div className="auth-card">
+          <h2>Forgot Password</h2>
+          <p className="auth-subtitle">
+            Enter your email to receive a password reset OTP
+          </p>
 
-        <form onSubmit={handleSubmit}>
-          <div className="auth-field">
-            <label>Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+          {error && <div className="auth-error">{error}</div>}
+
+          <form onSubmit={handleSubmit}>
+            <div className="auth-field">
+              <label>Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+
+            <button className="auth-button" type="submit" disabled={loading}>
+              {loading ? "Sending..." : "Send OTP"}
+            </button>
+          </form>
+
+          <div className="auth-links">
+            <Link to="/login">Back to login</Link>
           </div>
-
-          <button className="auth-button" type="submit" disabled={loading}>
-            {loading ? "Sending..." : "Send OTP"}
-          </button>
-        </form>
-
-        <div className="auth-links">
-          <Link to="/login">Back to login</Link>
         </div>
       </div>
     </div>

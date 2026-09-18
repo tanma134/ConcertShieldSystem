@@ -25,7 +25,7 @@ export default function VerifyEmailPage() {
     setLoading(true);
     try {
       await authApi.verifyEmail(form);
-      setSuccess("Verification successful! Redirecting to login page...");
+      setSuccess("Verified successfully! Redirecting to login...");
       setTimeout(() => navigate("/login"), 1200);
     } catch (err) {
       setError(err.response?.data?.message || "Verification failed. Please try again.");
@@ -36,42 +36,49 @@ export default function VerifyEmailPage() {
 
   return (
     <div className="auth-wrapper">
-      <div className="auth-card">
-        <h2>Verify Email</h2>
+      <div className="auth-card-wrap">
+        <Link to="/" className="auth-logo">
+          Concert<span>Shield</span>
+        </Link>
 
-        {error && <div className="auth-error">{error}</div>}
-        {success && <div className="auth-success">{success}</div>}
+        <div className="auth-card">
+          <h2>Verify Email</h2>
+          <p className="auth-subtitle">Enter the OTP sent to your email</p>
 
-        <form onSubmit={handleSubmit}>
-          <div className="auth-field">
-            <label>Email</label>
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              required
-            />
+          {error && <div className="auth-error">{error}</div>}
+          {success && <div className="auth-success">{success}</div>}
+
+          <form onSubmit={handleSubmit}>
+            <div className="auth-field">
+              <label>Email</label>
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div className="auth-field">
+              <label>OTP Code</label>
+              <input
+                type="text"
+                name="otp"
+                value={form.otp}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <button className="auth-button" type="submit" disabled={loading}>
+              {loading ? "Verifying..." : "Verify"}
+            </button>
+          </form>
+
+          <div className="auth-links">
+            <Link to="/login">Back to login</Link>
           </div>
-
-          <div className="auth-field">
-            <label>OTP code</label>
-            <input
-              type="text"
-              name="otp"
-              value={form.otp}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <button className="auth-button" type="submit" disabled={loading}>
-            {loading ? "Verifying..." : "Verify"}
-          </button>
-        </form>
-
-        <div className="auth-links">
-          <Link to="/login">Back to login</Link>
         </div>
       </div>
     </div>

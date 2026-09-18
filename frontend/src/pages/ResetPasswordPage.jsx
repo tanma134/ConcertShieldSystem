@@ -38,7 +38,7 @@ export default function ResetPasswordPage() {
       });
       navigate("/login");
     } catch (err) {
-      setError(err.response?.data?.message || "Password reset failed.");
+      setError(err.response?.data?.message || "Failed to reset password.");
     } finally {
       setLoading(false);
     }
@@ -46,41 +46,48 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="auth-wrapper">
-      <div className="auth-card">
-        <h2>Reset Password</h2>
+      <div className="auth-card-wrap">
+        <Link to="/" className="auth-logo">
+          Concert<span>Shield</span>
+        </Link>
 
-        {error && <div className="auth-error">{error}</div>}
+        <div className="auth-card">
+          <h2>Reset Password</h2>
+          <p className="auth-subtitle">Create a new password for your account</p>
 
-        <form onSubmit={handleSubmit}>
-          <div className="auth-field">
-            <label>New Password</label>
-            <input
-              type="password"
-              name="newPassword"
-              value={form.newPassword}
-              onChange={handleChange}
-              required
-            />
+          {error && <div className="auth-error">{error}</div>}
+
+          <form onSubmit={handleSubmit}>
+            <div className="auth-field">
+              <label>New Password</label>
+              <input
+                type="password"
+                name="newPassword"
+                value={form.newPassword}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div className="auth-field">
+              <label>Confirm Password</label>
+              <input
+                type="password"
+                name="confirmPassword"
+                value={form.confirmPassword}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <button className="auth-button" type="submit" disabled={loading}>
+              {loading ? "Updating..." : "Reset Password"}
+            </button>
+          </form>
+
+          <div className="auth-links">
+            <Link to="/login">Log In</Link>
           </div>
-
-          <div className="auth-field">
-            <label>Confirm Password</label>
-            <input
-              type="password"
-              name="confirmPassword"
-              value={form.confirmPassword}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <button className="auth-button" type="submit" disabled={loading}>
-            {loading ? "Updating..." : "Reset Password"}
-          </button>
-        </form>
-
-        <div className="auth-links">
-          <Link to="/login">Login</Link>
         </div>
       </div>
     </div>

@@ -84,7 +84,7 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("User", policy => policy.RequireRole("User"));
+    options.AddPolicy("Customer", policy => policy.RequireRole("Customer"));
     options.AddPolicy("CanViewUsers", policy => policy.RequireRole("Admin", "Staff"));
     options.AddPolicy("CanManageUsers", policy => policy.RequireRole("Admin"));
 });
@@ -121,6 +121,15 @@ using (var scope = app.Services.CreateScope())
             context.Roles.Add(new Role { RoleName = "Customer" });
             context.SaveChanges();
             Console.WriteLine("Created role: Customer");
+        }
+
+        // "Organizer" is granted additively (customer keeps Customer + gains Organizer)
+        // once EventAPI approves their first concert — see UserController.AddRole.
+        if (!context.Roles.Any(r => r.RoleName == "Organizer"))
+        {
+            context.Roles.Add(new Role { RoleName = "Organizer" });
+            context.SaveChanges();
+            Console.WriteLine("Created role: Organizer");
         }
 
         var adminRole = context.Roles.First(r => r.RoleName == "Admin");
@@ -160,6 +169,43 @@ using (var scope = app.Services.CreateScope())
         else
         {
             Console.WriteLine("Admin account already exists");
+        }
+
+        // Dev/test convenience account so the Create-Concert flow can be exercised
+        // end-to-end via Swagger without needing a live SMTP server for email OTP.
+        var customerRole = context.Roles.First(r => r.RoleName == "Customer");
+        var testCustomerEmail = "customer@ticketbox.com";
+
+        if (!context.Users.Any(u => u.Email == testCustomerEmail))
+        {
+            var customer = new User
+            {
+                Email = testCustomerEmail,
+                FullName = "Test Customer",
+                PhoneNumber = "0987654321",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Customer@123"),
+                IsVerified = true,
+                IsActive = true,
+                EkycStatus = "NotSubmitted",
+                CreatedAt = DateTime.UtcNow
+            };
+
+            context.Users.Add(customer);
+            context.SaveChanges();
+
+            context.UserRoles.Add(new UserRole
+            {
+                UserId = customer.UserId,
+                RoleId = customerRole.RoleId,
+                AssignedAt = DateTime.UtcNow
+            });
+            context.SaveChanges();
+
+            Console.WriteLine("========================================");
+            Console.WriteLine("TEST CUSTOMER ACCOUNT CREATED:");
+            Console.WriteLine($"    Email:    {testCustomerEmail}");
+            Console.WriteLine($"    Password: Customer@123");
+            Console.WriteLine("========================================");
         }
     }
     catch (Exception ex)
