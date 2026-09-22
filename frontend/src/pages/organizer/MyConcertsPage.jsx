@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
+import { useAuth } from "../../context/AuthContext";
 import eventApi from "../../api/eventApi";
 import { formatDateRange, formatPrice } from "../../utils/format";
 import "./MyConcertsPage.css";
@@ -23,9 +24,11 @@ const STATUS_CLASS = {
 };
 
 export default function MyConcertsPage() {
+  const { isOrganizer } = useAuth();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -36,6 +39,25 @@ export default function MyConcertsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleDeleteDraft = async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const eventId = Number(event.currentTarget.dataset.eventId);
+    const title = event.currentTarget.dataset.eventTitle;
+    if (!window.confirm(`Delete event "${title}"? This action cannot be undone.`)) return;
+
+    setDeletingId(eventId);
+    setError("");
+    try {
+      await eventApi.remove(eventId);
+      setEvents((items) => items.filter((item) => item.eventId !== eventId));
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not delete this event.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="tb-app">
       <Header />
@@ -43,9 +65,11 @@ export default function MyConcertsPage() {
       <div className="tb-container mc-wrap">
         <div className="mc-head">
           <h1>My Events</h1>
-          <Link to="/organizer/events/new" className="tb-btn tb-btn-primary">
-            + Create New Event
-          </Link>
+          {isOrganizer && (
+            <Link to="/organizer/events/new" className="tb-btn tb-btn-primary">
+              + Create New Event
+            </Link>
+          )}
         </div>
 
         {loading && <div className="tb-loading">Loading...</div>}
@@ -57,14 +81,14 @@ export default function MyConcertsPage() {
           </div>
         )}
 
-        {!loading && !error && events.length > 0 && (
+        {!loading && events.length > 0 && (
           <div className="mc-list">
             {events.map((ev) => (
-              <Link
-                key={ev.eventId}
-                to={`/organizer/events/${ev.eventId}/edit`}
-                className="mc-card"
-              >
+              <article key={ev.eventId} className="mc-card">
+                <Link
+                  to={`/organizer/events/${ev.eventId}/edit`}
+                  className="mc-card-link"
+                >
                 <div className="mc-card-poster">
                   {ev.posterUrl ? (
                     <img src={ev.posterUrl} alt={ev.title} />
@@ -85,7 +109,25 @@ export default function MyConcertsPage() {
                     {ev.minPrice != null ? `From ${formatPrice(ev.minPrice)}` : "No price"}
                   </p>
                 </div>
-              </Link>
+                </Link>
+                {["Draft", "Rejected"].includes(ev.status) && <div className="mc-config-links">
+                  <Link to={`/organizer/events/${ev.eventId}/seating`}>Seating</Link>
+                  <Link to={`/organizer/events/${ev.eventId}/pricing`}>Pricing</Link>
+                  <Link to={`/organizer/events/${ev.eventId}/refunds`}>Refund policies</Link>
+                </div>}
+                {["Draft", "Rejected"].includes(ev.status) && (
+                  <button
+                    type="button"
+                    className="mc-delete-draft"
+                    data-event-id={ev.eventId}
+                    data-event-title={ev.title}
+                    onClick={handleDeleteDraft}
+                    disabled={deletingId === ev.eventId}
+                  >
+                    {deletingId === ev.eventId ? "Deleting..." : `Delete ${ev.status.toLowerCase()}`}
+                  </button>
+                )}
+              </article>
             ))}
           </div>
         )}

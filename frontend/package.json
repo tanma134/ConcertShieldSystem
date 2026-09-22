@@ -12,8 +12,10 @@
   "dependencies": {
     "@react-oauth/google": "^0.13.5",
     "axios": "^1.20.0",
+    "konva": "^10.6.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-konva": "^19.3.0",
     "react-router-dom": "^7.18.3"
   },
   "devDependencies": {

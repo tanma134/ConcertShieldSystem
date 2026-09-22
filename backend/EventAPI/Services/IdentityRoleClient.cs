@@ -27,10 +27,7 @@ namespace EventAPI.Services
                 };
 
                 if (!string.IsNullOrWhiteSpace(bearerToken))
-                {
-                    request.Headers.Authorization =
-                        new AuthenticationHeaderValue("Bearer", bearerToken);
-                }
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
 
                 using var response = await _http.SendAsync(request, ct);
                 var body = await response.Content.ReadAsStringAsync(ct);
@@ -40,7 +37,6 @@ namespace EventAPI.Services
                     _logger.LogWarning(
                         "Granting role {Role} to user {UserId} failed: {Status} {Body}",
                         roleName, userId, (int)response.StatusCode, body);
-
                     return new GrantRoleResult
                     {
                         Success = false,
@@ -50,40 +46,32 @@ namespace EventAPI.Services
 
                 var roles = new List<string>();
                 var message = "Role granted.";
-
                 try
                 {
                     using var doc = JsonDocument.Parse(body);
-                    if (doc.RootElement.TryGetProperty("roles", out var rolesEl) &&
-                        rolesEl.ValueKind == JsonValueKind.Array)
+                    if (doc.RootElement.TryGetProperty("roles", out var rolesElement) &&
+                        rolesElement.ValueKind == JsonValueKind.Array)
                     {
-                        roles = rolesEl.EnumerateArray()
-                            .Select(r => r.GetString() ?? string.Empty)
-                            .Where(r => r.Length > 0)
+                        roles = rolesElement.EnumerateArray()
+                            .Select(role => role.GetString() ?? string.Empty)
+                            .Where(role => role.Length > 0)
                             .ToList();
                     }
-
-                    if (doc.RootElement.TryGetProperty("message", out var msgEl))
-                        message = msgEl.GetString() ?? message;
+                    if (doc.RootElement.TryGetProperty("message", out var messageElement))
+                        message = messageElement.GetString() ?? message;
                 }
                 catch (JsonException)
                 {
-                    // Non-JSON success body — the grant still worked, just report it plainly.
+                    // A non-JSON success response still means the role was granted.
                 }
-
-                _logger.LogInformation(
-                    "Granted role {Role} to user {UserId}. Roles now: {Roles}",
-                    roleName, userId, string.Join(", ", roles));
 
                 return new GrantRoleResult { Success = true, Message = message, Roles = roles };
             }
             catch (Exception ex)
             {
-                // A role-grant failure must NOT roll back an approval that already
-                // succeeded — the caller surfaces this as a warning instead.
-                _logger.LogError(ex, "Could not reach AuthenticationAPI to grant role {Role} to user {UserId}",
+                _logger.LogError(ex,
+                    "Could not reach AuthenticationAPI to grant role {Role} to user {UserId}",
                     roleName, userId);
-
                 return new GrantRoleResult
                 {
                     Success = false,

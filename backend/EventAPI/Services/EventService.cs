@@ -43,7 +43,13 @@ namespace EventAPI.Services
 
         public async Task<EventResponseDTO> CreateAsync(CreateEventDTO dto, int organizerId)
         {
-            var slug = await SlugHelper.GenerateUniqueSlugAsync(_context, dto.Title);
+            var requestedSlug = SlugHelper.NormalizeSlug(dto.Slug ?? dto.Title);
+            if (!SlugHelper.IsValidSlug(requestedSlug, out var slugError))
+                throw new ArgumentException(slugError);
+            var availability = await SlugHelper.CheckAvailabilityAsync(_context, requestedSlug);
+            if (!availability.Available)
+                throw new ArgumentException($"Slug '{requestedSlug}' is already in use. Try '{availability.Suggestion}'.");
+            var slug = requestedSlug;
 
             var entity = new Event
             {
@@ -61,7 +67,8 @@ namespace EventAPI.Services
                 StartsAt = dto.StartsAt,
                 EndsAt = dto.EndsAt,
                 Timezone = string.IsNullOrWhiteSpace(dto.Timezone) ? "SE Asia Standard Time" : dto.Timezone,
-                HasSeatingChart = dto.HasSeatingChart,
+                HasSeatingChart = false,
+                SeatingMode = SeatingMode.GeneralAdmission,
                 RequiresVirtualQueue = dto.RequiresVirtualQueue,
                 MinTicketsPerAccount = dto.MinTicketsPerAccount,
                 MaxTicketsPerAccount = dto.MaxTicketsPerAccount,
@@ -77,6 +84,21 @@ namespace EventAPI.Services
             var created = await _eventRepository.CreateAsync(entity);
             _logger.LogInformation("Event {EventId} created by user {UserId} as Draft", created.EventId, organizerId);
             return MapToResponse(created);
+        }
+
+        public async Task<SlugAvailabilityDTO> CheckSlugAvailabilityAsync(string slug, int? excludeEventId = null)
+        {
+            var normalized = SlugHelper.NormalizeSlug(slug);
+            if (!SlugHelper.IsValidSlug(normalized, out _))
+                return new SlugAvailabilityDTO { Slug = normalized, Available = false, Suggestion = normalized };
+
+            var result = await SlugHelper.CheckAvailabilityAsync(_context, normalized, excludeEventId);
+            return new SlugAvailabilityDTO
+            {
+                Slug = normalized,
+                Available = result.Available,
+                Suggestion = result.Suggestion
+            };
         }
 
         /// <param name="publicOnly">
@@ -135,6 +157,49 @@ namespace EventAPI.Services
             return items.Select(MapToListDto).ToList();
         }
 
+        public async Task<OrganizerDashboardSummaryDTO> GetOrganizerDashboardAsync(int organizerId)
+        {
+            // Reuses the same query as "my events" (already includes non-deleted
+            // TicketTypes), so revenue/sold counts cost nothing extra to compute -
+            // just a sum over data that's already in memory.
+            var events = await _eventRepository.GetByOrganizerIdAsync(organizerId);
+
+            var summary = new OrganizerDashboardSummaryDTO
+            {
+                TotalEvents = events.Count,
+                DraftEvents = events.Count(e => EventStatus.Normalize(e.Status) == EventStatus.Draft),
+                PendingEvents = events.Count(e => EventStatus.Normalize(e.Status) == EventStatus.Pending),
+                PublishedEvents = events.Count(e => EventStatus.Normalize(e.Status) == EventStatus.Published),
+                RejectedEvents = events.Count(e => EventStatus.Normalize(e.Status) == EventStatus.Rejected),
+                CancelledEvents = events.Count(e => EventStatus.Normalize(e.Status) == EventStatus.Cancelled),
+            };
+
+            foreach (var e in events)
+            {
+                var ticketTypes = e.TicketTypes?.Where(t => !t.IsDeleted).ToList() ?? new List<TicketType>();
+                var sold = ticketTypes.Sum(t => t.SoldQuantity);
+                var revenue = ticketTypes.Sum(t => (long)t.SoldQuantity * t.Price);
+
+                summary.TotalTicketsSold += sold;
+                summary.TotalRevenue += revenue;
+
+                summary.Events.Add(new OrganizerDashboardEventDTO
+                {
+                    EventId = e.EventId,
+                    Title = e.Title,
+                    Slug = e.Slug,
+                    PosterUrl = e.PosterUrl,
+                    Status = EventStatus.Normalize(e.Status),
+                    StartsAt = e.StartsAt,
+                    TotalTickets = ticketTypes.Sum(t => t.Quantity),
+                    SoldTickets = sold,
+                    Revenue = revenue,
+                });
+            }
+
+            return summary;
+        }
+
         public async Task<PagedResultDTO<EventListDTO>> GetModerationQueueAsync(int page, int pageSize)
         {
             var (items, totalCount) = await _eventRepository.GetModerationQueueAsync(page, pageSize);
@@ -167,10 +232,16 @@ namespace EventAPI.Services
                 throw new InvalidOperationException(
                     $"Concert cannot be edited while in status '{currentStatus}'. Only Draft or Rejected concerts can be edited.");
 
-            if (dto.Title != null && dto.Title != entity.Title)
+            if (dto.Title != null) entity.Title = dto.Title;
+            if (dto.Slug != null)
             {
-                entity.Title = dto.Title;
-                entity.Slug = await SlugHelper.GenerateUniqueSlugAsync(_context, dto.Title, id);
+                var normalizedSlug = SlugHelper.NormalizeSlug(dto.Slug);
+                if (!SlugHelper.IsValidSlug(normalizedSlug, out var slugError))
+                    throw new ArgumentException(slugError);
+                var availability = await SlugHelper.CheckAvailabilityAsync(_context, normalizedSlug, id);
+                if (!availability.Available)
+                    throw new ArgumentException($"Slug '{normalizedSlug}' is already in use. Try '{availability.Suggestion}'.");
+                entity.Slug = normalizedSlug;
             }
 
             if (dto.ShortDescription != null) entity.ShortDescription = dto.ShortDescription;
@@ -183,7 +254,9 @@ namespace EventAPI.Services
             if (dto.StartsAt.HasValue) entity.StartsAt = dto.StartsAt.Value;
             if (dto.EndsAt.HasValue) entity.EndsAt = dto.EndsAt.Value;
             if (dto.Timezone != null) entity.Timezone = dto.Timezone;
-            if (dto.HasSeatingChart.HasValue) entity.HasSeatingChart = dto.HasSeatingChart.Value;
+            // HasSeatingChart is not settable via Update — see the comment on
+            // UpdateEventDTO.HasSeatingChart (removed 21/09/2026). SeatingService is
+            // the single owner of this flag.
             if (dto.RequiresVirtualQueue.HasValue) entity.RequiresVirtualQueue = dto.RequiresVirtualQueue.Value;
             if (dto.MinTicketsPerAccount.HasValue) entity.MinTicketsPerAccount = dto.MinTicketsPerAccount;
             if (dto.MaxTicketsPerAccount.HasValue) entity.MaxTicketsPerAccount = dto.MaxTicketsPerAccount;
@@ -203,6 +276,10 @@ namespace EventAPI.Services
         public async Task SoftDeleteAsync(int id, int callerId, bool isAdmin)
         {
             var entity = await GetOwnedEntityAsync(id, callerId, isAdmin);
+            if (!isAdmin && !EventStatus.Editable.Contains(EventStatus.Normalize(entity.Status)))
+                throw new InvalidOperationException(
+                    $"Only Draft or Rejected concerts can be deleted. Current status: '{EventStatus.Normalize(entity.Status)}'.");
+
             await _eventRepository.SoftDeleteAsync(id, callerId);
             _logger.LogInformation("Event {EventId} soft-deleted by user {UserId}", id, callerId);
         }
@@ -317,14 +394,13 @@ namespace EventAPI.Services
 
             _logger.LogInformation("Concert {EventId} approved and published by admin {AdminId}", id, adminId);
 
-            // The owner becomes an Organizer while KEEPING their Customer role.
-            // A failure here must not undo the approval — it's reported as a warning.
-            var roleGrant = await _roleClient.GrantRoleAsync(entity.OrganizerId, "Organizer", adminBearerToken);
+            var roleGrant = await _roleClient.GrantRoleAsync(
+                entity.OrganizerId, "Organizer", adminBearerToken);
 
             if (!roleGrant.Success)
             {
                 _logger.LogWarning(
-                    "Concert {EventId} was published but granting the Organizer role to user {UserId} failed: {Message}",
+                    "Concert {EventId} was published but Organizer role grant failed for user {UserId}: {Message}",
                     id, entity.OrganizerId, roleGrant.Message);
             }
 
@@ -472,6 +548,7 @@ namespace EventAPI.Services
             EndsAt = e.EndsAt,
             Timezone = e.Timezone,
             HasSeatingChart = e.HasSeatingChart,
+            SeatingMode = SeatingMode.Normalize(e.SeatingMode),
             RequiresVirtualQueue = e.RequiresVirtualQueue,
             Status = EventStatus.Normalize(e.Status),
             RejectedReason = e.RejectedReason,
@@ -489,6 +566,7 @@ namespace EventAPI.Services
             SubmittedAt = e.SubmittedAt,
             ApprovedAt = e.ApprovedAt,
             RejectedAt = e.RejectedAt,
+            ReviewedBy = e.ReviewedBy,
             Category = MusicCategoryName,
             IsPublic = EventStatus.IsPublic(e.Status),
             TicketTypes = e.TicketTypes?.Where(t => !t.IsDeleted).OrderBy(t => t.SortOrder).Select(MapTicketType).ToList() ?? new(),
@@ -509,13 +587,20 @@ namespace EventAPI.Services
             StartsAt = e.StartsAt,
             EndsAt = e.EndsAt,
             Status = EventStatus.Normalize(e.Status),
+            HasSeatingChart = e.HasSeatingChart,
+            SeatingMode = SeatingMode.Normalize(e.SeatingMode),
             IsFeatured = e.IsFeatured,
             ViewCount = e.ViewCount,
             TotalTickets = e.TicketTypes?.Where(t => !t.IsDeleted).Sum(t => t.Quantity) ?? e.TotalTickets,
             SoldTickets = e.TicketTypes?.Where(t => !t.IsDeleted).Sum(t => t.SoldQuantity) ?? e.SoldTickets,
             MinPrice = e.TicketTypes?.Where(t => !t.IsDeleted).Select(t => (long?)t.Price).DefaultIfEmpty(null).Min(),
             Category = MusicCategoryName,
-            CreatedAt = e.CreatedAt
+            CreatedAt = e.CreatedAt,
+            SubmittedAt = e.SubmittedAt,
+            ApprovedAt = e.ApprovedAt,
+            RejectedAt = e.RejectedAt,
+            ReviewedBy = e.ReviewedBy,
+            RejectedReason = e.RejectedReason
         };
 
         /// <summary>
@@ -531,28 +616,7 @@ namespace EventAPI.Services
                 var map = await _seatingRepository.GetByEventIdAsync(e.EventId, includeSeats: true);
                 if (map != null)
                 {
-                    dto.SeatingChart = new SeatingChartResponseDTO
-                    {
-                        SeatMapId = map.SeatMapId,
-                        EventId = map.EventId,
-                        Name = map.Name,
-                        LayoutJson = map.LayoutJson,
-                        CreatedAt = map.CreatedAt,
-                        UpdatedAt = map.UpdatedAt,
-                        Zones = map.SeatZones.OrderBy(z => z.ZoneName).Select(z => new SeatZoneResponseDTO
-                        {
-                            SeatZoneId = z.SeatZoneId,
-                            SeatMapId = z.SeatMapId,
-                            TicketTypeId = z.TicketTypeId,
-                            ZoneName = z.ZoneName,
-                            ShapeJson = z.ShapeJson,
-                            TotalSeats = z.Seats.Count,
-                            AvailableSeats = z.Seats.Count(s => s.Status == "Available"),
-                            // Seat list omitted here to keep the concert payload small —
-                            // use GET api/seating/event/{eventId} for the full grid.
-                            Seats = new List<SeatResponseDTO>()
-                        }).ToList()
-                    };
+                    dto.SeatingChart = SeatingService.MapChart(map, includeSeats: false);
                 }
             }
 

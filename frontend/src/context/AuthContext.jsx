@@ -1,8 +1,10 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+import authApi from "../api/authApi";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
+  const initialRoleRefreshStarted = useRef(false);
   // =========================
   // USER
   // =========================
@@ -89,6 +91,44 @@ export function AuthProvider({ children }) {
     setUser(nextUser);
   };
 
+  // Rotate the refresh token and receive a new JWT whose role claims are read
+  // from the database now (not from the old access token).
+  const refreshRoles = async () => {
+    const refreshToken = localStorage.getItem("refreshToken");
+    if (!refreshToken) throw new Error("No refresh token available.");
+
+    const refreshResponse = await authApi.refresh({ refreshToken });
+    const refreshed = refreshResponse.data;
+    localStorage.setItem("accessToken", refreshed.accessToken);
+    if (refreshed.refreshToken) {
+      localStorage.setItem("refreshToken", refreshed.refreshToken);
+    }
+
+    const profileResponse = await authApi.getMe();
+    const profile = profileResponse.data;
+    const latestRoles = refreshed.roles || profile.roles ||
+      (profile.roleName ? [profile.roleName] : []);
+
+    localStorage.setItem("roles", JSON.stringify(latestRoles));
+    setRoles(latestRoles);
+
+    const nextUser = { ...(user || {}), ...profile };
+    localStorage.setItem("user", JSON.stringify(nextUser));
+    setUser(nextUser);
+    return latestRoles;
+  };
+
+  useEffect(() => {
+    if (initialRoleRefreshStarted.current || !localStorage.getItem("refreshToken")) return;
+    initialRoleRefreshStarted.current = true;
+    refreshRoles().catch(() => {
+      // Keep the current session state. The normal 401 interceptor will handle
+      // an actually expired/revoked session on the next protected request.
+    });
+    // Run once on application startup; the ref also protects React StrictMode.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // =========================
   // AUTHENTICATION
   // =========================
@@ -98,7 +138,7 @@ export function AuthProvider({ children }) {
   // ROLE CHECK
   // =========================
   const normalizedRoles = roles.map((role) =>
-    String(role).toLowerCase()
+    String(role?.roleName || role?.name || role).toLowerCase()
   );
 
   const isAdmin = normalizedRoles.includes("admin");
@@ -117,6 +157,7 @@ export function AuthProvider({ children }) {
         login,
         logout,
         updateUser,
+        refreshRoles,
 
         isAuthenticated,
         isAdmin,

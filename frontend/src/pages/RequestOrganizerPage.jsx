@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import organizerRequestApi from "../api/organizerRequestApi";
 import "../styles/organizerRequest.css";
 
@@ -19,6 +21,7 @@ function StatusBadge({ status }) {
 }
 
 export default function RequestOrganizerPage() {
+  const { isOrganizer, refreshRoles } = useAuth();
   const [form, setForm] = useState({
     reason: "",
     companyName: "",
@@ -32,12 +35,16 @@ export default function RequestOrganizerPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+
   const hasPending = history.some((r) => r.status === "Pending");
 
   const fetchHistory = async () => {
     try {
       const res = await organizerRequestApi.getMyRequests();
       setHistory(res.data);
+      if (!isOrganizer && res.data.some((request) => request.status === "Approved")) {
+        await refreshRoles();
+      }
     } catch {
       // im lặng bỏ qua nếu không load được lịch sử, không chặn form
     } finally {
@@ -85,14 +92,23 @@ export default function RequestOrganizerPage() {
             Tell us about yourself and why you'd like to organize events on our platform.
           </p>
 
-          {error && <div className="org-alert org-alert--error">{error}</div>}
-          {success && <div className="org-alert org-alert--success">{success}</div>}
+          {isOrganizer && (
+            <div className="org-alert org-alert--success">
+              🎉 You already have the <strong>Organizer</strong> role!{" "}
+              <Link to="/organizer/events/new">Create your first event →</Link>
+            </div>
+          )}
 
-          {hasPending && !success ? (
+          {!isOrganizer && error && <div className="org-alert org-alert--error">{error}</div>}
+          {!isOrganizer && success && <div className="org-alert org-alert--success">{success}</div>}
+
+          {!isOrganizer && hasPending && !success && (
             <div className="org-alert org-alert--success">
               You already have a pending request. Please wait for our review.
             </div>
-          ) : (
+          )}
+
+          {!isOrganizer && !hasPending && !success && (
             <form onSubmit={handleSubmit}>
               <div className="org-field">
                 <label>Reason *</label>
@@ -168,6 +184,7 @@ export default function RequestOrganizerPage() {
               </button>
             </form>
           )}
+
         </div>
 
         <div className="org-card">

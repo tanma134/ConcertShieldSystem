@@ -24,8 +24,10 @@ export default function AdminLoginPage() {
 
       // LoginResponseDTO co field "roles" (camelCase neu backend dung
       // JsonNamingPolicy.CamelCase, nguoc lai doi thanh res.data.Roles)
-      const roles = res.data.roles || [];
-      const isAdmin = roles.some((r) => r.toLowerCase() === "admin");
+      const roles = res.data?.roles || res.data?.Roles || [];
+      const isAdmin = roles.some((role) =>
+        String(role?.roleName || role?.name || role).toLowerCase() === "admin"
+      );
 
       if (!isAdmin) {
         setError("This account does not have admin privileges.");

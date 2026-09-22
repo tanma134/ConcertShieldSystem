@@ -20,6 +20,7 @@ namespace EventAPI.DTOs
         public DateTime EndsAt { get; set; }
         public string Timezone { get; set; } = null!;
         public bool HasSeatingChart { get; set; }
+        public string SeatingMode { get; set; } = Common.SeatingMode.ReservedSeating;
         public bool RequiresVirtualQueue { get; set; }
         public string Status { get; set; } = null!;
         public string? RejectedReason { get; set; }
@@ -38,6 +39,7 @@ namespace EventAPI.DTOs
         public DateTime? SubmittedAt { get; set; }
         public DateTime? ApprovedAt { get; set; }
         public DateTime? RejectedAt { get; set; }
+        public int? ReviewedBy { get; set; }
 
         /// <summary>Always "Music" in the current scope (CategoryId = 1).</summary>
         public string Category { get; set; } = "Music";
@@ -65,6 +67,8 @@ namespace EventAPI.DTOs
         public DateTime StartsAt { get; set; }
         public DateTime EndsAt { get; set; }
         public string Status { get; set; } = null!;
+        public bool HasSeatingChart { get; set; }
+        public string SeatingMode { get; set; } = Common.SeatingMode.ReservedSeating;
         public bool IsFeatured { get; set; }
         public int ViewCount { get; set; }
         public int TotalTickets { get; set; }
@@ -73,6 +77,11 @@ namespace EventAPI.DTOs
         public long? MinPrice { get; set; }
         public string Category { get; set; } = "Music";
         public DateTime CreatedAt { get; set; }
+        public DateTime? SubmittedAt { get; set; }
+        public DateTime? ApprovedAt { get; set; }
+        public DateTime? RejectedAt { get; set; }
+        public int? ReviewedBy { get; set; }
+        public string? RejectedReason { get; set; }
     }
 
     public class EventFilterDTO
@@ -86,6 +95,9 @@ namespace EventAPI.DTOs
         public long? MaxPrice { get; set; }
         public int? OrganizerId { get; set; }
         public bool? IsFeatured { get; set; }
+        public bool? HasSeatingChart { get; set; }
+        public string? SeatingMode { get; set; }
+
         /// <summary>
         /// Set by the controller, never bound from the query string: when true the
         /// repository hard-filters to Published only, so public endpoints can never

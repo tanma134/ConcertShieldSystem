@@ -98,8 +98,9 @@ namespace AuthenticationAPI.Controllers
         }
 
         [HttpPost("me/avatar")]
+        [Consumes("multipart/form-data")]
         [RequestSizeLimit(5 * 1024 * 1024)]
-        public async Task<IActionResult> UploadAvatar([FromForm(Name = "file")] IFormFile file)
+        public async Task<IActionResult> UploadAvatar(IFormFile file)
         {
             var value = User.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!int.TryParse(value, out var userId)) return Unauthorized(new { message = "User id claim is missing." });

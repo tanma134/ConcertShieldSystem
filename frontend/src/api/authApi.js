@@ -11,6 +11,7 @@ const authApi = {
   verifyResetOtp: (data) => axiosClient.post("/auth/verify-reset-otp", data),
   resetPassword: (data) => axiosClient.post("/auth/reset-password", data),
   getProfile: () => axiosClient.get("/auth/me"),
+  getMe: () => axiosClient.get("/auth/me"),
   updateProfile: (data) => axiosClient.put("/auth/me", data),
   uploadAvatar: (file) => {
     const form = new FormData();

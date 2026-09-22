@@ -12,10 +12,15 @@ const eventApi = {
   getByCategory: (categoryId, filter = {}) =>
     axiosClient.get(`/events/category/${categoryId}`, { params: filter }),
   getBySlug: (slug) => axiosClient.get(`/events/slug/${slug}`),
+  checkSlug: (slug, excludeEventId = null) =>
+    axiosClient.get("/events/slug-availability", {
+      params: { slug, ...(excludeEventId ? { excludeEventId } : {}) },
+    }),
 
   // ---- Customer: my concerts (any status) ----
   getMine: () => axiosClient.get("/events/mine"),
   getMineById: (id) => axiosClient.get(`/events/mine/${id}`),
+  getMyDashboard: () => axiosClient.get("/events/mine/dashboard"),
 
   // ---- Draft lifecycle ----
   create: (dto) => axiosClient.post("/events", dto),
@@ -48,6 +53,8 @@ const eventApi = {
   // ---- Admin moderation ----
   getPending: (page = 1, pageSize = 12) =>
     axiosClient.get("/events/pending", { params: { page, pageSize } }),
+  getAllAdmin: (filter = {}) =>
+    axiosClient.get("/events/admin", { params: filter }),
   adminGetById: (id) => axiosClient.get(`/events/admin/${id}`),
   approve: (id) => axiosClient.post(`/events/${id}/approve`),
   reject: (id, reason) => axiosClient.post(`/events/${id}/reject`, { reason }),

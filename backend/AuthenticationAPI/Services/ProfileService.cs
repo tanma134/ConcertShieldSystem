@@ -188,7 +188,13 @@ namespace AuthenticationAPI.Services
 
                 RoleName = user.UserRoles
                     .Select(ur => ur.Role.RoleName)
-                    .FirstOrDefault()
+                    .FirstOrDefault(),
+
+                Roles = user.UserRoles
+                    .Where(ur => ur.Role != null)
+                    .Select(ur => ur.Role.RoleName)
+                    .OrderBy(role => role)
+                    .ToList()
             };
         }
     }

@@ -55,6 +55,7 @@ export default function AdminDashboardPage() {
         <button type="button" className="admin-nav-item active" onClick={() => navigate("/admin")}>Dashboard</button>
         <button type="button" className="admin-nav-item" onClick={() => navigate("/admin/users")}>User Management</button>
         <button type="button" className="admin-nav-item" onClick={() => navigate("/admin/roles")}>Role Management</button>
+        <button type="button" className="admin-nav-item" onClick={() => navigate("/admin/events")}>Event Approvals</button>
         <button type="button" className="admin-nav-item" onClick={() => navigate("/admin/reviews")}>Review Management</button>
         <button type="button" className="admin-nav-item" onClick={() => navigate("/admin/wishlists")}>Wishlist Management</button>
         <button type="button" className="admin-nav-item" onClick={() => navigate("/admin/organizer-requests")}>Organizer Requests</button>

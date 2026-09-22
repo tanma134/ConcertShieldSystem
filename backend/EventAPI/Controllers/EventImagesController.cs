@@ -19,12 +19,16 @@ namespace EventAPI.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> GetByEvent(int eventId)
         {
-            var result = await _imageService.GetByEventIdAsync(eventId);
-            return Ok(ApiResponseDTO<List<EventImageResponseDTO>>.SuccessResponse(result));
+            try
+            {
+                var result = await _imageService.GetByEventIdAsync(eventId, CurrentUserIdOrNull, IsAdmin);
+                return Ok(ApiResponseDTO<List<EventImageResponseDTO>>.SuccessResponse(result));
+            }
+            catch (Exception ex) { return HandleException(ex); }
         }
 
         [HttpPost("event/{eventId:int}/upload")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         [RequestSizeLimit(10_000_000)]
         public async Task<IActionResult> Upload(int eventId, IFormFile file)
         {
@@ -37,7 +41,7 @@ namespace EventAPI.Controllers
         }
 
         [HttpPost("event/{eventId:int}/upload-multiple")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         [RequestSizeLimit(50_000_000)]
         public async Task<IActionResult> UploadMultiple(int eventId, List<IFormFile> files)
         {
@@ -53,7 +57,7 @@ namespace EventAPI.Controllers
         }
 
         [HttpPut("{id:int}")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateImageDTO dto)
         {
             try
@@ -65,7 +69,7 @@ namespace EventAPI.Controllers
         }
 
         [HttpPost("{id:int}/set-main")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> SetMain(int id)
         {
             try
@@ -77,7 +81,7 @@ namespace EventAPI.Controllers
         }
 
         [HttpPut("reorder")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Reorder([FromQuery] int eventId, [FromBody] List<ReorderImageDTO> orders)
         {
             try
@@ -89,7 +93,7 @@ namespace EventAPI.Controllers
         }
 
         [HttpDelete("{id:int}")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Delete(int id)
         {
             try

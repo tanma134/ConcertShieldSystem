@@ -191,6 +191,30 @@
   background: var(--tb-primary-light);
 }
 
+.tb-become-org-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-size: 13.5px;
+  background: var(--tb-surface-2);
+  border: 1.5px solid rgba(251, 191, 36, 0.5);
+  color: #fbbf24;
+}
+
+.tb-become-org-btn:hover {
+  border-color: #f59e0b;
+  color: #f59e0b;
+  background: rgba(251, 191, 36, 0.08);
+}
+
+@media (max-width: 560px) {
+  .tb-become-org-btn span {
+    display: none;
+  }
+}
+
 .tb-header-link {
   font-size: 14px;
   color: var(--tb-text);

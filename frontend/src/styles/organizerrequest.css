@@ -49,6 +49,9 @@
   font-weight: 700;
   margin: 0 0 4px;
   letter-spacing: -0.01em;
+  /* index.css set mau h1/h2 mac dinh gan den (#08060d) cho theme sang;
+     phai override o day, khong thi tieu de bi chim mau tren nen toi. */
+  color: var(--org-text);
 }
 
 .org-subtitle {

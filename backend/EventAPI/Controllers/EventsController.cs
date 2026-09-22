@@ -3,6 +3,7 @@ using EventAPI.Services;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using EventAPI.Common;
 
 namespace EventAPI.Controllers
 {
@@ -11,8 +12,7 @@ namespace EventAPI.Controllers
     /// and Rejected -> edit -> Pending.
     ///
     /// Every concert is a Music concert (CategoryId = 1); the category cannot be chosen.
-    /// Any logged-in Customer may create one — the Organizer role is granted
-    /// automatically (additively) once an Admin approves it.
+    /// Only an approved Organizer may create and configure a concert.
     /// </summary>
     [Route("api/events")]
     public class EventsController : BaseApiController
@@ -61,6 +61,22 @@ namespace EventAPI.Controllers
             return Ok(ApiResponseDTO<List<EventListDTO>>.SuccessResponse(result));
         }
 
+        /// <summary>Normalizes a slug and checks uniqueness while the user is typing.</summary>
+        [HttpGet("slug-availability")]
+        [Authorize(Policy = "RequireOrganizer")]
+        public async Task<IActionResult> CheckSlugAvailability(
+            [FromQuery] string slug, [FromQuery] int? excludeEventId = null)
+        {
+            if (excludeEventId.HasValue)
+            {
+                try { await _eventService.GetMineByIdAsync(excludeEventId.Value, CurrentUserId, IsAdmin); }
+                catch (Exception ex) { return HandleException(ex); }
+            }
+
+            var result = await _eventService.CheckSlugAvailabilityAsync(slug, excludeEventId);
+            return Ok(ApiResponseDTO<SlugAvailabilityDTO>.SuccessResponse(result));
+        }
+
         [HttpGet("city/{city}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetByCity(string city, [FromQuery] EventFilterDTO filter)
@@ -96,7 +112,7 @@ namespace EventAPI.Controllers
         }
 
         // =====================================================================
-        // CUSTOMER — my concerts
+        // ORGANIZER — my concerts
         // =====================================================================
 
         /// <summary>Every concert I own, in any status (Draft included).</summary>
@@ -106,6 +122,18 @@ namespace EventAPI.Controllers
         {
             var result = await _eventService.GetByOrganizerIdAsync(CurrentUserId);
             return Ok(ApiResponseDTO<List<EventListDTO>>.SuccessResponse(result));
+        }
+
+        /// <summary>
+        /// Organizer dashboard summary: event counts by status, tickets sold, and
+        /// gross ticket revenue (price * soldQuantity, not adjusted for refunds).
+        /// </summary>
+        [HttpGet("mine/dashboard")]
+        [Authorize(Policy = "RequireCustomer")]
+        public async Task<IActionResult> GetMyDashboard()
+        {
+            var result = await _eventService.GetOrganizerDashboardAsync(CurrentUserId);
+            return Ok(ApiResponseDTO<OrganizerDashboardSummaryDTO>.SuccessResponse(result));
         }
 
         /// <summary>
@@ -125,15 +153,14 @@ namespace EventAPI.Controllers
         }
 
         // =====================================================================
-        // CUSTOMER — create / update / delete draft
+        // ORGANIZER — create / update / delete draft
         // =====================================================================
 
         /// <summary>
-        /// Creates the concert as a Draft. Any authenticated Customer may do this —
-        /// they do NOT need to be an Organizer yet.
+        /// Creates the concert as a Draft for an approved Organizer.
         /// </summary>
         [HttpPost]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Create([FromBody] CreateEventDTO dto)
         {
             var validation = await _createValidator.ValidateAsync(dto);
@@ -151,7 +178,7 @@ namespace EventAPI.Controllers
 
         /// <summary>Updates a Draft or Rejected concert. Partial — send only what changes.</summary>
         [HttpPut("{id:int}")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateEventDTO dto)
         {
             var validation = await _updateValidator.ValidateAsync(dto);
@@ -167,7 +194,7 @@ namespace EventAPI.Controllers
         }
 
         [HttpDelete("{id:int}")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Delete(int id)
         {
             try
@@ -195,7 +222,7 @@ namespace EventAPI.Controllers
         /// would produce, so the UI can show what's still missing.
         /// </summary>
         [HttpGet("{id:int}/validate")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> ValidateForSubmission(int id)
         {
             try
@@ -214,7 +241,7 @@ namespace EventAPI.Controllers
         /// rejected concert after editing.
         /// </summary>
         [HttpPost("{id:int}/submit")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Submit(int id)
         {
             try
@@ -226,7 +253,7 @@ namespace EventAPI.Controllers
         }
 
         [HttpPost("{id:int}/cancel")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Cancel(int id)
         {
             try
@@ -248,6 +275,21 @@ namespace EventAPI.Controllers
         {
             var result = await _eventService.GetPendingAsync(page, pageSize);
             return Ok(ApiResponseDTO<PagedResultDTO<PendingEventDTO>>.SuccessResponse(result));
+        }
+
+        /// <summary>
+        /// All concerts regardless of status, for the Admin "All Events" page.
+        /// Supports the same search/filter/sort/pagination as the public list
+        /// (status, creator/OrganizerId, date range, city), but is never limited
+        /// to Published — the pending queue alone isn't enough for moderation.
+        /// </summary>
+        [HttpGet("admin")]
+        [Authorize(Policy = "RequireAdmin")]
+        public async Task<IActionResult> AdminGetAll([FromQuery] EventFilterDTO filter)
+        {
+            filter.PublishedOnly = false;
+            var result = await _eventService.GetFilteredAsync(filter);
+            return Ok(ApiResponseDTO<PagedResultDTO<EventListDTO>>.SuccessResponse(result));
         }
 
         /// <summary>Alias kept for the existing admin UI.</summary>
@@ -273,8 +315,8 @@ namespace EventAPI.Controllers
         }
 
         /// <summary>
-        /// Pending -> Published. The owner additionally gains the "Organizer" role
-        /// while keeping "Customer" — so they end up with both.
+        /// Pending -> Published. Organizer role approval is handled separately by
+        /// the Organizer Request workflow in AuthenticationAPI.
         /// </summary>
         [HttpPost("{id:int}/approve")]
         [Authorize(Policy = "RequireAdmin")]
@@ -282,11 +324,12 @@ namespace EventAPI.Controllers
         {
             try
             {
-                var (result, roleGrant) = await _eventService.ApproveAsync(id, CurrentUserId, BearerToken);
+                var (result, roleGrant) = await _eventService.ApproveAsync(
+                    id, CurrentUserId, BearerToken);
 
                 var message = roleGrant.Success
-                    ? "Concert approved and published. Owner now has the Organizer role."
-                    : "Concert approved and published, but the Organizer role could not be granted: " + roleGrant.Message;
+                    ? "Concert approved and published. Owner now also has the Organizer role."
+                    : "Concert approved, but Organizer role could not be granted: " + roleGrant.Message;
 
                 return Ok(new ApiResponseDTO<EventResponseDTO>
                 {
@@ -321,7 +364,7 @@ namespace EventAPI.Controllers
 
         /// <summary>Uploads or replaces the poster. Replacing removes the old Cloudinary asset.</summary>
         [HttpPost("{id:int}/poster")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         [RequestSizeLimit(10_000_000)]
         public async Task<IActionResult> UploadPoster(int id, IFormFile file, [FromServices] ICloudinaryService cloudinary)
         {
@@ -341,7 +384,7 @@ namespace EventAPI.Controllers
         }
 
         [HttpDelete("{id:int}/poster")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> DeletePoster(int id)
         {
             try
@@ -354,7 +397,7 @@ namespace EventAPI.Controllers
 
         /// <summary>Uploads or replaces the banner. Replacing removes the old Cloudinary asset.</summary>
         [HttpPost("{id:int}/banner")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         [RequestSizeLimit(10_000_000)]
         public async Task<IActionResult> UploadBanner(int id, IFormFile file, [FromServices] ICloudinaryService cloudinary)
         {
@@ -373,7 +416,7 @@ namespace EventAPI.Controllers
         }
 
         [HttpDelete("{id:int}/banner")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> DeleteBanner(int id)
         {
             try

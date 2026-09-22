@@ -5,7 +5,7 @@ namespace EventAPI.Services
 {
     public interface IEventImageService
     {
-        Task<List<EventImageResponseDTO>> GetByEventIdAsync(int eventId);
+        Task<List<EventImageResponseDTO>> GetByEventIdAsync(int eventId, int? callerId, bool isAdmin);
         Task<EventImageResponseDTO> UploadAsync(int eventId, IFormFile file, int callerId, bool isAdmin);
         Task<List<EventImageResponseDTO>> UploadMultipleAsync(int eventId, List<IFormFile> files, int callerId, bool isAdmin);
         Task<EventImageResponseDTO> UpdateAsync(int imageId, UpdateImageDTO dto, int callerId, bool isAdmin);

@@ -84,6 +84,27 @@ namespace AuthenticationAPI.Controllers
             return Ok(result.Data);
         }
 
+        /// <summary>Additively grants a role. Repeated grants are idempotent.</summary>
+        [HttpPost("users/{id}/roles")]
+        public async Task<IActionResult> AddRole(int id, [FromBody] AddRoleDTO dto)
+        {
+            var result = await _userService.AddRoleAsync(id, dto.RoleName);
+
+            if (!result.Success)
+            {
+                if (result.Message == "User not found.")
+                    return NotFound(new { message = result.Message });
+
+                return BadRequest(new { message = result.Message });
+            }
+
+            return Ok(new
+            {
+                message = result.Message,
+                roles = result.Data?.Roles.Select(role => role.RoleName).ToList() ?? new List<string>()
+            });
+        }
+
         // Block / Unblock User
         [HttpPut("users/{id}/status")]
         public async Task<IActionResult> UpdateUserStatus(

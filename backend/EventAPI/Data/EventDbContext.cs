@@ -20,6 +20,7 @@ namespace EventAPI.Data
         public virtual DbSet<Seat> Seats { get; set; } = null!;
         public virtual DbSet<Wishlist> Wishlists { get; set; } = null!;
         public virtual DbSet<Review> Reviews { get; set; } = null!;
+        public virtual DbSet<SeatingTemplate> SeatingTemplates { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -42,8 +43,8 @@ namespace EventAPI.Data
                 entity.Property(e => e.ShortDescription).HasColumnName("short_description").HasMaxLength(500);
                 entity.Property(e => e.Description).HasColumnName("description");
                 entity.Property(e => e.PosterUrl)
-    .HasColumnName("poster_url")
-    .HasMaxLength(500);
+                    .HasColumnName("poster_url")
+                    .HasMaxLength(500);
 
                 entity.Property(e => e.PosterPublicId)
                     .HasColumnName("poster_public_id")
@@ -65,12 +66,13 @@ namespace EventAPI.Data
                 entity.Property(e => e.EndsAt).HasColumnName("ends_at");
                 entity.Property(e => e.Timezone).HasColumnName("timezone").HasMaxLength(50).HasDefaultValue("SE Asia Standard Time");
                 entity.Property(e => e.HasSeatingChart).HasColumnName("has_seating_chart").HasDefaultValue(false);
+                entity.Property(e => e.SeatingMode).HasColumnName("seating_mode").HasMaxLength(30).HasDefaultValue("ReservedSeating");
                 entity.Property(e => e.RequiresVirtualQueue).HasColumnName("requires_virtual_queue").HasDefaultValue(false);
                 entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(20).HasDefaultValue("Draft");
                 entity.Property(e => e.RejectedReason).HasColumnName("rejected_reason").HasMaxLength(500);
                 entity.Property(e => e.SubmittedAt)
-    .HasColumnName("submitted_at")
-    .HasColumnType("timestamp with time zone");
+                    .HasColumnName("submitted_at")
+                    .HasColumnType("timestamp with time zone");
 
                 entity.Property(e => e.ApprovedAt)
                     .HasColumnName("approved_at")
@@ -109,8 +111,8 @@ namespace EventAPI.Data
                 entity.Property(e => e.EventId).HasColumnName("event_id");
                 entity.Property(e => e.ImageUrl).HasColumnName("image_url").HasMaxLength(500);
                 entity.Property(e => e.PublicId)
-        .HasColumnName("public_id")
-        .HasMaxLength(500);
+                    .HasColumnName("public_id")
+                    .HasMaxLength(500);
                 entity.Property(e => e.SortOrder).HasColumnName("sort_order").HasDefaultValue(0);
                 entity.Property(e => e.IsMain).HasColumnName("is_main").HasDefaultValue(false);
                 entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
@@ -155,6 +157,11 @@ namespace EventAPI.Data
                     .WithMany(p => p.TicketTypes)
                     .HasForeignKey(d => d.EventId)
                     .HasConstraintName("fk_ticket_types_event");
+
+                entity.HasIndex(e => new { e.EventId, e.TypeName })
+                    .IsUnique()
+                    .HasFilter("is_deleted = false")
+                    .HasDatabaseName("uq_ticket_types_event_name_active");
             });
 
             // PricingRules
@@ -310,6 +317,30 @@ namespace EventAPI.Data
                 entity.HasOne(d => d.Event)
                     .WithMany(p => p.Reviews)
                     .HasForeignKey(d => d.EventId);
+            });
+
+            // SeatingTemplates
+            modelBuilder.Entity<SeatingTemplate>(entity =>
+            {
+                entity.ToTable("seating_templates");
+                entity.HasKey(e => e.SeatingTemplateId).HasName("seating_templates_pkey");
+
+                entity.Property(e => e.SeatingTemplateId).HasColumnName("seating_template_id").UseIdentityAlwaysColumn();
+                entity.Property(e => e.OrganizerId).HasColumnName("organizer_id");
+                entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(150);
+                entity.Property(e => e.Description).HasColumnName("description").HasMaxLength(500);
+                entity.Property(e => e.SeatingMode).HasColumnName("seating_mode").HasMaxLength(30).HasDefaultValue("ReservedSeating");
+                entity.Property(e => e.IsPublic).HasColumnName("is_public").HasDefaultValue(false);
+                entity.Property(e => e.LayoutJson).HasColumnName("layout_json").HasColumnType("jsonb");
+                entity.Property(e => e.ZonesJson).HasColumnName("zones_json").HasColumnType("jsonb");
+                entity.Property(e => e.CreatedBy).HasColumnName("created_by");
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("now()");
+                entity.Property(e => e.IsDeleted).HasColumnName("is_deleted").HasDefaultValue(false);
+                entity.Property(e => e.DeletedAt).HasColumnName("deleted_at");
+
+                entity.HasIndex(e => e.OrganizerId).HasDatabaseName("ix_seating_templates_organizer_id");
+                entity.HasIndex(e => e.IsPublic).HasDatabaseName("ix_seating_templates_is_public");
             });
         }
     }

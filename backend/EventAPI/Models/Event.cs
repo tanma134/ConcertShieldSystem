@@ -25,6 +25,8 @@ namespace EventAPI.Models
         public DateTime EndsAt { get; set; }
         public string Timezone { get; set; } = "SE Asia Standard Time";
         public bool HasSeatingChart { get; set; } = false;
+        /// <summary>GeneralAdmission | StandingZones | ReservedSeating (see SeatingMode).</summary>
+        public string SeatingMode { get; set; } = Common.SeatingMode.ReservedSeating;
         public bool RequiresVirtualQueue { get; set; } = false;
         /// <summary>Draft | Pending | Published | Rejected | Cancelled (see EventStatus).</summary>
         public string Status { get; set; } = "Draft";

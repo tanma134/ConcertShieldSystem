@@ -4,12 +4,14 @@ namespace EventAPI.Services
 {
     public interface IEventService
     {
+        Task<SlugAvailabilityDTO> CheckSlugAvailabilityAsync(string slug, int? excludeEventId = null);
         Task<EventResponseDTO> CreateAsync(CreateEventDTO dto, int organizerId);
         Task<EventResponseDTO> GetByIdAsync(int id, bool incrementView = false, bool publicOnly = true);
         Task<EventResponseDTO> GetBySlugAsync(string slug, bool incrementView = false, bool publicOnly = true);
         Task<PagedResultDTO<EventListDTO>> GetFilteredAsync(EventFilterDTO filter);
         Task<List<EventListDTO>> GetFeaturedAsync(int count);
         Task<List<EventListDTO>> GetByOrganizerIdAsync(int organizerId);
+        Task<OrganizerDashboardSummaryDTO> GetOrganizerDashboardAsync(int organizerId);
         Task<PagedResultDTO<EventListDTO>> GetModerationQueueAsync(int page, int pageSize);
 
         Task<EventResponseDTO> UpdateAsync(int id, UpdateEventDTO dto, int callerId, bool isAdmin);
@@ -28,11 +30,9 @@ namespace EventAPI.Services
         /// <summary>Admin moderation queue with ticket/pricing summary.</summary>
         Task<PagedResultDTO<PendingEventDTO>> GetPendingAsync(int page, int pageSize);
 
-        /// <summary>
-        /// Pending -> Published. Admin only. Also grants the owner the "Organizer"
-        /// role additively (they keep "Customer").
-        /// </summary>
-        Task<(EventResponseDTO Event, GrantRoleResult RoleGrant)> ApproveAsync(int id, int adminId, string? adminBearerToken);
+        /// <summary>Pending -> Published and grants Organizer additively.</summary>
+        Task<(EventResponseDTO Event, GrantRoleResult RoleGrant)> ApproveAsync(
+            int id, int adminId, string? adminBearerToken);
 
         /// <summary>Pending -> Rejected (with reason). Admin only.</summary>
         Task<EventResponseDTO> RejectAsync(int id, string reason, int adminId);

@@ -19,7 +19,7 @@ namespace AuthenticationAPI.Services
         private readonly IMemoryCache _cache;
         private readonly ILogger<AuthenticationService> _logger;
 
-        private const string DefaultRoleName = "User";
+        private const string DefaultRoleName = "Customer";
         private const string GenericOtpInvalidMessage = "Invalid or expired OTP.";
 
         public AuthenticationService(
@@ -226,7 +226,8 @@ namespace AuthenticationAPI.Services
             {
                 AccessToken = accessToken,
                 AccessTokenExpiresAt = accessTokenExpiry,
-                RefreshToken = newRefreshToken
+                RefreshToken = newRefreshToken,
+                Roles = tokenEntity.User.UserRoles.Select(ur => ur.Role.RoleName).ToList()
             };
         }
 

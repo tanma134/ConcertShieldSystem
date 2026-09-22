@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import Header from "../../components/Header";
-import Footer from "../../components/Footer";
+import AdminShell from "./AdminShell";
 import eventApi from "../../api/eventApi";
-import { formatDateRange, formatPrice } from "../../utils/format";
+import { formatDateRange } from "../../utils/format";
 import "../organizer/OrganizerWizard.css";
 import "./AdminPages.css";
+import StepTicketsSeating from "../organizer/steps/StepTicketsSeating";
 
 export default function AdminEventDetailPage() {
   const { id } = useParams();
@@ -75,10 +75,8 @@ export default function AdminEventDetailPage() {
   const canDecide = event?.status === "Pending";
 
   return (
-    <div className="tb-app">
-      <Header />
-
-      <div className="tb-container ow-wrap">
+    <AdminShell title="Review Event">
+      <div className="ow-wrap">
         <div className="ow-head">
           <div>
             <h1>Review Event</h1>
@@ -149,93 +147,34 @@ export default function AdminEventDetailPage() {
               </section>
             )}
 
-            {event.ticketTypes?.length > 0 && (
+            {(event.bannerUrl || event.images?.length > 0) && (
               <section className="ow-section">
-                <h3>Ticket Types</h3>
-                <table className="ow-table">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Price</th>
-                      <th>Quantity</th>
-                      <th>Per-order limit</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {event.ticketTypes.map((t) => (
-                      <tr key={t.ticketTypeId}>
-                        <td>
-                          <div className="ow-td-title">{t.typeName}</div>
-                          {t.description && (
-                            <div className="ow-td-sub">{t.description}</div>
-                          )}
-                        </td>
-                        <td>{formatPrice(t.price)}</td>
-                        <td>{t.quantity}</td>
-                        <td>
-                          {t.minPerOrder}–{t.maxPerOrder}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <h3>Organizer Images</h3>
+                {event.bannerUrl && <img className="admin-event-banner" src={event.bannerUrl} alt="Event banner" />}
+                <div className="admin-event-gallery">
+                  {(event.images || []).map((image) => <img key={image.imageId} src={image.imageUrl} alt="Organizer upload" />)}
+                </div>
               </section>
             )}
 
-            {event.seatingChart?.zones?.length > 0 && (
-              <section className="ow-section">
-                <h3>Seating Chart</h3>
-                <table className="ow-table">
-                  <thead>
-                    <tr>
-                      <th>Zone</th>
-                      <th>Type</th>
-                      <th>Capacity</th>
-                      <th>Available</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {event.seatingChart.zones.map((z) => (
-                      <tr key={z.seatZoneId}>
-                        <td>{z.zoneName}</td>
-                        <td>{z.zoneType === "Seated" ? "Seated" : "Standing"}</td>
-                        <td>{z.capacity}</td>
-                        <td>{z.availableSeats}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </section>
-            )}
-
-            {event.refundPolicies?.length > 0 && (
-              <section className="ow-section">
-                <h3>Refund Policies</h3>
-                <table className="ow-table">
-                  <thead>
-                    <tr>
-                      <th>Policy</th>
-                      <th>Refund</th>
-                      <th>Deadline</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {event.refundPolicies.map((p) => (
-                      <tr key={p.refundPolicyId}>
-                        <td>
-                          <div className="ow-td-title">{p.policyName}</div>
-                          {p.description && (
-                            <div className="ow-td-sub">{p.description}</div>
-                          )}
-                        </td>
-                        <td>{p.refundPercent}%</td>
-                        <td>{p.deadlineBeforeEventHours} hours before</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </section>
-            )}
+            <section className="ow-section admin-seating-editor">
+              <h3>Seating Chart, Tickets &amp; Pricing</h3>
+              <p className="ow-hint">
+                Full editor — build/edit the seating chart on the canvas,
+                apply or save templates, and configure ticket classes,
+                dynamic pricing and refund policy, the same tools the
+                organizer uses. As Admin you can adjust these regardless of
+                the event's current status.
+              </p>
+              <StepTicketsSeating
+                eventId={Number(id)}
+                event={event}
+                forceEditable
+                standalone
+                onRefresh={load}
+                onSaved={load}
+              />
+            </section>
 
             {canDecide && (
               <div className="ow-actions">
@@ -289,8 +228,6 @@ export default function AdminEventDetailPage() {
           </div>
         )}
       </div>
-
-      <Footer />
-    </div>
+    </AdminShell>
   );
 }

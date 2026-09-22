@@ -8,8 +8,10 @@ import ResetPasswordPage from "../pages/ResetPasswordPage";
 import HomePage from "../pages/HomePage";
 import EventDetailPage from "../pages/EventDetailPage";
 import MyConcertsPage from "../pages/organizer/MyConcertsPage";
+import OrganizerDashboardPage from "../pages/organizer/OrganizerDashboardPage";
 import CreateEventWizard from "../pages/organizer/CreateEventWizard";
 import AdminEventsPage from "../pages/admin/AdminEventsPage";
+import AdminAllEventsPage from "../pages/admin/AdminAllEventsPage";
 import AdminEventDetailPage from "../pages/admin/AdminEventDetailPage";
 import ProtectedRoute from "./ProtectedRoute";
 import AdminLoginPage from "../pages/AdminLoginPage";
@@ -23,6 +25,8 @@ import RequestOrganizerPage from "../pages/RequestOrganizerPage";
 import MyProfilePage from "../pages/MyProfilePage";
 import EditProfilePage from "../pages/EditProfilePage";
 import WishlistManagementPage from "../pages/admin/WishlistManagementPage";
+import EventConfigurationPage from "../pages/organizer/EventConfigurationPage";
+import AdminSeatingTemplatesPage from "../pages/admin/AdminSeatingTemplatesPage";
 
 export default function AppRoutes() {
   return (
@@ -41,9 +45,15 @@ export default function AppRoutes() {
       <Route path="/profile" element={<ProtectedRoute><MyProfilePage /></ProtectedRoute>} />
       <Route path="/profile/edit" element={<ProtectedRoute><EditProfilePage /></ProtectedRoute>} />
 
-      {/* Customer create/edit concert wizard - any logged-in Customer can create
-          a concert without being an Organizer yet; the role is granted once an
-          Admin approves it. */}
+      {/* Any logged-in Customer may create and configure a Draft concert. */}
+      <Route
+        path="/organizer/dashboard"
+        element={
+          <ProtectedRoute>
+            <OrganizerDashboardPage />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/organizer/events"
         element={
@@ -55,7 +65,7 @@ export default function AppRoutes() {
       <Route
         path="/organizer/events/new"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute organizerOnly>
             <CreateEventWizard />
           </ProtectedRoute>
         }
@@ -63,11 +73,14 @@ export default function AppRoutes() {
       <Route
         path="/organizer/events/:id/edit"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute organizerOnly>
             <CreateEventWizard />
           </ProtectedRoute>
         }
       />
+      {[
+        ["seating", "seating"], ["pricing", "pricing"], ["refunds", "refunds"],
+      ].map(([path, section]) => <Route key={path} path={`/organizer/events/:id/${path}`} element={<ProtectedRoute organizerOnly><EventConfigurationPage section={section} /></ProtectedRoute>} />)}
 
       {/* Admin moderation queue - requires the Admin role. */}
       <Route
@@ -75,6 +88,14 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute adminOnly>
             <AdminEventsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/events/all"
+        element={
+          <ProtectedRoute adminOnly>
+            <AdminAllEventsPage />
           </ProtectedRoute>
         }
       />
@@ -140,6 +161,7 @@ export default function AppRoutes() {
         }
       />
       <Route path="/admin/wishlists" element={<AdminRoute><WishlistManagementPage /></AdminRoute>} />
+      <Route path="/admin/seating-templates" element={<AdminRoute><AdminSeatingTemplatesPage /></AdminRoute>} />
     </Routes>
   );
 }

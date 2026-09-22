@@ -24,7 +24,11 @@ export default function LoginPage() {
     try {
       const res = await authApi.login(form);
       login(res.data);
-      navigate("/");
+      const roles = res.data?.roles || res.data?.Roles || [];
+      const isAdmin = roles.some((role) =>
+        String(role?.roleName || role?.name || role).toLowerCase() === "admin"
+      );
+      navigate(isAdmin ? "/admin" : "/");
     } catch (err) {
       setError(err.response?.data?.message || "Login failed. Please try again.");
     } finally {
@@ -40,7 +44,11 @@ export default function LoginPage() {
         idToken: credentialResponse.credential,
       });
       login(res.data);
-      navigate("/");
+      const roles = res.data?.roles || res.data?.Roles || [];
+      const isAdmin = roles.some((role) =>
+        String(role?.roleName || role?.name || role).toLowerCase() === "admin"
+      );
+      navigate(isAdmin ? "/admin" : "/");
     } catch (err) {
       setError(err.response?.data?.message || "Google login failed. Please try again.");
     } finally {

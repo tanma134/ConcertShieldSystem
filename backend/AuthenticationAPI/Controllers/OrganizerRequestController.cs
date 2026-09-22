@@ -52,6 +52,9 @@ namespace AuthenticationAPI.Controllers
             try
             {
                 var result = await _service.GetByIdAsync(requestId);
+                var isAdmin = User.IsInRole("Admin");
+                if (!isAdmin && result.UserId != CurrentUserId)
+                    return Forbid();
                 return Ok(result);
             }
             catch (KeyNotFoundException ex)

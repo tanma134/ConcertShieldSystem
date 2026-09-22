@@ -65,6 +65,9 @@ axiosClient.interceptors.response.use(
         if (res.data.refreshToken) {
           localStorage.setItem("refreshToken", res.data.refreshToken);
         }
+        if (res.data.roles) {
+          localStorage.setItem("roles", JSON.stringify(res.data.roles));
+        }
 
         originalRequest.headers.Authorization = `Bearer ${res.data.accessToken}`;
         return axiosClient(originalRequest);

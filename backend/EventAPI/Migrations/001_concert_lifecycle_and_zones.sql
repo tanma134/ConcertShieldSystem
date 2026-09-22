@@ -96,21 +96,13 @@ AND    z.capacity = 0;
 CREATE INDEX IF NOT EXISTS ix_seat_zones_ticket_type_id ON seat_zones (ticket_type_id);
 
 -- -----------------------------------------------------------------------------
--- 4. ticket_types: resync quantity from the layout
---    Once a layout exists, quantity is DERIVED from zone capacity rather than
---    typed in, which is how the big ticketing platforms avoid seat/quantity drift.
+-- 4. ticket_types: protect names inside one concert.
+--    Quantity remains the organizer's declared quota; zone capacity is checked
+--    against it by SeatingService and must match before submission.
 -- -----------------------------------------------------------------------------
-UPDATE ticket_types t
-SET    quantity = z.total_capacity
-FROM   (
-           SELECT ticket_type_id, SUM(capacity) AS total_capacity
-           FROM   seat_zones
-           GROUP  BY ticket_type_id
-       ) z
-WHERE  t.ticket_type_id = z.ticket_type_id
-AND    z.total_capacity > 0
-AND    z.total_capacity >= t.sold_quantity   -- never shrink below what's sold
-AND    t.quantity <> z.total_capacity;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ticket_types_event_name_active
+ON ticket_types(event_id, lower(trim(type_name)))
+WHERE is_deleted = false;
 
 COMMIT;
 

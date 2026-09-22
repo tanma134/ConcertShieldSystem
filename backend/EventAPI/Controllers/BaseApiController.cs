@@ -20,6 +20,20 @@ namespace EventAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Same as <see cref="CurrentUserId"/> but never throws — for [AllowAnonymous]
+        /// endpoints that still need to recognize an owner/Admin caller when a token
+        /// happens to be present (e.g. viewing a Draft's child data).
+        /// </summary>
+        protected int? CurrentUserIdOrNull
+        {
+            get
+            {
+                var raw = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                return int.TryParse(raw, out var id) ? id : null;
+            }
+        }
+
         protected bool IsAdmin => User.IsInRole("Admin");
 
         protected bool IsOrganizer => User.IsInRole("Organizer");

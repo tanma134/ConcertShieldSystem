@@ -32,13 +32,17 @@ namespace EventAPI.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> GetByEvent(int eventId)
         {
-            var result = await _seatingService.GetByEventIdAsync(eventId);
+            try
+            {
+                var result = await _seatingService.GetByEventIdAsync(eventId, CurrentUserIdOrNull, IsAdmin);
 
-            if (result == null)
-                return Ok(ApiResponseDTO<SeatingChartResponseDTO?>.SuccessResponse(
-                    null, "This concert has no seating chart (general admission)."));
+                if (result == null)
+                    return Ok(ApiResponseDTO<SeatingChartResponseDTO?>.SuccessResponse(
+                        null, "This concert has no seating chart (general admission)."));
 
-            return Ok(ApiResponseDTO<SeatingChartResponseDTO>.SuccessResponse(result));
+                return Ok(ApiResponseDTO<SeatingChartResponseDTO>.SuccessResponse(result));
+            }
+            catch (Exception ex) { return HandleException(ex); }
         }
 
         /// <summary>Zone-level summary with seat counts — no per-seat list.</summary>
@@ -46,13 +50,17 @@ namespace EventAPI.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> GetPreview(int eventId)
         {
-            var result = await _seatingService.GetPreviewAsync(eventId);
+            try
+            {
+                var result = await _seatingService.GetPreviewAsync(eventId, CurrentUserIdOrNull, IsAdmin);
 
-            if (result == null)
-                return Ok(ApiResponseDTO<SeatingChartPreviewDTO?>.SuccessResponse(
-                    null, "This concert has no seating chart (general admission)."));
+                if (result == null)
+                    return Ok(ApiResponseDTO<SeatingChartPreviewDTO?>.SuccessResponse(
+                        null, "This concert has no seating chart (general admission)."));
 
-            return Ok(ApiResponseDTO<SeatingChartPreviewDTO>.SuccessResponse(result));
+                return Ok(ApiResponseDTO<SeatingChartPreviewDTO>.SuccessResponse(result));
+            }
+            catch (Exception ex) { return HandleException(ex); }
         }
 
         /// <summary>
@@ -69,7 +77,7 @@ namespace EventAPI.Controllers
         {
             try
             {
-                var result = await _seatingService.GetZoneSeatsAsync(seatZoneId, availableOnly);
+                var result = await _seatingService.GetZoneSeatsAsync(seatZoneId, CurrentUserIdOrNull, IsAdmin, availableOnly);
                 return Ok(ApiResponseDTO<SeatZoneResponseDTO>.SuccessResponse(result));
             }
             catch (Exception ex) { return HandleException(ex); }
@@ -81,7 +89,7 @@ namespace EventAPI.Controllers
         /// Sets HasSeatingChart = true.
         /// </summary>
         [HttpPost("event/{eventId:int}")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Build(int eventId, [FromBody] BuildSeatingChartDTO dto)
         {
             try
@@ -96,7 +104,7 @@ namespace EventAPI.Controllers
 
         /// <summary>Adds one more zone (and its seats) to an existing chart.</summary>
         [HttpPost("event/{eventId:int}/zones")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> AddZone(int eventId, [FromBody] CreateSeatZoneDTO dto)
         {
             try
@@ -113,7 +121,7 @@ namespace EventAPI.Controllers
         /// Re-linking is refused once any seat in the zone is held/reserved/sold.
         /// </summary>
         [HttpPut("zones/{seatZoneId:int}")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> UpdateZone(int seatZoneId, [FromBody] UpdateSeatZoneDTO dto)
         {
             try
@@ -126,7 +134,7 @@ namespace EventAPI.Controllers
 
         /// <summary>Deletes a zone and all of its seats. Refused if any seat is taken.</summary>
         [HttpDelete("zones/{seatZoneId:int}")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> DeleteZone(int seatZoneId)
         {
             try
@@ -142,7 +150,7 @@ namespace EventAPI.Controllers
         /// admission (HasSeatingChart = false).
         /// </summary>
         [HttpDelete("event/{eventId:int}")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Delete(int eventId)
         {
             try

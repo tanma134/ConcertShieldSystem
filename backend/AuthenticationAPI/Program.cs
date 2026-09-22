@@ -132,7 +132,7 @@ using (var scope = app.Services.CreateScope())
         }
 
         // "Organizer" is granted additively (customer keeps Customer + gains Organizer)
-        // once EventAPI approves their first concert — see UserController.AddRole.
+        // when an organizer request is approved.
         if (!context.Roles.Any(r => r.RoleName == "Organizer"))
         {
             context.Roles.Add(new Role { RoleName = "Organizer" });
@@ -154,7 +154,9 @@ using (var scope = app.Services.CreateScope())
                 IsVerified = true,
                 IsActive = true,
                 EkycStatus = "NotSubmitted",
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                AuthProvider = "local",
+                HasPassword = true
             };
 
             context.Users.Add(admin);
@@ -182,6 +184,27 @@ using (var scope = app.Services.CreateScope())
         // Dev/test convenience account so the Create-Concert flow can be exercised
         // end-to-end via Swagger without needing a live SMTP server for email OTP.
         var customerRole = context.Roles.First(r => r.RoleName == "Customer");
+        var legacyUserRole = context.Roles.FirstOrDefault(r => r.RoleName == "User");
+        if (legacyUserRole != null)
+        {
+            var legacyCustomerIds = context.UserRoles
+                .Where(ur => ur.RoleId == legacyUserRole.RoleId)
+                .Select(ur => ur.UserId)
+                .ToList();
+            var alreadyCustomerIds = context.UserRoles
+                .Where(ur => ur.RoleId == customerRole.RoleId)
+                .Select(ur => ur.UserId)
+                .ToHashSet();
+            context.UserRoles.AddRange(legacyCustomerIds
+                .Where(id => !alreadyCustomerIds.Contains(id))
+                .Select(id => new UserRole
+                {
+                    UserId = id,
+                    RoleId = customerRole.RoleId,
+                    AssignedAt = DateTime.UtcNow
+                }));
+            context.SaveChanges();
+        }
         var testCustomerEmail = "customer@ticketbox.com";
 
         if (!context.Users.Any(u => u.Email == testCustomerEmail))
@@ -195,7 +218,9 @@ using (var scope = app.Services.CreateScope())
                 IsVerified = true,
                 IsActive = true,
                 EkycStatus = "NotSubmitted",
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                AuthProvider = "local",
+                HasPassword = true
             };
 
             context.Users.Add(customer);
@@ -214,6 +239,34 @@ using (var scope = app.Services.CreateScope())
             Console.WriteLine($"    Email:    {testCustomerEmail}");
             Console.WriteLine($"    Password: Customer@123");
             Console.WriteLine("========================================");
+        }
+
+        var organizerRole = context.Roles.First(r => r.RoleName == "Organizer");
+        var testOrganizerEmail = "organizer@ticketbox.com";
+        if (!context.Users.Any(u => u.Email == testOrganizerEmail))
+        {
+            var organizer = new User
+            {
+                Email = testOrganizerEmail,
+                FullName = "Test Organizer",
+                PhoneNumber = "0977777777",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Organizer@123"),
+                IsVerified = true,
+                IsActive = true,
+                EkycStatus = "NotSubmitted",
+                CreatedAt = DateTime.UtcNow,
+                AuthProvider = "local",
+                HasPassword = true
+            };
+
+            context.Users.Add(organizer);
+            context.SaveChanges();
+            context.UserRoles.AddRange(
+                new UserRole { UserId = organizer.UserId, RoleId = customerRole.RoleId, AssignedAt = DateTime.UtcNow },
+                new UserRole { UserId = organizer.UserId, RoleId = organizerRole.RoleId, AssignedAt = DateTime.UtcNow });
+            context.SaveChanges();
+
+            Console.WriteLine("TEST ORGANIZER ACCOUNT CREATED: organizer@ticketbox.com / Organizer@123");
         }
     }
     catch (Exception ex)

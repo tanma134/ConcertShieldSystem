@@ -417,7 +417,63 @@
       }
     },
     {
-      "Key": "organizer-request-approve",
+      "Key": "organizer-request-mine",
+      "DownstreamPathTemplate": "/api/organizer-requests/me",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7058
+        }
+      ],
+      "UpstreamPathTemplate": "/api/organizer-requests/me",
+      "UpstreamHttpMethod": [
+        "Get"
+      ],
+      "Priority": 10,
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
+    },
+    {
+      "Key": "organizer-request-detail",
+      "DownstreamPathTemplate": "/api/organizer-requests/{id}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7058
+        }
+      ],
+      "UpstreamPathTemplate": "/api/organizer-requests/{id}",
+      "UpstreamHttpMethod": [
+        "Get"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
+    },
+    {
+      "Key": "organizer-request-review",
+      "DownstreamPathTemplate": "/api/organizer-requests/{id}/review",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7058
+        }
+      ],
+      "UpstreamPathTemplate": "/api/organizer-requests/{id}/review",
+      "UpstreamHttpMethod": [
+        "Put"
+      ],
+      "Priority": 10,
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
+    },
+    {
+      "Key": "organizer-request-approve-legacy",
       "DownstreamPathTemplate": "/api/organizer-requests/{id}/approve",
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
@@ -609,6 +665,24 @@
         }
       ],
       "UpstreamPathTemplate": "/api/system-health",
+      "UpstreamHttpMethod": [
+        "Get"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
+    },
+    {
+      "Key": "event-slug-availability",
+      "DownstreamPathTemplate": "/api/events/slug-availability",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7289
+        }
+      ],
+      "UpstreamPathTemplate": "/api/events/slug-availability",
       "UpstreamHttpMethod": [
         "Get"
       ],
@@ -2638,6 +2712,25 @@
       }
     },
     {
+      "Key": "event-admin-list",
+      "DownstreamPathTemplate": "/api/events/admin",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7289
+        }
+      ],
+      "UpstreamPathTemplate": "/api/events/admin",
+      "UpstreamHttpMethod": [
+        "Get"
+      ],
+      "Priority": 10,
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
+    },
+    {
       "Key": "event-admin-detail",
       "DownstreamPathTemplate": "/api/events/admin/{id}",
       "DownstreamScheme": "https",
@@ -2965,6 +3058,110 @@
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer"
       }
+    },
+    {
+      "Key": "seating-templates-list-create",
+      "DownstreamPathTemplate": "/api/seating-templates",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7289
+        }
+      ],
+      "UpstreamPathTemplate": "/api/seating-templates",
+      "UpstreamHttpMethod": [
+        "Get",
+        "Post"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
+    },
+    {
+      "Key": "seating-templates-save-from-event",
+      "DownstreamPathTemplate": "/api/seating-templates/from-event",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7289
+        }
+      ],
+      "UpstreamPathTemplate": "/api/seating-templates/from-event",
+      "UpstreamHttpMethod": [
+        "Post"
+      ],
+      "Priority": 10,
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
+    },
+    {
+      "Key": "seating-templates-detail",
+      "DownstreamPathTemplate": "/api/seating-templates/{id}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7289
+        }
+      ],
+      "UpstreamPathTemplate": "/api/seating-templates/{id}",
+      "UpstreamHttpMethod": [
+        "Get",
+        "Put",
+        "Delete"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
+    },
+    {
+      "Key": "seating-templates-apply",
+      "DownstreamPathTemplate": "/api/seating-templates/{templateId}/apply/{eventId}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7289
+        }
+      ],
+      "UpstreamPathTemplate": "/api/seating-templates/{templateId}/apply/{eventId}",
+      "UpstreamHttpMethod": [
+        "Post"
+      ],
+      "Priority": 10,
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
+    },
+    {
+      "Key": "pricing-rules-by-ticket-type",
+      "DownstreamPathTemplate": "/api/pricingrules/tickettype/{ticketTypeId}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [{ "Host": "localhost", "Port": 7289 }],
+      "UpstreamPathTemplate": "/api/pricingrules/tickettype/{ticketTypeId}",
+      "UpstreamHttpMethod": ["Get"],
+      "Priority": 10
+    },
+    {
+      "Key": "pricing-rules-create",
+      "DownstreamPathTemplate": "/api/pricingrules",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [{ "Host": "localhost", "Port": 7289 }],
+      "UpstreamPathTemplate": "/api/pricingrules",
+      "UpstreamHttpMethod": ["Post"],
+      "AuthenticationOptions": { "AuthenticationProviderKey": "Bearer" }
+    },
+    {
+      "Key": "pricing-rules-detail",
+      "DownstreamPathTemplate": "/api/pricingrules/{id}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [{ "Host": "localhost", "Port": 7289 }],
+      "UpstreamPathTemplate": "/api/pricingrules/{id}",
+      "UpstreamHttpMethod": ["Put", "Delete"],
+      "AuthenticationOptions": { "AuthenticationProviderKey": "Bearer" }
     },
     {
       "Key": "identity-users-assign-roles",

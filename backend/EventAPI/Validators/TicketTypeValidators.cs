@@ -31,6 +31,46 @@ namespace EventAPI.Validators
         }
     }
 
+    public class UpdateTicketTypeValidator : AbstractValidator<UpdateTicketTypeDTO>
+    {
+        public UpdateTicketTypeValidator()
+        {
+            RuleFor(x => x.TypeName)
+                .NotEmpty().WithMessage("Ticket type name cannot be blank")
+                .MaximumLength(100)
+                .When(x => x.TypeName != null);
+
+            RuleFor(x => x.Price)
+                .GreaterThanOrEqualTo(0).WithMessage("Price must be >= 0")
+                .When(x => x.Price.HasValue);
+
+            RuleFor(x => x.Quantity)
+                .GreaterThan(0).WithMessage("Quantity must be > 0")
+                .When(x => x.Quantity.HasValue);
+
+            RuleFor(x => x.MinPerOrder)
+                .GreaterThan(0).WithMessage("MinPerOrder must be > 0")
+                .When(x => x.MinPerOrder.HasValue);
+
+            RuleFor(x => x.MaxPerOrder)
+                .GreaterThan(0).WithMessage("MaxPerOrder must be > 0")
+                .When(x => x.MaxPerOrder.HasValue);
+
+            // Cross-field checks that only make sense when both sides of the pair
+            // are present in this request; when only one side changes, the service
+            // re-checks the pair against the persisted entity after applying it.
+            RuleFor(x => x)
+                .Must(x => x.MaxPerOrder!.Value >= x.MinPerOrder!.Value)
+                .WithMessage("MaxPerOrder must be >= MinPerOrder")
+                .When(x => x.MinPerOrder.HasValue && x.MaxPerOrder.HasValue);
+
+            RuleFor(x => x)
+                .Must(x => x.SalesEndsAt!.Value > x.SalesStartsAt!.Value)
+                .WithMessage("Sales end must be after sales start")
+                .When(x => x.SalesStartsAt.HasValue && x.SalesEndsAt.HasValue);
+        }
+    }
+
     public class CreatePricingRuleValidator : AbstractValidator<CreatePricingRuleDTO>
     {
         private static readonly string[] ValidRuleTypes = { "EarlyBird", "LastMinute", "QuantityBased", "TimeBased" };

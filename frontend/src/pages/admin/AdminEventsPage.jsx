@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import Header from "../../components/Header";
-import Footer from "../../components/Footer";
+import AdminShell from "./AdminShell";
 import eventApi from "../../api/eventApi";
 import { formatDateRange, formatPrice } from "../../utils/format";
 import "../organizer/OrganizerWizard.css";
@@ -41,10 +40,8 @@ export default function AdminEventsPage() {
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   return (
-    <div className="tb-app">
-      <Header />
-
-      <div className="tb-container ow-wrap">
+    <AdminShell title="Event Approvals">
+      <div className="ow-wrap">
         <div className="ow-head">
           <div>
             <h1>Event Moderation</h1>
@@ -71,7 +68,7 @@ export default function AdminEventsPage() {
                   <th>Event</th>
                   <th>City</th>
                   <th>Dates</th>
-                  <th>Tickets</th>
+                  <th>Capacity</th>
                   <th>From</th>
                   <th>Submitted</th>
                   <th></th>
@@ -147,8 +144,6 @@ export default function AdminEventsPage() {
           </>
         )}
       </div>
-
-      <Footer />
-    </div>
+    </AdminShell>
   );
 }

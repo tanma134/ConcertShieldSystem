@@ -177,6 +177,38 @@ namespace AuthenticationAPI.Services
             return (true, "Role assigned successfully.", refreshedUser == null ? null : MapToUserDto(refreshedUser));
         }
 
+        public async Task<(bool Success, string Message, UserDTO? Data)> AddRoleAsync(int userId, string roleName)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+                return (false, "User not found.", null);
+
+            var normalizedRoleName = roleName?.Trim();
+            if (string.IsNullOrWhiteSpace(normalizedRoleName))
+                return (false, "RoleName is required.", null);
+
+            if (!normalizedRoleName.Equals("Organizer", StringComparison.OrdinalIgnoreCase))
+                return (false, "This workflow may only grant the Organizer role.", null);
+
+            var role = await _userRepository.GetRoleByNameAsync(normalizedRoleName);
+            if (role == null)
+                return (false, $"Role '{normalizedRoleName}' not found.", null);
+
+            if (await _userRepository.UserHasRoleAsync(userId, role.RoleId))
+                return (true, "User already has this role.", MapToUserDto(user));
+
+            await _userRepository.AddUserRoleAsync(new Models.UserRole
+            {
+                UserId = userId,
+                RoleId = role.RoleId,
+                AssignedAt = DateTime.UtcNow
+            });
+            await _userRepository.SaveChangesAsync();
+
+            var refreshedUser = await _userRepository.GetByIdAsync(userId);
+            return (true, "Role granted successfully.", refreshedUser == null ? null : MapToUserDto(refreshedUser));
+        }
+
         private static UserDTO MapToUserDto(User user)
         {
             var roles = user.UserRoles

@@ -208,9 +208,8 @@ namespace EventAPI.Services
                         }
                     }
 
-                    // Quantity is DERIVED from the layout (SeatingService keeps it in
-                    // sync), so we only need to confirm every ticket type is actually
-                    // placed somewhere — a type with no zone could never be fulfilled.
+                    // Ticket quantity is the declared quota. Zones may be built in
+                    // several passes, but at submission their total capacity must match.
                     foreach (var t in ticketTypes)
                     {
                         var zones = seatMap.SeatZones.Where(z => z.TicketTypeId == t.TicketTypeId).ToList();
@@ -232,7 +231,7 @@ namespace EventAPI.Services
                         {
                             result.Errors.Add(
                                 $"Ticket type '{t.TypeName}': quantity is {t.Quantity} but its zones hold {capacity}. " +
-                                "Re-save the layout to resync (quantity is derived from the zones).");
+                                "Adjust the zone capacity or ticket quantity so they match.");
                         }
                     }
 
