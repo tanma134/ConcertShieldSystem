@@ -22,6 +22,7 @@ namespace EventAPI.Repositories
 
         Task AddSeatsAsync(List<Seat> seats);
         Task DeleteSeatsByZoneAsync(int seatZoneId);
+        Task ReplaceSeatsAsync(int seatZoneId, List<Seat> seats, int capacity);
 
         /// <summary>Counts seats in a zone that are not Available (held/reserved/sold).</summary>
         Task<int> CountOccupiedSeatsAsync(int seatZoneId);

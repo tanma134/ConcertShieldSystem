@@ -10,6 +10,9 @@ namespace EventAPI.DTOs
 
         public string? LayoutJson { get; set; }
 
+        [MaxLength(30)]
+        public string? SeatingMode { get; set; }
+
         public List<CreateSeatZoneDTO> Zones { get; set; } = new();
     }
 
@@ -63,6 +66,13 @@ namespace EventAPI.DTOs
         /// and re-adding the zone, so seat labels stay consistent.
         /// </summary>
         public int? Capacity { get; set; }
+
+        /// <summary>Seated zones: regenerate the grid when no seat is held or sold.</summary>
+        public int? Rows { get; set; }
+        public int? SeatsPerRow { get; set; }
+
+        [MaxLength(3)]
+        public string? RowLabelPrefix { get; set; }
     }
 
     public class SeatingChartResponseDTO
@@ -71,6 +81,7 @@ namespace EventAPI.DTOs
         public int EventId { get; set; }
         public string Name { get; set; } = null!;
         public string? LayoutJson { get; set; }
+        public string SeatingMode { get; set; } = Common.SeatingMode.ReservedSeating;
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public List<SeatZoneResponseDTO> Zones { get; set; } = new();

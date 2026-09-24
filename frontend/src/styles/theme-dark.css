@@ -1,5 +1,10 @@
 /* Theme "đen tím hồng" dùng cho toàn bộ site ConcertShield */
-.tb-app {
+/*
+ * Biến --tb-* được khai báo ở :root để MỌI khu vực (kể cả admin, vốn không
+ * bọc trong .tb-app) đều đọc được — trước đây các trang admin dùng
+ * var(--tb-*) nhưng không có .tb-app cha nên biến rỗng, nút mất màu/mất viền.
+ */
+:root {
   --tb-bg: #0a0812;
   --tb-bg-alt: #120e1c;
   --tb-surface: #171223;
@@ -14,7 +19,9 @@
   --tb-primary-light: rgba(192, 38, 211, 0.14);
   --tb-gradient: linear-gradient(135deg, #7c3aed 0%, #c026d3 55%, #ec4899 100%);
   --tb-price: #fbbf24;
+}
 
+.tb-app {
   width: 100%;
   min-height: 100vh;
   background:

@@ -9,17 +9,21 @@ namespace EventAPI.Services
     {
         private readonly IRefundPolicyRepository _refundPolicyRepository;
         private readonly IEventRepository _eventRepository;
+        private readonly IEventAccessService _eventAccessService;
 
         public RefundPolicyService(
             IRefundPolicyRepository refundPolicyRepository,
-            IEventRepository eventRepository)
+            IEventRepository eventRepository,
+            IEventAccessService eventAccessService)
         {
             _refundPolicyRepository = refundPolicyRepository;
             _eventRepository = eventRepository;
+            _eventAccessService = eventAccessService;
         }
 
-        public async Task<List<RefundPolicyResponseDTO>> GetByEventIdAsync(int eventId)
+        public async Task<List<RefundPolicyResponseDTO>> GetByEventIdAsync(int eventId, int? callerId, bool isAdmin)
         {
+            await _eventAccessService.EnsureVisibleAsync(eventId, callerId, isAdmin);
             var items = await _refundPolicyRepository.GetByEventIdAsync(eventId);
             return items.Select(Map).ToList();
         }

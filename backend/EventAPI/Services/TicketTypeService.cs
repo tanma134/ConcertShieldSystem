@@ -10,6 +10,7 @@ namespace EventAPI.Services
         private readonly ITicketTypeRepository _ticketTypeRepository;
         private readonly IEventRepository _eventRepository;
         private readonly ISeatingRepository _seatingRepository;
+        private readonly IEventAccessService _eventAccessService;
 
         // Ticket types can't be edited once the event has entered final states.
         private static readonly string[] LockedEventStatuses = { EventStatus.Cancelled };
@@ -17,15 +18,21 @@ namespace EventAPI.Services
         public TicketTypeService(
             ITicketTypeRepository ticketTypeRepository,
             IEventRepository eventRepository,
-            ISeatingRepository seatingRepository)
+            ISeatingRepository seatingRepository,
+            IEventAccessService eventAccessService)
         {
             _ticketTypeRepository = ticketTypeRepository;
             _eventRepository = eventRepository;
             _seatingRepository = seatingRepository;
+            _eventAccessService = eventAccessService;
         }
 
-        public async Task<List<TicketTypeResponseDTO>> GetByEventIdAsync(int eventId)
+        public async Task<List<TicketTypeResponseDTO>> GetByEventIdAsync(int eventId, int? callerId, bool isAdmin)
         {
+            // Draft/Pending/Rejected/Cancelled ticket types are the owner's/Admin's
+            // business only — a guessed eventId must not leak them.
+            await _eventAccessService.EnsureVisibleAsync(eventId, callerId, isAdmin);
+
             var items = await _ticketTypeRepository.GetByEventIdAsync(eventId);
             return items.Select(Map).ToList();
         }
@@ -34,19 +41,18 @@ namespace EventAPI.Services
         {
             var ev = await GetOwnedEventAsync(eventId, callerId, isAdmin);
 
-            // With a layout present, capacity comes from the zones, so a new ticket
-            // type starts at 0 and is filled in when it gets placed in a zone.
-            var hasLayout = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: false) != null;
-            var quantity = hasLayout ? 0 : dto.Quantity;
+            if (await _ticketTypeRepository.ExistsNameAsync(eventId, dto.TypeName))
+                throw new InvalidOperationException(
+                    $"A ticket type named '{dto.TypeName.Trim()}' already exists for this concert.");
 
             var entity = new TicketType
             {
                 EventId = eventId,
-                TypeName = dto.TypeName,
+                TypeName = dto.TypeName.Trim(),
                 Description = dto.Description,
                 Price = dto.Price,
                 OriginalPrice = dto.OriginalPrice,
-                Quantity = quantity,
+                Quantity = dto.Quantity,
                 MinPerOrder = dto.MinPerOrder,
                 MaxPerOrder = dto.MaxPerOrder,
                 ColorCode = dto.ColorCode,
@@ -67,9 +73,15 @@ namespace EventAPI.Services
             var entity = await _ticketTypeRepository.GetByIdAsync(ticketTypeId)
                 ?? throw new KeyNotFoundException($"TicketType {ticketTypeId} not found.");
 
-            await GetOwnedEventAsync(entity.EventId, callerId, isAdmin);
+            var parentEvent = await GetOwnedEventAsync(entity.EventId, callerId, isAdmin);
 
-            if (dto.TypeName != null) entity.TypeName = dto.TypeName;
+            if (dto.TypeName != null)
+            {
+                if (await _ticketTypeRepository.ExistsNameAsync(entity.EventId, dto.TypeName, ticketTypeId))
+                    throw new InvalidOperationException(
+                        $"A ticket type named '{dto.TypeName.Trim()}' already exists for this concert.");
+                entity.TypeName = dto.TypeName.Trim();
+            }
             if (dto.Description != null) entity.Description = dto.Description;
             if (dto.Price.HasValue) entity.Price = dto.Price.Value;
             if (dto.OriginalPrice.HasValue) entity.OriginalPrice = dto.OriginalPrice;
@@ -79,8 +91,7 @@ namespace EventAPI.Services
 
                 if (placedInLayout)
                     throw new InvalidOperationException(
-                        $"Quantity for '{entity.TypeName}' is derived from the seating layout and cannot be set by hand. " +
-                        "Change the zone's rows/seats or its standing capacity instead.");
+                        "Quantity is managed by seating-zone capacity. Edit the linked zones instead.");
 
                 entity.Quantity = dto.Quantity.Value;
             }
@@ -94,6 +105,21 @@ namespace EventAPI.Services
 
             if (entity.Quantity < entity.SoldQuantity)
                 throw new InvalidOperationException("Quantity cannot be less than the number already sold.");
+
+            // Re-check cross-field rules against the FINAL entity state: the DTO
+            // validator only catches a bad pair when both sides are sent together,
+            // but a partial update (e.g. only MinPerOrder) can just as easily break
+            // the pair against the value already stored on the entity.
+            if (entity.MaxPerOrder < entity.MinPerOrder)
+                throw new InvalidOperationException("MaxPerOrder must be >= MinPerOrder.");
+
+            if (entity.SalesStartsAt.HasValue && entity.SalesEndsAt.HasValue &&
+                entity.SalesEndsAt <= entity.SalesStartsAt)
+                throw new InvalidOperationException("SalesEndsAt must be after SalesStartsAt.");
+
+            if (entity.SalesEndsAt.HasValue && parentEvent.EndsAt != default &&
+                entity.SalesEndsAt > parentEvent.EndsAt)
+                throw new InvalidOperationException("Ticket sales cannot end after the concert ends.");
 
             await _ticketTypeRepository.UpdateAsync(entity);
             return Map(entity);

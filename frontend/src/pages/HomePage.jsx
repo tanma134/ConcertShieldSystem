@@ -46,7 +46,9 @@ export default function HomePage() {
 
     const filter = {
       page: 1,
-      pageSize: q ? 12 : 6,
+      // The home page is the public catalogue, so a newly approved concert
+      // must not disappear merely because it falls after the first six rows.
+      pageSize: 100,
       sortBy: "StartsAt",
       sortOrder: "asc",
     };

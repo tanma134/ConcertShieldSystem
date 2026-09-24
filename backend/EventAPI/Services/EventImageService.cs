@@ -10,18 +10,25 @@ namespace EventAPI.Services
         private readonly IEventImageRepository _imageRepository;
         private readonly IEventRepository _eventRepository;
         private readonly ICloudinaryService _cloudinary;
+        private readonly IEventAccessService _eventAccessService;
 
         private const int MaxImagesPerEvent = 20;
 
-        public EventImageService(IEventImageRepository imageRepository, IEventRepository eventRepository, ICloudinaryService cloudinary)
+        public EventImageService(
+            IEventImageRepository imageRepository,
+            IEventRepository eventRepository,
+            ICloudinaryService cloudinary,
+            IEventAccessService eventAccessService)
         {
             _imageRepository = imageRepository;
             _eventRepository = eventRepository;
             _cloudinary = cloudinary;
+            _eventAccessService = eventAccessService;
         }
 
-        public async Task<List<EventImageResponseDTO>> GetByEventIdAsync(int eventId)
+        public async Task<List<EventImageResponseDTO>> GetByEventIdAsync(int eventId, int? callerId, bool isAdmin)
         {
+            await _eventAccessService.EnsureVisibleAsync(eventId, callerId, isAdmin);
             var items = await _imageRepository.GetByEventIdAsync(eventId);
             return items.Select(Map).ToList();
         }

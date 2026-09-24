@@ -13,7 +13,7 @@ const POPULAR_SEARCHES = ["Live Music", "EDM Festival", "K-Pop", "Jazz Night", "
 
 export default function Header() {
   const navigate = useNavigate();
-  const { user, logout, isAuthenticated, isAdmin } = useAuth();
+  const { user, logout, isAuthenticated, isAdmin, isOrganizer } = useAuth();
   const [searchParams] = useSearchParams();
   const [keyword, setKeyword] = useState(searchParams.get("q") || "");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -199,7 +199,8 @@ export default function Header() {
         </div>
 
         <div className="tb-header-actions">
-          {isAuthenticated && (
+          {/* Organizer: Create Event button */}
+          {isAuthenticated && !isAdmin && isOrganizer && (
             <button
               type="button"
               className="tb-btn tb-btn-outline tb-create-btn"
@@ -217,9 +218,30 @@ export default function Header() {
             </button>
           )}
 
-          {isAuthenticated && (
-            <Link to="/organizer/events" className="tb-header-link">
-              My Concerts
+          {/* Customer (no organizer role): Become Organizer button */}
+          {isAuthenticated && !isAdmin && !isOrganizer && (
+            <button
+              type="button"
+              className="tb-btn tb-btn-outline tb-become-org-btn"
+              onClick={() => navigate("/organizer/request")}
+            >
+              <svg viewBox="0 0 20 20" width="15" height="15" fill="none">
+                <path
+                  d="M10 3a7 7 0 1 1 0 14A7 7 0 0 1 10 3Zm0 4v3.5l2.5 1.5"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span>Become Organizer</span>
+            </button>
+          )}
+
+          {/* Organizer: Dashboard link */}
+          {isAuthenticated && !isAdmin && isOrganizer && (
+            <Link to="/organizer/dashboard" className="tb-header-link">
+              Dashboard
             </Link>
           )}
 
@@ -230,7 +252,7 @@ export default function Header() {
           )}
 
           {isAdmin && (
-            <Link to="/admin/events" className="tb-header-link">
+            <Link to="/admin" className="tb-header-link">
               Admin
             </Link>
           )}

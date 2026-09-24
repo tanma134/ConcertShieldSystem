@@ -8,6 +8,9 @@ namespace EventAPI.DTOs
         [MaxLength(200)]
         public string Title { get; set; } = null!;
 
+        [MaxLength(250)]
+        public string? Slug { get; set; }
+
         [MaxLength(500)]
         public string? ShortDescription { get; set; }
 
@@ -35,6 +38,10 @@ namespace EventAPI.DTOs
         public string Timezone { get; set; } = "SE Asia Standard Time";
 
         public bool HasSeatingChart { get; set; } = false;
+
+        [MaxLength(30)]
+        public string SeatingMode { get; set; } = Common.SeatingMode.ReservedSeating;
+
         public bool RequiresVirtualQueue { get; set; } = false;
 
         public int? MinTicketsPerAccount { get; set; }
@@ -51,6 +58,9 @@ namespace EventAPI.DTOs
     {
         [MaxLength(200)]
         public string? Title { get; set; }
+
+        [MaxLength(250)]
+        public string? Slug { get; set; }
 
         [MaxLength(500)]
         public string? ShortDescription { get; set; }
@@ -75,7 +85,13 @@ namespace EventAPI.DTOs
         [MaxLength(50)]
         public string? Timezone { get; set; }
 
-        public bool? HasSeatingChart { get; set; }
+        [MaxLength(30)]
+        public string? SeatingMode { get; set; }
+
+        // HasSeatingChart is intentionally NOT editable here: SeatingService owns it
+        // exclusively (set true by BuildAsync once a real layout exists, set false by
+        // DeleteAsync when the chart is removed). Letting a generic Update flip it by
+        // hand could desync it from whether a seat_maps row actually exists.
         public bool? RequiresVirtualQueue { get; set; }
 
         public int? MinTicketsPerAccount { get; set; }

@@ -32,12 +32,16 @@ namespace EventAPI.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> GetByEvent(int eventId)
         {
-            var result = await _refundPolicyService.GetByEventIdAsync(eventId);
-            return Ok(ApiResponseDTO<List<RefundPolicyResponseDTO>>.SuccessResponse(result));
+            try
+            {
+                var result = await _refundPolicyService.GetByEventIdAsync(eventId, CurrentUserIdOrNull, IsAdmin);
+                return Ok(ApiResponseDTO<List<RefundPolicyResponseDTO>>.SuccessResponse(result));
+            }
+            catch (Exception ex) { return HandleException(ex); }
         }
 
         [HttpPost("event/{eventId:int}")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Create(int eventId, [FromBody] CreateRefundPolicyDTO dto)
         {
             var validation = await _createValidator.ValidateAsync(dto);
@@ -55,7 +59,7 @@ namespace EventAPI.Controllers
         }
 
         [HttpPut("{id:int}")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateRefundPolicyDTO dto)
         {
             try
@@ -67,7 +71,7 @@ namespace EventAPI.Controllers
         }
 
         [HttpDelete("{id:int}")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Delete(int id)
         {
             try

@@ -5,16 +5,16 @@ namespace EventAPI.Services
     public interface ISeatingService
     {
         /// <summary>Full chart with every zone and seat. Null when the concert is general admission.</summary>
-        Task<SeatingChartResponseDTO?> GetByEventIdAsync(int eventId);
+        Task<SeatingChartResponseDTO?> GetByEventIdAsync(int eventId, int? callerId, bool isAdmin);
 
         /// <summary>Lightweight summary (counts per zone, no seat list) for cards and previews.</summary>
-        Task<SeatingChartPreviewDTO?> GetPreviewAsync(int eventId);
+        Task<SeatingChartPreviewDTO?> GetPreviewAsync(int eventId, int? callerId, bool isAdmin);
 
         /// <summary>
         /// The seats of one Seated zone, for the buyer's seat-picker. Throws for a
         /// Standing zone, which has no individual seats to choose.
         /// </summary>
-        Task<SeatZoneResponseDTO> GetZoneSeatsAsync(int seatZoneId, bool availableOnly = false);
+        Task<SeatZoneResponseDTO> GetZoneSeatsAsync(int seatZoneId, int? callerId, bool isAdmin, bool availableOnly = false);
 
         /// <summary>
         /// Creates or replaces the concert's seating chart and generates every seat

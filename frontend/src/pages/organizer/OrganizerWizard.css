@@ -13,6 +13,9 @@
 .ow-head h1 {
   font-size: 24px;
   margin: 0 0 6px;
+  /* index.css set mau h1/h2 mac dinh gan den cho theme sang; can override
+     o day (dung o ca cac trang admin va organizer wizard). */
+  color: var(--tb-text);
 }
 
 .ow-sub {
@@ -138,6 +141,7 @@
 .ow-step-body h2 {
   font-size: 18px;
   margin: 0 0 18px;
+  color: var(--tb-text);
 }
 
 .ow-error {
@@ -756,4 +760,77 @@
   .ow-step {
     flex: 1 1 45%;
   }
+}
+
+/* ===== Seating templates (UC_26.2 / UC_26.3) ===== */
+
+.ow-template-bar {
+  margin: 10px 0 16px;
+}
+
+.ow-capacity-ok {
+  color: #4ade80;
+  font-weight: 700;
+}
+
+.ow-capacity-warning {
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+.ow-template-bar-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.ow-template-picker {
+  background: var(--tb-surface-2);
+  border: 1px solid var(--tb-border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 10px;
+}
+
+.ow-template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.ow-template-card {
+  text-align: left;
+  background: var(--tb-surface);
+  border: 1px solid var(--tb-border);
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.ow-template-card:hover {
+  border-color: var(--tb-primary-2);
+  transform: translateY(-1px);
+}
+
+.ow-template-card-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ow-template-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.18);
+  color: #3b82f6;
+}
+
+.ow-template-mapping {
+  margin-top: 4px;
 }

@@ -15,13 +15,12 @@ function toLocalInput(iso) {
 
 const emptyForm = {
   title: "",
+  slug: "",
   shortDescription: "",
   description: "",
   locationName: "",
   address: "",
   city: "",
-  latitude: "",
-  longitude: "",
   startsAt: "",
   endsAt: "",
   minTicketsPerAccount: "",
@@ -35,6 +34,8 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
   const [showSeo, setShowSeo] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [touched, setTouched] = useState({});
+  const [slugState, setSlugState] = useState({ checking: false, available: null, suggestion: "" });
 
   const readOnly = event && !["Draft", "Rejected"].includes(event.status);
 
@@ -42,13 +43,12 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
     if (!event) return;
     setForm({
       title: event.title || "",
+      slug: event.slug || "",
       shortDescription: event.shortDescription || "",
       description: event.description || "",
       locationName: event.locationName || "",
       address: event.address || "",
       city: event.city || "",
-      latitude: event.latitude ?? "",
-      longitude: event.longitude ?? "",
       startsAt: toLocalInput(event.startsAt),
       endsAt: toLocalInput(event.endsAt),
       minTicketsPerAccount: event.minTicketsPerAccount ?? "",
@@ -61,7 +61,33 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
+    setTouched((current) => ({ ...current, [name]: true }));
   };
+
+  const normalizeSlug = (value) => value
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[đĐ]/g, "d").toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "").replace(/[\s-]+/g, "-").replace(/^-|-$/g, "")
+    .slice(0, 200);
+
+  useEffect(() => {
+    const slug = normalizeSlug(form.slug || form.title);
+    if (slug.length < 3) {
+      setSlugState({ checking: false, available: null, suggestion: "" });
+      return undefined;
+    }
+    const timer = window.setTimeout(async () => {
+      setSlugState((s) => ({ ...s, checking: true }));
+      try {
+        const res = await eventApi.checkSlug(slug, eventId);
+        const data = res.data?.data;
+        setSlugState({ checking: false, available: !!data?.available, suggestion: data?.suggestion || "" });
+      } catch {
+        setSlugState({ checking: false, available: null, suggestion: "" });
+      }
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [form.slug, form.title, eventId]);
 
   // Dynamic validation: recompute the moment the start/end date changes,
   // instead of waiting until Save is clicked to surface an error.
@@ -73,16 +99,35 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
     return "";
   }, [form.startsAt, form.endsAt]);
 
+  const fieldErrors = useMemo(() => {
+    const errors = {};
+    if (touched.title && !form.title.trim()) errors.title = "Event name is required.";
+    const normalizedSlug = normalizeSlug(form.slug || form.title);
+    if ((touched.slug || touched.title) && normalizedSlug.length < 3) errors.slug = "Slug must contain at least 3 characters.";
+    else if (slugState.available === false) errors.slug = `This slug is already used. Try '${slugState.suggestion}'.`;
+    if (touched.startsAt && !form.startsAt) errors.startsAt = "Start time is required.";
+    if (form.startsAt && new Date(form.startsAt) <= new Date()) errors.startsAt = "Start time must be in the future.";
+    if (touched.endsAt && !form.endsAt) errors.endsAt = "End time is required.";
+    if (dateRangeError) errors.endsAt = dateRangeError;
+    const min = form.minTicketsPerAccount === "" ? null : Number(form.minTicketsPerAccount);
+    const max = form.maxTicketsPerAccount === "" ? null : Number(form.maxTicketsPerAccount);
+    if (min != null && min < 1) errors.minTicketsPerAccount = "Minimum must be at least 1.";
+    if (max != null && max < 1) errors.maxTicketsPerAccount = "Maximum must be at least 1.";
+    if (min != null && max != null && min > max) errors.maxTicketsPerAccount = "Maximum must be greater than or equal to minimum.";
+    return errors;
+  }, [form, touched, dateRangeError, slugState]);
+
+  const hasLiveErrors = Object.keys(fieldErrors).length > 0;
+
   const buildDto = () => {
     const dto = {
       title: form.title.trim(),
+      slug: normalizeSlug(form.slug || form.title),
       shortDescription: form.shortDescription.trim() || null,
       description: form.description.trim() || null,
       locationName: form.locationName.trim() || null,
       address: form.address.trim() || null,
       city: form.city.trim() || null,
-      latitude: form.latitude === "" ? null : Number(form.latitude),
-      longitude: form.longitude === "" ? null : Number(form.longitude),
       startsAt: form.startsAt ? new Date(form.startsAt).toISOString() : null,
       endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
       minTicketsPerAccount:
@@ -177,6 +222,22 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
               placeholder="e.g. Son Tung M-TP Live in Can Tho"
               maxLength={200}
             />
+            {fieldErrors.title && <span className="ow-field-error">{fieldErrors.title}</span>}
+          </label>
+
+          <label className="ow-field ow-span-2">
+            <span>Public URL slug *</span>
+            <input
+              name="slug"
+              value={form.slug}
+              onChange={handleChange}
+              onBlur={() => setTouched((current) => ({ ...current, slug: true }))}
+              placeholder={normalizeSlug(form.title) || "event-url-slug"}
+              maxLength={200}
+            />
+            {slugState.checking && <span className="ow-hint">Checking availability...</span>}
+            {!slugState.checking && slugState.available === true && <span className="ow-field-ok">✓ Slug is available</span>}
+            {fieldErrors.slug && <span className="ow-field-error">{fieldErrors.slug}</span>}
           </label>
 
           <label className="ow-field ow-span-2">
@@ -209,6 +270,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
               value={form.startsAt}
               onChange={handleChange}
             />
+            {fieldErrors.startsAt && <span className="ow-field-error">{fieldErrors.startsAt}</span>}
           </label>
 
           <label className="ow-field">
@@ -220,8 +282,8 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
               onChange={handleChange}
               aria-invalid={!!dateRangeError}
             />
-            {dateRangeError && (
-              <span className="ow-field-error">{dateRangeError}</span>
+            {fieldErrors.endsAt && (
+              <span className="ow-field-error">{fieldErrors.endsAt}</span>
             )}
           </label>
 
@@ -247,6 +309,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
             />
           </label>
 
+
           <label className="ow-field">
             <span>City</span>
             <select name="city" value={form.city} onChange={handleChange}>
@@ -268,6 +331,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
               value={form.minTicketsPerAccount}
               onChange={handleChange}
             />
+            {fieldErrors.minTicketsPerAccount && <span className="ow-field-error">{fieldErrors.minTicketsPerAccount}</span>}
           </label>
 
           <label className="ow-field">
@@ -279,6 +343,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
               value={form.maxTicketsPerAccount}
               onChange={handleChange}
             />
+            {fieldErrors.maxTicketsPerAccount && <span className="ow-field-error">{fieldErrors.maxTicketsPerAccount}</span>}
           </label>
         </div>
 
@@ -319,7 +384,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
           type="button"
           className="tb-btn tb-btn-outline"
           onClick={handleSaveDraft}
-          disabled={saving || readOnly || !!dateRangeError}
+          disabled={saving || slugState.checking || readOnly || hasLiveErrors}
         >
           {saving ? "Saving..." : "💾 Save draft"}
         </button>
@@ -327,7 +392,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
           type="button"
           className="tb-btn tb-btn-primary"
           onClick={handleNext}
-          disabled={saving || (!readOnly && !!dateRangeError)}
+          disabled={saving || slugState.checking || (!readOnly && hasLiveErrors)}
         >
           {readOnly ? "Next →" : saving ? "Saving..." : "Save & Next →"}
         </button>

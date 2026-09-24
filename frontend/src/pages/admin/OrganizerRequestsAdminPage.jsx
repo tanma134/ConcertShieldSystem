@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import organizerRequestApi from "../../api/organizerRequestApi";
+import AdminShell from "./AdminShell";
 import "../../styles/organizerRequest.css";
+import "./AdminPages.css";
 
 const FILTERS = [
   { label: "All", value: undefined },
@@ -135,7 +137,8 @@ export default function OrganizerRequestsAdminPage() {
   }, [filter]);
 
   return (
-    <div className="org-page">
+    <AdminShell title="Organizer Requests">
+    <div className="org-page admin-org-page">
       <div className="org-container org-container--wide">
         <div className="org-card">
           <h1 className="org-title">Organizer requests</h1>
@@ -219,5 +222,6 @@ export default function OrganizerRequestsAdminPage() {
         />
       )}
     </div>
+    </AdminShell>
   );
 }

@@ -3,7 +3,10 @@ import { useParams, Link } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import EventCard from "../components/EventCard";
+import ReviewSection from "../components/ReviewSection";
 import eventApi from "../api/eventApi";
+import wishlistApi from "../api/wishlistApi";
+import { useAuth } from "../context/AuthContext";
 import { formatDateRange, formatPrice } from "../utils/format";
 import "../styles/theme-dark.css";
 import "./EventDetailPage.css";
@@ -18,6 +21,7 @@ const STATUS_LABELS = {
 
 export default function EventDetailPage() {
   const { slug } = useParams();
+  const { isAuthenticated } = useAuth();
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -25,7 +29,12 @@ export default function EventDetailPage() {
 
   const [related, setRelated] = useState([]);
   const [relatedLoading, setRelatedLoading] = useState(true);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
+  const [wishlistError, setWishlistError] = useState("");
 
+  // Event data is synchronized with the current route.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     setLoading(true);
     setError("");
@@ -36,6 +45,36 @@ export default function EventDetailPage() {
       .catch(() => setError("Event not found."))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  // Wishlist status is synchronized with the current event and session.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {
+    if (!event?.eventId || !isAuthenticated) {
+      setIsWishlisted(false);
+      return;
+    }
+    wishlistApi.getStatus(event.eventId)
+      .then((status) => setIsWishlisted(Boolean(status?.isWishlisted)))
+      .catch(() => setIsWishlisted(false));
+  }, [event?.eventId, isAuthenticated]);
+
+  const toggleWishlist = async () => {
+    if (!isAuthenticated) {
+      window.location.href = "/login";
+      return;
+    }
+    try {
+      setWishlistLoading(true);
+      setWishlistError("");
+      if (isWishlisted) await wishlistApi.remove(event.eventId);
+      else await wishlistApi.add(event.eventId);
+      setIsWishlisted(!isWishlisted);
+    } catch (requestError) {
+      setWishlistError(requestError.response?.data?.message || "Wishlist update failed.");
+    } finally {
+      setWishlistLoading(false);
+    }
+  };
 
   // Một vài sự kiện khác đang mở bán, hiển thị bên dưới trang chi tiết
   useEffect(() => {
@@ -213,6 +252,8 @@ export default function EventDetailPage() {
                   </div>
                 </section>
               )}
+
+              <ReviewSection eventId={event.eventId} />
             </div>
 
             <aside className="tb-detail-side">
@@ -278,6 +319,11 @@ export default function EventDetailPage() {
                 <div className="tb-detail-price">
                   Starting from <strong>{formatPrice(minPrice)}</strong>
                 </div>
+
+                <button type="button" className="tb-btn tb-btn-outline tb-wishlist-btn" onClick={toggleWishlist} disabled={wishlistLoading}>
+                  {wishlistLoading ? "Updating..." : isWishlisted ? "♥ Wishlisted" : "♡ Add to Wishlist"}
+                </button>
+                {wishlistError && <div className="tb-buy-blocked">{wishlistError}</div>}
 
                 {canBuy ? (
                   <button type="button" className="tb-btn tb-btn-primary tb-buy-btn">

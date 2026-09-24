@@ -118,6 +118,20 @@ namespace EventAPI.Repositories
                 .ExecuteDeleteAsync();
         }
 
+        public async Task ReplaceSeatsAsync(int seatZoneId, List<Seat> seats, int capacity)
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            var zone = await _context.SeatZones.Include(z => z.Seats)
+                .FirstOrDefaultAsync(z => z.SeatZoneId == seatZoneId)
+                ?? throw new KeyNotFoundException($"Seat zone {seatZoneId} not found.");
+            _context.Seats.RemoveRange(zone.Seats);
+            zone.Seats.Clear();
+            foreach (var seat in seats) zone.Seats.Add(seat);
+            zone.Capacity = capacity;
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+
         public async Task<int> CountOccupiedSeatsAsync(int seatZoneId)
         {
             return await _context.Seats

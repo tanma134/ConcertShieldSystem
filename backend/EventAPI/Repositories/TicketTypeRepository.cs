@@ -28,6 +28,15 @@ namespace EventAPI.Repositories
                 .FirstOrDefaultAsync(t => t.TicketTypeId == id && !t.IsDeleted);
         }
 
+        public async Task<bool> ExistsNameAsync(int eventId, string typeName, int? excludeId = null)
+        {
+            var normalized = typeName.Trim().ToLower();
+            return await _context.TicketTypes.AsNoTracking().AnyAsync(t =>
+                t.EventId == eventId && !t.IsDeleted &&
+                t.TypeName.Trim().ToLower() == normalized &&
+                (!excludeId.HasValue || t.TicketTypeId != excludeId.Value));
+        }
+
         public async Task<TicketType> CreateAsync(TicketType entity)
         {
             _context.TicketTypes.Add(entity);

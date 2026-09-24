@@ -24,6 +24,10 @@ const axiosClient = axios.create({
 
 // Attach the access token to every request, EXCEPT the public endpoints above
 axiosClient.interceptors.request.use((config) => {
+  if (config.data instanceof FormData) {
+    delete config.headers["Content-Type"];
+    delete config.headers["content-type"];
+  }
   if (!isPublicEndpoint(config.url)) {
     const token = localStorage.getItem("accessToken");
     if (token) {
@@ -60,6 +64,9 @@ axiosClient.interceptors.response.use(
         localStorage.setItem("accessToken", res.data.accessToken);
         if (res.data.refreshToken) {
           localStorage.setItem("refreshToken", res.data.refreshToken);
+        }
+        if (res.data.roles) {
+          localStorage.setItem("roles", JSON.stringify(res.data.roles));
         }
 
         originalRequest.headers.Authorization = `Bearer ${res.data.accessToken}`;

@@ -17,15 +17,15 @@ namespace EventAPI.Services
     /// Mixing is the normal case for concerts: numbered seats on the balcony plus a
     /// standing pit at the front.
     ///
-    /// CAPACITY RULE: once a layout exists, TicketType.Quantity is DERIVED, not typed
-    /// in. It is recalculated as the total capacity of every zone bound to that ticket
-    /// type, which is how the large ticketing platforms avoid seat/quantity drift.
+    /// CAPACITY RULE: once a chart exists, its zones are the source of truth and
+    /// TicketType.Quantity is synchronized to their effective capacity.
     /// </summary>
     public class SeatingService : ISeatingService
     {
         private readonly ISeatingRepository _seatingRepository;
         private readonly IEventRepository _eventRepository;
         private readonly ITicketTypeRepository _ticketTypeRepository;
+        private readonly IEventAccessService _eventAccessService;
         private readonly ILogger<SeatingService> _logger;
 
         // Guardrails so a typo (rows = 10000) can't try to insert millions of rows.
@@ -37,11 +37,13 @@ namespace EventAPI.Services
             ISeatingRepository seatingRepository,
             IEventRepository eventRepository,
             ITicketTypeRepository ticketTypeRepository,
+            IEventAccessService eventAccessService,
             ILogger<SeatingService> logger)
         {
             _seatingRepository = seatingRepository;
             _eventRepository = eventRepository;
             _ticketTypeRepository = ticketTypeRepository;
+            _eventAccessService = eventAccessService;
             _logger = logger;
         }
 
@@ -49,14 +51,16 @@ namespace EventAPI.Services
         // Reads
         // =====================================================================
 
-        public async Task<SeatingChartResponseDTO?> GetByEventIdAsync(int eventId)
+        public async Task<SeatingChartResponseDTO?> GetByEventIdAsync(int eventId, int? callerId, bool isAdmin)
         {
+            await _eventAccessService.EnsureVisibleAsync(eventId, callerId, isAdmin);
             var map = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: true);
             return map == null ? null : MapChart(map, includeSeats: true);
         }
 
-        public async Task<SeatingChartPreviewDTO?> GetPreviewAsync(int eventId)
+        public async Task<SeatingChartPreviewDTO?> GetPreviewAsync(int eventId, int? callerId, bool isAdmin)
         {
+            await _eventAccessService.EnsureVisibleAsync(eventId, callerId, isAdmin);
             var map = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: true);
             if (map == null) return null;
 
@@ -68,6 +72,10 @@ namespace EventAPI.Services
                 byId.TryGetValue(z.TicketTypeId, out var tt);
                 var seated = SeatZoneType.IsSeated(z.ZoneType);
 
+                var effectiveCapacity = seated && z.Seats.Count > 0
+                    ? z.Seats.Count
+                    : z.Capacity;
+
                 return new ZonePreviewDTO
                 {
                     SeatZoneId = z.SeatZoneId,
@@ -75,13 +83,13 @@ namespace EventAPI.Services
                     ZoneType = SeatZoneType.Normalize(z.ZoneType),
                     TicketTypeName = tt?.TypeName,
                     Price = tt?.Price,
-                    Capacity = z.Capacity,
+                    Capacity = effectiveCapacity,
                     TotalSeats = seated ? z.Seats.Count : 0,
                     AvailableSeats = seated
                         ? z.Seats.Count(s => s.Status == "Available")
                         // Standing zones have no per-seat rows, so availability comes
                         // from what TicketAPI has sold against the ticket type.
-                        : Math.Max(z.Capacity - (tt?.SoldQuantity ?? 0), 0)
+                        : Math.Max(effectiveCapacity - (tt?.SoldQuantity ?? 0), 0)
                 };
             }).ToList();
 
@@ -99,10 +107,14 @@ namespace EventAPI.Services
             };
         }
 
-        public async Task<SeatZoneResponseDTO> GetZoneSeatsAsync(int seatZoneId, bool availableOnly = false)
+        public async Task<SeatZoneResponseDTO> GetZoneSeatsAsync(int seatZoneId, int? callerId, bool isAdmin, bool availableOnly = false)
         {
             var zone = await _seatingRepository.GetZoneByIdAsync(seatZoneId, includeSeats: true)
                 ?? throw new KeyNotFoundException($"Seat zone {seatZoneId} not found.");
+
+            // A guessed zone id must not bypass event ownership: resolve the parent
+            // event through the zone's SeatMap before returning anything.
+            await _eventAccessService.EnsureVisibleAsync(zone.SeatMap.EventId, callerId, isAdmin);
 
             if (SeatZoneType.IsStanding(zone.ZoneType))
                 throw new InvalidOperationException(
@@ -168,13 +180,15 @@ namespace EventAPI.Services
             if (!ev.HasSeatingChart)
             {
                 ev.HasSeatingChart = true;
-                ev.UpdatedBy = callerId;
-                await _eventRepository.UpdateAsync(ev);
             }
-
-            await SyncTicketTypeQuantitiesAsync(eventId, callerId);
+            ev.SeatingMode = dto.Zones.All(z => SeatZoneType.IsStanding(z.ZoneType))
+                ? SeatingMode.StandingZones
+                : SeatingMode.ReservedSeating;
+            ev.UpdatedBy = callerId;
+            await _eventRepository.UpdateAsync(ev);
 
             var reloaded = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: true);
+            await SynchronizeTicketQuantitiesAsync(ticketTypes, reloaded!);
 
             _logger.LogInformation(
                 "Layout {SeatMapId} built for event {EventId}: {Zones} zone(s), capacity {Capacity}",
@@ -190,7 +204,7 @@ namespace EventAPI.Services
         public async Task<SeatZoneResponseDTO> AddZoneAsync(
             int eventId, CreateSeatZoneDTO dto, int callerId, bool isAdmin)
         {
-            await GetEditableEventAsync(eventId, callerId, isAdmin);
+            var ev = await GetEditableEventAsync(eventId, callerId, isAdmin);
 
             var map = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: false)
                 ?? throw new InvalidOperationException(
@@ -209,9 +223,16 @@ namespace EventAPI.Services
 
             var zone = await CreateZoneInternalAsync(map.SeatMapId, dto);
 
-            await SyncTicketTypeQuantitiesAsync(eventId, callerId);
+            if (SeatZoneType.IsSeated(dto.ZoneType) && ev.SeatingMode != SeatingMode.ReservedSeating)
+            {
+                ev.SeatingMode = SeatingMode.ReservedSeating;
+                ev.UpdatedBy = callerId;
+                await _eventRepository.UpdateAsync(ev);
+            }
 
             var reloaded = await _seatingRepository.GetZoneByIdAsync(zone.SeatZoneId, includeSeats: true);
+            var updatedMap = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: true);
+            await SynchronizeTicketQuantitiesAsync(ticketTypes, updatedMap!);
             return MapZone(reloaded!, includeSeats: true);
         }
 
@@ -228,6 +249,15 @@ namespace EventAPI.Services
 
             if (dto.ZoneName != null) zone.ZoneName = dto.ZoneName;
             if (dto.ShapeJson != null) zone.ShapeJson = dto.ShapeJson;
+
+            if (dto.ZoneName != null)
+            {
+                var existingMap = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: false);
+                if (existingMap!.SeatZones.Any(z => z.SeatZoneId != seatZoneId &&
+                    string.Equals(z.ZoneName, dto.ZoneName.Trim(), StringComparison.OrdinalIgnoreCase)))
+                    throw new ArgumentException($"A zone named '{dto.ZoneName}' already exists on this layout.");
+                zone.ZoneName = dto.ZoneName.Trim();
+            }
 
             // ---- Re-link to a different ticket type ----
             if (dto.TicketTypeId.HasValue && dto.TicketTypeId.Value != zone.TicketTypeId)
@@ -263,10 +293,40 @@ namespace EventAPI.Services
                 zone.Capacity = dto.Capacity.Value;
             }
 
+            // ---- Resize/regenerate a numbered grid ----
+            if (dto.Rows.HasValue || dto.SeatsPerRow.HasValue || dto.RowLabelPrefix != null)
+            {
+                if (!SeatZoneType.IsSeated(zone.ZoneType))
+                    throw new InvalidOperationException("Rows and SeatsPerRow only apply to a Seated zone.");
+
+                await EnsureZoneNotSoldAsync(zone, ticketTypes, "Cannot resize this zone");
+                var currentRows = zone.Seats.Select(s => s.RowLabel).Distinct().Count();
+                var currentSeatsPerRow = zone.Seats.GroupBy(s => s.RowLabel)
+                    .Select(g => g.Count()).DefaultIfEmpty(0).Max();
+                var rows = dto.Rows ?? currentRows;
+                var seatsPerRow = dto.SeatsPerRow ?? currentSeatsPerRow;
+                if (rows <= 0 || seatsPerRow <= 0)
+                    throw new ArgumentException("Rows and SeatsPerRow must be greater than 0.");
+                if ((long)rows * seatsPerRow > MaxSeatsPerZone)
+                    throw new ArgumentException($"A zone cannot exceed {MaxSeatsPerZone} seats.");
+
+                var resizeDto = new CreateSeatZoneDTO
+                {
+                    Rows = rows,
+                    SeatsPerRow = seatsPerRow,
+                    RowLabelPrefix = dto.RowLabelPrefix ?? zone.Seats
+                        .OrderBy(s => s.YCoordinate).Select(s => s.RowLabel).FirstOrDefault() ?? "A"
+                };
+                zone.Capacity = rows * seatsPerRow;
+                await _seatingRepository.ReplaceSeatsAsync(
+                    zone.SeatZoneId, GenerateSeats(zone.SeatZoneId, resizeDto), zone.Capacity);
+            }
+
             await _seatingRepository.UpdateZoneAsync(zone);
-            await SyncTicketTypeQuantitiesAsync(eventId, callerId);
 
             var reloaded = await _seatingRepository.GetZoneByIdAsync(seatZoneId, includeSeats: true);
+            var updatedMap = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: true);
+            await SynchronizeTicketQuantitiesAsync(ticketTypes, updatedMap!);
             return MapZone(reloaded!, includeSeats: true);
         }
 
@@ -282,7 +342,19 @@ namespace EventAPI.Services
             await EnsureZoneNotSoldAsync(zone, ticketTypes, "Cannot delete this zone");
 
             await _seatingRepository.DeleteZoneAsync(seatZoneId);
-            await SyncTicketTypeQuantitiesAsync(eventId, callerId);
+
+            var remaining = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: false);
+            var ev = await _eventRepository.GetByIdAsync(eventId);
+            if (ev != null && remaining != null)
+            {
+                ev.SeatingMode = remaining.SeatZones.Any(z => SeatZoneType.IsSeated(z.ZoneType))
+                    ? SeatingMode.ReservedSeating
+                    : SeatingMode.StandingZones;
+                ev.UpdatedBy = callerId;
+                await _eventRepository.UpdateAsync(ev);
+            }
+            if (remaining != null)
+                await SynchronizeTicketQuantitiesAsync(ticketTypes, remaining);
         }
 
         public async Task DeleteAsync(int eventId, int callerId, bool isAdmin)
@@ -300,6 +372,7 @@ namespace EventAPI.Services
             // Back to pure general admission — quantities become manual again and are
             // left exactly as the layout last set them.
             ev.HasSeatingChart = false;
+            ev.SeatingMode = SeatingMode.GeneralAdmission;
             ev.UpdatedBy = callerId;
             await _eventRepository.UpdateAsync(ev);
         }
@@ -389,44 +462,33 @@ namespace EventAPI.Services
             return errors;
         }
 
-        /// <summary>
-        /// Recalculates TicketType.Quantity as the total capacity of the zones bound
-        /// to it. This is what keeps seats and quantity from ever drifting apart:
-        /// with a layout present, quantity is derived rather than typed in.
-        /// A ticket type with no zone is left untouched — the submit validator flags it.
-        /// </summary>
-        private async Task SyncTicketTypeQuantitiesAsync(int eventId, int callerId)
+        private static int DtoCapacity(CreateSeatZoneDTO zone)
         {
-            var map = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: true);
-            if (map == null) return;
+            return SeatZoneType.IsSeated(zone.ZoneType)
+                ? Math.Max(zone.Rows, 0) * Math.Max(zone.SeatsPerRow, 0)
+                : Math.Max(zone.Capacity ?? 0, 0);
+        }
 
-            var ticketTypes = await _ticketTypeRepository.GetByEventIdAsync(eventId);
+        private static int ZoneCapacity(SeatZone zone)
+        {
+            return SeatZoneType.IsSeated(zone.ZoneType) && zone.Seats.Count > 0
+                ? zone.Seats.Count
+                : zone.Capacity;
+        }
 
-            foreach (var tt in ticketTypes)
+        private async Task SynchronizeTicketQuantitiesAsync(List<TicketType> ticketTypes, SeatMap map)
+        {
+            foreach (var ticketType in ticketTypes)
             {
-                var zones = map.SeatZones.Where(z => z.TicketTypeId == tt.TicketTypeId).ToList();
-                if (zones.Count == 0) continue;
-
-                var capacity = zones.Sum(z =>
-                    SeatZoneType.IsSeated(z.ZoneType) ? z.Seats.Count : z.Capacity);
-
-                if (capacity == tt.Quantity) continue;
-
-                // Never let a derived recalculation drop below what's already sold.
-                if (capacity < tt.SoldQuantity)
+                var capacity = map.SeatZones
+                    .Where(z => z.TicketTypeId == ticketType.TicketTypeId)
+                    .Sum(ZoneCapacity);
+                if (capacity == 0 || capacity == ticketType.Quantity) continue;
+                if (capacity < ticketType.SoldQuantity)
                     throw new InvalidOperationException(
-                        $"Ticket type '{tt.TypeName}': the zones now hold {capacity} place(s) " +
-                        $"but {tt.SoldQuantity} ticket(s) are already sold.");
-
-                var entity = await _ticketTypeRepository.GetByIdAsync(tt.TicketTypeId);
-                if (entity == null) continue;
-
-                entity.Quantity = capacity;
-                await _ticketTypeRepository.UpdateAsync(entity);
-
-                _logger.LogInformation(
-                    "Ticket type {TicketTypeId} quantity synced to {Quantity} from the layout",
-                    tt.TicketTypeId, capacity);
+                        $"Cannot reduce '{ticketType.TypeName}' below {ticketType.SoldQuantity} sold tickets.");
+                ticketType.Quantity = capacity;
+                await _ticketTypeRepository.UpdateAsync(ticketType);
             }
         }
 
@@ -542,6 +604,9 @@ namespace EventAPI.Services
             EventId = m.EventId,
             Name = m.Name,
             LayoutJson = m.LayoutJson,
+            SeatingMode = m.SeatZones.All(z => SeatZoneType.IsStanding(z.ZoneType))
+                ? SeatingMode.StandingZones
+                : SeatingMode.ReservedSeating,
             CreatedAt = m.CreatedAt,
             UpdatedAt = m.UpdatedAt,
             Zones = m.SeatZones.OrderBy(z => z.ZoneName).Select(z => MapZone(z, includeSeats)).ToList()
@@ -550,6 +615,12 @@ namespace EventAPI.Services
         internal static SeatZoneResponseDTO MapZone(SeatZone z, bool includeSeats)
         {
             var seated = SeatZoneType.IsSeated(z.ZoneType);
+            // DB-first databases created by the older code left Capacity = 0 for
+            // numbered zones. Their actual capacity is the number of Seat rows.
+            // Expose one consistent value to the organizer, admin and validator.
+            var effectiveCapacity = seated && z.Seats.Count > 0
+                ? z.Seats.Count
+                : z.Capacity;
 
             return new SeatZoneResponseDTO
             {
@@ -559,8 +630,8 @@ namespace EventAPI.Services
                 ZoneName = z.ZoneName,
                 ShapeJson = z.ShapeJson,
                 ZoneType = SeatZoneType.Normalize(z.ZoneType),
-                Capacity = z.Capacity,
-                TotalSeats = seated ? z.Seats.Count : 0,
+                Capacity = effectiveCapacity,
+                TotalSeats = seated ? effectiveCapacity : 0,
                 AvailableSeats = seated ? z.Seats.Count(s => s.Status == "Available") : z.Capacity,
                 Seats = seated && includeSeats
                     ? z.Seats

@@ -11,23 +11,32 @@ namespace EventAPI.Controllers
     {
         private readonly ITicketTypeService _ticketTypeService;
         private readonly IValidator<CreateTicketTypeDTO> _createValidator;
+        private readonly IValidator<UpdateTicketTypeDTO> _updateValidator;
 
-        public TicketTypesController(ITicketTypeService ticketTypeService, IValidator<CreateTicketTypeDTO> createValidator)
+        public TicketTypesController(
+            ITicketTypeService ticketTypeService,
+            IValidator<CreateTicketTypeDTO> createValidator,
+            IValidator<UpdateTicketTypeDTO> updateValidator)
         {
             _ticketTypeService = ticketTypeService;
             _createValidator = createValidator;
+            _updateValidator = updateValidator;
         }
 
         [HttpGet("event/{eventId:int}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetByEvent(int eventId)
         {
-            var result = await _ticketTypeService.GetByEventIdAsync(eventId);
-            return Ok(ApiResponseDTO<List<TicketTypeResponseDTO>>.SuccessResponse(result));
+            try
+            {
+                var result = await _ticketTypeService.GetByEventIdAsync(eventId, CurrentUserIdOrNull, IsAdmin);
+                return Ok(ApiResponseDTO<List<TicketTypeResponseDTO>>.SuccessResponse(result));
+            }
+            catch (Exception ex) { return HandleException(ex); }
         }
 
         [HttpPost("event/{eventId:int}")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Create(int eventId, [FromBody] CreateTicketTypeDTO dto)
         {
             var validation = await _createValidator.ValidateAsync(dto);
@@ -43,9 +52,16 @@ namespace EventAPI.Controllers
         }
 
         [HttpPut("{id:int}")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateTicketTypeDTO dto)
         {
+            if (dto.TicketTypeId != 0 && dto.TicketTypeId != id)
+                return BadRequest(ApiResponseDTO<object>.FailResponse("Route id and body TicketTypeId do not match."));
+
+            var validation = await _updateValidator.ValidateAsync(dto);
+            if (!validation.IsValid)
+                return BadRequest(ApiResponseDTO<object>.FailResponse("Validation failed", validation.Errors.Select(e => e.ErrorMessage).ToList()));
+
             try
             {
                 var result = await _ticketTypeService.UpdateAsync(id, dto, CurrentUserId, IsAdmin);
@@ -55,7 +71,7 @@ namespace EventAPI.Controllers
         }
 
         [HttpDelete("{id:int}")]
-        [Authorize(Policy = "RequireCustomer")]
+        [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Delete(int id)
         {
             try

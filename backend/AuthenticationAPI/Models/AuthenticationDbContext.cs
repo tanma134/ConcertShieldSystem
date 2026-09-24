@@ -202,6 +202,7 @@ public partial class AuthenticationDbContext : DbContext
                 .UseIdentityAlwaysColumn()
                 .HasColumnName("user_id");
             entity.Property(e => e.AvatarUrl).HasColumnName("avatar_url");
+            entity.Property(e => e.AvatarPublicId).HasColumnName("avatar_public_id");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("now()")
                 .HasColumnName("created_at");
