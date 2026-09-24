@@ -24,7 +24,11 @@ export default function LoginPage() {
     try {
       const res = await authApi.login(form);
       login(res.data);
-      navigate("/");
+      const roles = res.data?.roles || res.data?.Roles || [];
+      const isAdmin = roles.some((role) =>
+        String(role?.roleName || role?.name || role).toLowerCase() === "admin"
+      );
+      navigate(isAdmin ? "/admin" : "/");
     } catch (err) {
       setError(err.response?.data?.message || "Login failed. Please try again.");
     } finally {
@@ -40,7 +44,11 @@ export default function LoginPage() {
         idToken: credentialResponse.credential,
       });
       login(res.data);
-      navigate("/");
+      const roles = res.data?.roles || res.data?.Roles || [];
+      const isAdmin = roles.some((role) =>
+        String(role?.roleName || role?.name || role).toLowerCase() === "admin"
+      );
+      navigate(isAdmin ? "/admin" : "/");
     } catch (err) {
       setError(err.response?.data?.message || "Google login failed. Please try again.");
     } finally {
@@ -50,56 +58,63 @@ export default function LoginPage() {
 
   return (
     <div className="auth-wrapper">
-      <div className="auth-card">
-        <h2>Login</h2>
+      <div className="auth-card-wrap">
+        <Link to="/" className="auth-logo">
+          Concert<span>Shield</span>
+        </Link>
 
-        {error && <div className="auth-error">{error}</div>}
+        <div className="auth-card">
+          <h2>Log In</h2>
+          <p className="auth-subtitle">Welcome back to ConcertShield</p>
 
-        <form onSubmit={handleSubmit}>
-          <div className="auth-field">
-            <label>Email</label>
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              required
-            />
+          {error && <div className="auth-error">{error}</div>}
+
+          <form onSubmit={handleSubmit}>
+            <div className="auth-field">
+              <label>Email</label>
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div className="auth-field">
+              <label>Password</label>
+              <input
+                type="password"
+                name="password"
+                value={form.password}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <button className="auth-button" type="submit" disabled={loading}>
+              {loading ? "Logging in..." : "Log In"}
+            </button>
+          </form>
+
+          <div className="auth-divider">or</div>
+
+          <div className="google-login-wrapper">
+            {googleLoading ? (
+              <p>Logging in with Google...</p>
+            ) : (
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => setError("Google login failed. Please try again.")}
+              />
+            )}
           </div>
 
-          <div className="auth-field">
-            <label>Password</label>
-            <input
-              type="password"
-              name="password"
-              value={form.password}
-              onChange={handleChange}
-              required
-            />
+          <div className="auth-links">
+            <Link to="/forgot-password">Forgot password?</Link>
+            <br />
+            Don't have an account? <Link to="/register">Sign Up</Link>
           </div>
-
-          <button className="auth-button" type="submit" disabled={loading}>
-            {loading ? "Logging in..." : "Login"}
-          </button>
-        </form>
-
-        <div className="auth-divider">or</div>
-
-        <div className="google-login-wrapper">
-          {googleLoading ? (
-            <p>Logging in with Google...</p>
-          ) : (
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={() => setError("Google login failed. Please try again.")}
-            />
-          )}
-        </div>
-
-        <div className="auth-links">
-          <Link to="/forgot-password">Forgot Password?</Link>
-          <br />
-          Don't have an account? <Link to="/register">Register</Link>
         </div>
       </div>
     </div>

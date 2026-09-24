@@ -1,9 +1,9 @@
 import axios from "axios";
 
-// TODO: đổi lại đúng địa chỉ API Gateway của bạn
+// TODO: point this at your actual API Gateway address
 const BASE_URL = "https://localhost:7164/api";
 
-// Các endpoint không cần (và không nên) gắn access token
+// Endpoints that don't need (and shouldn't get) an access token attached
 const PUBLIC_ENDPOINTS = [
   "/auth/login",
   "/auth/register",
@@ -22,8 +22,12 @@ const axiosClient = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// Gắn access token vào mỗi request, TRỪ các endpoint public ở trên
+// Attach the access token to every request, EXCEPT the public endpoints above
 axiosClient.interceptors.request.use((config) => {
+  if (config.data instanceof FormData) {
+    delete config.headers["Content-Type"];
+    delete config.headers["content-type"];
+  }
   if (!isPublicEndpoint(config.url)) {
     const token = localStorage.getItem("accessToken");
     if (token) {
@@ -33,8 +37,8 @@ axiosClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Tự động refresh token khi bị 401 (chỉ áp dụng cho request cần xác thực,
-// không áp dụng cho chính login/refresh để tránh gọi thừa hoặc lặp vô hạn)
+// Automatically refresh the token on 401 (only for requests that require
+// auth - never for login/refresh itself, to avoid extra or infinite calls)
 axiosClient.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -60,6 +64,9 @@ axiosClient.interceptors.response.use(
         localStorage.setItem("accessToken", res.data.accessToken);
         if (res.data.refreshToken) {
           localStorage.setItem("refreshToken", res.data.refreshToken);
+        }
+        if (res.data.roles) {
+          localStorage.setItem("roles", JSON.stringify(res.data.roles));
         }
 
         originalRequest.headers.Authorization = `Bearer ${res.data.accessToken}`;

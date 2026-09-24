@@ -35,6 +35,30 @@ namespace AuthenticationAPI.Repositories
                 .FirstOrDefaultAsync(r => r.RoleName == roleName);
         }
 
+        public async Task<Role?> GetRoleByIdAsync(int roleId)
+        {
+            return await _context.Roles
+                .FirstOrDefaultAsync(r => r.RoleId == roleId);
+        }
+
+        public async Task<bool> UserHasRoleAsync(int userId, string roleName)
+        {
+            return await _context.UserRoles
+                .AnyAsync(ur => ur.UserId == userId && ur.Role != null && ur.Role.RoleName == roleName);
+        }
+
+        public async Task<bool> UserHasRoleAsync(int userId, int roleId)
+        {
+            return await _context.UserRoles
+                .AnyAsync(ur => ur.UserId == userId && ur.RoleId == roleId);
+        }
+
+        public async Task<UserRole?> GetUserRoleAsync(int userId, int roleId)
+        {
+            return await _context.UserRoles
+                .FirstOrDefaultAsync(ur => ur.UserId == userId && ur.RoleId == roleId);
+        }
+
         public async Task AddAsync(User user)
         {
             await _context.Users.AddAsync(user);
@@ -43,6 +67,11 @@ namespace AuthenticationAPI.Repositories
         public async Task AddUserRoleAsync(UserRole userRole)
         {
             await _context.UserRoles.AddAsync(userRole);
+        }
+
+        public void RemoveUserRole(UserRole userRole)
+        {
+            _context.UserRoles.Remove(userRole);
         }
 
         public async Task AddRefreshTokenAsync(RefreshToken refreshToken)

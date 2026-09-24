@@ -85,7 +85,8 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("User", policy => policy.RequireRole("User"));
+    options.AddPolicy("Customer", policy => policy.RequireRole("Customer"));
+    options.AddPolicy("User", policy => policy.RequireAuthenticatedUser());
     options.AddPolicy("CanViewUsers", policy => policy.RequireRole("Admin", "Staff"));
     options.AddPolicy("CanManageUsers", policy => policy.RequireRole("Admin"));
 });
@@ -115,10 +116,17 @@ builder.Services.AddScoped<IKycService, KycService>();
 builder.Services.AddScoped<IObjectStorage, EncryptedFileObjectStorage>();
 builder.Services.AddScoped<ICccdDataProtector, AesDataProtector>();
 builder.Services.AddHostedService<KycRetentionService>();
+builder.Services.AddScoped<IAvatarStorageService, AvatarStorageService>();
 
 
 
 var app = builder.Build();
+
+using (var schemaScope = app.Services.CreateScope())
+{
+    var db = schemaScope.ServiceProvider.GetRequiredService<AuthenticationDbContext>();
+    await db.Database.ExecuteSqlRawAsync("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_public_id text;");
+}
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AuthenticationDbContext>();
@@ -139,6 +147,15 @@ using (var scope = app.Services.CreateScope())
             Console.WriteLine("Created role: Customer");
         }
 
+        // "Organizer" is granted additively (customer keeps Customer + gains Organizer)
+        // when an organizer request is approved.
+        if (!context.Roles.Any(r => r.RoleName == "Organizer"))
+        {
+            context.Roles.Add(new Role { RoleName = "Organizer" });
+            context.SaveChanges();
+            Console.WriteLine("Created role: Organizer");
+        }
+
         var adminRole = context.Roles.First(r => r.RoleName == "Admin");
         var adminEmail = "admin@ticketbox.com";
 
@@ -153,7 +170,9 @@ using (var scope = app.Services.CreateScope())
                 IsVerified = true,
                 IsActive = true,
                 EkycStatus = "NotSubmitted",
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                AuthProvider = "local",
+                HasPassword = true
             };
 
             context.Users.Add(admin);
@@ -176,6 +195,94 @@ using (var scope = app.Services.CreateScope())
         else
         {
             Console.WriteLine("Admin account already exists");
+        }
+
+        // Dev/test convenience account so the Create-Concert flow can be exercised
+        // end-to-end via Swagger without needing a live SMTP server for email OTP.
+        var customerRole = context.Roles.First(r => r.RoleName == "Customer");
+        var legacyUserRole = context.Roles.FirstOrDefault(r => r.RoleName == "User");
+        if (legacyUserRole != null)
+        {
+            var legacyCustomerIds = context.UserRoles
+                .Where(ur => ur.RoleId == legacyUserRole.RoleId)
+                .Select(ur => ur.UserId)
+                .ToList();
+            var alreadyCustomerIds = context.UserRoles
+                .Where(ur => ur.RoleId == customerRole.RoleId)
+                .Select(ur => ur.UserId)
+                .ToHashSet();
+            context.UserRoles.AddRange(legacyCustomerIds
+                .Where(id => !alreadyCustomerIds.Contains(id))
+                .Select(id => new UserRole
+                {
+                    UserId = id,
+                    RoleId = customerRole.RoleId,
+                    AssignedAt = DateTime.UtcNow
+                }));
+            context.SaveChanges();
+        }
+        var testCustomerEmail = "customer@ticketbox.com";
+
+        if (!context.Users.Any(u => u.Email == testCustomerEmail))
+        {
+            var customer = new User
+            {
+                Email = testCustomerEmail,
+                FullName = "Test Customer",
+                PhoneNumber = "0987654321",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Customer@123"),
+                IsVerified = true,
+                IsActive = true,
+                EkycStatus = "NotSubmitted",
+                CreatedAt = DateTime.UtcNow,
+                AuthProvider = "local",
+                HasPassword = true
+            };
+
+            context.Users.Add(customer);
+            context.SaveChanges();
+
+            context.UserRoles.Add(new UserRole
+            {
+                UserId = customer.UserId,
+                RoleId = customerRole.RoleId,
+                AssignedAt = DateTime.UtcNow
+            });
+            context.SaveChanges();
+
+            Console.WriteLine("========================================");
+            Console.WriteLine("TEST CUSTOMER ACCOUNT CREATED:");
+            Console.WriteLine($"    Email:    {testCustomerEmail}");
+            Console.WriteLine($"    Password: Customer@123");
+            Console.WriteLine("========================================");
+        }
+
+        var organizerRole = context.Roles.First(r => r.RoleName == "Organizer");
+        var testOrganizerEmail = "organizer@ticketbox.com";
+        if (!context.Users.Any(u => u.Email == testOrganizerEmail))
+        {
+            var organizer = new User
+            {
+                Email = testOrganizerEmail,
+                FullName = "Test Organizer",
+                PhoneNumber = "0977777777",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Organizer@123"),
+                IsVerified = true,
+                IsActive = true,
+                EkycStatus = "NotSubmitted",
+                CreatedAt = DateTime.UtcNow,
+                AuthProvider = "local",
+                HasPassword = true
+            };
+
+            context.Users.Add(organizer);
+            context.SaveChanges();
+            context.UserRoles.AddRange(
+                new UserRole { UserId = organizer.UserId, RoleId = customerRole.RoleId, AssignedAt = DateTime.UtcNow },
+                new UserRole { UserId = organizer.UserId, RoleId = organizerRole.RoleId, AssignedAt = DateTime.UtcNow });
+            context.SaveChanges();
+
+            Console.WriteLine("TEST ORGANIZER ACCOUNT CREATED: organizer@ticketbox.com / Organizer@123");
         }
     }
     catch (Exception ex)

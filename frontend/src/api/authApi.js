@@ -10,6 +10,14 @@ const authApi = {
   forgotPassword: (data) => axiosClient.post("/auth/forgot-password", data),
   verifyResetOtp: (data) => axiosClient.post("/auth/verify-reset-otp", data),
   resetPassword: (data) => axiosClient.post("/auth/reset-password", data),
+  getProfile: () => axiosClient.get("/auth/me"),
+  getMe: () => axiosClient.get("/auth/me"),
+  updateProfile: (data) => axiosClient.put("/auth/me", data),
+  uploadAvatar: (file) => {
+    const form = new FormData();
+    form.append("file", file);
+    return axiosClient.post("/auth/me/avatar", form);
+  },
 };
 
 export default authApi;

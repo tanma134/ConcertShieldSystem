@@ -1,0 +1,836 @@
+.ow-wrap {
+  padding: 32px 24px 80px;
+}
+
+.ow-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.ow-head h1 {
+  font-size: 24px;
+  margin: 0 0 6px;
+  /* index.css set mau h1/h2 mac dinh gan den cho theme sang; can override
+     o day (dung o ca cac trang admin va organizer wizard). */
+  color: var(--tb-text);
+}
+
+.ow-sub {
+  color: var(--tb-text-muted);
+  font-size: 13.5px;
+  margin: 0;
+  max-width: 560px;
+}
+
+.ow-banner {
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  margin-bottom: 18px;
+  border: 1px solid var(--tb-border);
+}
+
+.ow-banner-rejected {
+  background: rgba(248, 113, 113, 0.1);
+  border-color: rgba(248, 113, 113, 0.35);
+  color: #fca5a5;
+}
+
+.ow-banner-pending {
+  background: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.35);
+  color: #fbbf24;
+}
+
+.ow-banner-published {
+  background: rgba(74, 222, 128, 0.1);
+  border-color: rgba(74, 222, 128, 0.35);
+  color: #86efac;
+}
+
+/* ---- Step progress ---- */
+
+.ow-steps {
+  display: flex;
+  list-style: none;
+  margin: 0 0 22px;
+  padding: 0;
+  gap: 8px;
+}
+
+.ow-step {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--tb-border);
+  background: var(--tb-surface);
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.ow-step.disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.ow-step.active {
+  border-color: var(--tb-primary-2);
+  background: var(--tb-primary-light);
+}
+
+.ow-step-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12.5px;
+  font-weight: 700;
+  background: var(--tb-surface-2);
+  color: var(--tb-text-muted);
+  flex-shrink: 0;
+}
+
+.ow-step.active .ow-step-num {
+  background: var(--tb-gradient);
+  color: #fff;
+}
+
+.ow-step.done .ow-step-num {
+  background: rgba(74, 222, 128, 0.18);
+  color: #86efac;
+}
+
+.ow-step-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--tb-text-muted);
+}
+
+.ow-step.active .ow-step-label {
+  color: var(--tb-text);
+}
+
+.ow-saved-toast {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(74, 222, 128, 0.12);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  color: #86efac;
+  font-size: 12.5px;
+  margin-bottom: 16px;
+}
+
+/* ---- Panel / step body ---- */
+
+.ow-panel {
+  background: var(--tb-surface);
+  border: 1px solid var(--tb-border);
+  border-radius: 16px;
+  padding: 28px;
+}
+
+.ow-step-body h2 {
+  font-size: 18px;
+  margin: 0 0 18px;
+  color: var(--tb-text);
+}
+
+.ow-error {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  color: #fca5a5;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.ow-hint {
+  color: var(--tb-text-muted);
+  font-size: 12.5px;
+  margin: 0 0 12px;
+}
+
+.ow-fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.ow-fieldset:disabled {
+  opacity: 0.6;
+}
+
+/* ---- Form grid ---- */
+
+.ow-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.ow-span-2 {
+  grid-column: span 2;
+}
+
+.ow-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ow-field span {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--tb-text-muted);
+}
+
+.ow-field input,
+.ow-field select,
+.ow-field textarea {
+  background: var(--tb-surface-2);
+  border: 1px solid var(--tb-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--tb-text);
+  font-size: 13.5px;
+  font-family: inherit;
+}
+
+.ow-field input:focus,
+.ow-field select:focus,
+.ow-field textarea:focus {
+  outline: none;
+  border-color: var(--tb-primary-2);
+}
+
+.ow-field input[aria-invalid="true"] {
+  border-color: #f87171;
+}
+
+.ow-field-error {
+  color: #fca5a5;
+  font-size: 12px;
+}
+
+.ow-inline-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.ow-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--tb-text-muted);
+}
+
+.ow-toggle-seo {
+  background: none;
+  border: none;
+  color: var(--tb-primary-2);
+  font-size: 13px;
+  padding: 0;
+  margin-bottom: 12px;
+}
+
+/* ---- Actions row ---- */
+
+.ow-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--tb-border);
+}
+
+.ow-actions .tb-btn:last-child {
+  margin-left: auto;
+}
+
+.ow-btn-sm {
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+/* ---- Images step ---- */
+
+.ow-image-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.ow-image-card h3 {
+  font-size: 14px;
+  margin: 0 0 4px;
+}
+
+.ow-image-preview,
+.ow-image-placeholder {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--tb-border);
+  object-fit: cover;
+  margin-bottom: 10px;
+}
+
+.ow-image-preview.ow-poster,
+.ow-image-placeholder.ow-poster {
+  aspect-ratio: 3 / 4;
+}
+
+.ow-image-preview.ow-banner,
+.ow-image-placeholder.ow-banner {
+  aspect-ratio: 16 / 6;
+}
+
+.ow-image-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tb-surface-2);
+  color: var(--tb-text-muted);
+  font-size: 12.5px;
+}
+
+.ow-image-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ow-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.ow-image-actions label {
+  cursor: pointer;
+}
+
+.ow-link-danger {
+  background: none;
+  border: none;
+  color: #f87171;
+  font-size: 12.5px;
+  padding: 0;
+}
+
+.ow-gallery-section h3 {
+  font-size: 14px;
+  margin: 0 0 4px;
+}
+
+.ow-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.ow-gallery-item {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--tb-border);
+  aspect-ratio: 1;
+}
+
+.ow-gallery-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ow-gallery-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: var(--tb-gradient);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 7px;
+  border-radius: 999px;
+}
+
+.ow-gallery-item-actions {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 6px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.75), transparent);
+}
+
+.ow-gallery-item-actions button {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 10.5px;
+  padding: 0;
+}
+
+.ow-gallery-add {
+  border: 1.5px dashed var(--tb-border);
+  border-radius: 8px;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.ow-gallery-add label {
+  cursor: pointer;
+  color: var(--tb-primary-2);
+  font-size: 12px;
+  padding: 8px;
+}
+
+/* ---- Sections (tickets / seating / refund) ---- */
+
+.ow-section {
+  margin-bottom: 32px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--tb-border);
+}
+
+.ow-section:last-of-type {
+  border-bottom: none;
+  margin-bottom: 8px;
+}
+
+.ow-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.ow-section-head h3 {
+  font-size: 15px;
+  margin: 0;
+}
+
+.ow-empty-row {
+  color: var(--tb-text-muted);
+  font-size: 13px;
+  padding: 14px 0;
+}
+
+.ow-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.ow-table th {
+  text-align: left;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--tb-text-muted);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--tb-border);
+}
+
+.ow-table td {
+  padding: 10px;
+  border-bottom: 1px solid var(--tb-border);
+  vertical-align: top;
+}
+
+.ow-td-title {
+  font-weight: 600;
+}
+
+.ow-td-sub {
+  color: var(--tb-text-muted);
+  font-size: 11.5px;
+  margin-top: 2px;
+}
+
+.ow-td-strike {
+  color: var(--tb-text-muted);
+  text-decoration: line-through;
+  font-size: 11.5px;
+}
+
+.ow-inline-form {
+  background: var(--tb-surface-2);
+  border: 1px solid var(--tb-border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 10px;
+}
+
+.ow-inline-form-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.ow-mode-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.ow-mode-btn {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--tb-border);
+  background: var(--tb-surface-2);
+  color: var(--tb-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ow-mode-btn.active {
+  border-color: var(--tb-primary-2);
+  background: var(--tb-primary-light);
+  color: var(--tb-text);
+}
+
+/* ---- Visual zone map (Ticketbox-style overview) ---- */
+
+.ow-zonemap {
+  display: grid;
+  grid-template-columns: 2.2fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.ow-zonemap-canvas {
+  position: relative;
+  background: #0b0d12;
+  border: 1px solid var(--tb-border);
+  border-radius: 12px;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  user-select: none;
+}
+
+.ow-zonemap-stage {
+  position: absolute;
+  top: 4%;
+  left: 30%;
+  width: 40%;
+  height: 14%;
+  background: #3f3f46;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #d4d4d8;
+  pointer-events: none;
+}
+
+.ow-zonemap-zone {
+  position: absolute;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 4px;
+  color: #0b0d12;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.ow-zonemap-zone-standing {
+  opacity: 0.92;
+  border-style: dashed;
+}
+
+.ow-zonemap-zone-label {
+  font-size: 11px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.ow-zonemap-zone-type {
+  font-size: 9.5px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.ow-zonemap-resize-handle {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.35);
+  cursor: nwse-resize;
+}
+
+.ow-zonemap-empty {
+  position: absolute;
+  inset: 32% 8% auto;
+  text-align: center;
+  color: var(--tb-text-muted);
+  font-size: 12.5px;
+}
+
+.ow-zonemap-legend {
+  background: var(--tb-surface-2);
+  border: 1px solid var(--tb-border);
+  border-radius: 12px;
+  padding: 14px;
+  overflow-y: auto;
+}
+
+.ow-zonemap-legend-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--tb-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 10px;
+}
+
+.ow-zonemap-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--tb-border);
+  font-size: 12.5px;
+}
+
+.ow-zonemap-legend-row:last-child {
+  border-bottom: none;
+}
+
+.ow-zonemap-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.ow-zonemap-legend-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.ow-zonemap-legend-price {
+  font-weight: 700;
+  color: var(--tb-primary-2);
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .ow-zonemap {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ow-zone-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+.ow-zone-seated {
+  background: rgba(168, 85, 247, 0.15);
+  color: var(--tb-primary-2);
+}
+
+.ow-zone-standing {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+}
+
+/* ---- Review step ---- */
+
+.ow-validation {
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid var(--tb-border);
+}
+
+.ow-validation-ok {
+  background: rgba(74, 222, 128, 0.1);
+  border-color: rgba(74, 222, 128, 0.3);
+  color: #86efac;
+}
+
+.ow-validation-bad {
+  background: rgba(248, 113, 113, 0.08);
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+.ow-validation-title {
+  font-weight: 700;
+  font-size: 13.5px;
+  margin-bottom: 6px;
+}
+
+.ow-validation ul {
+  margin: 0 0 4px;
+  padding-left: 20px;
+  font-size: 12.5px;
+  color: #fca5a5;
+}
+
+.ow-validation-warnings {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--tb-border);
+}
+
+.ow-validation-warnings ul {
+  color: #fbbf24;
+}
+
+.ow-review-summary {
+  margin-top: 10px;
+}
+
+.ow-review-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.ow-review-poster {
+  width: 100px;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--tb-border);
+  flex-shrink: 0;
+}
+
+.ow-review-row h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.ow-review-row p {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: var(--tb-text-muted);
+}
+
+@media (max-width: 760px) {
+  .ow-grid,
+  .ow-image-grid {
+    grid-template-columns: 1fr;
+  }
+  .ow-span-2 {
+    grid-column: span 1;
+  }
+  .ow-steps {
+    flex-wrap: wrap;
+  }
+  .ow-step {
+    flex: 1 1 45%;
+  }
+}
+
+/* ===== Seating templates (UC_26.2 / UC_26.3) ===== */
+
+.ow-template-bar {
+  margin: 10px 0 16px;
+}
+
+.ow-capacity-ok {
+  color: #4ade80;
+  font-weight: 700;
+}
+
+.ow-capacity-warning {
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+.ow-template-bar-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.ow-template-picker {
+  background: var(--tb-surface-2);
+  border: 1px solid var(--tb-border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-top: 10px;
+}
+
+.ow-template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.ow-template-card {
+  text-align: left;
+  background: var(--tb-surface);
+  border: 1px solid var(--tb-border);
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.ow-template-card:hover {
+  border-color: var(--tb-primary-2);
+  transform: translateY(-1px);
+}
+
+.ow-template-card-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ow-template-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.18);
+  color: #3b82f6;
+}
+
+.ow-template-mapping {
+  margin-top: 4px;
+}
