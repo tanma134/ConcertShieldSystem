@@ -1,8 +1,9 @@
-﻿
-using AuthenticationAPI.Models;
+﻿using AuthenticationAPI.Models;
+using AuthenticationAPI.Providers;
 using AuthenticationAPI.Repositories;
 using AuthenticationAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System;
@@ -99,6 +100,21 @@ builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IOrganizerRequestRepository, OrganizerRequestRepository>();
 builder.Services.AddScoped<IOrganizerRequestService, OrganizerRequestService>();
+builder.Services.AddScoped<IEkycRepository, EkycRepository>();
+builder.Services.AddScoped<IKycAccessLogService, KycAccessLogService>();
+builder.Services.AddScoped<IKycSettingService, KycSettingService>();
+builder.Services.AddScoped<IKycConsentService, KycConsentService>();
+builder.Services.AddScoped<IKycDataPurger, KycDataPurger>();
+builder.Services.AddScoped<IKycDeletionService, KycDeletionService>();
+
+// eKYC VNPT: đăng ký HttpClient kèm header Token-id / Token-key / Authorization / mac-address
+// (đọc từ section "Vnpt" trong appsettings). Thay cho AddHttpClient<IEkycProvider, VnptEkycProvider>() cũ.
+builder.Services.AddVnptEkyc(builder.Configuration);
+
+builder.Services.AddScoped<IKycService, KycService>();
+builder.Services.AddScoped<IObjectStorage, EncryptedFileObjectStorage>();
+builder.Services.AddScoped<ICccdDataProtector, AesDataProtector>();
+builder.Services.AddHostedService<KycRetentionService>();
 
 
 

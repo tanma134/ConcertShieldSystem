@@ -11,6 +11,7 @@ import AdminLoginPage from "../pages/AdminLoginPage";
 import AdminRoute from "./AdminRoute";
 import OrganizerRequestsAdminPage from "../pages/admin/OrganizerRequestsAdminPage";
 import RequestOrganizerPage from "../pages/RequestOrganizerPage";
+import KycPage from "../pages/KycPage";
 
 export default function AppRoutes() {
   return (
@@ -37,6 +38,16 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute>
             <RequestOrganizerPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Xac thuc danh tinh (eKYC) bang camera */}
+      <Route
+        path="/kyc"
+        element={
+          <ProtectedRoute>
+            <KycPage />
           </ProtectedRoute>
         }
       />

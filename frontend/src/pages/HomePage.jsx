@@ -31,6 +31,10 @@ export default function HomePage() {
         <p className="home-subtitle">Bạn đã đăng nhập thành công.</p>
 
         <div className="home-actions">
+          <Link to="/kyc" className="home-button home-button--primary">
+            Xác thực danh tính (eKYC)
+          </Link>
+
           <Link to="/organizer/request" className="home-button home-button--primary">
             Yêu cầu trở thành Organizer
           </Link>

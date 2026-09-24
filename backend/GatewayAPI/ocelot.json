@@ -274,8 +274,8 @@
         },
 
         {
-            "Key": "ekyc-scan-cccd",
-            "DownstreamPathTemplate": "/api/ekyc/scan-cccd",
+            "Key": "kyc-consent",
+            "DownstreamPathTemplate": "/api/kyc/consent",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
                 {
@@ -283,13 +283,17 @@
                     "Port": 7058
                 }
             ],
-            "UpstreamPathTemplate": "/api/ekyc/scan-cccd",
-            "UpstreamHttpMethod": [ "Post" ],
-            "AuthenticationOptions": { "AuthenticationProviderKey": "Bearer" }
+            "UpstreamPathTemplate": "/api/kyc/consent",
+            "UpstreamHttpMethod": [
+                "Get"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
         },
         {
-            "Key": "ekyc-verify-face",
-            "DownstreamPathTemplate": "/api/ekyc/verify-face",
+            "Key": "kyc-submit",
+            "DownstreamPathTemplate": "/api/kyc/submit",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
                 {
@@ -297,13 +301,17 @@
                     "Port": 7058
                 }
             ],
-            "UpstreamPathTemplate": "/api/ekyc/verify-face",
-            "UpstreamHttpMethod": [ "Post" ],
-            "AuthenticationOptions": { "AuthenticationProviderKey": "Bearer" }
+            "UpstreamPathTemplate": "/api/kyc/submit",
+            "UpstreamHttpMethod": [
+                "Post"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
         },
         {
-            "Key": "ekyc-status",
-            "DownstreamPathTemplate": "/api/ekyc/status",
+            "Key": "kyc-status",
+            "DownstreamPathTemplate": "/api/kyc/status/{ekycId}",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
                 {
@@ -311,9 +319,31 @@
                     "Port": 7058
                 }
             ],
-            "UpstreamPathTemplate": "/api/ekyc/status",
-            "UpstreamHttpMethod": [ "Get" ],
-            "AuthenticationOptions": { "AuthenticationProviderKey": "Bearer" }
+            "UpstreamPathTemplate": "/api/kyc/status/{ekycId}",
+            "UpstreamHttpMethod": [
+                "Get"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "kyc-admin-image",
+            "DownstreamPathTemplate": "/api/admin/kyc/{ekycId}/images/{kind}",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7058
+                }
+            ],
+            "UpstreamPathTemplate": "/api/admin/kyc/{ekycId}/images/{kind}",
+            "UpstreamHttpMethod": [
+                "Get"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
         },
         {
             "Key": "ekyc-manual-review",
