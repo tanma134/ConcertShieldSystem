@@ -118,6 +118,16 @@ export default function AppRoutes() {
         }
       />
 
+      {/* Xac thuc danh tinh (eKYC) bang camera */}
+      <Route
+        path="/kyc"
+        element={
+          <ProtectedRoute>
+            <KycPage />
+          </ProtectedRoute>
+        }
+      />
+
       {/* Khu vuc Admin */}
       <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route
