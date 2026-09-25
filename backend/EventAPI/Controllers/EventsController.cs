@@ -7,13 +7,12 @@ using EventAPI.Common;
 
 namespace EventAPI.Controllers
 {
-    /// <summary>
-    /// Concert lifecycle: Draft -> Pending -> Published, plus Pending -> Rejected
-    /// and Rejected -> edit -> Pending.
-    ///
-    /// Every concert is a Music concert (CategoryId = 1); the category cannot be chosen.
-    /// Only an approved Organizer may create and configure a concert.
-    /// </summary>
+
+    // Concert lifecycle: Draft -> Pending -> Published, plus Pending -> Rejected
+    // and Rejected -> edit -> Pending.
+    //     // Every concert is a Music concert (CategoryId = 1); the category cannot be chosen.
+    // Only an approved Organizer may create and configure a concert.
+
     [Route("api/events")]
     public class EventsController : BaseApiController
     {
@@ -38,7 +37,7 @@ namespace EventAPI.Controllers
         // PUBLIC READS — Published concerts only
         // =====================================================================
 
-        /// <summary>Public list/search/filter. Only Published concerts are returned.</summary>
+        // Public list/search/filter. Only Published concerts are returned.
         [HttpGet]
         [AllowAnonymous]
         public async Task<IActionResult> GetList([FromQuery] EventFilterDTO filter)
@@ -61,7 +60,7 @@ namespace EventAPI.Controllers
             return Ok(ApiResponseDTO<List<EventListDTO>>.SuccessResponse(result));
         }
 
-        /// <summary>Normalizes a slug and checks uniqueness while the user is typing.</summary>
+        // Normalizes a slug and checks uniqueness while the user is typing.
         [HttpGet("slug-availability")]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> CheckSlugAvailability(
@@ -85,7 +84,7 @@ namespace EventAPI.Controllers
             return await GetList(filter);
         }
 
-        /// <summary>Public concert detail by slug. 404 unless Published.</summary>
+        // Public concert detail by slug. 404 unless Published.
         [HttpGet("slug/{slug}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetBySlug(string slug)
@@ -98,7 +97,7 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        /// <summary>Public concert detail by id. 404 unless Published.</summary>
+        // Public concert detail by id. 404 unless Published.
         [HttpGet("{id:int}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetById(int id)
@@ -115,7 +114,7 @@ namespace EventAPI.Controllers
         // ORGANIZER — my concerts
         // =====================================================================
 
-        /// <summary>Every concert I own, in any status (Draft included).</summary>
+        // Every concert I own, in any status (Draft included).
         [HttpGet("mine")]
         [Authorize(Policy = "RequireCustomer")]
         public async Task<IActionResult> GetMine()
@@ -124,10 +123,9 @@ namespace EventAPI.Controllers
             return Ok(ApiResponseDTO<List<EventListDTO>>.SuccessResponse(result));
         }
 
-        /// <summary>
-        /// Organizer dashboard summary: event counts by status, tickets sold, and
-        /// gross ticket revenue (price * soldQuantity, not adjusted for refunds).
-        /// </summary>
+        // Organizer dashboard summary: event counts by status, tickets sold, and
+        // gross ticket revenue (price * soldQuantity, not adjusted for refunds).
+
         [HttpGet("mine/dashboard")]
         [Authorize(Policy = "RequireCustomer")]
         public async Task<IActionResult> GetMyDashboard()
@@ -136,10 +134,9 @@ namespace EventAPI.Controllers
             return Ok(ApiResponseDTO<OrganizerDashboardSummaryDTO>.SuccessResponse(result));
         }
 
-        /// <summary>
-        /// One of my concerts in full (incl. seating chart) regardless of status.
-        /// Use this instead of GET /{id} while the concert is still a Draft.
-        /// </summary>
+        // One of my concerts in full (incl. seating chart) regardless of status.
+        // Use this instead of GET /{id} while the concert is still a Draft.
+
         [HttpGet("mine/{id:int}")]
         [Authorize(Policy = "RequireCustomer")]
         public async Task<IActionResult> GetMineById(int id)
@@ -156,9 +153,8 @@ namespace EventAPI.Controllers
         // ORGANIZER — create / update / delete draft
         // =====================================================================
 
-        /// <summary>
-        /// Creates the concert as a Draft for an approved Organizer.
-        /// </summary>
+        // Creates the concert as a Draft for an approved Organizer.
+
         [HttpPost]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Create([FromBody] CreateEventDTO dto)
@@ -176,7 +172,7 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        /// <summary>Updates a Draft or Rejected concert. Partial — send only what changes.</summary>
+        // Updates a Draft or Rejected concert. Partial — send only what changes.
         [HttpPut("{id:int}")]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateEventDTO dto)
@@ -217,10 +213,9 @@ namespace EventAPI.Controllers
         // SUBMIT FOR APPROVAL
         // =====================================================================
 
-        /// <summary>
-        /// Dry-run of the publication checks. Returns the same error list Submit
-        /// would produce, so the UI can show what's still missing.
-        /// </summary>
+        // Dry-run of the publication checks. Returns the same error list Submit
+        // would produce, so the UI can show what's still missing.
+
         [HttpGet("{id:int}/validate")]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> ValidateForSubmission(int id)
@@ -235,11 +230,10 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        /// <summary>
-        /// Draft/Rejected -> Pending. Validates all publication data first; on failure
-        /// returns 400 with every missing field listed. Also used to RESUBMIT a
-        /// rejected concert after editing.
-        /// </summary>
+        // Draft/Rejected -> Pending. Validates all publication data first; on failure
+        // returns 400 with every missing field listed. Also used to RESUBMIT a
+        // rejected concert after editing.
+
         [HttpPost("{id:int}/submit")]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Submit(int id)
@@ -268,7 +262,7 @@ namespace EventAPI.Controllers
         // ADMIN — moderation
         // =====================================================================
 
-        /// <summary>Concerts waiting for approval, oldest submission first.</summary>
+        // Concerts waiting for approval, oldest submission first.
         [HttpGet("pending")]
         [Authorize(Policy = "RequireAdmin")]
         public async Task<IActionResult> GetPending([FromQuery] int page = 1, [FromQuery] int pageSize = 12)
@@ -277,12 +271,11 @@ namespace EventAPI.Controllers
             return Ok(ApiResponseDTO<PagedResultDTO<PendingEventDTO>>.SuccessResponse(result));
         }
 
-        /// <summary>
-        /// All concerts regardless of status, for the Admin "All Events" page.
-        /// Supports the same search/filter/sort/pagination as the public list
-        /// (status, creator/OrganizerId, date range, city), but is never limited
-        /// to Published — the pending queue alone isn't enough for moderation.
-        /// </summary>
+        // All concerts regardless of status, for the Admin "All Events" page.
+        // Supports the same search/filter/sort/pagination as the public list
+        // (status, creator/OrganizerId, date range, city), but is never limited
+        // to Published — the pending queue alone isn't enough for moderation.
+
         [HttpGet("admin")]
         [Authorize(Policy = "RequireAdmin")]
         public async Task<IActionResult> AdminGetAll([FromQuery] EventFilterDTO filter)
@@ -292,16 +285,15 @@ namespace EventAPI.Controllers
             return Ok(ApiResponseDTO<PagedResultDTO<EventListDTO>>.SuccessResponse(result));
         }
 
-        /// <summary>Alias kept for the existing admin UI.</summary>
+        // Alias kept for the existing admin UI.
         [HttpGet("moderation/queue")]
         [Authorize(Policy = "RequireAdmin")]
         public async Task<IActionResult> ModerationQueue([FromQuery] int page = 1, [FromQuery] int pageSize = 12)
             => await GetPending(page, pageSize);
 
-        /// <summary>
-        /// Full detail of any concert regardless of status, so the Admin can review
-        /// a Pending submission before deciding.
-        /// </summary>
+        // Full detail of any concert regardless of status, so the Admin can review
+        // a Pending submission before deciding.
+
         [HttpGet("admin/{id:int}")]
         [Authorize(Policy = "RequireAdmin")]
         public async Task<IActionResult> AdminGetById(int id)
@@ -314,10 +306,9 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        /// <summary>
-        /// Pending -> Published. Organizer role approval is handled separately by
-        /// the Organizer Request workflow in AuthenticationAPI.
-        /// </summary>
+        // Pending -> Published. Organizer role approval is handled separately by
+        // the Organizer Request workflow in AuthenticationAPI.
+
         [HttpPost("{id:int}/approve")]
         [Authorize(Policy = "RequireAdmin")]
         public async Task<IActionResult> Approve(int id)
@@ -342,7 +333,7 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        /// <summary>Pending -> Rejected. A reason is mandatory.</summary>
+        // Pending -> Rejected. A reason is mandatory.
         [HttpPost("{id:int}/reject")]
         [Authorize(Policy = "RequireAdmin")]
         public async Task<IActionResult> Reject(int id, [FromBody] RejectEventDTO dto)
@@ -362,7 +353,7 @@ namespace EventAPI.Controllers
         // POSTER / BANNER (Cloudinary)
         // =====================================================================
 
-        /// <summary>Uploads or replaces the poster. Replacing removes the old Cloudinary asset.</summary>
+        // Uploads or replaces the poster. Replacing removes the old Cloudinary asset.
         [HttpPost("{id:int}/poster")]
         [Authorize(Policy = "RequireOrganizer")]
         [RequestSizeLimit(10_000_000)]
@@ -395,7 +386,7 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        /// <summary>Uploads or replaces the banner. Replacing removes the old Cloudinary asset.</summary>
+        // Uploads or replaces the banner. Replacing removes the old Cloudinary asset.
         [HttpPost("{id:int}/banner")]
         [Authorize(Policy = "RequireOrganizer")]
         [RequestSizeLimit(10_000_000)]

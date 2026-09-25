@@ -132,12 +132,6 @@ namespace EventAPI.Repositories
             await transaction.CommitAsync();
         }
 
-        public async Task<int> CountOccupiedSeatsAsync(int seatZoneId)
-        {
-            return await _context.Seats
-                .CountAsync(s => s.SeatZoneId == seatZoneId && s.Status != "Available");
-        }
-
         public async Task<int> CountSeatsForEventAsync(int eventId)
         {
             return await _context.Seats

@@ -3,10 +3,8 @@ import axiosClient from "./axiosClient";
 const seatingApi = {
   getByEvent: (eventId) => axiosClient.get(`/seating/event/${eventId}`),
   getPreview: (eventId) => axiosClient.get(`/seating/event/${eventId}/preview`),
-  getZoneSeats: (seatZoneId, availableOnly = false) =>
-    axiosClient.get(`/seating/zones/${seatZoneId}/seats`, {
-      params: { availableOnly },
-    }),
+  // Returns physical seat definitions only; booking availability belongs to Booking/Queue.
+  getZoneSeats: (seatZoneId) => axiosClient.get(`/seating/zones/${seatZoneId}/seats`),
 
   // Creates or replaces the whole layout.
   build: (eventId, dto) => axiosClient.post(`/seating/event/${eventId}`, dto),

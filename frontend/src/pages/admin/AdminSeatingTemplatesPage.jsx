@@ -21,6 +21,53 @@ const blankZone = () => ({
   shapeJson: null,
 });
 
+// Mirrors SeatingService.GenerateSeats on the backend (spreadsheet-style row
+// labels: A..Z, AA, AB, ...), so the canvas preview here looks the same as
+// what the organizer will see once EventAPI generates the real Seat rows on
+// Apply. Client-only synthetic seats — never sent back to the API, only used
+// so ZoneMapCanvas has something to draw dots from before any real event exists.
+function rowLabelToIndex(label) {
+  let index = 0;
+  for (const c of String(label || "").trim().toUpperCase()) {
+    if (c < "A" || c > "Z") return 0;
+    index = index * 26 + (c.charCodeAt(0) - 64);
+  }
+  return index - 1;
+}
+
+function indexToRowLabel(index) {
+  let label = "";
+  let i = Math.max(index, 0);
+  do {
+    label = String.fromCharCode(65 + (i % 26)) + label;
+    i = Math.floor(i / 26) - 1;
+  } while (i >= 0);
+  return label;
+}
+
+function previewSeatsFor(zone) {
+  if (zone.zoneType !== "Seated") return undefined;
+  const rows = Number(zone.rows) || 0;
+  const seatsPerRow = Number(zone.seatsPerRow) || 0;
+  if (!rows || !seatsPerRow) return undefined;
+
+  const startIndex = rowLabelToIndex(zone.rowLabelPrefix || "A");
+  const seats = [];
+  for (let r = 0; r < rows; r++) {
+    const rowLabel = indexToRowLabel(startIndex + r);
+    for (let n = 1; n <= seatsPerRow; n++) {
+      seats.push({
+        seatId: `preview-${zone._id}-${rowLabel}-${n}`,
+        rowLabel,
+        seatNumber: String(n),
+        xCoordinate: n,
+        yCoordinate: r + 1,
+      });
+    }
+  }
+  return seats;
+}
+
 export default function AdminSeatingTemplatesPage() {
   const [templates, setTemplates] = useState([]);
   const [form, setForm] = useState({ name: "", description: "", zones: [blankZone()] });
@@ -105,6 +152,7 @@ export default function AdminSeatingTemplatesPage() {
     zoneName: z.zoneName || "Untitled zone",
     zoneType: z.zoneType,
     shapeJson: z.shapeJson,
+    seats: previewSeatsFor(z),
   }));
 
   const handleZoneMove = (id, rect) => updateZone(id, "shapeJson", JSON.stringify(rect));

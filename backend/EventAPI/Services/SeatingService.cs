@@ -5,21 +5,9 @@ using EventAPI.Repositories;
 
 namespace EventAPI.Services
 {
-    /// <summary>
-    /// Owns a concert's layout.
-    ///
-    /// A concert either has no layout at all (pure general admission — capacity comes
-    /// straight from TicketType.Quantity), or it has ONE SeatMap containing any mix of:
-    ///
-    ///   * Seated zones   — one Seat row per physical seat. Buyers pick their own seat.
-    ///   * Standing zones — no Seat rows, just a headcount.
-    ///
-    /// Mixing is the normal case for concerts: numbered seats on the balcony plus a
-    /// standing pit at the front.
-    ///
-    /// CAPACITY RULE: once a chart exists, its zones are the source of truth and
-    /// TicketType.Quantity is synchronized to their effective capacity.
-    /// </summary>
+    // EventAPI owns the seating configuration only. TicketType.Quantity is the declared
+    // quota; zones consume that quota but never rewrite it. Runtime availability belongs
+    // to the booking/inventory service.
     public class SeatingService : ISeatingService
     {
         private readonly ISeatingRepository _seatingRepository;
@@ -50,6 +38,8 @@ namespace EventAPI.Services
         // =====================================================================
         // Reads
         // =====================================================================
+
+        // Lấy cấu hình theo sự kiện; chỉ đọc dữ liệu, không thay đổi trạng thái.
 
         public async Task<SeatingChartResponseDTO?> GetByEventIdAsync(int eventId, int? callerId, bool isAdmin)
         {
@@ -85,11 +75,6 @@ namespace EventAPI.Services
                     Price = tt?.Price,
                     Capacity = effectiveCapacity,
                     TotalSeats = seated ? z.Seats.Count : 0,
-                    AvailableSeats = seated
-                        ? z.Seats.Count(s => s.Status == "Available")
-                        // Standing zones have no per-seat rows, so availability comes
-                        // from what TicketAPI has sold against the ticket type.
-                        : Math.Max(effectiveCapacity - (tt?.SoldQuantity ?? 0), 0)
                 };
             }).ToList();
 
@@ -102,12 +87,11 @@ namespace EventAPI.Services
                 StandingZones = zones.Count(z => z.ZoneType == SeatZoneType.Standing),
                 TotalCapacity = zones.Sum(z => z.Capacity),
                 TotalSeats = zones.Sum(z => z.TotalSeats),
-                AvailableSeats = zones.Sum(z => z.AvailableSeats),
                 Zones = zones
             };
         }
 
-        public async Task<SeatZoneResponseDTO> GetZoneSeatsAsync(int seatZoneId, int? callerId, bool isAdmin, bool availableOnly = false)
+        public async Task<SeatZoneResponseDTO> GetZoneSeatsAsync(int seatZoneId, int? callerId, bool isAdmin)
         {
             var zone = await _seatingRepository.GetZoneByIdAsync(seatZoneId, includeSeats: true)
                 ?? throw new KeyNotFoundException($"Seat zone {seatZoneId} not found.");
@@ -121,17 +105,14 @@ namespace EventAPI.Services
                     $"'{zone.ZoneName}' is a standing zone — there are no individual seats to pick. " +
                     "Buy by quantity against its ticket type instead.");
 
-            var dto = MapZone(zone, includeSeats: true);
-
-            if (availableOnly)
-                dto.Seats = dto.Seats.Where(s => s.Status == "Available").ToList();
-
-            return dto;
+            return MapZone(zone, includeSeats: true);
         }
 
         // =====================================================================
         // Build / replace the whole layout
         // =====================================================================
+
+        // Tạo lại sơ đồ ghế trong một luồng nghiệp vụ; kiểm tra quyền, quota vé và sinh ghế trước khi lưu.
 
         public async Task<SeatingChartResponseDTO> BuildAsync(
             int eventId, BuildSeatingChartDTO dto, int callerId, bool isAdmin)
@@ -154,13 +135,16 @@ namespace EventAPI.Services
             if (errors.Count > 0)
                 throw new ArgumentException(string.Join(" | ", errors));
 
+            // Validate before deleting/replacing anything so an invalid layout cannot
+            // destroy the organizer's current chart.
+            ValidateTicketTypeCapacities(
+                ticketTypes,
+                dto.Zones.Select(z => (z.TicketTypeId, DtoCapacity(z))));
+
             // Replacing an existing layout is destructive, so refuse once anything is taken.
             var existing = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: true);
             if (existing != null)
             {
-                await EnsureNothingSoldAsync(existing, ticketTypes,
-                    "Cannot rebuild the layout");
-
                 await _seatingRepository.DeleteSeatMapAsync(existing.SeatMapId, callerId);
             }
 
@@ -188,7 +172,6 @@ namespace EventAPI.Services
             await _eventRepository.UpdateAsync(ev);
 
             var reloaded = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: true);
-            await SynchronizeTicketQuantitiesAsync(ticketTypes, reloaded!);
 
             _logger.LogInformation(
                 "Layout {SeatMapId} built for event {EventId}: {Zones} zone(s), capacity {Capacity}",
@@ -200,6 +183,8 @@ namespace EventAPI.Services
         // =====================================================================
         // Zone-level operations
         // =====================================================================
+
+        // Thêm zone mới và chặn tổng capacity vượt Quantity của TicketType trước khi ghi DB.
 
         public async Task<SeatZoneResponseDTO> AddZoneAsync(
             int eventId, CreateSeatZoneDTO dto, int callerId, bool isAdmin)
@@ -221,6 +206,11 @@ namespace EventAPI.Services
             if (errors.Count > 0)
                 throw new ArgumentException(string.Join(" | ", errors));
 
+            ValidateTicketTypeCapacities(
+                ticketTypes,
+                map.SeatZones.Select(z => (z.TicketTypeId, ZoneCapacity(z)))
+                    .Append((dto.TicketTypeId, DtoCapacity(dto))));
+
             var zone = await CreateZoneInternalAsync(map.SeatMapId, dto);
 
             if (SeatZoneType.IsSeated(dto.ZoneType) && ev.SeatingMode != SeatingMode.ReservedSeating)
@@ -231,10 +221,10 @@ namespace EventAPI.Services
             }
 
             var reloaded = await _seatingRepository.GetZoneByIdAsync(zone.SeatZoneId, includeSeats: true);
-            var updatedMap = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: true);
-            await SynchronizeTicketQuantitiesAsync(ticketTypes, updatedMap!);
             return MapZone(reloaded!, includeSeats: true);
         }
+
+        // Cập nhật zone; nếu đổi kích thước Seated thì kiểm tra quota rồi sinh lại physical seat tương ứng.
 
         public async Task<SeatZoneResponseDTO> UpdateZoneAsync(
             int seatZoneId, UpdateSeatZoneDTO dto, int callerId, bool isAdmin)
@@ -246,6 +236,28 @@ namespace EventAPI.Services
             await GetEditableEventAsync(eventId, callerId, isAdmin);
 
             var ticketTypes = await _ticketTypeRepository.GetByEventIdAsync(eventId);
+            var currentMap = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: true)
+                ?? throw new InvalidOperationException("The seating layout no longer exists.");
+
+            var proposedTicketTypeId = dto.TicketTypeId ?? zone.TicketTypeId;
+            var proposedCapacity = ZoneCapacity(zone);
+            if (SeatZoneType.IsStanding(zone.ZoneType) && dto.Capacity.HasValue)
+                proposedCapacity = dto.Capacity.Value;
+            if (SeatZoneType.IsSeated(zone.ZoneType) && (dto.Rows.HasValue || dto.SeatsPerRow.HasValue))
+            {
+                var currentRowsForValidation = zone.Seats.Select(s => s.RowLabel).Distinct().Count();
+                var currentSeatsPerRowForValidation = zone.Seats.GroupBy(s => s.RowLabel)
+                    .Select(g => g.Count()).DefaultIfEmpty(0).Max();
+                proposedCapacity = (dto.Rows ?? currentRowsForValidation) *
+                    (dto.SeatsPerRow ?? currentSeatsPerRowForValidation);
+            }
+
+            ValidateTicketTypeCapacities(
+                ticketTypes,
+                currentMap.SeatZones
+                    .Where(z => z.SeatZoneId != seatZoneId)
+                    .Select(z => (z.TicketTypeId, ZoneCapacity(z)))
+                    .Append((proposedTicketTypeId, proposedCapacity)));
 
             if (dto.ZoneName != null) zone.ZoneName = dto.ZoneName;
             if (dto.ShapeJson != null) zone.ShapeJson = dto.ShapeJson;
@@ -265,9 +277,6 @@ namespace EventAPI.Services
                 if (!ticketTypes.Any(t => t.TicketTypeId == dto.TicketTypeId.Value))
                     throw new ArgumentException($"TicketTypeId {dto.TicketTypeId} does not belong to this concert.");
 
-                await EnsureZoneNotSoldAsync(zone, ticketTypes,
-                    "Cannot change the ticket type");
-
                 zone.TicketTypeId = dto.TicketTypeId.Value;
             }
 
@@ -285,11 +294,6 @@ namespace EventAPI.Services
                 if (dto.Capacity.Value > MaxCapacityPerZone)
                     throw new ArgumentException($"Capacity cannot exceed {MaxCapacityPerZone}.");
 
-                var sold = ticketTypes.FirstOrDefault(t => t.TicketTypeId == zone.TicketTypeId)?.SoldQuantity ?? 0;
-                if (dto.Capacity.Value < sold)
-                    throw new InvalidOperationException(
-                        $"Cannot shrink this zone to {dto.Capacity.Value}: {sold} ticket(s) have already been sold against it.");
-
                 zone.Capacity = dto.Capacity.Value;
             }
 
@@ -299,7 +303,6 @@ namespace EventAPI.Services
                 if (!SeatZoneType.IsSeated(zone.ZoneType))
                     throw new InvalidOperationException("Rows and SeatsPerRow only apply to a Seated zone.");
 
-                await EnsureZoneNotSoldAsync(zone, ticketTypes, "Cannot resize this zone");
                 var currentRows = zone.Seats.Select(s => s.RowLabel).Distinct().Count();
                 var currentSeatsPerRow = zone.Seats.GroupBy(s => s.RowLabel)
                     .Select(g => g.Count()).DefaultIfEmpty(0).Max();
@@ -325,10 +328,10 @@ namespace EventAPI.Services
             await _seatingRepository.UpdateZoneAsync(zone);
 
             var reloaded = await _seatingRepository.GetZoneByIdAsync(seatZoneId, includeSeats: true);
-            var updatedMap = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: true);
-            await SynchronizeTicketQuantitiesAsync(ticketTypes, updatedMap!);
             return MapZone(reloaded!, includeSeats: true);
         }
+
+        // Xóa zone khỏi sơ đồ khi event còn cho phép chỉnh sửa.
 
         public async Task DeleteZoneAsync(int seatZoneId, int callerId, bool isAdmin)
         {
@@ -337,9 +340,6 @@ namespace EventAPI.Services
 
             var eventId = zone.SeatMap.EventId;
             await GetEditableEventAsync(eventId, callerId, isAdmin);
-
-            var ticketTypes = await _ticketTypeRepository.GetByEventIdAsync(eventId);
-            await EnsureZoneNotSoldAsync(zone, ticketTypes, "Cannot delete this zone");
 
             await _seatingRepository.DeleteZoneAsync(seatZoneId);
 
@@ -353,9 +353,9 @@ namespace EventAPI.Services
                 ev.UpdatedBy = callerId;
                 await _eventRepository.UpdateAsync(ev);
             }
-            if (remaining != null)
-                await SynchronizeTicketQuantitiesAsync(ticketTypes, remaining);
         }
+
+        // Xóa hoặc vô hiệu cấu hình theo rule của domain; không xử lý nghiệp vụ ngoài phạm vi EventAPI.
 
         public async Task DeleteAsync(int eventId, int callerId, bool isAdmin)
         {
@@ -363,9 +363,6 @@ namespace EventAPI.Services
 
             var map = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: true)
                 ?? throw new KeyNotFoundException("This concert has no layout.");
-
-            var ticketTypes = await _ticketTypeRepository.GetByEventIdAsync(eventId);
-            await EnsureNothingSoldAsync(map, ticketTypes, "Cannot delete the layout");
 
             await _seatingRepository.DeleteSeatMapAsync(map.SeatMapId, callerId);
 
@@ -476,51 +473,28 @@ namespace EventAPI.Services
                 : zone.Capacity;
         }
 
-        private async Task SynchronizeTicketQuantitiesAsync(List<TicketType> ticketTypes, SeatMap map)
+        // Enforces the configuration invariant before persistence: all zones mapped to a
+        // ticket class may consume at most that class's declared Quantity. Unused quota is
+        // valid and remains available for later zones; the seating chart never changes Quantity.
+        private static void ValidateTicketTypeCapacities(
+            List<TicketType> ticketTypes,
+            IEnumerable<(int TicketTypeId, int Capacity)> zoneCapacities)
         {
+            var totals = zoneCapacities
+                .GroupBy(x => x.TicketTypeId)
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.Capacity));
+
             foreach (var ticketType in ticketTypes)
             {
-                var capacity = map.SeatZones
-                    .Where(z => z.TicketTypeId == ticketType.TicketTypeId)
-                    .Sum(ZoneCapacity);
-                if (capacity == 0 || capacity == ticketType.Quantity) continue;
-                if (capacity < ticketType.SoldQuantity)
+                var capacity = totals.GetValueOrDefault(ticketType.TicketTypeId, 0);
+                if (capacity > ticketType.Quantity)
                     throw new InvalidOperationException(
-                        $"Cannot reduce '{ticketType.TypeName}' below {ticketType.SoldQuantity} sold tickets.");
-                ticketType.Quantity = capacity;
-                await _ticketTypeRepository.UpdateAsync(ticketType);
+                        $"Zone capacity {capacity} exceeds Quantity {ticketType.Quantity} of ticket type '{ticketType.TypeName}'.");
             }
         }
 
-        /// <summary>Seated zones: any non-Available seat. Standing zones: any sold ticket.</summary>
-        private async Task EnsureZoneNotSoldAsync(SeatZone zone, List<TicketType> ticketTypes, string action)
-        {
-            if (SeatZoneType.IsSeated(zone.ZoneType))
-            {
-                var occupied = await _seatingRepository.CountOccupiedSeatsAsync(zone.SeatZoneId);
-                if (occupied > 0)
-                    throw new InvalidOperationException(
-                        $"{action}: {occupied} seat(s) in '{zone.ZoneName}' are already held, reserved or sold.");
-            }
-            else
-            {
-                var sold = ticketTypes.FirstOrDefault(t => t.TicketTypeId == zone.TicketTypeId)?.SoldQuantity ?? 0;
-                if (sold > 0)
-                    throw new InvalidOperationException(
-                        $"{action}: {sold} ticket(s) have already been sold for the standing zone '{zone.ZoneName}'.");
-            }
-        }
-
-        private async Task EnsureNothingSoldAsync(SeatMap map, List<TicketType> ticketTypes, string action)
-        {
-            foreach (var zone in map.SeatZones)
-                await EnsureZoneNotSoldAsync(zone, ticketTypes, action);
-        }
-
-        /// <summary>
-        /// Generates seats for a Seated zone: rows labelled from RowLabelPrefix
-        /// (A, B, C... then AA, AB past Z) and seats numbered 1..SeatsPerRow.
-        /// </summary>
+        // Generates the physical seat definitions for a Seated zone. Row labels continue
+        // after Z as AA, AB... so large layouts stay deterministic and readable.
         private static List<Seat> GenerateSeats(int seatZoneId, CreateSeatZoneDTO dto)
         {
             var seats = new List<Seat>(dto.Rows * dto.SeatsPerRow);
@@ -539,7 +513,6 @@ namespace EventAPI.Services
                         SeatNumber = n.ToString(),
                         XCoordinate = n,
                         YCoordinate = r + 1,
-                        Status = "Available",
                         UpdatedAt = DateTime.UtcNow
                     });
                 }
@@ -548,7 +521,7 @@ namespace EventAPI.Services
             return seats;
         }
 
-        /// <summary>"A" -> 0, "B" -> 1, "Z" -> 25, "AA" -> 26.</summary>
+        // Converts spreadsheet-style row labels to a zero-based index.
         private static int RowLabelToIndex(string label)
         {
             int index = 0;
@@ -560,7 +533,7 @@ namespace EventAPI.Services
             return index - 1;
         }
 
-        /// <summary>0 -> "A", 25 -> "Z", 26 -> "AA".</summary>
+        // Converts a zero-based row index back to spreadsheet-style labels.
         private static string IndexToRowLabel(int index)
         {
             var label = string.Empty;
@@ -575,11 +548,8 @@ namespace EventAPI.Services
             return label;
         }
 
-        /// <summary>
-        /// Ownership + status gate. The layout is only configurable while the concert
-        /// is Draft or Rejected (an Admin may override) — once Pending or Published
-        /// it's what the Admin reviewed and what buyers are booking against.
-        /// </summary>
+        // Central ownership/status gate for layout mutations. Pending/Published layouts
+        // stay immutable so Admin reviews the same configuration that was submitted.
         private async Task<Event> GetEditableEventAsync(int eventId, int callerId, bool isAdmin)
         {
             var ev = await _eventRepository.GetByIdAsync(eventId)
@@ -632,7 +602,6 @@ namespace EventAPI.Services
                 ZoneType = SeatZoneType.Normalize(z.ZoneType),
                 Capacity = effectiveCapacity,
                 TotalSeats = seated ? effectiveCapacity : 0,
-                AvailableSeats = seated ? z.Seats.Count(s => s.Status == "Available") : z.Capacity,
                 Seats = seated && includeSeats
                     ? z.Seats
                         .OrderBy(s => s.YCoordinate).ThenBy(s => s.XCoordinate)
@@ -642,8 +611,7 @@ namespace EventAPI.Services
                             RowLabel = s.RowLabel,
                             SeatNumber = s.SeatNumber,
                             XCoordinate = s.XCoordinate,
-                            YCoordinate = s.YCoordinate,
-                            Status = s.Status
+                            YCoordinate = s.YCoordinate
                         }).ToList()
                     : new List<SeatResponseDTO>()
             };

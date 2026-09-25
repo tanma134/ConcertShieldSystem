@@ -6,16 +6,15 @@ using EventAPI.Repositories;
 
 namespace EventAPI.Services
 {
-    /// <summary>
-    /// Reusable venue layouts (UC_26.2 Apply Seating Template / UC_26.3 Save Seating
-    /// Chart as Template), so an organizer running several similar concerts doesn't
-    /// have to redraw the same zones every time.
-    ///
-    /// Applying a template never generates seats itself — it turns the template's
-    /// zones into a BuildSeatingChartDTO and delegates to ISeatingService.BuildAsync,
-    /// so seat generation, capacity sync and the "can't rebuild once sold" guard all
-    /// stay owned by SeatingService in exactly one place.
-    /// </summary>
+
+    // Reusable venue layouts (UC_26.2 Apply Seating Template / UC_26.3 Save Seating
+    // Chart as Template), so an organizer running several similar concerts doesn't
+    // have to redraw the same zones every time.
+    //     // Applying a template never generates seats itself — it turns the template's
+    // zones into a BuildSeatingChartDTO and delegates to ISeatingService.BuildAsync,
+    // so seat generation, capacity sync and the "can't rebuild once sold" guard all
+    // stay owned by SeatingService in exactly one place.
+
     public class SeatingTemplateService : ISeatingTemplateService
     {
         private readonly ISeatingTemplateRepository _templateRepository;
@@ -38,17 +37,23 @@ namespace EventAPI.Services
             _seatingService = seatingService;
         }
 
+        // Lấy template mà người gọi được phép xem: template của mình và system template công khai.
+
         public async Task<List<SeatingTemplateListDTO>> GetVisibleAsync(int callerId, bool isAdmin = false)
         {
             var items = await _templateRepository.GetVisibleToAsync(callerId, isAdmin);
             return items.Select(t => MapToList(t, callerId)).ToList();
         }
 
+        // Lấy chi tiết theo id sau khi kiểm tra quyền truy cập.
+
         public async Task<SeatingTemplateResponseDTO> GetByIdAsync(int id, int callerId, bool isAdmin)
         {
             var entity = await GetVisibleEntityAsync(id, callerId, isAdmin);
             return MapToResponse(entity);
         }
+
+        // Chụp cấu trúc seating hiện tại thành template độc lập; không giữ SeatId/TicketTypeId của event nguồn.
 
         public async Task<SeatingTemplateResponseDTO> SaveFromEventAsync(
             SaveSeatingTemplateDTO dto, int callerId, bool isAdmin)
@@ -85,6 +90,8 @@ namespace EventAPI.Services
             return MapToResponse(created);
         }
 
+        // Tạo mới cấu hình sau khi kiểm tra các business rule bắt buộc.
+
         public async Task<SeatingTemplateResponseDTO> CreateAsync(
             CreateSeatingTemplateDTO dto, int callerId, bool isAdmin)
         {
@@ -111,6 +118,8 @@ namespace EventAPI.Services
             return MapToResponse(created);
         }
 
+        // Cập nhật cấu hình hiện có và giữ các invariant nghiệp vụ trước khi lưu.
+
         public async Task<SeatingTemplateResponseDTO> UpdateAsync(
             int id, UpdateSeatingTemplateDTO dto, int callerId, bool isAdmin)
         {
@@ -124,11 +133,15 @@ namespace EventAPI.Services
             return MapToResponse(entity);
         }
 
+        // Xóa hoặc vô hiệu cấu hình theo rule của domain; không xử lý nghiệp vụ ngoài phạm vi EventAPI.
+
         public async Task DeleteAsync(int id, int callerId, bool isAdmin)
         {
             var entity = await GetOwnedEntityAsync(id, callerId, isAdmin);
             await _templateRepository.SoftDeleteAsync(entity.SeatingTemplateId);
         }
+
+        // Áp template bằng cách map zone sang TicketType của event mới rồi giao SeatingService validate và sinh ghế.
 
         public async Task<SeatingChartResponseDTO> ApplyToEventAsync(
             int templateId, int eventId, ApplySeatingTemplateDTO dto, int callerId, bool isAdmin)
@@ -187,11 +200,10 @@ namespace EventAPI.Services
 
         // ---- mapping helpers ----
 
-        /// <summary>
-        /// Seats are always generated as a rectangular grid (see
-        /// SeatingService.GenerateSeats), so Rows / SeatsPerRow / the first row label
-        /// can be derived straight back from the seats that already exist.
-        /// </summary>
+        // Seats are always generated as a rectangular grid (see
+        // SeatingService.GenerateSeats), so Rows / SeatsPerRow / the first row label
+        // can be derived straight back from the seats that already exist.
+
         private static SeatingTemplateZoneDTO ToTemplateZone(SeatZone z)
         {
             if (!SeatZoneType.IsSeated(z.ZoneType))
@@ -250,7 +262,7 @@ namespace EventAPI.Services
             return entity;
         }
 
-        /// <summary>Readable by its owner, an Admin, or anyone when it is public.</summary>
+        // Readable by its owner, an Admin, or anyone when it is public.
         private async Task<SeatingTemplate> GetVisibleEntityAsync(int id, int callerId, bool isAdmin)
         {
             var entity = await _templateRepository.GetByIdAsync(id)

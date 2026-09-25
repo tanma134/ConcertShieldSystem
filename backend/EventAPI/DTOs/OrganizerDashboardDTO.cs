@@ -3,12 +3,12 @@ using System.Collections.Generic;
 
 namespace EventAPI.DTOs
 {
-    /// <summary>
-    /// One row in the organizer's dashboard event table. Revenue is a simple
-    /// sum of price * soldQuantity across the concert's own ticket types - it
-    /// does not account for refunds, which live in RefundAPI, so it is best
-    /// read as "gross ticket sales", not net payout.
-    /// </summary>
+
+    // One row in the organizer's dashboard event table. Revenue is a simple
+    // sum of price * soldQuantity across the concert's own ticket types - it
+    // does not account for refunds, which live in RefundAPI, so it is best
+    // read as "gross ticket sales", not net payout.
+
     public class OrganizerDashboardEventDTO
     {
         public int EventId { get; set; }
@@ -34,7 +34,7 @@ namespace EventAPI.DTOs
         public int TotalTicketsSold { get; set; }
         public long TotalRevenue { get; set; }
 
-        /// <summary>Newest first - same ordering as GET /events/mine.</summary>
+        // Newest first - same ordering as GET /events/mine.
         public List<OrganizerDashboardEventDTO> Events { get; set; } = new();
     }
 }

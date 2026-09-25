@@ -45,12 +45,11 @@ namespace EventAPI.Repositories
             await _context.SaveChangesAsync();
         }
 
-        /// <summary>
-        /// RefundPolicy has no soft-delete columns in the schema, so removal is a
-        /// hard delete. Safe because policies are only editable while the concert is
-        /// Draft/Rejected (enforced in the service layer) — i.e. before any ticket
-        /// has ever been sold against them.
-        /// </summary>
+        // RefundPolicy has no soft-delete columns in the schema, so removal is a
+        // hard delete. Safe because policies are only editable while the concert is
+        // Draft/Rejected (enforced in the service layer) — i.e. before any ticket
+        // has ever been sold against them.
+
         public async Task DeleteAsync(int refundPolicyId)
         {
             var entity = await _context.RefundPolicies.FindAsync(refundPolicyId);

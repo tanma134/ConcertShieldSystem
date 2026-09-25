@@ -2,11 +2,11 @@ using System.ComponentModel.DataAnnotations;
 
 namespace EventAPI.DTOs
 {
-    /// <summary>
-    /// One zone inside a template — the same shape/rows/capacity fields as
-    /// CreateSeatZoneDTO, minus TicketTypeId (a template is event-agnostic; the
-    /// ticket type is chosen again each time the template is applied).
-    /// </summary>
+
+    // One zone inside a template — the same shape/rows/capacity fields as
+    // CreateSeatZoneDTO, minus TicketTypeId (a template is event-agnostic; the
+    // ticket type is chosen again each time the template is applied).
+
     public class SeatingTemplateZoneDTO
     {
         [Required]
@@ -27,7 +27,7 @@ namespace EventAPI.DTOs
         public int? Capacity { get; set; }
     }
 
-    /// <summary>UC_26.3 — Save Seating Chart as Template: snapshot an already-built concert layout.</summary>
+    // UC_26.3 — Save Seating Chart as Template: snapshot an already-built concert layout.
     public class SaveSeatingTemplateDTO
     {
         [Required]
@@ -40,11 +40,11 @@ namespace EventAPI.DTOs
         [MaxLength(500)]
         public string? Description { get; set; }
 
-        /// <summary>Only honored when the caller is an Admin.</summary>
+        // Only honored when the caller is an Admin.
         public bool IsPublic { get; set; } = false;
     }
 
-    /// <summary>Draw-from-scratch template, built directly in the editor without a source concert.</summary>
+    // Draw-from-scratch template, built directly in the editor without a source concert.
     public class CreateSeatingTemplateDTO
     {
         [Required]
@@ -59,7 +59,7 @@ namespace EventAPI.DTOs
         [Required]
         public List<SeatingTemplateZoneDTO> Zones { get; set; } = new();
 
-        /// <summary>Only honored when the caller is an Admin.</summary>
+        // Only honored when the caller is an Admin.
         public bool IsPublic { get; set; } = false;
     }
 
@@ -71,21 +71,21 @@ namespace EventAPI.DTOs
         [MaxLength(500)]
         public string? Description { get; set; }
 
-        /// <summary>Only honored when the caller is an Admin.</summary>
+        // Only honored when the caller is an Admin.
         public bool? IsPublic { get; set; }
     }
 
-    /// <summary>One entry in an organizer's zone-to-ticket-type mapping for UC_26.2 — Apply Seating Template.</summary>
+    // One entry in an organizer's zone-to-ticket-type mapping for UC_26.2 — Apply Seating Template.
     public class TemplateZoneMappingDTO
     {
-        /// <summary>Index into the template's Zones list.</summary>
+        // Index into the template's Zones list.
         [Required]
         public int ZoneIndex { get; set; }
 
         [Required]
         public int TicketTypeId { get; set; }
 
-        /// <summary>Editable copy values. Template defaults are used when omitted.</summary>
+        // Editable copy values. Template defaults are used when omitted.
         [MaxLength(100)] public string? ZoneName { get; set; }
         [MaxLength(20)] public string? ZoneType { get; set; }
         public int? Rows { get; set; }
@@ -116,7 +116,7 @@ namespace EventAPI.DTOs
         public DateTime UpdatedAt { get; set; }
     }
 
-    /// <summary>Lightweight row for the template picker (UC_26.2's "Seating Template List" screen).</summary>
+    // Lightweight row for the template picker (UC_26.2's "Seating Template List" screen).
     public class SeatingTemplateListDTO
     {
         public int SeatingTemplateId { get; set; }

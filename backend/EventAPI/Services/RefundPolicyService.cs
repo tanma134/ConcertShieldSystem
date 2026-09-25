@@ -21,12 +21,16 @@ namespace EventAPI.Services
             _eventAccessService = eventAccessService;
         }
 
+        // Lấy cấu hình theo sự kiện; chỉ đọc dữ liệu, không thay đổi trạng thái.
+
         public async Task<List<RefundPolicyResponseDTO>> GetByEventIdAsync(int eventId, int? callerId, bool isAdmin)
         {
             await _eventAccessService.EnsureVisibleAsync(eventId, callerId, isAdmin);
             var items = await _refundPolicyRepository.GetByEventIdAsync(eventId);
             return items.Select(Map).ToList();
         }
+
+        // Tạo mới cấu hình sau khi kiểm tra các business rule bắt buộc.
 
         public async Task<RefundPolicyResponseDTO> CreateAsync(
             int eventId, CreateRefundPolicyDTO dto, int callerId, bool isAdmin)
@@ -53,6 +57,8 @@ namespace EventAPI.Services
             return Map(created);
         }
 
+        // Cập nhật cấu hình hiện có và giữ các invariant nghiệp vụ trước khi lưu.
+
         public async Task<RefundPolicyResponseDTO> UpdateAsync(
             int refundPolicyId, UpdateRefundPolicyDTO dto, int callerId, bool isAdmin)
         {
@@ -61,15 +67,24 @@ namespace EventAPI.Services
 
             await GetEditableEventAsync(entity.EventId, callerId, isAdmin);
 
-            if (dto.PolicyName != null) entity.PolicyName = dto.PolicyName;
+            if (dto.PolicyName != null)
+            {
+                var existing = await _refundPolicyRepository.GetByEventIdAsync(entity.EventId);
+                if (existing.Any(p => p.RefundPolicyId != refundPolicyId &&
+                    string.Equals(p.PolicyName, dto.PolicyName, StringComparison.OrdinalIgnoreCase)))
+                    throw new InvalidOperationException(
+                        $"A refund policy named '{dto.PolicyName}' already exists for this concert.");
+
+                entity.PolicyName = dto.PolicyName.Trim();
+            }
             if (dto.Description != null) entity.Description = dto.Description;
             if (dto.DeadlineBeforeEventHours.HasValue) entity.DeadlineBeforeEventHours = dto.DeadlineBeforeEventHours.Value;
             if (dto.RefundPercent.HasValue) entity.RefundPercent = dto.RefundPercent.Value;
             if (dto.RequiresOrganizerApproval.HasValue) entity.RequiresOrganizerApproval = dto.RequiresOrganizerApproval.Value;
             if (dto.IsActive.HasValue) entity.IsActive = dto.IsActive.Value;
 
-            if (entity.DeadlineBeforeEventHours <= 0)
-                throw new InvalidOperationException("DeadlineBeforeEventHours must be greater than 0.");
+            if (entity.DeadlineBeforeEventHours < 0)
+                throw new InvalidOperationException("DeadlineBeforeEventHours cannot be negative.");
 
             if (entity.RefundPercent < 0 || entity.RefundPercent > 100)
                 throw new InvalidOperationException("RefundPercent must be between 0 and 100.");
@@ -77,6 +92,8 @@ namespace EventAPI.Services
             await _refundPolicyRepository.UpdateAsync(entity);
             return Map(entity);
         }
+
+        // Xóa hoặc vô hiệu cấu hình theo rule của domain; không xử lý nghiệp vụ ngoài phạm vi EventAPI.
 
         public async Task DeleteAsync(int refundPolicyId, int callerId, bool isAdmin)
         {
@@ -87,11 +104,8 @@ namespace EventAPI.Services
             await _refundPolicyRepository.DeleteAsync(refundPolicyId);
         }
 
-        /// <summary>
-        /// Ownership + status gate. Refund terms are part of the contract shown to
-        /// buyers, so they're only configurable while the concert is still Draft or
-        /// Rejected (an Admin may override).
-        /// </summary>
+        // Refund terms become part of the published event contract, so organizers may
+        // change them only while the event is Draft or Rejected; Admin may override.
         private async Task<Event> GetEditableEventAsync(int eventId, int callerId, bool isAdmin)
         {
             var ev = await _eventRepository.GetByIdAsync(eventId)

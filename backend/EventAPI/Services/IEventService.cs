@@ -18,38 +18,38 @@ namespace EventAPI.Services
         Task SoftDeleteAsync(int id, int callerId, bool isAdmin);
         Task RestoreAsync(int id);
 
-        /// <summary>Full concert incl. seating chart, for the owner (any status).</summary>
+        // Full concert incl. seating chart, for the owner (any status).
         Task<EventResponseDTO> GetMineByIdAsync(int id, int callerId, bool isAdmin);
 
-        /// <summary>Runs the pre-submit publication checks without changing anything.</summary>
+        // Runs the pre-submit publication checks without changing anything.
         Task<SubmitValidationResultDTO> ValidateForSubmissionAsync(int id, int callerId, bool isAdmin);
 
-        /// <summary>Draft/Rejected -> Pending. Owner only. Validates publication data first.</summary>
+        // Draft/Rejected -> Pending. Owner only. Validates publication data first.
         Task<EventResponseDTO> SubmitAsync(int id, int callerId);
 
-        /// <summary>Admin moderation queue with ticket/pricing summary.</summary>
+        // Admin moderation queue with ticket/pricing summary.
         Task<PagedResultDTO<PendingEventDTO>> GetPendingAsync(int page, int pageSize);
 
-        /// <summary>Pending -> Published and grants Organizer additively.</summary>
+        // Pending -> Published and grants Organizer additively.
         Task<(EventResponseDTO Event, GrantRoleResult RoleGrant)> ApproveAsync(
             int id, int adminId, string? adminBearerToken);
 
-        /// <summary>Pending -> Rejected (with reason). Admin only.</summary>
+        // Pending -> Rejected (with reason). Admin only.
         Task<EventResponseDTO> RejectAsync(int id, string reason, int adminId);
 
-        /// <summary>Approved/Pending -> Cancelled. Owner or Admin.</summary>
+        // Approved/Pending -> Cancelled. Owner or Admin.
         Task<EventResponseDTO> CancelAsync(int id, int callerId, bool isAdmin);
 
         Task<EventResponseDTO> SetPosterAsync(int id, string url, string publicId, int callerId, bool isAdmin);
         Task<EventResponseDTO> SetBannerAsync(int id, string url, string publicId, int callerId, bool isAdmin);
 
-        /// <summary>Removes the poster from the concert and from Cloudinary.</summary>
+        // Removes the poster from the concert and from Cloudinary.
         Task<EventResponseDTO> DeletePosterAsync(int id, int callerId, bool isAdmin);
 
-        /// <summary>Removes the banner from the concert and from Cloudinary.</summary>
+        // Removes the banner from the concert and from Cloudinary.
         Task<EventResponseDTO> DeleteBannerAsync(int id, int callerId, bool isAdmin);
 
-        /// <summary>Throws if the event doesn't exist or the caller doesn't own it (unless isAdmin).</summary>
+        // Throws if the event doesn't exist or the caller doesn't own it (unless isAdmin).
         Task<Models.Event> GetOwnedEntityAsync(int id, int callerId, bool isAdmin);
     }
 }

@@ -162,6 +162,15 @@ namespace EventAPI.Data
                     .IsUnique()
                     .HasFilter("is_deleted = false")
                     .HasDatabaseName("uq_ticket_types_event_name_active");
+
+                // DB-level inventory invariant (council feedback: "một ghế/一 vé không thể
+                // bán vượt quota; DB phải có transaction/invariant/constraint, không chỉ
+                // dựa vào Redis lock"). No app code can ever persist an oversold row, even
+                // if a future service writes SoldQuantity directly instead of going through
+                // TryReserveAsync below.
+                entity.ToTable(t => t.HasCheckConstraint(
+                    "ck_ticket_types_sold_within_quantity",
+                    "sold_quantity >= 0 AND sold_quantity <= quantity"));
             });
 
             // PricingRules
@@ -270,9 +279,6 @@ namespace EventAPI.Data
                 entity.Property(e => e.SeatNumber).HasColumnName("seat_number").HasMaxLength(10);
                 entity.Property(e => e.XCoordinate).HasColumnName("x_coordinate");
                 entity.Property(e => e.YCoordinate).HasColumnName("y_coordinate");
-                entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(20).HasDefaultValue("Available");
-                entity.Property(e => e.HeldByUserId).HasColumnName("held_by_user_id");
-                entity.Property(e => e.HoldExpiresAt).HasColumnName("hold_expires_at");
                 entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("now()");
 
                 entity.HasOne(d => d.SeatZone)

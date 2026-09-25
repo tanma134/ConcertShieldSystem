@@ -17,7 +17,7 @@ namespace EventAPI.Services
         private readonly EventDbContext _context; // only used for unique-slug lookup (reuses existing SlugHelper)
         private readonly ILogger<EventService> _logger;
 
-        /// <summary>CategoryId 1 == Music. Concerts are always Music in this system.</summary>
+        // CategoryId 1 == Music. Concerts are always Music in this system.
         public const int MusicCategoryId = 1;
         public const string MusicCategoryName = "Music";
 
@@ -40,6 +40,8 @@ namespace EventAPI.Services
             _context = context;
             _logger = logger;
         }
+
+        // Tạo mới cấu hình sau khi kiểm tra các business rule bắt buộc.
 
         public async Task<EventResponseDTO> CreateAsync(CreateEventDTO dto, int organizerId)
         {
@@ -101,10 +103,11 @@ namespace EventAPI.Services
             };
         }
 
-        /// <param name="publicOnly">
-        /// True for anonymous/public endpoints: a concert that isn't Published is
-        /// reported as "not found" so drafts can't be discovered by guessing ids.
-        /// </param>
+        // <param name="publicOnly">
+        // True for anonymous/public endpoints: a concert that isn't Published is
+        // reported as "not found" so drafts can't be discovered by guessing ids.
+        // </param>
+        // Lấy chi tiết theo id sau khi kiểm tra quyền truy cập.
         public async Task<EventResponseDTO> GetByIdAsync(int id, bool incrementView = false, bool publicOnly = true)
         {
             var entity = await _eventRepository.GetByIdAsync(id, includeChildren: true)
@@ -223,6 +226,8 @@ namespace EventAPI.Services
             return entity;
         }
 
+        // Cập nhật cấu hình hiện có và giữ các invariant nghiệp vụ trước khi lưu.
+
         public async Task<EventResponseDTO> UpdateAsync(int id, UpdateEventDTO dto, int callerId, bool isAdmin)
         {
             var entity = await GetOwnedEntityAsync(id, callerId, isAdmin);
@@ -300,11 +305,15 @@ namespace EventAPI.Services
             return await MapToResponseWithSeatingAsync(entity);
         }
 
+        // Kiểm tra các điều kiện bắt buộc trước khi event được submit, không thay đổi dữ liệu.
+
         public async Task<SubmitValidationResultDTO> ValidateForSubmissionAsync(int id, int callerId, bool isAdmin)
         {
             await GetOwnedEntityAsync(id, callerId, isAdmin);
             return await _submissionValidator.ValidateAsync(id);
         }
+
+        // Chuyển Draft/Rejected sang Pending chỉ khi toàn bộ cấu hình event vượt qua kiểm tra trước khi duyệt.
 
         public async Task<EventResponseDTO> SubmitAsync(int id, int callerId)
         {
@@ -366,6 +375,8 @@ namespace EventAPI.Services
             };
         }
 
+        // Admin duyệt event Pending sang Published; không bỏ qua validation nghiệp vụ.
+
         public async Task<(EventResponseDTO Event, GrantRoleResult RoleGrant)> ApproveAsync(
             int id, int adminId, string? adminBearerToken)
         {
@@ -408,6 +419,8 @@ namespace EventAPI.Services
             return (await MapToResponseWithSeatingAsync(reloaded!), roleGrant);
         }
 
+        // Admin từ chối event Pending và lưu lý do để Organizer sửa rồi submit lại.
+
         public async Task<EventResponseDTO> RejectAsync(int id, string reason, int adminId)
         {
             if (string.IsNullOrWhiteSpace(reason))
@@ -433,6 +446,8 @@ namespace EventAPI.Services
             return await MapToResponseWithSeatingAsync(reloaded!);
         }
 
+        // Hủy event theo state rule hiện tại; phần refund transaction được xử lý ở service chuyên trách.
+
         public async Task<EventResponseDTO> CancelAsync(int id, int callerId, bool isAdmin)
         {
             var entity = await GetOwnedEntityAsync(id, callerId, isAdmin);
@@ -440,10 +455,30 @@ namespace EventAPI.Services
             var status = EventStatus.Normalize(entity.Status);
             if (status != EventStatus.Published && status != EventStatus.Pending)
                 throw new InvalidOperationException($"Only Pending or Published concerts can be cancelled. Current status: '{status}'.");
+            if (entity.EndsAt <= DateTime.UtcNow)
+                throw new InvalidOperationException("This concert has already ended and can no longer be cancelled.");
 
             entity.Status = EventStatus.Cancelled;
             entity.UpdatedBy = callerId;
             await _eventRepository.UpdateAsync(entity);
+
+            // Freeze sale: the committee's cancellation workflow starts with "freeze
+            // sale" before anything else (affected-orders lookup, notify, refund all
+            // live in TicketAPI/PaymentAPI/RefundAPI, which own that data). This is
+            // the part EventAPI actually owns — stop every ticket type from reading
+            // as sellable, so any other service checking TicketType.Status == "Active"
+            // (see EventSubmissionValidator) stops offering it immediately, without
+            // relying solely on callers re-checking the parent Event's status.
+            var ticketTypes = await _ticketTypeRepository.GetByEventIdAsync(id);
+            foreach (var tt in ticketTypes.Where(t => t.Status == "Active"))
+            {
+                tt.Status = "Cancelled";
+                await _ticketTypeRepository.UpdateAsync(tt);
+            }
+
+            _logger.LogInformation(
+                "Concert {EventId} cancelled by {CallerId}; {Count} ticket type(s) closed for sale.",
+                id, callerId, ticketTypes.Count);
 
             var reloaded = await _eventRepository.GetByIdAsync(id, includeChildren: true);
             return MapToResponse(reloaded!);
@@ -603,10 +638,9 @@ namespace EventAPI.Services
             RejectedReason = e.RejectedReason
         };
 
-        /// <summary>
-        /// MapToResponse plus the seating chart, which lives in its own aggregate and
-        /// therefore isn't part of the Event's Include graph.
-        /// </summary>
+        // MapToResponse plus the seating chart, which lives in its own aggregate and
+        // therefore isn't part of the Event's Include graph.
+
         private async Task<EventResponseDTO> MapToResponseWithSeatingAsync(Event e)
         {
             var dto = MapToResponse(e);
@@ -616,7 +650,7 @@ namespace EventAPI.Services
                 var map = await _seatingRepository.GetByEventIdAsync(e.EventId, includeSeats: true);
                 if (map != null)
                 {
-                    dto.SeatingChart = SeatingService.MapChart(map, includeSeats: false);
+                    dto.SeatingChart = SeatingService.MapChart(map, includeSeats: true);
                 }
             }
 

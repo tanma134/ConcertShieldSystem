@@ -25,26 +25,26 @@ namespace EventAPI.Models
         public DateTime EndsAt { get; set; }
         public string Timezone { get; set; } = "SE Asia Standard Time";
         public bool HasSeatingChart { get; set; } = false;
-        /// <summary>GeneralAdmission | StandingZones | ReservedSeating (see SeatingMode).</summary>
+        // GeneralAdmission | StandingZones | ReservedSeating (see SeatingMode).
         public string SeatingMode { get; set; } = Common.SeatingMode.ReservedSeating;
         public bool RequiresVirtualQueue { get; set; } = false;
-        /// <summary>Draft | Pending | Published | Rejected | Cancelled (see EventStatus).</summary>
+        // Draft | Pending | Published | Rejected | Cancelled (see EventStatus).
         public string Status { get; set; } = "Draft";
 
-        /// <summary>Reason supplied by the Admin when rejecting. Cleared on resubmit.</summary>
+        // Reason supplied by the Admin when rejecting. Cleared on resubmit.
         public string? RejectedReason { get; set; }
 
         // ---- Lifecycle audit timestamps ----
-        /// <summary>Set when the owner submits Draft/Rejected -> Pending.</summary>
+        // Set when the owner submits Draft/Rejected -> Pending.
         public DateTime? SubmittedAt { get; set; }
 
-        /// <summary>Set when an Admin approves Pending -> Published.</summary>
+        // Set when an Admin approves Pending -> Published.
         public DateTime? ApprovedAt { get; set; }
 
-        /// <summary>Set when an Admin rejects Pending -> Rejected.</summary>
+        // Set when an Admin rejects Pending -> Rejected.
         public DateTime? RejectedAt { get; set; }
 
-        /// <summary>Admin user id that approved/rejected this concert.</summary>
+        // Admin user id that approved/rejected this concert.
         public int? ReviewedBy { get; set; }
         public bool IsFeatured { get; set; } = false;
         public int ViewCount { get; set; } = 0;

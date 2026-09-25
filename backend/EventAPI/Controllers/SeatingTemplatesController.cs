@@ -5,20 +5,18 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EventAPI.Controllers
 {
-    /// <summary>
-    /// Reusable venue layouts an organizer/admin can draw once and apply to many
-    /// concerts — the "canvas + template library" workflow requested for the
-    /// seating chart builder.
-    ///
-    ///   UC_26.3 Save Seating Chart as Template — snapshot an already-built concert
-    ///           layout into the reusable library.
-    ///   UC_26.2 Apply Seating Template        — load a template into a (Draft or
-    ///           Rejected) concert, mapping each template zone onto one of that
-    ///           concert's ticket types.
-    ///
-    /// A template is visible to its owner and to any Admin, plus everyone once it is
-    /// marked IsPublic (admin-provided starter templates such as "Standard theater").
-    /// </summary>
+
+    // Reusable venue layouts an organizer/admin can draw once and apply to many
+    // concerts — the "canvas + template library" workflow requested for the
+    // seating chart builder.
+    //     //   UC_26.3 Save Seating Chart as Template — snapshot an already-built concert
+    //           layout into the reusable library.
+    //   UC_26.2 Apply Seating Template        — load a template into a (Draft or
+    //           Rejected) concert, mapping each template zone onto one of that
+    //           concert's ticket types.
+    //     // A template is visible to its owner and to any Admin, plus everyone once it is
+    // marked IsPublic (admin-provided starter templates such as "Standard theater").
+
     [Route("api/seating-templates")]
     public class SeatingTemplatesController : BaseApiController
     {
@@ -29,7 +27,7 @@ namespace EventAPI.Controllers
             _templateService = templateService;
         }
 
-        /// <summary>Templates I can use: my own plus every public (admin-provided) one.</summary>
+        // Templates I can use: my own plus every public (admin-provided) one.
         [HttpGet]
         [Authorize(Policy = "RequireCustomer")]
         public async Task<IActionResult> GetVisible()
@@ -50,7 +48,7 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        /// <summary>UC_26.3 — snapshot the current, already-built layout of one of my concerts.</summary>
+        // UC_26.3 — snapshot the current, already-built layout of one of my concerts.
         [HttpPost("from-event")]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> SaveFromEvent([FromBody] SaveSeatingTemplateDTO dto)
@@ -64,7 +62,7 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        /// <summary>Draw-from-scratch template, not tied to any concert.</summary>
+        // Draw-from-scratch template, not tied to any concert.
         [HttpPost]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Create([FromBody] CreateSeatingTemplateDTO dto)
@@ -102,10 +100,9 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        /// <summary>
-        /// UC_26.2 — builds the concert's seating chart from the template, after the
-        /// organizer maps each template zone to one of the concert's ticket types.
-        /// </summary>
+        // UC_26.2 — builds the concert's seating chart from the template, after the
+        // organizer maps each template zone to one of the concert's ticket types.
+
         [HttpPost("{templateId:int}/apply/{eventId:int}")]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Apply(int templateId, int eventId, [FromBody] ApplySeatingTemplateDTO dto)

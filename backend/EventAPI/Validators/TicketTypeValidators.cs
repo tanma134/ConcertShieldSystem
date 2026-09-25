@@ -109,7 +109,7 @@ namespace EventAPI.Validators
                 .MaximumLength(150);
 
             RuleFor(x => x.DeadlineBeforeEventHours)
-                .GreaterThan(0).WithMessage("Deadline hours must be > 0");
+                .GreaterThanOrEqualTo(0).WithMessage("Deadline hours must be >= 0");
 
             RuleFor(x => x.RefundPercent)
                 .InclusiveBetween(0, 100)

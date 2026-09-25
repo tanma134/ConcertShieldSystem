@@ -5,7 +5,8 @@ import eventApi from "../../api/eventApi";
 import { formatDateRange } from "../../utils/format";
 import "../organizer/OrganizerWizard.css";
 import "./AdminPages.css";
-import StepTicketsSeating from "../organizer/steps/StepTicketsSeating";
+import ZoneMapCanvas from "../organizer/steps/ZoneMapCanvas";
+import SeatGridPreview from "../organizer/steps/SeatGridPreview";
 
 export default function AdminEventDetailPage() {
   const { id } = useParams();
@@ -157,23 +158,57 @@ export default function AdminEventDetailPage() {
               </section>
             )}
 
-            <section className="ow-section admin-seating-editor">
+            <section className="ow-section">
               <h3>Seating Chart, Tickets &amp; Pricing</h3>
               <p className="ow-hint">
-                Full editor — build/edit the seating chart on the canvas,
-                apply or save templates, and configure ticket classes,
-                dynamic pricing and refund policy, the same tools the
-                organizer uses. As Admin you can adjust these regardless of
-                the event's current status.
+                Read-only configuration submitted by the organizer. Admin reviews this
+                configuration here and approves or rejects the event; changes must be
+                made by the organizer after rejection.
               </p>
-              <StepTicketsSeating
-                eventId={Number(id)}
-                event={event}
-                forceEditable
-                standalone
-                onRefresh={load}
-                onSaved={load}
-              />
+
+              {event.ticketTypes?.length > 0 && (
+                <table className="ow-table">
+                  <thead><tr><th>Ticket class</th><th>Price</th><th>Quantity</th></tr></thead>
+                  <tbody>
+                    {event.ticketTypes.map((ticket) => (
+                      <tr key={ticket.ticketTypeId}>
+                        <td>{ticket.typeName}</td><td>{ticket.price}</td><td>{ticket.quantity}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+
+              {event.seatingChart?.zones?.length > 0 ? (
+                <>
+                  <ZoneMapCanvas
+                    zones={event.seatingChart.zones}
+                    ticketTypes={event.ticketTypes || []}
+                    readOnly
+                  />
+                  {event.seatingChart.zones.map((zone) => (
+                    <div key={zone.seatZoneId} className="ow-section">
+                      <strong>{zone.zoneName}</strong> — {zone.zoneType} — capacity {zone.capacity}
+                      {zone.zoneType === "Seated" && zone.seats?.length > 0 && (
+                        <SeatGridPreview mode="actual" seats={zone.seats} />
+                      )}
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <p className="ow-hint">No seating chart configured.</p>
+              )}
+
+              {event.refundPolicies?.length > 0 && (
+                <div>
+                  <h4>Refund policies</h4>
+                  {event.refundPolicies.map((policy) => (
+                    <p key={policy.refundPolicyId} className="ow-hint">
+                      {policy.policyName}: {policy.refundPercent}% — deadline {policy.deadlineBeforeEventHours} hour(s) before event
+                    </p>
+                  ))}
+                </div>
+              )}
             </section>
 
             {canDecide && (

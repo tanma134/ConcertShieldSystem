@@ -5,16 +5,15 @@ using EventAPI.Repositories;
 
 namespace EventAPI.Services
 {
-    /// <summary>
-    /// Dynamic pricing rules layered on top of a TicketType's base price — e.g. an
-    /// Early Bird discount that expires at a fixed time, or a price step-up once a
-    /// quantity threshold sells out.
-    ///
-    /// EventAPI only owns the CONFIGURATION of these rules. Resolving them into an
-    /// actual sale price at checkout time (which rule wins when several are active,
-    /// applying it to the order total, etc.) is TicketAPI/order-flow responsibility —
-    /// keeping that logic here would duplicate state across services.
-    /// </summary>
+
+    // Dynamic pricing rules layered on top of a TicketType's base price — e.g. an
+    // Early Bird discount that expires at a fixed time, or a price step-up once a
+    // quantity threshold sells out.
+    //     // EventAPI only owns the CONFIGURATION of these rules. Resolving them into an
+    // actual sale price at checkout time (which rule wins when several are active,
+    // applying it to the order total, etc.) is TicketAPI/order-flow responsibility —
+    // keeping that logic here would duplicate state across services.
+
     public class PricingRuleService : IPricingRuleService
     {
         private static readonly string[] TimeBasedRuleTypes = { "EarlyBird", "LastMinute", "TimeBased" };
@@ -51,6 +50,8 @@ namespace EventAPI.Services
             return items.Select(Map).ToList();
         }
 
+        // Tạo mới cấu hình sau khi kiểm tra các business rule bắt buộc.
+
         public async Task<PricingRuleResponseDTO> CreateAsync(
             int ticketTypeId, CreatePricingRuleDTO dto, int callerId, bool isAdmin)
         {
@@ -82,6 +83,8 @@ namespace EventAPI.Services
             return Map(created);
         }
 
+        // Cập nhật cấu hình hiện có và giữ các invariant nghiệp vụ trước khi lưu.
+
         public async Task<PricingRuleResponseDTO> UpdateAsync(
             int pricingRuleId, UpdatePricingRuleDTO dto, int callerId, bool isAdmin)
         {
@@ -107,6 +110,8 @@ namespace EventAPI.Services
             return Map(entity);
         }
 
+        // Xóa hoặc vô hiệu cấu hình theo rule của domain; không xử lý nghiệp vụ ngoài phạm vi EventAPI.
+
         public async Task DeleteAsync(int pricingRuleId, int callerId, bool isAdmin)
         {
             var entity = await _pricingRuleRepository.GetByIdAsync(pricingRuleId)
@@ -116,16 +121,15 @@ namespace EventAPI.Services
             await _pricingRuleRepository.DeleteAsync(pricingRuleId);
         }
 
-        /// <summary>
-        /// Cross-checks a rule's shape against its declared RuleType so a saved rule
-        /// can never be ambiguous about when or how it applies:
-        ///   - EarlyBird / LastMinute / TimeBased -> needs at least one trigger time.
-        ///   - QuantityBased -> needs a positive QuantityThreshold.
-        ///   - Every rule needs a price effect: AdjustedPrice and/or DiscountPercent.
-        /// FluentValidation (CreatePricingRuleValidator) already covers most of this
-        /// on Create; it is re-checked here because Update can clear one field
-        /// without the request going back through the validator.
-        /// </summary>
+        // Cross-checks a rule's shape against its declared RuleType so a saved rule
+        // can never be ambiguous about when or how it applies:
+        //   - EarlyBird / LastMinute / TimeBased -> needs at least one trigger time.
+        //   - QuantityBased -> needs a positive QuantityThreshold.
+        //   - Every rule needs a price effect: AdjustedPrice and/or DiscountPercent.
+        // FluentValidation (CreatePricingRuleValidator) already covers most of this
+        // on Create; it is re-checked here because Update can clear one field
+        // without the request going back through the validator.
+
         private static void ValidateRuleShape(
             string ruleType, long? adjustedPrice, decimal? discountPercent,
             DateTime? triggerFrom, DateTime? triggerTo, int? quantityThreshold)
@@ -149,12 +153,11 @@ namespace EventAPI.Services
                 throw new InvalidOperationException($"Rule type '{QuantityBasedRuleType}' needs a QuantityThreshold greater than 0.");
         }
 
-        /// <summary>
-        /// Ownership + status gate, reached through the ticket type's parent event.
-        /// Pricing rules are only configurable while the concert is Draft or Rejected
-        /// (an Admin may override) — the same rule already applied to ticket types
-        /// and refund policies.
-        /// </summary>
+        // Ownership + status gate, reached through the ticket type's parent event.
+        // Pricing rules are only configurable while the concert is Draft or Rejected
+        // (an Admin may override) — the same rule already applied to ticket types
+        // and refund policies.
+
         private async Task<TicketType> GetEditableTicketTypeAsync(int ticketTypeId, int callerId, bool isAdmin)
         {
             var ticketType = await _ticketTypeRepository.GetByIdAsync(ticketTypeId)

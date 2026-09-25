@@ -6,13 +6,12 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EventAPI.Controllers
 {
-    /// <summary>
-    /// Refund terms for a concert. A concert may have several tiers, e.g.
-    /// "100% refund up to 168h before" plus "50% refund up to 48h before".
-    ///
-    /// Terms are part of what buyers agree to, so they're only editable while the
-    /// concert is Draft or Rejected.
-    /// </summary>
+
+    // Refund terms for a concert. A concert may have several tiers, e.g.
+    // "100% refund up to 168h before" plus "50% refund up to 48h before".
+    //     // Terms are part of what buyers agree to, so they're only editable while the
+    // concert is Draft or Rejected.
+
     [Route("api/refundpolicies")]
     public class RefundPoliciesController : BaseApiController
     {
@@ -27,7 +26,7 @@ namespace EventAPI.Controllers
             _createValidator = createValidator;
         }
 
-        /// <summary>Active refund policies for a concert, longest deadline first.</summary>
+        // Active refund policies for a concert, longest deadline first.
         [HttpGet("event/{eventId:int}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetByEvent(int eventId)

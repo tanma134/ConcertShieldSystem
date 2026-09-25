@@ -106,7 +106,13 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
     if ((touched.slug || touched.title) && normalizedSlug.length < 3) errors.slug = "Slug must contain at least 3 characters.";
     else if (slugState.available === false) errors.slug = `This slug is already used. Try '${slugState.suggestion}'.`;
     if (touched.startsAt && !form.startsAt) errors.startsAt = "Start time is required.";
-    if (form.startsAt && new Date(form.startsAt) <= new Date()) errors.startsAt = "Start time must be in the future.";
+    // Gated by `touched` so that simply reopening an existing Draft/Rejected
+    // event whose start date has since passed (the organizer just came back
+    // to it later) doesn't permanently disable Save/Next before they've
+    // touched the field themselves.
+    if (touched.startsAt && form.startsAt && new Date(form.startsAt) <= new Date()) {
+      errors.startsAt = "Start time must be in the future.";
+    }
     if (touched.endsAt && !form.endsAt) errors.endsAt = "End time is required.";
     if (dateRangeError) errors.endsAt = dateRangeError;
     const min = form.minTicketsPerAccount === "" ? null : Number(form.minTicketsPerAccount);
@@ -221,6 +227,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
               onChange={handleChange}
               placeholder="e.g. Son Tung M-TP Live in Can Tho"
               maxLength={200}
+              aria-invalid={!!fieldErrors.title}
             />
             {fieldErrors.title && <span className="ow-field-error">{fieldErrors.title}</span>}
           </label>
@@ -234,6 +241,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
               onBlur={() => setTouched((current) => ({ ...current, slug: true }))}
               placeholder={normalizeSlug(form.title) || "event-url-slug"}
               maxLength={200}
+              aria-invalid={!!fieldErrors.slug}
             />
             {slugState.checking && <span className="ow-hint">Checking availability...</span>}
             {!slugState.checking && slugState.available === true && <span className="ow-field-ok">✓ Slug is available</span>}
@@ -269,6 +277,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
               name="startsAt"
               value={form.startsAt}
               onChange={handleChange}
+              aria-invalid={!!fieldErrors.startsAt}
             />
             {fieldErrors.startsAt && <span className="ow-field-error">{fieldErrors.startsAt}</span>}
           </label>
@@ -280,7 +289,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
               name="endsAt"
               value={form.endsAt}
               onChange={handleChange}
-              aria-invalid={!!dateRangeError}
+              aria-invalid={!!fieldErrors.endsAt}
             />
             {fieldErrors.endsAt && (
               <span className="ow-field-error">{fieldErrors.endsAt}</span>
@@ -330,6 +339,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
               name="minTicketsPerAccount"
               value={form.minTicketsPerAccount}
               onChange={handleChange}
+              aria-invalid={!!fieldErrors.minTicketsPerAccount}
             />
             {fieldErrors.minTicketsPerAccount && <span className="ow-field-error">{fieldErrors.minTicketsPerAccount}</span>}
           </label>
@@ -342,6 +352,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
               name="maxTicketsPerAccount"
               value={form.maxTicketsPerAccount}
               onChange={handleChange}
+              aria-invalid={!!fieldErrors.maxTicketsPerAccount}
             />
             {fieldErrors.maxTicketsPerAccount && <span className="ow-field-error">{fieldErrors.maxTicketsPerAccount}</span>}
           </label>

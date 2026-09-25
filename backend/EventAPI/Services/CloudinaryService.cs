@@ -3,10 +3,10 @@ using CloudinaryDotNet.Actions;
 
 namespace EventAPI.Services
 {
-    /// <summary>
-    /// Wraps the Cloudinary SDK. Reads credentials from configuration section "Cloudinary"
-    /// (CloudName / ApiKey / ApiSecret) — never hardcode the secret, never return it to clients.
-    /// </summary>
+
+    // Wraps the Cloudinary SDK. Reads credentials from configuration section "Cloudinary"
+    // (CloudName / ApiKey / ApiSecret) — never hardcode the secret, never return it to clients.
+
     public class CloudinaryService : ICloudinaryService
     {
         private readonly Cloudinary _cloudinary;

@@ -81,5 +81,47 @@ namespace EventAPI.Controllers
             }
             catch (Exception ex) { return HandleException(ex); }
         }
+
+        // ---- Inventory seam for the Booking/Payment side of the system ----
+        // TODO: gate these with service-to-service auth (API key / mTLS) once a
+        // Booking/Payment service exists and calls them. RequireAdmin only exists
+        // today so a plain Customer/Organizer token cannot hit them directly —
+        // it is not the intended long-term caller.
+
+        [HttpPost("{id:int}/reserve")]
+        [Authorize(Policy = "RequireAdmin")]
+        public async Task<IActionResult> Reserve(int id, [FromBody] ReserveInventoryDTO dto)
+        {
+            if (dto.Quantity <= 0)
+                return BadRequest(ApiResponseDTO<object>.FailResponse("Quantity must be greater than 0."));
+
+            try
+            {
+                var result = await _ticketTypeService.ReserveInventoryAsync(id, dto.Quantity);
+                // "Sold out"/window-closed is an expected business outcome, not a server
+                // error: the caller (Booking/Payment) needs the structured result to
+                // decide what to do next (release the hold, offer another seat, etc.),
+                // not an exception it has to parse.
+                return Ok(ApiResponseDTO<InventoryOperationResultDTO>.SuccessResponse(
+                    result, result.Success ? "Reserved" : result.Reason));
+            }
+            catch (Exception ex) { return HandleException(ex); }
+        }
+
+        [HttpPost("{id:int}/release")]
+        [Authorize(Policy = "RequireAdmin")]
+        public async Task<IActionResult> Release(int id, [FromBody] ReserveInventoryDTO dto)
+        {
+            if (dto.Quantity <= 0)
+                return BadRequest(ApiResponseDTO<object>.FailResponse("Quantity must be greater than 0."));
+
+            try
+            {
+                var result = await _ticketTypeService.ReleaseInventoryAsync(id, dto.Quantity);
+                return Ok(ApiResponseDTO<InventoryOperationResultDTO>.SuccessResponse(
+                    result, result.Success ? "Released" : result.Reason));
+            }
+            catch (Exception ex) { return HandleException(ex); }
+        }
     }
 }

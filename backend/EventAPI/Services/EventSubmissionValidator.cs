@@ -155,12 +155,13 @@ namespace EventAPI.Services
 
             // ---- Refund policy ----
             var refundPolicies = await _refundPolicyRepository.GetByEventIdAsync(eventId);
-            if (refundPolicies.Count == 0)
+            var activeRefundPolicies = refundPolicies.Where(p => p.IsActive).ToList();
+            if (activeRefundPolicies.Count == 0)
             {
                 if (requireRefundPolicy)
                     result.Errors.Add("At least one active refund policy is required.");
                 else
-                    result.Warnings.Add("No refund policy configured.");
+                    result.Warnings.Add("No active refund policy configured.");
             }
 
             foreach (var p in refundPolicies)
@@ -168,8 +169,8 @@ namespace EventAPI.Services
                 if (p.RefundPercent < 0 || p.RefundPercent > 100)
                     result.Errors.Add($"Refund policy '{p.PolicyName}': RefundPercent must be between 0 and 100.");
 
-                if (p.DeadlineBeforeEventHours <= 0)
-                    result.Errors.Add($"Refund policy '{p.PolicyName}': DeadlineBeforeEventHours must be greater than 0.");
+                if (p.DeadlineBeforeEventHours < 0)
+                    result.Errors.Add($"Refund policy '{p.PolicyName}': DeadlineBeforeEventHours cannot be negative.");
             }
 
             // ---- Seating ----
@@ -208,8 +209,8 @@ namespace EventAPI.Services
                         }
                     }
 
-                    // Ticket quantity is the declared quota. Zones may be built in
-                    // several passes, but at submission their total capacity must match.
+                    // Ticket quantity is the declared quota. Zones may consume part or all
+                    // of it, but their aggregate capacity must never exceed it.
                     foreach (var t in ticketTypes)
                     {
                         var zones = seatMap.SeatZones.Where(z => z.TicketTypeId == t.TicketTypeId).ToList();
@@ -225,13 +226,10 @@ namespace EventAPI.Services
                         var capacity = zones.Sum(z =>
                             SeatZoneType.IsSeated(z.ZoneType) ? z.Seats.Count : z.Capacity);
 
-                        // Should not happen once the layout has been saved, but a stale
-                        // quantity would let TicketAPI oversell, so fail loudly.
-                        if (capacity != t.Quantity)
+                        if (capacity > t.Quantity)
                         {
                             result.Errors.Add(
-                                $"Ticket type '{t.TypeName}': quantity is {t.Quantity} but its zones hold {capacity}. " +
-                                "Adjust the zone capacity or ticket quantity so they match.");
+                                $"Ticket type '{t.TypeName}': mapped zone capacity {capacity} exceeds quantity {t.Quantity}.");
                         }
                     }
 

@@ -1,13 +1,15 @@
 namespace EventAPI.Common
 {
-    /// <summary>
-    /// The 3 exclusive seating modes for a concert.
-    /// An event must strictly use one of these three modes:
-    /// 1. GeneralAdmission: No seating chart. Capacity is taken directly from TicketType.Quantity.
-    /// 2. StandingZones: Zone map exists. Each zone has capacity/headcount only (no Seat rows).
-    /// 3. ReservedSeating: Seat map exists with rows and individual seats per zone.
-    /// Mixing Standing and Seated within the same event is strictly prohibited.
-    /// </summary>
+
+    // The 3 possible seating modes for a concert, derived automatically from its
+    // zones (see SeatingService) — organizers never set this directly:
+    // 1. GeneralAdmission: No seating chart. Capacity is taken directly from TicketType.Quantity.
+    // 2. StandingZones: Zone map exists and every zone is headcount-only (no Seat rows).
+    // 3. ReservedSeating: Zone map exists and at least one zone has individual numbered seats.
+    //    A chart may freely mix Seated and Standing zones (e.g. numbered seats on the
+    //    balcony plus a standing pit at the front) — as soon as any zone is Seated,
+    //    the event as a whole is classified ReservedSeating.
+
     public static class SeatingMode
     {
         public const string GeneralAdmission = "GeneralAdmission";

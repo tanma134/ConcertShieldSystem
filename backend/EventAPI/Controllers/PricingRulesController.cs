@@ -6,15 +6,14 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EventAPI.Controllers
 {
-    /// <summary>
-    /// Dynamic pricing rules layered on a TicketType's base price (UC_27.1 — Configure
-    /// Pricing Rule): time-based discounts (EarlyBird/LastMinute), fixed calendar
-    /// windows (TimeBased), or quantity-triggered price steps (QuantityBased).
-    ///
-    /// Configuration only — resolving a rule into a live sale price at checkout is
-    /// TicketAPI's responsibility. Rules are only editable while the concert is Draft
-    /// or Rejected, same as ticket types and refund policies.
-    /// </summary>
+
+    // Dynamic pricing rules layered on a TicketType's base price (UC_27.1 — Configure
+    // Pricing Rule): time-based discounts (EarlyBird/LastMinute), fixed calendar
+    // windows (TimeBased), or quantity-triggered price steps (QuantityBased).
+    //     // Configuration only — resolving a rule into a live sale price at checkout is
+    // TicketAPI's responsibility. Rules are only editable while the concert is Draft
+    // or Rejected, same as ticket types and refund policies.
+
     [Route("api/pricingrules")]
     public class PricingRulesController : BaseApiController
     {
@@ -29,7 +28,7 @@ namespace EventAPI.Controllers
             _createValidator = createValidator;
         }
 
-        /// <summary>All pricing rules configured for one ticket type, highest priority first.</summary>
+        // All pricing rules configured for one ticket type, highest priority first.
         [HttpGet("tickettype/{ticketTypeId:int}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetByTicketType(int ticketTypeId)

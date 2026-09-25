@@ -64,6 +64,26 @@ namespace EventAPI.DTOs
         public int TicketTypeId { get; set; }
     }
 
+    // Inventory reserve/release seam for a future Booking/Payment service: hold created
+    // -> reserve; hold timeout, payment failure, refund, or event cancellation -> release.
+    // EventAPI does not know about orders/holds/payments — it only guarantees the count
+    // never exceeds Quantity and never goes negative.
+
+    public class ReserveInventoryDTO
+    {
+        [Required]
+        [Range(1, int.MaxValue, ErrorMessage = "Quantity must be greater than 0.")]
+        public int Quantity { get; set; }
+    }
+
+    public class InventoryOperationResultDTO
+    {
+        public bool Success { get; set; }
+        public int TicketTypeId { get; set; }
+        public int AvailableQuantity { get; set; }
+        public string? Reason { get; set; }
+    }
+
     public class TicketTypeResponseDTO
     {
         public int TicketTypeId { get; set; }

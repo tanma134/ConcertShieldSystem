@@ -27,6 +27,8 @@ namespace EventAPI.Services
             _eventAccessService = eventAccessService;
         }
 
+        // Lấy cấu hình theo sự kiện; chỉ đọc dữ liệu, không thay đổi trạng thái.
+
         public async Task<List<TicketTypeResponseDTO>> GetByEventIdAsync(int eventId, int? callerId, bool isAdmin)
         {
             // Draft/Pending/Rejected/Cancelled ticket types are the owner's/Admin's
@@ -36,6 +38,8 @@ namespace EventAPI.Services
             var items = await _ticketTypeRepository.GetByEventIdAsync(eventId);
             return items.Select(Map).ToList();
         }
+
+        // Tạo mới cấu hình sau khi kiểm tra các business rule bắt buộc.
 
         public async Task<TicketTypeResponseDTO> CreateAsync(int eventId, CreateTicketTypeDTO dto, int callerId, bool isAdmin)
         {
@@ -68,6 +72,8 @@ namespace EventAPI.Services
             return Map(created);
         }
 
+        // Cập nhật cấu hình hiện có và giữ các invariant nghiệp vụ trước khi lưu.
+
         public async Task<TicketTypeResponseDTO> UpdateAsync(int ticketTypeId, UpdateTicketTypeDTO dto, int callerId, bool isAdmin)
         {
             var entity = await _ticketTypeRepository.GetByIdAsync(ticketTypeId)
@@ -87,11 +93,10 @@ namespace EventAPI.Services
             if (dto.OriginalPrice.HasValue) entity.OriginalPrice = dto.OriginalPrice;
             if (dto.Quantity.HasValue && dto.Quantity.Value != entity.Quantity)
             {
-                var placedInLayout = await IsPlacedInLayoutAsync(entity.EventId, entity.TicketTypeId);
-
-                if (placedInLayout)
+                var mappedCapacity = await GetMappedCapacityAsync(entity.EventId, entity.TicketTypeId);
+                if (dto.Quantity.Value < mappedCapacity)
                     throw new InvalidOperationException(
-                        "Quantity is managed by seating-zone capacity. Edit the linked zones instead.");
+                        $"Quantity {dto.Quantity.Value} cannot be lower than mapped zone capacity {mappedCapacity}.");
 
                 entity.Quantity = dto.Quantity.Value;
             }
@@ -125,6 +130,8 @@ namespace EventAPI.Services
             return Map(entity);
         }
 
+        // Xóa hoặc vô hiệu cấu hình theo rule của domain; không xử lý nghiệp vụ ngoài phạm vi EventAPI.
+
         public async Task DeleteAsync(int ticketTypeId, int callerId, bool isAdmin)
         {
             var entity = await _ticketTypeRepository.GetByIdAsync(ticketTypeId)
@@ -144,7 +151,81 @@ namespace EventAPI.Services
             await _ticketTypeRepository.SoftDeleteAsync(ticketTypeId, callerId);
         }
 
-        /// <summary>True when at least one zone in the concert's layout uses this ticket type.</summary>
+        // Quantity is organizer-owned configuration. It may change after zones are mapped,
+        // but never below the capacity already assigned to those zones.
+        public async Task<InventoryOperationResultDTO> ReserveInventoryAsync(int ticketTypeId, int quantity)
+        {
+            var entity = await _ticketTypeRepository.GetByIdAsync(ticketTypeId);
+            if (entity == null)
+                return Fail(ticketTypeId, 0, "TicketType not found.");
+
+            // Business gates the caller cannot bypass: even a well-behaved Booking
+            // service must not be able to reserve against a type that isn't currently
+            // sellable. The atomic UPDATE below re-checks Status/quantity anyway, but
+            // failing fast here gives a precise Reason instead of a generic "no rows".
+            if (entity.Status != "Active")
+                return Fail(ticketTypeId, entity.Quantity - entity.SoldQuantity, $"TicketType is '{entity.Status}', not on sale.");
+
+            var ev = await _eventRepository.GetByIdAsync(entity.EventId);
+            if (ev == null || EventStatus.Normalize(ev.Status) != EventStatus.Published)
+                return Fail(ticketTypeId, entity.Quantity - entity.SoldQuantity, "Parent concert is not Published.");
+
+            var now = DateTime.UtcNow;
+            if (entity.SalesStartsAt.HasValue && now < entity.SalesStartsAt.Value)
+                return Fail(ticketTypeId, entity.Quantity - entity.SoldQuantity, "Sales window has not started yet.");
+            if (entity.SalesEndsAt.HasValue && now > entity.SalesEndsAt.Value)
+                return Fail(ticketTypeId, entity.Quantity - entity.SoldQuantity, "Sales window has ended.");
+
+            var reserved = await _ticketTypeRepository.TryReserveAsync(ticketTypeId, quantity);
+
+            // Re-read after the atomic UPDATE so AvailableQuantity reflects the actual
+            // committed state — including when another concurrent caller won the race.
+            var reloaded = await _ticketTypeRepository.GetByIdAsync(ticketTypeId);
+            var available = reloaded == null ? 0 : reloaded.Quantity - reloaded.SoldQuantity;
+
+            return new InventoryOperationResultDTO
+            {
+                Success = reserved,
+                TicketTypeId = ticketTypeId,
+                AvailableQuantity = available,
+                Reason = reserved ? null : "Not enough inventory available."
+            };
+        }
+
+        public async Task<InventoryOperationResultDTO> ReleaseInventoryAsync(int ticketTypeId, int quantity)
+        {
+            var released = await _ticketTypeRepository.ReleaseAsync(ticketTypeId, quantity);
+            var reloaded = await _ticketTypeRepository.GetByIdAsync(ticketTypeId);
+
+            return new InventoryOperationResultDTO
+            {
+                Success = released,
+                TicketTypeId = ticketTypeId,
+                AvailableQuantity = reloaded == null ? 0 : reloaded.Quantity - reloaded.SoldQuantity,
+                Reason = released ? null : "TicketType not found."
+            };
+        }
+
+        private static InventoryOperationResultDTO Fail(int ticketTypeId, int available, string reason) => new()
+        {
+            Success = false,
+            TicketTypeId = ticketTypeId,
+            AvailableQuantity = available,
+            Reason = reason
+        };
+
+        private async Task<int> GetMappedCapacityAsync(int eventId, int ticketTypeId)
+        {
+            var map = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: true);
+            if (map == null) return 0;
+
+            return map.SeatZones
+                .Where(z => z.TicketTypeId == ticketTypeId)
+                .Sum(z => SeatZoneType.IsSeated(z.ZoneType) && z.Seats.Count > 0
+                    ? z.Seats.Count
+                    : z.Capacity);
+        }
+
         private async Task<bool> IsPlacedInLayoutAsync(int eventId, int ticketTypeId)
         {
             var map = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: false);
