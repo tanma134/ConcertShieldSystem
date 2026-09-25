@@ -1,6 +1,18 @@
 {
-    "Routes": [
-        
+  "Routes": [
+    {
+      "Key": "identity-register",
+      "DownstreamPathTemplate": "/api/auth/register",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7058
+        }
+      ],
+      "UpstreamPathTemplate": "/api/auth/register",
+      "UpstreamHttpMethod": [ "Post" ]
+    },
     {
       "Key": "identity-verify-email",
       "DownstreamPathTemplate": "/api/auth/verify-email",
@@ -1295,7 +1307,10 @@
       "DownstreamPathTemplate": "/api/reviews/{reviewId}/replies",
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
-        { "Host": "localhost", "Port": 7290 }
+        {
+          "Host": "localhost",
+          "Port": 7290
+        }
       ],
       "UpstreamPathTemplate": "/api/reviews/{reviewId}/replies",
       "UpstreamHttpMethod": [ "Post" ],
@@ -3140,27 +3155,42 @@
       "Key": "pricing-rules-by-ticket-type",
       "DownstreamPathTemplate": "/api/pricingrules/tickettype/{ticketTypeId}",
       "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [{ "Host": "localhost", "Port": 7289 }],
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7289
+        }
+      ],
       "UpstreamPathTemplate": "/api/pricingrules/tickettype/{ticketTypeId}",
-      "UpstreamHttpMethod": ["Get"],
+      "UpstreamHttpMethod": [ "Get" ],
       "Priority": 10
     },
     {
       "Key": "pricing-rules-create",
       "DownstreamPathTemplate": "/api/pricingrules",
       "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [{ "Host": "localhost", "Port": 7289 }],
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7289
+        }
+      ],
       "UpstreamPathTemplate": "/api/pricingrules",
-      "UpstreamHttpMethod": ["Post"],
+      "UpstreamHttpMethod": [ "Post" ],
       "AuthenticationOptions": { "AuthenticationProviderKey": "Bearer" }
     },
     {
       "Key": "pricing-rules-detail",
       "DownstreamPathTemplate": "/api/pricingrules/{id}",
       "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [{ "Host": "localhost", "Port": 7289 }],
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7289
+        }
+      ],
       "UpstreamPathTemplate": "/api/pricingrules/{id}",
-      "UpstreamHttpMethod": ["Put", "Delete"],
+      "UpstreamHttpMethod": [ "Put", "Delete" ],
       "AuthenticationOptions": { "AuthenticationProviderKey": "Bearer" }
     },
     {
