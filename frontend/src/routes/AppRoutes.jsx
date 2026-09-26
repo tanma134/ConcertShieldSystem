@@ -22,11 +22,14 @@ import ReviewManagementPage from "../pages/admin/ReviewManagementPage";
 import UserManagementPage from "../pages/admin/UserManagementPage";
 import RoleManagementPage from "../pages/admin/RoleManagementPage";
 import RequestOrganizerPage from "../pages/RequestOrganizerPage";
+import KycPage from "../pages/KycPage";
 import MyProfilePage from "../pages/MyProfilePage";
 import EditProfilePage from "../pages/EditProfilePage";
 import WishlistManagementPage from "../pages/admin/WishlistManagementPage";
 import EventConfigurationPage from "../pages/organizer/EventConfigurationPage";
 import AdminSeatingTemplatesPage from "../pages/admin/AdminSeatingTemplatesPage";
+import VoucherManagementPage from "../pages/admin/VoucherManagementPage";
+import NotificationCenterPage from "../pages/NotificationCenterPage";
 
 export default function AppRoutes() {
   return (
@@ -170,8 +173,15 @@ export default function AppRoutes() {
           </AdminRoute>
         }
       />
+      {/* Notifications - Available for Customer & Organizer */}
+      <Route path="/notifications" element={<ProtectedRoute><NotificationCenterPage /></ProtectedRoute>} />
+
+      {/* Voucher Management - Organizer */}
+      <Route path="/organizer/vouchers" element={<ProtectedRoute organizerOnly><VoucherManagementPage /></ProtectedRoute>} />
+
       <Route path="/admin/wishlists" element={<AdminRoute><WishlistManagementPage /></AdminRoute>} />
       <Route path="/admin/seating-templates" element={<AdminRoute><AdminSeatingTemplatesPage /></AdminRoute>} />
+      <Route path="/admin/vouchers" element={<AdminRoute><VoucherManagementPage /></AdminRoute>} />
     </Routes>
   );
 }

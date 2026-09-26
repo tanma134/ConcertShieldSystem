@@ -394,6 +394,85 @@ namespace EventAPI.Services
 
             _logger.LogInformation("Concert {EventId} approved and published by admin {AdminId}", id, adminId);
 
+            var organizerUserId = entity.OrganizerId;
+            var eventTitle = entity.Title;
+            var eventSlug = entity.Slug;
+            _ = Task.Run(async () =>
+            {
+                // 1. Direct persistence to notification_db
+                try
+                {
+                    using var conn = new Npgsql.NpgsqlConnection("Host=localhost;Port=5432;Database=notification_db;Username=postgres;Password=123456");
+                    await conn.OpenAsync();
+                    // 1. Notification to Organizer
+                    using (var cmd = new Npgsql.NpgsqlCommand(
+                        "INSERT INTO notifications (user_id, title, message, content, type, category, target_url, is_read, created_at, is_deleted) VALUES (@uid, @title, @msg, @content, @type, @cat, @url, false, NOW(), false);", conn))
+                    {
+                        cmd.Parameters.AddWithValue("uid", organizerUserId);
+                        cmd.Parameters.AddWithValue("title", "Sự kiện của bạn đã được phê duyệt");
+                        var msg = $"Chúc mừng! Sự kiện '{eventTitle}' của bạn đã được Admin phê duyệt và xuất bản.";
+                        cmd.Parameters.AddWithValue("msg", msg);
+                        cmd.Parameters.AddWithValue("content", msg);
+                        cmd.Parameters.AddWithValue("type", "event_approved");
+                        cmd.Parameters.AddWithValue("cat", "event_approved");
+                        cmd.Parameters.AddWithValue("url", $"/events/{eventSlug}");
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+
+                    // 2. Broadcast Notification to all Customers for the new published Event
+                    using (var cmd2 = new Npgsql.NpgsqlCommand(
+                        "INSERT INTO notifications (user_id, title, message, content, type, category, target_url, is_read, created_at, is_deleted) VALUES (@uid, @title, @msg, @content, @type, @cat, @url, false, NOW(), false);", conn))
+                    {
+                        cmd2.Parameters.AddWithValue("uid", 0);
+                        cmd2.Parameters.AddWithValue("title", $"Sự kiện mới: {eventTitle}");
+                        var msg2 = $"Sự kiện '{eventTitle}' đã chính thức được phê duyệt và mở bán vé! Mua vé ngay hôm nay.";
+                        cmd2.Parameters.AddWithValue("msg", msg2);
+                        cmd2.Parameters.AddWithValue("content", msg2);
+                        cmd2.Parameters.AddWithValue("type", "event_new");
+                        cmd2.Parameters.AddWithValue("cat", "event_new");
+                        cmd2.Parameters.AddWithValue("url", $"/events/{eventSlug}");
+                        await cmd2.ExecuteNonQueryAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Direct DB notification failed for event approval {EventId}", id);
+                }
+
+                // 2. HTTP Realtime ping
+                try
+                {
+                    var handler = new System.Net.Http.HttpClientHandler
+                    {
+                        ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true
+                    };
+                    using var httpClient = new System.Net.Http.HttpClient(handler) { Timeout = TimeSpan.FromSeconds(3) };
+                    var payload = new
+                    {
+                        userId = organizerUserId,
+                        title = "Sự kiện của bạn đã được phê duyệt",
+                        message = $"Chúc mừng! Sự kiện '{eventTitle}' của bạn đã được Admin phê duyệt và xuất bản.",
+                        category = "event_approved",
+                        targetUrl = $"/events/{eventSlug}"
+                    };
+                    var content = new System.Net.Http.StringContent(System.Text.Json.JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
+                    var endpoints = new[] { "https://localhost:7197/api/notifications", "http://localhost:5174/api/notifications" };
+                    foreach (var ep in endpoints)
+                    {
+                        try
+                        {
+                            var res = await httpClient.PostAsync(ep, content);
+                            if (res.IsSuccessStatusCode) break;
+                        }
+                        catch { }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to send HTTP notification for approved event {EventId}", id);
+                }
+            });
+
             var roleGrant = await _roleClient.GrantRoleAsync(
                 entity.OrganizerId, "Organizer", adminBearerToken);
 

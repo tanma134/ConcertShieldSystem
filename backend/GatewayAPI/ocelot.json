@@ -2463,8 +2463,8 @@
       }
     },
     {
-      "Key": "voucher-list",
-      "DownstreamPathTemplate": "/api/vouchers",
+      "Key": "v1-vouchers-root",
+      "DownstreamPathTemplate": "/api/v1/vouchers",
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
@@ -2472,75 +2472,12 @@
           "Port": 7227
         }
       ],
-      "UpstreamPathTemplate": "/api/vouchers",
+      "UpstreamPathTemplate": "/api/v1/vouchers",
       "UpstreamHttpMethod": [
-        "Get"
-      ]
-    },
-    {
-      "Key": "voucher-detail",
-      "DownstreamPathTemplate": "/api/vouchers/{id}",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7227
-        }
-      ],
-      "UpstreamPathTemplate": "/api/vouchers/{id}",
-      "UpstreamHttpMethod": [
-        "Get"
-      ]
-    },
-    {
-      "Key": "voucher-validate",
-      "DownstreamPathTemplate": "/api/vouchers/validate",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7227
-        }
-      ],
-      "UpstreamPathTemplate": "/api/vouchers/validate",
-      "UpstreamHttpMethod": [
-        "Post"
-      ],
-      "AuthenticationOptions": {
-        "AuthenticationProviderKey": "Bearer"
-      }
-    },
-    {
-      "Key": "voucher-create",
-      "DownstreamPathTemplate": "/api/vouchers",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7227
-        }
-      ],
-      "UpstreamPathTemplate": "/api/vouchers",
-      "UpstreamHttpMethod": [
-        "Post"
-      ],
-      "AuthenticationOptions": {
-        "AuthenticationProviderKey": "Bearer"
-      }
-    },
-    {
-      "Key": "voucher-update-delete",
-      "DownstreamPathTemplate": "/api/vouchers/{id}",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "localhost",
-          "Port": 7227
-        }
-      ],
-      "UpstreamPathTemplate": "/api/vouchers/{id}",
-      "UpstreamHttpMethod": [
+        "Get",
+        "Post",
         "Put",
+        "Patch",
         "Delete"
       ],
       "AuthenticationOptions": {
@@ -2548,8 +2485,8 @@
       }
     },
     {
-      "Key": "voucher-use",
-      "DownstreamPathTemplate": "/api/vouchers/use",
+      "Key": "v1-vouchers-everything",
+      "DownstreamPathTemplate": "/api/v1/vouchers/{everything}",
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
@@ -2557,14 +2494,21 @@
           "Port": 7227
         }
       ],
-      "UpstreamPathTemplate": "/api/vouchers/use",
+      "UpstreamPathTemplate": "/api/v1/vouchers/{everything}",
       "UpstreamHttpMethod": [
-        "Post"
-      ]
+        "Get",
+        "Post",
+        "Put",
+        "Patch",
+        "Delete"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
     },
     {
-      "Key": "voucher-by-event",
-      "DownstreamPathTemplate": "/api/vouchers/event/{eventId}",
+      "Key": "vouchers-root",
+      "DownstreamPathTemplate": "/api/vouchers",
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
@@ -2572,14 +2516,21 @@
           "Port": 7227
         }
       ],
-      "UpstreamPathTemplate": "/api/vouchers/event/{eventId}",
+      "UpstreamPathTemplate": "/api/vouchers",
       "UpstreamHttpMethod": [
-        "Get"
-      ]
+        "Get",
+        "Post",
+        "Put",
+        "Patch",
+        "Delete"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
     },
     {
-      "Key": "voucher-usages",
-      "DownstreamPathTemplate": "/api/vouchers/{id}/usages",
+      "Key": "vouchers-everything",
+      "DownstreamPathTemplate": "/api/vouchers/{everything}",
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
@@ -2587,9 +2538,13 @@
           "Port": 7227
         }
       ],
-      "UpstreamPathTemplate": "/api/vouchers/{id}/usages",
+      "UpstreamPathTemplate": "/api/vouchers/{everything}",
       "UpstreamHttpMethod": [
-        "Get"
+        "Get",
+        "Post",
+        "Put",
+        "Patch",
+        "Delete"
       ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer"
@@ -3230,6 +3185,42 @@
       }
     },
     {
+      "Key": "notification-read-all",
+      "DownstreamPathTemplate": "/api/notifications/read-all",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7197
+        }
+      ],
+      "UpstreamPathTemplate": "/api/notifications/read-all",
+      "UpstreamHttpMethod": [
+        "Put"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
+    },
+    {
+      "Key": "notification-mark-read",
+      "DownstreamPathTemplate": "/api/notifications/{id}/read",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7197
+        }
+      ],
+      "UpstreamPathTemplate": "/api/notifications/{id}/read",
+      "UpstreamHttpMethod": [
+        "Put"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
+    },
+    {
       "Key": "notification-detail",
       "DownstreamPathTemplate": "/api/notifications/{id}",
       "DownstreamScheme": "https",
@@ -3250,7 +3241,7 @@
       }
     },
     {
-      "Key": "notification-list-create",
+      "Key": "notification-list",
       "DownstreamPathTemplate": "/api/notifications",
       "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
@@ -3261,12 +3252,23 @@
       ],
       "UpstreamPathTemplate": "/api/notifications",
       "UpstreamHttpMethod": [
-        "Get",
-        "Post"
+        "Get"
+      ]
+    },
+    {
+      "Key": "notification-create",
+      "DownstreamPathTemplate": "/api/notifications",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7197
+        }
       ],
-      "AuthenticationOptions": {
-        "AuthenticationProviderKey": "Bearer"
-      }
+      "UpstreamPathTemplate": "/api/notifications",
+      "UpstreamHttpMethod": [
+        "Post"
+      ]
     },
     {
       "Key": "notification-dashboardhub-negotiate",

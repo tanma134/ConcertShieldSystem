@@ -17,6 +17,7 @@ const links = [
   ["/admin/reviews", "Review Management"],
   ["/admin/wishlists", "Wishlist Management"],
   ["/admin/seating-templates", "Seating Templates"],
+  ["/admin/vouchers", "Voucher Management"],
 ];
 
 export default function AdminShell({ children, title = "Admin Panel" }) {
@@ -50,16 +51,18 @@ export default function AdminShell({ children, title = "Admin Panel" }) {
       <main className="admin-main">
         <header className="admin-topbar">
           <div className="topbar-title">{title}</div>
-          <button
-            type="button"
-            className="admin-button"
-            onClick={() => {
-              logout();
-              navigate("/admin/login");
-            }}
-          >
-            Logout
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <button
+              type="button"
+              className="admin-button"
+              onClick={() => {
+                logout();
+                navigate("/admin/login");
+              }}
+            >
+              Logout
+            </button>
+          </div>
         </header>
         {children}
       </main>

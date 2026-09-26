@@ -8,6 +8,12 @@ export function AuthProvider({ children }) {
   // =========================
   // USER
   // =========================
+  // isAuthenticated tracks whether an accessToken exists — as reactive state
+  // so components using useAuth() re-render on login/logout.
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    () => !!localStorage.getItem("accessToken")
+  );
+
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem("user");
 
@@ -52,6 +58,7 @@ export function AuthProvider({ children }) {
     // Access Token
     if (accessToken) {
       localStorage.setItem("accessToken", accessToken);
+      setIsAuthenticated(true);
     }
 
     // Refresh Token
@@ -83,6 +90,7 @@ export function AuthProvider({ children }) {
 
     setUser(null);
     setRoles([]);
+    setIsAuthenticated(false);
   };
 
   const updateUser = (nextUser) => {
@@ -128,11 +136,6 @@ export function AuthProvider({ children }) {
     // Run once on application startup; the ref also protects React StrictMode.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // =========================
-  // AUTHENTICATION
-  // =========================
-  const isAuthenticated = !!localStorage.getItem("accessToken");
 
   // =========================
   // ROLE CHECK

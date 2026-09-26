@@ -1,4 +1,4 @@
-﻿using AuthenticationAPI.DTOs;
+using AuthenticationAPI.DTOs;
 using AuthenticationAPI.Models;
 using AuthenticationAPI.Repositories;
 using Microsoft.Extensions.Logging;
@@ -134,6 +134,68 @@ namespace AuthenticationAPI.Services
             _logger.LogInformation(
                 "Organizer request reviewed: RequestId={RequestId}, Status={Status}, ReviewerId={ReviewerId}.",
                 requestId, dto.Status, reviewerId);
+
+            if (dto.Status == StatusApproved)
+            {
+                var targetUserId = request.UserId;
+                _ = Task.Run(async () =>
+                {
+                    // 1. Direct persistence to notification_db
+                    try
+                    {
+                        using var conn = new Npgsql.NpgsqlConnection("Host=localhost;Port=5432;Database=notification_db;Username=postgres;Password=123456");
+                        await conn.OpenAsync();
+                        using var cmd = new Npgsql.NpgsqlCommand(
+                            "INSERT INTO notifications (user_id, title, message, content, type, category, target_url, is_read, created_at, is_deleted) VALUES (@uid, @title, @msg, @content, @type, @cat, @url, false, NOW(), false);", conn);
+                        cmd.Parameters.AddWithValue("uid", targetUserId);
+                        cmd.Parameters.AddWithValue("title", "Yêu cầu nâng cấp Organizer đã được duyệt");
+                        var msg = "Chúc mừng! Yêu cầu đăng ký làm Nhà tổ chức sự kiện (Organizer) của bạn đã được Admin phê duyệt.";
+                        cmd.Parameters.AddWithValue("msg", msg);
+                        cmd.Parameters.AddWithValue("content", msg);
+                        cmd.Parameters.AddWithValue("type", "organizer_approved");
+                        cmd.Parameters.AddWithValue("cat", "organizer_approved");
+                        cmd.Parameters.AddWithValue("url", "/organizer/dashboard");
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Direct DB notification failed for organizer request {RequestId}", requestId);
+                    }
+
+                    // 2. HTTP Realtime ping
+                    try
+                    {
+                        var handler = new HttpClientHandler
+                        {
+                            ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true
+                        };
+                        using var httpClient = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(3) };
+                        var payload = new
+                        {
+                            userId = targetUserId,
+                            title = "Yêu cầu nâng cấp Organizer đã được duyệt",
+                            message = "Chúc mừng! Yêu cầu đăng ký làm Nhà tổ chức sự kiện (Organizer) của bạn đã được Admin phê duyệt.",
+                            category = "organizer_approved",
+                            targetUrl = "/organizer/dashboard"
+                        };
+                        var content = new StringContent(System.Text.Json.JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
+                        var endpoints = new[] { "https://localhost:7197/api/notifications", "http://localhost:5174/api/notifications" };
+                        foreach (var ep in endpoints)
+                        {
+                            try
+                            {
+                                var res = await httpClient.PostAsync(ep, content);
+                                if (res.IsSuccessStatusCode) break;
+                            }
+                            catch { }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to send HTTP notification for approved organizer request {RequestId}", requestId);
+                    }
+                });
+            }
 
             return MapToDto(request, request.User);
         }
