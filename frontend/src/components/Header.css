@@ -455,3 +455,9 @@
   font-weight: 500;
 }
 
+.tb-header a,
+.tb-header a:hover,
+.tb-header a:focus {
+  text-decoration: none;
+}
+

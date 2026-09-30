@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using PaymentAPI.API;
 using PaymentAPI.Data;
+using PaymentAPI.Models;
 using PaymentAPI.Repositories;
 using PaymentAPI.Services;
 
@@ -16,16 +18,34 @@ builder.Services.AddEndpointsApiExplorer();
 
 // PostgreSQL DbContext
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? "Host=localhost;Port=5432;Database=payment_db;Username=postgres;Password=123456";
+    ?? "Host=localhost;Port=5432;Database=04_payment_db;Username=postgres;Password=123456";
 
 builder.Services.AddDbContext<PaymentDbContext>(options =>
     options.UseNpgsql(connectionString, npgsqlOptions =>
         npgsqlOptions.EnableRetryOnFailure())
 );
 
+builder.Services.AddHttpClient<ITicketApiClient, TicketApiClient>(client =>
+{
+    var ticketApiUrl = builder.Configuration["ApiSettings:TicketApiUrl"]
+        ?? throw new InvalidOperationException("TicketApiUrl is missing.");
+
+    var internalApiKey = builder.Configuration["TicketApi:InternalApiKey"]
+        ?? throw new InvalidOperationException("TicketApi internal API key is missing.");
+
+    client.BaseAddress = new Uri(ticketApiUrl);
+    client.DefaultRequestHeaders.Add("X-Internal-Api-Key", internalApiKey);
+});
+
 // Repositories & Services
 builder.Services.AddScoped<IVoucherRepository, VoucherRepository>();
 builder.Services.AddScoped<IVoucherService, VoucherService>();
+builder.Services.Configure<VnPayConfig>(
+    builder.Configuration.GetSection("VnPay"));
+
+builder.Services.AddScoped<IVnPayService, VnPayService>();
+builder.Services.AddScoped<IPaymentTransactionService, PaymentTransactionService>();
+builder.Services.AddScoped<IPaymentTransactionRepository, PaymentTransactionRepository>();
 
 // JWT Authentication
 var jwtSecretKey = builder.Configuration["JwtSettings:SecretKey"] ?? "SuperSecretKey_MustBe32CharsOrMore!@#";

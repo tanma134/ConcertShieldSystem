@@ -30,6 +30,10 @@ import EventConfigurationPage from "../pages/organizer/EventConfigurationPage";
 import AdminSeatingTemplatesPage from "../pages/admin/AdminSeatingTemplatesPage";
 import VoucherManagementPage from "../pages/admin/VoucherManagementPage";
 import NotificationCenterPage from "../pages/NotificationCenterPage";
+import SelectTicketPage from "../pages/customer/SelectTicketPage"
+import QuestionFormPage from "../pages/customer/QuestionFormPage";
+import PaymentInfoPage from "../pages/customer/PaymentInfoPage";
+import PaymentResult from "../pages/customer/PaymentResult";
 
 export default function AppRoutes() {
   return (
@@ -48,6 +52,26 @@ export default function AppRoutes() {
       <Route path="/profile" element={<ProtectedRoute><MyProfilePage /></ProtectedRoute>} />
       <Route path="/profile/edit" element={<ProtectedRoute><EditProfilePage /></ProtectedRoute>} />
 
+      <Route path="/events/:eventId/select-tickets" element={<SelectTicketPage />} />
+      <Route
+        path="/checkout/question-form/:holdId"
+        element={
+          <ProtectedRoute>
+            <QuestionFormPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/checkout/payment-info/:holdId"
+        element={
+          <ProtectedRoute>
+            <PaymentInfoPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/payment/result" element={<PaymentResult />} />
+      
       {/* Any logged-in Customer may create and configure a Draft concert. */}
       <Route
         path="/organizer/dashboard"

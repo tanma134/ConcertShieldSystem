@@ -3,6 +3,7 @@ using EventAPI.Data;
 using EventAPI.DTOs;
 using EventAPI.Models;
 using EventAPI.Repositories;
+using static EventAPI.DTOs.ConfirmEventSaleDTO;
 
 namespace EventAPI.Services
 {
@@ -695,7 +696,7 @@ namespace EventAPI.Services
                 var map = await _seatingRepository.GetByEventIdAsync(e.EventId, includeSeats: true);
                 if (map != null)
                 {
-                    dto.SeatingChart = SeatingService.MapChart(map, includeSeats: false);
+                    dto.SeatingChart = SeatingService.MapChart(map, includeSeats: true);
                 }
             }
 
@@ -745,5 +746,34 @@ namespace EventAPI.Services
             IsActive = r.IsActive,
             CreatedAt = r.CreatedAt
         };
+
+        public async Task<bool> ConfirmPaidOrderSaleAsync(int eventId, ConfirmEventSaleRequestDTO request)
+        {
+            if (eventId <= 0)
+                throw new ArgumentOutOfRangeException(nameof(eventId));
+
+            if (request.OrderId <= 0)
+                throw new ArgumentOutOfRangeException(nameof(request.OrderId));
+
+            if (request.Items == null || request.Items.Count == 0)
+                throw new ArgumentException("Order must contain at least one ticket item.");
+
+            if (request.Items.Any(item =>
+                    item.TicketTypeId <= 0 || item.Quantity <= 0))
+            {
+                throw new ArgumentException(
+                    "TicketTypeId and Quantity must be greater than zero.");
+            }
+
+            if (request.Items
+                .GroupBy(item => item.TicketTypeId)
+                .Any(group => group.Count() > 1))
+            {
+                throw new ArgumentException(
+                    "Each ticket type must appear only once in the request.");
+            }
+
+            return await _eventRepository.ConfirmPaidOrderSaleAsync(eventId, request.OrderId, request.Items);
+        }
     }
 }

@@ -79,20 +79,35 @@ namespace PaymentAPI.Data
             // Payment Transactions
             modelBuilder.Entity<PaymentTransaction>(entity =>
             {
-                entity.ToTable("payment_transactions");
                 entity.HasKey(e => e.PaymentTransactionId).HasName("payment_transactions_pkey");
 
-                entity.Property(e => e.PaymentTransactionId).HasColumnName("payment_transaction_id").UseIdentityAlwaysColumn();
-                entity.Property(e => e.OrderId).HasColumnName("order_id").IsRequired();
-                entity.Property(e => e.Gateway).HasColumnName("gateway").HasMaxLength(30).HasDefaultValue("VNPay");
-                entity.Property(e => e.GatewayTransactionRef).HasColumnName("gateway_transaction_ref").HasMaxLength(100);
-                entity.Property(e => e.Amount).HasColumnName("amount").IsRequired();
-                entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(20).HasDefaultValue("Initiated");
-                entity.Property(e => e.WebhookPayload).HasColumnName("webhook_payload").HasColumnType("jsonb");
-                entity.Property(e => e.RequestedAt).HasColumnName("requested_at").HasDefaultValueSql("now()");
-                entity.Property(e => e.RespondedAt).HasColumnName("responded_at");
+                entity.ToTable("payment_transactions");
 
-                entity.HasIndex(e => e.OrderId).HasDatabaseName("ix_payment_transactions_order_id");
+                entity.HasIndex(e => e.OrderId, "ix_payment_transactions_order_id");
+
+                entity.Property(e => e.PaymentTransactionId)
+                    .UseIdentityAlwaysColumn()
+                    .HasColumnName("payment_transaction_id");
+                entity.Property(e => e.Amount).HasColumnName("amount");
+                entity.Property(e => e.Gateway)
+                    .HasMaxLength(30)
+                    .HasDefaultValueSql("'VNPay'::character varying")
+                    .HasColumnName("gateway");
+                entity.Property(e => e.GatewayTransactionRef)
+                    .HasMaxLength(100)
+                    .HasColumnName("gateway_transaction_ref");
+                entity.Property(e => e.OrderId).HasColumnName("order_id");
+                entity.Property(e => e.RequestedAt)
+                    .HasDefaultValueSql("now()")
+                    .HasColumnName("requested_at");
+                entity.Property(e => e.RespondedAt).HasColumnName("responded_at");
+                entity.Property(e => e.Status)
+                    .HasMaxLength(20)
+                    .HasDefaultValueSql("'Initiated'::character varying")
+                    .HasColumnName("status");
+                entity.Property(e => e.WebhookPayload)
+                    .HasColumnType("jsonb")
+                    .HasColumnName("webhook_payload");
             });
         }
     }
