@@ -1,4 +1,5 @@
 using EventAPI.DTOs;
+using static EventAPI.DTOs.ConfirmEventSaleDTO;
 
 namespace EventAPI.Services
 {
@@ -51,5 +52,7 @@ namespace EventAPI.Services
 
         /// <summary>Throws if the event doesn't exist or the caller doesn't own it (unless isAdmin).</summary>
         Task<Models.Event> GetOwnedEntityAsync(int id, int callerId, bool isAdmin);
+
+        Task<bool> ConfirmPaidOrderSaleAsync(int eventId, ConfirmEventSaleRequestDTO request);
     }
 }

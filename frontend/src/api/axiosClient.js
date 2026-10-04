@@ -74,7 +74,19 @@ axiosClient.interceptors.response.use(
       } catch (refreshError) {
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
-        window.location.href = "/login";
+
+        // Prevent infinite reload loops if already on an authentication page
+        const currentPath = window.location.pathname;
+        const isAuthPage =
+          currentPath.includes("/login") ||
+          currentPath.includes("/register") ||
+          currentPath.includes("/verify") ||
+          currentPath.includes("/forgot") ||
+          currentPath.includes("/reset");
+
+        if (!isAuthPage) {
+          window.location.href = "/login";
+        }
         return Promise.reject(refreshError);
       }
     }

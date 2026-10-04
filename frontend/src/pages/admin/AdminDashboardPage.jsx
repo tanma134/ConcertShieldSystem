@@ -49,6 +49,24 @@ export default function AdminDashboardPage() {
     navigate("/admin/login");
   };
 
+  return <div className="admin-shell">
+    <aside className="admin-sidebar">
+      <div className="admin-brand"><div className="admin-brand-mark">CS</div><h2>ConcertShield</h2></div>
+      <nav className="admin-nav" aria-label="Sidebar navigation">
+        <button type="button" className="admin-nav-item active" onClick={() => navigate("/admin")}>Dashboard</button>
+        <button type="button" className="admin-nav-item" onClick={() => navigate("/admin/users")}>User Management</button>
+        <button type="button" className="admin-nav-item" onClick={() => navigate("/admin/roles")}>Role Management</button>
+        <button type="button" className="admin-nav-item" onClick={() => navigate("/admin/events")}>Event Approvals</button>
+        <button type="button" className="admin-nav-item" onClick={() => navigate("/admin/reviews")}>Review Management</button>
+        <button type="button" className="admin-nav-item" onClick={() => navigate("/admin/wishlists")}>Wishlist Management</button>
+        <button type="button" className="admin-nav-item" onClick={() => navigate("/admin/organizer-requests")}>Organizer Requests</button>
+        <button type="button" className="admin-nav-item" onClick={() => navigate("/admin/vouchers")}>Voucher Management</button>
+      </nav>
+      <div className="admin-user-box"><span>Logged in as</span><strong>{user?.fullName || user?.email || "Admin"}</strong></div>
+    </aside>
+
+    <main className="admin-main">
+      <header className="admin-topbar"><div className="topbar-title">Admin Panel</div><button type="button" className="admin-button" onClick={handleLogout}>Logout</button></header>
   return <AdminShell title="Admin Panel">
       {error && <div className="auth-message error">{error}<button type="button" onClick={() => setError("")}>Dismiss</button></div>}
       <section className="admin-header"><div><p>Admin dashboard</p><h1>System Management</h1></div></section>

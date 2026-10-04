@@ -1,5 +1,6 @@
 using EventAPI.DTOs;
 using EventAPI.Models;
+using static EventAPI.DTOs.ConfirmEventSaleDTO;
 
 namespace EventAPI.Repositories
 {
@@ -24,5 +25,7 @@ namespace EventAPI.Repositories
         Task HardDeleteAsync(int id);
         Task RestoreAsync(int id);
         Task IncrementViewCountAsync(int id);
+
+        Task<bool> ConfirmPaidOrderSaleAsync(int eventId, int orderId, IReadOnlyCollection<ConfirmEventSaleItemDTO> items);
     }
 }

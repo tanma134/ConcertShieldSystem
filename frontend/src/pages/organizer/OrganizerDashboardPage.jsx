@@ -63,9 +63,14 @@ export default function OrganizerDashboardPage() {
             <h1>Dashboard</h1>
           </div>
           {isOrganizer && (
-            <Link to="/organizer/events/new" className="tb-btn tb-btn-primary">
-              + Create New Event
-            </Link>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <Link to="/organizer/vouchers" className="tb-btn tb-btn-outline">
+                🎟️ Quản lý Voucher
+              </Link>
+              <Link to="/organizer/events/new" className="tb-btn tb-btn-primary">
+                + Create New Event
+              </Link>
+            </div>
           )}
         </div>
 

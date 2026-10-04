@@ -22,6 +22,8 @@ namespace EventAPI.Data
         public virtual DbSet<Review> Reviews { get; set; } = null!;
         public virtual DbSet<SeatingTemplate> SeatingTemplates { get; set; } = null!;
 
+        public virtual DbSet<EventSaleConfirmation> EventSaleConfirmations { get; set; } = null!;
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -341,6 +343,28 @@ namespace EventAPI.Data
 
                 entity.HasIndex(e => e.OrganizerId).HasDatabaseName("ix_seating_templates_organizer_id");
                 entity.HasIndex(e => e.IsPublic).HasDatabaseName("ix_seating_templates_is_public");
+            });
+
+            modelBuilder.Entity<EventSaleConfirmation>(entity =>
+            {
+                entity.ToTable("event_sale_confirmations");
+
+                entity.HasKey(x => x.OrderId);
+
+                entity.Property(x => x.OrderId)
+                    .HasColumnName("order_id");
+
+                entity.Property(x => x.EventId)
+                    .HasColumnName("event_id");
+
+                entity.Property(x => x.ConfirmedAtUtc)
+                    .HasColumnName("confirmed_at_utc")
+                    .HasDefaultValueSql("now()");
+
+                entity.HasOne<Event>()
+                    .WithMany()
+                    .HasForeignKey(x => x.EventId)
+                    .HasConstraintName("fk_event_sale_confirmations_event");
             });
         }
     }

@@ -2,13 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import eventApi from "../api/eventApi";
+import notificationApi from "../api/notificationApi";
 import "./Header.css";
 
-
-
 // Quick-pick keywords shown under the search box so users can tap instead
-// of typing (and don't need to clear the box first - picking one just
-// replaces whatever is currently in it).
 const POPULAR_SEARCHES = ["Live Music", "EDM Festival", "K-Pop", "Jazz Night", "Acoustic"];
 
 export default function Header() {
@@ -20,8 +17,15 @@ export default function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [suggestLoading, setSuggestLoading] = useState(false);
+
+  // Notification Bell Dropdown state
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
   const accountRef = useRef(null);
   const searchRef = useRef(null);
+  const notifRef = useRef(null);
   const debounceRef = useRef(null);
 
   const runSearch = (term) => {
@@ -43,8 +47,68 @@ export default function Header() {
   const handleLogout = () => {
     logout();
     setMenuOpen(false);
+    setNotifOpen(false);
     navigate("/");
   };
+
+  const fetchHeaderNotifications = () => {
+    if (!isAuthenticated || isAdmin) return;
+    notificationApi
+      .getNotifications()
+      .then((res) => {
+        const rawItems = res.data?.items || res.data?.Items || res.data?.data?.items || res.data?.data?.Items || [];
+        const rawUnread = res.data?.unreadCount ?? res.data?.UnreadCount ?? res.data?.data?.unreadCount ?? res.data?.data?.UnreadCount ?? 0;
+        setNotifications(
+          rawItems.map((n) => ({
+            notificationId: n.notificationId ?? n.NotificationId ?? n.id ?? 0,
+            title: n.title || n.Title || "",
+            message: n.message || n.Message || "",
+            category: n.category || n.Category || "event_new",
+            targetUrl: n.targetUrl || n.TargetUrl || "",
+            isRead: n.isRead ?? n.IsRead ?? false,
+            createdAt: n.createdAt || n.CreatedAt,
+          }))
+        );
+        setUnreadCount(rawUnread);
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    if (!isAuthenticated || isAdmin) return;
+
+    fetchHeaderNotifications();
+
+    // Real-time polling every 6 seconds for notifications
+    const intervalId = setInterval(fetchHeaderNotifications, 6000);
+
+    const handleUpdate = () => fetchHeaderNotifications();
+    window.addEventListener("notification-updated", handleUpdate);
+    window.addEventListener("focus", handleUpdate);
+
+    const handleStorage = (e) => {
+      if (e.key === "cs_latest_notification") {
+        fetchHeaderNotifications();
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+
+    let channel = null;
+    try {
+      channel = new BroadcastChannel("concertshield_notifications");
+      channel.onmessage = () => {
+        fetchHeaderNotifications();
+      };
+    } catch (e) {}
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener("notification-updated", handleUpdate);
+      window.removeEventListener("focus", handleUpdate);
+      window.removeEventListener("storage", handleStorage);
+      if (channel) channel.close();
+    };
+  }, [isAuthenticated, isAdmin]);
 
   // Live suggestions as the user types (debounced).
   useEffect(() => {
@@ -69,11 +133,9 @@ export default function Header() {
     return () => clearTimeout(debounceRef.current);
   }, [keyword]);
 
-  // Close the dropdown on outside click or Esc, instead of onMouseLeave
-  // (there used to be a gap between the button and the menu that closed
-  // the menu on mouseover, making the "Log Out" button unclickable).
+  // Close dropdowns on outside click or Esc
   useEffect(() => {
-    if (!menuOpen && !searchOpen) return;
+    if (!menuOpen && !searchOpen && !notifOpen) return;
 
     const handleClickOutside = (e) => {
       if (accountRef.current && !accountRef.current.contains(e.target)) {
@@ -82,11 +144,15 @@ export default function Header() {
       if (searchRef.current && !searchRef.current.contains(e.target)) {
         setSearchOpen(false);
       }
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setNotifOpen(false);
+      }
     };
     const handleEsc = (e) => {
       if (e.key === "Escape") {
         setMenuOpen(false);
         setSearchOpen(false);
+        setNotifOpen(false);
       }
     };
 
@@ -96,7 +162,7 @@ export default function Header() {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEsc);
     };
-  }, [menuOpen, searchOpen]);
+  }, [menuOpen, searchOpen, notifOpen]);
 
   return (
     <header className="tb-header">
@@ -238,11 +304,99 @@ export default function Header() {
             </button>
           )}
 
-          {/* Organizer: Dashboard link */}
+          {/* Organizer: Dashboard & Vouchers links */}
           {isAuthenticated && !isAdmin && isOrganizer && (
-            <Link to="/organizer/dashboard" className="tb-header-link">
-              Dashboard
-            </Link>
+            <>
+              <Link to="/organizer/dashboard" className="tb-header-link">
+                Dashboard
+              </Link>
+              <Link to="/organizer/vouchers" className="tb-header-link">
+                Vouchers
+              </Link>
+            </>
+          )}
+
+          {/* Notification Bell Dropdown (Customer and Organizer only) */}
+          {isAuthenticated && !isAdmin && (
+            <div className="tb-notif-wrap" ref={notifRef}>
+              <button
+                type="button"
+                className="tb-header-link tb-notif-btn"
+                onClick={() => {
+                  const next = !notifOpen;
+                  setNotifOpen(next);
+                  if (next) fetchHeaderNotifications();
+                }}
+                title="Notifications"
+              >
+                🔔 Notifications
+                {unreadCount > 0 && (
+                  <span className="tb-notif-badge">{unreadCount > 99 ? "99+" : unreadCount}</span>
+                )}
+              </button>
+
+              {notifOpen && (
+                <div className="tb-notif-dropdown">
+                  <div className="tb-notif-header">
+                    <strong>Notifications</strong>
+                    {unreadCount > 0 && (
+                      <button
+                        type="button"
+                        className="tb-notif-mark-all"
+                        onClick={async () => {
+                          setUnreadCount(0);
+                          setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+                          try {
+                            await notificationApi.markAllAsRead();
+                          } catch (e) {}
+                        }}
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="tb-notif-list">
+                    {notifications.length === 0 ? (
+                      <div className="tb-notif-empty">No new notifications.</div>
+                    ) : (
+                      notifications.slice(0, 6).map((notif) => (
+                        <div
+                          key={notif.notificationId}
+                          className={`tb-notif-item ${!notif.isRead ? "unread" : ""}`}
+                          onClick={async () => {
+                            if (!notif.isRead) {
+                              setNotifications((prev) =>
+                                prev.map((n) =>
+                                  n.notificationId === notif.notificationId ? { ...n, isRead: true } : n
+                                )
+                              );
+                              setUnreadCount((prev) => Math.max(0, prev - 1));
+                              try {
+                                await notificationApi.markAsRead(notif.notificationId);
+                              } catch (e) {}
+                            }
+                            setNotifOpen(false);
+                            if (notif.targetUrl) {
+                              navigate(notif.targetUrl);
+                            }
+                          }}
+                        >
+                          <div className="tb-notif-item-title">{notif.title}</div>
+                          <div className="tb-notif-item-msg">{notif.message}</div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="tb-notif-footer">
+                    <Link to="/notifications" onClick={() => setNotifOpen(false)}>
+                      View all notifications ➔
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           {isAuthenticated && (
@@ -287,6 +441,11 @@ export default function Header() {
                     <Link to="/profile" onClick={() => setMenuOpen(false)}>
                       My Profile
                     </Link>
+                    {isAdmin && (
+                      <Link to="/admin/vouchers" onClick={() => setMenuOpen(false)}>
+                        Vouchers Admin
+                      </Link>
+                    )}
                     <button type="button" onClick={handleLogout}>
                       Log Out
                     </button>
@@ -301,7 +460,6 @@ export default function Header() {
           </div>
         </div>
       </div>
-
     </header>
   );
 }

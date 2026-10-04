@@ -22,11 +22,18 @@ import ReviewManagementPage from "../pages/admin/ReviewManagementPage";
 import UserManagementPage from "../pages/admin/UserManagementPage";
 import RoleManagementPage from "../pages/admin/RoleManagementPage";
 import RequestOrganizerPage from "../pages/RequestOrganizerPage";
+import KycPage from "../pages/KycPage";
 import MyProfilePage from "../pages/MyProfilePage";
 import EditProfilePage from "../pages/EditProfilePage";
 import WishlistManagementPage from "../pages/admin/WishlistManagementPage";
 import EventConfigurationPage from "../pages/organizer/EventConfigurationPage";
 import AdminSeatingTemplatesPage from "../pages/admin/AdminSeatingTemplatesPage";
+import VoucherManagementPage from "../pages/admin/VoucherManagementPage";
+import NotificationCenterPage from "../pages/NotificationCenterPage";
+import SelectTicketPage from "../pages/customer/SelectTicketPage"
+import QuestionFormPage from "../pages/customer/QuestionFormPage";
+import PaymentInfoPage from "../pages/customer/PaymentInfoPage";
+import PaymentResult from "../pages/customer/PaymentResult";
 import KycPage from "../pages/KycPage";
 import KycConsentAdminPage from "../pages/admin/KycConsentAdminPage";
 import KycDeletionAdminPage from "../pages/admin/KycDeletionAdminPage";
@@ -59,6 +66,27 @@ export default function AppRoutes() {
       <Route path="/events/:slug" element={<EventDetailPage />} />
       <Route path="/profile" element={<ProtectedRoute><MyProfilePage /></ProtectedRoute>} />
       <Route path="/profile/edit" element={<ProtectedRoute><EditProfilePage /></ProtectedRoute>} />
+
+      <Route path="/events/:eventId/select-tickets" element={<SelectTicketPage />} />
+      <Route
+        path="/checkout/question-form/:holdId"
+        element={
+          <ProtectedRoute>
+            <QuestionFormPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/checkout/payment-info/:holdId"
+        element={
+          <ProtectedRoute>
+            <PaymentInfoPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/payment/result" element={<PaymentResult />} />
+      
 <Route path="/profile/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
       {/* Any logged-in Customer may create and configure a Draft concert. */}
       <Route
@@ -185,6 +213,12 @@ export default function AppRoutes() {
           </AdminRoute>
         }
       />
+      {/* Notifications - Available for Customer & Organizer */}
+      <Route path="/notifications" element={<ProtectedRoute><NotificationCenterPage /></ProtectedRoute>} />
+
+      {/* Voucher Management - Organizer */}
+      <Route path="/organizer/vouchers" element={<ProtectedRoute organizerOnly><VoucherManagementPage /></ProtectedRoute>} />
+
       <Route path="/admin/wishlists" element={<AdminRoute><WishlistManagementPage /></AdminRoute>} />
       <Route path="/admin/kyc/consent" element={<AdminRoute><KycConsentAdminPage /></AdminRoute>} />
       <Route path="/admin/kyc/deletion-requests" element={<AdminRoute><KycDeletionAdminPage /></AdminRoute>} />
@@ -200,6 +234,7 @@ export default function AppRoutes() {
       <Route path="/admin/risk/appeals/:id" element={<AdminRoute><AppealReviewPage /></AdminRoute>} />
       <Route path="/risk/decisions/:id/appeal" element={<ProtectedRoute><SubmitAppealPage /></ProtectedRoute>} />
       <Route path="/admin/seating-templates" element={<AdminRoute><AdminSeatingTemplatesPage /></AdminRoute>} />
+      <Route path="/admin/vouchers" element={<AdminRoute><VoucherManagementPage /></AdminRoute>} />
     </Routes>
   );
 }

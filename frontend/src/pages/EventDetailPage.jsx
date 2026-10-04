@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import EventCard from "../components/EventCard";
@@ -32,6 +32,16 @@ export default function EventDetailPage() {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [wishlistError, setWishlistError] = useState("");
+
+  const navigate = useNavigate();
+
+  const handleBuyTickets = () => {
+    if (event && event.eventId) {
+      navigate(`/events/${event.eventId}/select-tickets`);
+    } else {
+      console.warn("Chưa có thông tin sự kiện để mua vé");
+    }
+  };
 
   // Event data is synchronized with the current route.
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -326,7 +336,7 @@ export default function EventDetailPage() {
                 {wishlistError && <div className="tb-buy-blocked">{wishlistError}</div>}
 
                 {canBuy ? (
-                  <button type="button" className="tb-btn tb-btn-primary tb-buy-btn">
+                  <button type="button" className="tb-btn tb-btn-primary tb-buy-btn" onClick={handleBuyTickets}>
                     Buy Tickets
                   </button>
                 ) : (
