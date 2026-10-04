@@ -55,7 +55,46 @@ namespace AuthenticationAPI.Services
             await client.DisconnectAsync(quit: true);
         }
 
-        // ─── Email Templates ─────────────────────────────────────────────────
+        public async Task SendKycDeletionResultAsync(string toEmail, bool approved, string? reason)
+        {
+            var settings = _configuration.GetSection("EmailSettings");
+            var host = settings["Host"]!;
+            var port = int.Parse(settings["Port"]!);
+            var enableSsl = bool.Parse(settings["EnableSsl"]!);
+            var senderEmail = settings["SenderEmail"]!;
+            var senderName = settings["SenderName"]!;
+            var password = settings["Password"]!;
+
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress(senderName, senderEmail));
+            message.To.Add(MailboxAddress.Parse(toEmail));
+            message.Subject = approved
+                ? "Your eKYC data deletion request was approved"
+                : "Your eKYC data deletion request was rejected";
+
+            var safeReason = System.Net.WebUtility.HtmlEncode(reason ?? "");
+            message.Body = new TextPart("html")
+            {
+                Text = approved
+                    ? @"<div style='font-family: Arial, sans-serif; max-width: 480px; margin: auto;'>
+                            <h2 style='color: #333;'>Deletion request approved</h2>
+                            <p>Your ID card and face data has been deleted from our system.</p>
+                        </div>"
+                    : $@"<div style='font-family: Arial, sans-serif; max-width: 480px; margin: auto;'>
+                            <h2 style='color: #333;'>Deletion request rejected</h2>
+                            <p>We could not delete your eKYC data for the following reason:</p>
+                            <p><strong>{safeReason}</strong></p>
+                        </div>"
+            };
+
+            using var client = new SmtpClient();
+            var secureOption = enableSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.None;
+            await client.ConnectAsync(host, port, secureOption);
+            await client.AuthenticateAsync(senderEmail, password);
+            await client.SendAsync(message);
+            await client.DisconnectAsync(quit: true);
+        }
+
 
         private static string BuildRegisterTemplate(string otp) => $@"
             <div style='font-family: Arial, sans-serif; max-width: 480px; margin: auto;'>

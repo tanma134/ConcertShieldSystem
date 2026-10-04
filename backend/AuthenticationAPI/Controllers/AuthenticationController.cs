@@ -1,5 +1,7 @@
-﻿using AuthenticationAPI.DTOs;
+﻿using System.Security.Claims;
+using AuthenticationAPI.DTOs;
 using AuthenticationAPI.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AuthenticationAPI.Controllers
@@ -18,6 +20,10 @@ namespace AuthenticationAPI.Controllers
             _authService = authService;
             _logger = logger;
         }
+
+        // Helper: lấy IP/User-Agent thật của client cho các action cần audit log
+        private string? ClientIp => HttpContext.Connection.RemoteIpAddress?.ToString();
+        private string? ClientUserAgent => Request.Headers.UserAgent.ToString();
 
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDTO dto)
@@ -70,7 +76,7 @@ namespace AuthenticationAPI.Controllers
         {
             try
             {
-                var result = await _authService.LoginAsync(dto);
+                var result = await _authService.LoginAsync(dto, ClientIp, ClientUserAgent);
                 return Ok(result);
             }
             catch (KeyNotFoundException ex)
@@ -97,7 +103,7 @@ namespace AuthenticationAPI.Controllers
         {
             try
             {
-                var result = await _authService.RefreshTokenAsync(dto);
+                var result = await _authService.RefreshTokenAsync(dto, ClientIp, ClientUserAgent);
                 return Ok(result);
             }
             catch (KeyNotFoundException ex)
@@ -177,7 +183,7 @@ namespace AuthenticationAPI.Controllers
         {
             try
             {
-                await _authService.ResetPasswordAsync(dto);
+                await _authService.ResetPasswordAsync(dto, ClientIp, ClientUserAgent);
                 return Ok(new { message = "Password reset successfully. You can now log in with your new password." });
             }
             catch (KeyNotFoundException ex)
@@ -194,12 +200,13 @@ namespace AuthenticationAPI.Controllers
                 return StatusCode(500, new { message = "An unexpected error occurred while resetting your password. Please try again later." });
             }
         }
+
         [HttpPost("google")]
         public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginDTO dto)
         {
             try
             {
-                var result = await _authService.GoogleLoginAsync(dto);
+                var result = await _authService.GoogleLoginAsync(dto, ClientIp, ClientUserAgent);
                 return Ok(result);
             }
             catch (UnauthorizedAccessException ex)
@@ -214,6 +221,38 @@ namespace AuthenticationAPI.Controllers
             {
                 _logger.LogError(ex, "Unexpected error during Google login");
                 return StatusCode(500, new { message = "An unexpected error occurred while logging in with Google. Please try again later." });
+            }
+        }
+
+        [HttpPost("change-password")]
+        [Authorize]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDTO dto)
+        {
+            var userIdText = (User.FindFirst("userId") ?? User.FindFirst(ClaimTypes.NameIdentifier))?.Value;
+            if (!int.TryParse(userIdText, out var userId))
+                return Unauthorized(new { message = "Invalid token" });
+
+            try
+            {
+                await _authService.ChangePasswordAsync(userId, dto, ClientIp, ClientUserAgent);
+                return Ok(new { message = "Password changed successfully." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error while changing password for user {UserId}", userId);
+                return StatusCode(500, new { message = "An unexpected error occurred while changing your password. Please try again later." });
             }
         }
     }

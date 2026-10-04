@@ -23,7 +23,7 @@ namespace AuthenticationAPI.Providers
         // Định dạng "<crop trên>,<crop dưới>", ví dụ "0.14,0.3"
         public string CropParam { get; set; } = "0.14,0.3";
 
-        // Từ chối giấy tờ đã hết hạn (expire_warning / back_expire_warning)
+        // Không còn dùng: BR-43 luôn từ chối giấy tờ hết hạn. Giữ lại để appsettings cũ không lỗi.
         public bool RejectExpiredCard { get; set; } = true;
 
         // true: OCR từng mặt qua /ai/v1/ocr/id/front và /ai/v1/ocr/id/back (biết chính xác mặt nào lỗi,
@@ -141,6 +141,8 @@ namespace AuthenticationAPI.Providers
                 {
                     Success = true,
                     IdNumber = GetString(obj, "id"),
+                    FullName = GetString(obj, "name"),
+                    DateOfBirth = GetString(obj, "birth_day"),
                     RawResponseJson = ocr.GetRawText()
                 };
             }
@@ -210,6 +212,8 @@ namespace AuthenticationAPI.Providers
             {
                 Success = true,
                 IdNumber = GetString(obj, "id"),
+                FullName = GetString(obj, "name"),
+                DateOfBirth = GetString(obj, "birth_day"),
                 RawResponseJson = "{\"object\":" + mergedJson + "}"
             };
         }
@@ -233,6 +237,18 @@ namespace AuthenticationAPI.Providers
             if (string.IsNullOrWhiteSpace(GetString(obj, "id")))
                 return "Không đọc được số CCCD, vui lòng chụp lại ảnh rõ nét hơn";
 
+            // BR-42: only a citizen ID card (CCCD, 12-digit number) is accepted
+            var idNumber = (GetString(obj, "id") ?? string.Empty).Trim();
+            if (idNumber.Length != 12 || !idNumber.All(char.IsDigit))
+                return "Chỉ chấp nhận Căn cước công dân (CCCD) 12 số";
+
+            // BR-42: front and back must be the same card. The MRZ on the back embeds the full ID number.
+            var mrz = GetString(obj, "mrz");
+            if (!string.IsNullOrWhiteSpace(mrz)
+                && mrz.Replace("<", "").Replace(" ", "").Length >= 20
+                && !mrz.Contains(idNumber))
+                return "Hai mặt giấy tờ không thuộc cùng một thẻ CCCD";
+
             // Số ID có hợp lệ theo quy luật không (tampering.is_legal = "yes")
             if (obj.TryGetProperty("tampering", out var tamper)
                 && GetString(tamper, "is_legal") is { } legal
@@ -242,9 +258,9 @@ namespace AuthenticationAPI.Providers
             if (string.Equals(GetString(obj, "id_fake_warning"), "yes", StringComparison.OrdinalIgnoreCase))
                 return "Số giấy tờ nghi ngờ giả mạo";
 
-            if (_options.RejectExpiredCard
-                && (string.Equals(GetString(obj, "expire_warning"), "yes", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(GetString(obj, "back_expire_warning"), "yes", StringComparison.OrdinalIgnoreCase)))
+            // BR-43: an expired ID card is always rejected (no longer controlled by configuration)
+            if (string.Equals(GetString(obj, "expire_warning"), "yes", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(GetString(obj, "back_expire_warning"), "yes", StringComparison.OrdinalIgnoreCase))
                 return "Giấy tờ đã hết hạn";
 
             return null;
@@ -263,6 +279,18 @@ namespace AuthenticationAPI.Providers
                 var live = (await PostAiAsync("/ai/v1/face/liveness",
                     new() { ["img"] = selfieHash })).GetProperty("object");
                 var livenessPassed = IsSuccess(live, "liveness");
+
+                // BR-48: the face is compared with the ID card only after the liveness check has passed
+                if (!livenessPassed)
+                {
+                    return new FaceCompareResult
+                    {
+                        Success = true,
+                        MatchScore = 0m,
+                        LivenessPassed = false,
+                        LivenessScore = 0m
+                    };
+                }
 
                 var cmp = (await PostAiAsync("/ai/v1/face/compare", new()
                 {

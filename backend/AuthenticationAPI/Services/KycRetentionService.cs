@@ -68,6 +68,7 @@ namespace AuthenticationAPI.Services
             {
                 var candidates = await db.EkycVerifications
                     .Where(e => e.DataPurgedAt == null
+                                && !e.LegalHold // BR-220/222: data under legal hold is not expired
                                 && e.Status != "Pending" && e.Status != "ManualReview"
                                 && (e.VerifiedAt ?? e.CreatedAt) < cutoff)
                     .OrderBy(e => e.EkycId)
@@ -84,9 +85,22 @@ namespace AuthenticationAPI.Services
                     try
                     {
                         await purger.PurgeAsync(record, settings.KeepDocumentHashAfterDeletion, ct);
-                        await accessLog.LogAsync(record.UserId, record.EkycId, null, KycActorTypes.System,
-                            KycAccessActions.RetentionPurge, null, $"retentionDays={settings.RetentionDays}");
                         purgedInBatch++;
+
+                        // BR-224: evidence of the purge (time, data type, basis) without any personal data
+                        var types = "id_images,face_image,ocr_data,biometric"
+                                    + (settings.KeepDocumentHashAfterDeletion ? "" : ",document_number");
+                        try
+                        {
+                            await accessLog.LogAsync(record.UserId, record.EkycId, null, KycActorTypes.System,
+                                KycAccessActions.RetentionPurge, null,
+                                $"purpose=retention_expiry; types={types}; basis=retention_policy_{settings.RetentionDays}d");
+                        }
+                        catch (Exception logEx) when (logEx is not OperationCanceledException)
+                        {
+                            // The data is already gone; a failed log write must not be counted as a failed purge
+                            _logger.LogError(logEx, "Không ghi được bằng chứng purge cho ekyc {EkycId}", record.EkycId);
+                        }
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException)
                     {
