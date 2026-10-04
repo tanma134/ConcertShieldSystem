@@ -18,6 +18,16 @@
         public int EkycId { get; set; }
         public string Status { get; set; } = null!;
         public string? Message { get; set; }
+
+        /// <summary>BR-44: identity read from the ID card, shown to the user for review (read-only, ID number masked).</summary>
+        public EkycIdentityInfoDto? Identity { get; set; }
+    }
+
+    public class EkycIdentityInfoDto
+    {
+        public string? FullName { get; set; }
+        public string? DateOfBirth { get; set; }
+        public string? IdNumberMasked { get; set; }
     }
 
     public class EkycStatusResponseDto

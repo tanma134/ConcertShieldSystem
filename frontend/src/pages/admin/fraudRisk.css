@@ -1,0 +1,481 @@
+/* ==========================================================================
+   fraudRisk.css — Fraud / Risk admin screens (theo Figma "Fraud & risk")
+   Dùng cho: FraudAlertDashboardPage, FraudAlertDetailPage, AuditLogAdminPage
+   Cách dùng: import SAU kycAdmin.css, và bọc nội dung trang trong <div className="fr-page">
+   Mọi rule đều nằm trong .fr-page nên KHÔNG ảnh hưởng các trang KYC khác.
+   ========================================================================== */
+
+.fr-page {
+  --fr-bg: #0a0712;
+  --fr-panel: #171325;
+  --fr-panel-2: #1d1830;
+  --fr-field: #120e20;
+  --fr-line: #2b2542;
+  --fr-ink: #ffffff;
+  --fr-ink-soft: #b9adcf;
+  --fr-ink-faint: #7d7396;
+  --fr-pink: #ff4d9d;
+  --fr-ok: #5eea9c;
+  --fr-warn: #ffc857;
+  --fr-error: #ff6b6b;
+  --fr-info: #7db4ff;
+  --fr-grad: linear-gradient(135deg, #8b2ff0, #ec4899);
+
+  --kyc-accent: var(--fr-pink); /* màu của <summary> "Matched rule details" */
+
+  color: var(--fr-ink);
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-size: 14.5px;
+}
+
+.fr-page *,
+.fr-page *::before,
+.fr-page *::after { box-sizing: border-box; }
+
+/* ---------- Panel ---------- */
+.fr-page .admin-panel {
+  background: var(--fr-panel);
+  border: 1px solid var(--fr-line);
+  border-radius: 14px;
+  padding: 0 28px 24px;
+  margin-bottom: 20px;
+}
+
+.fr-page .panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 0 -28px 18px;
+  padding: 22px 28px;
+  border-bottom: 1px solid var(--fr-line);
+}
+.fr-page .panel-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--fr-ink);
+}
+
+.fr-page .kyc-admin-note {
+  margin: 0 0 18px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--fr-ink-soft);
+}
+
+/* ---------- Buttons ---------- */
+.fr-page .admin-button,
+.fr-page .admin-button-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 42px;
+  padding: 0 22px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, opacity .12s ease;
+}
+.fr-page .admin-button {
+  border: none;
+  color: #fff;
+  background: var(--fr-grad);
+  box-shadow: 0 6px 20px rgba(139, 47, 240, .35);
+}
+.fr-page .admin-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(139, 47, 240, .5);
+}
+.fr-page .admin-button-secondary {
+  border: 1px solid var(--fr-line);
+  color: var(--fr-ink);
+  background: var(--fr-panel-2);
+}
+.fr-page .admin-button-secondary:hover:not(:disabled) { border-color: var(--fr-pink); }
+.fr-page .admin-button:disabled,
+.fr-page .admin-button-secondary:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Nút trong bảng: nhỏ gọn. Link "View" giống .link của Figma (chữ hồng) */
+.fr-page .user-table .admin-button,
+.fr-page .user-table button.admin-button-secondary {
+  height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
+}
+.fr-page .user-table a.admin-button-secondary {
+  height: auto;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--fr-pink);
+  font-size: 13px;
+}
+.fr-page .user-table a.admin-button-secondary:hover { text-decoration: underline; }
+
+/* ---------- Banner (error / notice) ---------- */
+.fr-page .auth-message {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--fr-ok);
+  background: rgba(94, 234, 156, .08);
+  border: 1px solid rgba(94, 234, 156, .45);
+}
+.fr-page .auth-message.error {
+  color: var(--fr-error);
+  background: rgba(255, 107, 107, .08);
+  border-color: rgba(255, 107, 107, .45);
+}
+.fr-page .auth-message button {
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+  opacity: .85;
+}
+.fr-page .auth-message button:hover { opacity: 1; }
+
+/* ---------- Summary cards (SummaryCard) & AI box (cùng class .kyc-item-editor) ---------- */
+.fr-page .kyc-item-editor {
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(139, 47, 240, .5);
+  background: rgba(139, 47, 240, .08);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--fr-ink-soft);
+}
+.fr-page .kyc-item-editor strong { color: #fff; }
+.fr-page .kyc-item-editor p { margin: 8px 0; }
+.fr-page .kyc-item-editor ul { margin: 8px 0; color: var(--fr-ink-soft); }
+
+/* SummaryCard có inline min-width → dùng kiểu "stat" */
+.fr-page .kyc-item-editor[style*="min-width"] {
+  flex: 1 1 160px;
+  padding: 14px 16px;
+  border: 1px solid var(--fr-line);
+  background: var(--fr-panel-2);
+  line-height: 1.2;
+}
+.fr-page .kyc-item-editor[style*="min-width"] .kyc-admin-note {
+  font-size: 12.5px;
+  color: var(--fr-ink-faint);
+}
+
+/* ---------- Toolbar / filters ---------- */
+.fr-page .kyc-admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.fr-page .kyc-admin-toolbar label { color: var(--fr-ink-soft); }
+
+/* ---------- Inputs ---------- */
+.fr-page input,
+.fr-page select,
+.fr-page textarea {
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--fr-line);
+  background: var(--fr-field);
+  color: var(--fr-ink);
+  font: inherit;
+  font-size: 14.5px;
+  color-scheme: dark;
+  outline: none;
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.fr-page textarea {
+  height: auto;
+  min-height: 88px;
+  padding: 12px 14px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.fr-page input::placeholder,
+.fr-page textarea::placeholder { color: var(--fr-ink-faint); }
+.fr-page input:focus,
+.fr-page select:focus,
+.fr-page textarea:focus {
+  border-color: var(--fr-pink);
+  box-shadow: 0 0 0 3px rgba(255, 77, 157, .18);
+}
+.fr-page .kyc-admin-toolbar select { min-width: 170px; }
+.fr-page .kyc-admin-toolbar input[inputmode="numeric"] { width: 150px; }
+
+/* Form trong modal */
+.fr-page .kyc-admin-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.fr-page .kyc-admin-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ---------- Table ---------- */
+.fr-page .table-wrap { overflow-x: auto; }
+.fr-page .user-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14.5px;
+}
+.fr-page .user-table th {
+  padding: 14px 14px 12px 0;
+  text-align: left;
+  white-space: nowrap;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--fr-ink-soft);
+  border-bottom: 1px solid var(--fr-line);
+}
+.fr-page .user-table td {
+  padding: 15px 14px 15px 0;
+  vertical-align: middle;
+}
+.fr-page .user-table tbody tr + tr td { border-top: 1px solid var(--fr-line); }
+.fr-page .user-table tbody tr:hover td { background: rgba(255, 255, 255, .02); }
+.fr-page .user-table input { height: 36px; font-size: 13px; }
+
+/* ---------- Pills ---------- */
+.fr-page .kyc-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--fr-ink-soft);
+  border: 1px solid var(--fr-line);
+}
+.fr-page .kyc-pill--bad {
+  color: var(--fr-error);
+  border-color: rgba(255, 107, 107, .45);
+  background: rgba(255, 107, 107, .08);
+}
+.fr-page .kyc-pill--pending {
+  color: var(--fr-warn);
+  border-color: rgba(255, 200, 87, .45);
+  background: rgba(255, 200, 87, .08);
+}
+.fr-page .kyc-pill--ok {
+  color: var(--fr-ok);
+  border-color: rgba(94, 234, 156, .45);
+  background: rgba(94, 234, 156, .08);
+}
+.fr-page .kyc-pill--view {
+  color: var(--fr-info);
+  border-color: rgba(125, 180, 255, .45);
+  background: rgba(125, 180, 255, .08);
+}
+.fr-page .kyc-pill--muted { color: var(--fr-ink-faint); }
+
+/* ---------- Pager ---------- */
+.fr-page .kyc-pager {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding-top: 18px;
+  font-size: 13.5px;
+  color: var(--fr-ink-soft);
+}
+.fr-page .kyc-pager .admin-button-secondary {
+  height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
+}
+
+/* ---------- Empty state ---------- */
+.fr-page .empty-state {
+  padding: 36px 16px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--fr-ink-faint);
+  border: 1px dashed var(--fr-line);
+  border-radius: 10px;
+}
+
+/* ---------- Alert info grid (dt/dd) ---------- */
+.fr-page .kyc-preview {
+  padding: 18px 20px;
+  border-radius: 12px;
+  border: 1px solid var(--fr-line);
+  background: var(--fr-panel-2);
+}
+.fr-page .kyc-preview dt {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--fr-ink-faint);
+}
+.fr-page .kyc-preview dd {
+  margin: 4px 0 0;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--fr-ink);
+  word-break: break-word;
+}
+
+/* ---------- Matched rules (RuleList) ---------- */
+.fr-page details summary {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.fr-page details li strong { color: var(--fr-ink); }
+.fr-page details .kyc-admin-note { margin-bottom: 0; }
+
+/* ---------- Audit log: JSON cell ---------- */
+.fr-page pre {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--fr-line);
+  background: var(--fr-field);
+  color: var(--fr-ink-soft);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  overflow-x: auto;
+}
+.fr-page code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+/* ---------- Modal "Block for alert" (overlay dùng inline style position: fixed) ---------- */
+.fr-page div[style*="position: fixed"] {
+  background: rgba(5, 3, 10, .78) !important;
+  backdrop-filter: blur(3px);
+  padding: 24px;
+}
+.fr-page div[style*="position: fixed"] .admin-panel {
+  margin: 0;
+  padding: 0 26px 22px;
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .55);
+}
+.fr-page div[style*="position: fixed"] .panel-header {
+  margin: 0 -26px 20px;
+  padding: 22px 26px 16px;
+}
+.fr-page div[style*="position: fixed"] .panel-header h2 { font-size: 19px; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 720px) {
+  .fr-page .admin-panel { padding: 0 16px 20px; }
+  .fr-page .panel-header { margin: 0 -16px 16px; padding: 18px 16px; flex-wrap: wrap; }
+  .fr-page .kyc-admin-toolbar select,
+  .fr-page .kyc-admin-toolbar input { flex: 1 1 140px; }
+}
+
+/* ---------- Patch: khối "Alert information" (tăng độ ưu tiên, đảo lại phân cấp nhãn/giá trị) ---------- */
+.fr-page .admin-panel .kyc-preview {
+  margin: 0 0 16px;
+  padding: 20px 24px !important;
+  gap: 18px 24px !important;
+  background: var(--fr-panel-2);
+  border: 1px solid var(--fr-line);
+  border-radius: 12px;
+}
+.fr-page .admin-panel .kyc-preview dt {
+  margin: 0 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--fr-ink-faint) !important;
+}
+.fr-page .admin-panel .kyc-preview dd {
+  margin: 6px 0 0 !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: var(--fr-ink) !important;
+}
+.fr-page .admin-panel .kyc-preview + .kyc-admin-note {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--fr-panel-2);
+  border: 1px solid var(--fr-line);
+}
+
+/* ==========================================================================
+   Appeal / Risk Decision screens (Figma: Risk decision, Submit appeal, Review appeal)
+   ========================================================================== */
+.fr-page.fr-standalone { max-width: 760px; margin: 0 auto; padding: 40px 20px; background: var(--fr-bg); min-height: 100vh; }
+
+.fr-page .fr-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+.fr-page .fr-top h1 { margin: 0; font-size: 26px; font-weight: 700; }
+.fr-page .fr-top p { margin: 6px 0 0; font-size: 13.5px; color: var(--fr-ink-soft); }
+.fr-page .fr-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.fr-page .fr-row.end { justify-content: flex-end; }
+
+.fr-page .fr-body { display: flex; flex-direction: column; gap: 18px; }
+.fr-page .fr-sub { margin: 4px 0 0; font-size: 13px; color: var(--fr-ink-soft); }
+
+.fr-page .fr-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
+.fr-page .fr-stat { padding: 14px; border-radius: 10px; background: var(--fr-panel-2); border: 1px solid var(--fr-line); }
+.fr-page .fr-stat small { display: block; font-size: 12.5px; color: var(--fr-ink-faint); }
+.fr-page .fr-stat b { font-size: 20px; }
+
+.fr-page .fr-kv { display: grid; grid-template-columns: 170px 1fr; gap: 10px 16px; font-size: 14px; margin: 0; }
+.fr-page .fr-kv > span { color: var(--fr-ink-faint); }
+.fr-page .fr-kv > div { word-break: break-word; }
+
+.fr-page .fr-field { display: flex; flex-direction: column; gap: 8px; }
+.fr-page .fr-label { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; }
+.fr-page .fr-label small { font-weight: 400; font-size: 12.5px; color: var(--fr-ink-faint); }
+.fr-page .fr-hint { font-size: 12.5px; color: var(--fr-ink-faint); }
+.fr-page .fr-err { font-size: 12.5px; color: #ffb3b3; }
+.fr-page textarea.fr-area { width: 100%; min-height: 96px; }
+.fr-page textarea.fr-area.is-err { border-color: var(--fr-error); }
+
+.fr-page .fr-info { padding: 12px 14px; border-radius: 10px; font-size: 13.5px; line-height: 1.55; color: var(--fr-ink-soft); background: var(--fr-panel-2); border: 1px solid var(--fr-line); }
+.fr-page .fr-info b { color: var(--fr-ink); }
+.fr-page .fr-info--warn { border-color: rgba(255, 200, 87, .45); background: rgba(255, 200, 87, .07); }
+
+.fr-page .fr-chip { display: inline-block; margin: 2px 6px 2px 0; padding: 5px 11px; border-radius: 8px; background: var(--fr-panel-2); border: 1px solid var(--fr-line); font-size: 13px; color: var(--fr-ink-soft); }
+
+.fr-page .fr-ai { padding: 14px 16px; border-radius: 10px; border: 1px solid rgba(139, 47, 240, .5); background: rgba(139, 47, 240, .08); font-size: 13.5px; line-height: 1.55; color: var(--fr-ink-soft); }
+.fr-page .fr-ai b { color: #fff; }
+
+.fr-page .fr-radios { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.fr-page .fr-radio { display: flex; gap: 12px; align-items: flex-start; padding: 14px; border-radius: 10px; border: 1px solid var(--fr-line); background: var(--fr-field); cursor: pointer; text-align: left; color: inherit; font: inherit; }
+.fr-page .fr-radio.on { border-color: var(--fr-pink); background: rgba(236, 72, 153, .06); }
+.fr-page .fr-radio .dot { flex: none; width: 18px; height: 18px; margin-top: 2px; border-radius: 50%; border: 2px solid var(--fr-ink-faint); }
+.fr-page .fr-radio.on .dot { border: 5px solid var(--fr-pink); }
+.fr-page .fr-radio b { font-size: 14.5px; }
+.fr-page .fr-radio p { margin: 3px 0 0; font-size: 13px; color: var(--fr-ink-soft); }
+
+.fr-page .fr-upload { display: flex; align-items: center; justify-content: center; height: 84px; border-radius: 10px; border: 1px dashed var(--fr-ink-faint); color: var(--fr-ink-faint); font-size: 13.5px; cursor: pointer; text-align: center; padding: 0 12px; }
+.fr-page .fr-upload:hover { border-color: var(--fr-pink); color: var(--fr-ink-soft); }
+.fr-page .fr-upload input { display: none; }
+
+@media (max-width: 720px) {
+  .fr-page .fr-kv { grid-template-columns: 1fr; gap: 2px; }
+  .fr-page .fr-kv > span { margin-top: 10px; }
+  .fr-page .fr-radios { grid-template-columns: 1fr; }
+}

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.13.35931.197 d17.13
+VisualStudioVersion = 17.13.35931.197
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthenticationAPI", "AuthenticationAPI\AuthenticationAPI.csproj", "{99BF9058-C3D1-4CE7-948E-D806E3B2DA22}"
 EndProject
@@ -24,6 +24,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RefundAPI", "RefundAPI\RefundAPI.csproj", "{451B6EEE-5AFE-42A4-9897-879F790E4FAA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReviewAPI", "ReviewAPI\ReviewAPI.csproj", "{B5E08B8C-8E9E-4C97-9C7C-4B6E5B3D9F11}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdminAPI.Tests", "AdminAPI.Tests\AdminAPI.Tests.csproj", "{049A5F83-EF0B-4942-B657-1DD475526FC9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -75,6 +77,10 @@ Global
 		{B5E08B8C-8E9E-4C97-9C7C-4B6E5B3D9F11}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B5E08B8C-8E9E-4C97-9C7C-4B6E5B3D9F11}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B5E08B8C-8E9E-4C97-9C7C-4B6E5B3D9F11}.Release|Any CPU.Build.0 = Release|Any CPU
+		{049A5F83-EF0B-4942-B657-1DD475526FC9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{049A5F83-EF0B-4942-B657-1DD475526FC9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{049A5F83-EF0B-4942-B657-1DD475526FC9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{049A5F83-EF0B-4942-B657-1DD475526FC9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

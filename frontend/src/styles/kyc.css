@@ -14,8 +14,16 @@
 }
 
 .kyc-page {
+  /* Full-bleed: bất kể .kyc-page nằm trong container cha hẹp thế nào
+     (vd: layout tổng có sidebar/grid do Header đem lại), khối này vẫn
+     luôn chiếm đúng 100% chiều rộng viewport và canh giữa card đúng
+     giữa màn hình, không bị đẩy lệch sang phải. */
+  width: 100vw;
+  max-width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+
   min-height: 100vh;
-  width: 100%;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -24,7 +32,7 @@
   font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
   padding: 24px;
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
   box-sizing: border-box;
 }
 
@@ -102,7 +110,7 @@
 .kyc-lead { margin: 0 0 18px; font-size: 14px; line-height: 1.55; color: var(--kyc-muted); }
 .kyc-muted { font-size: 14px; color: var(--kyc-muted); }
 
-/* ---- đồng ý ---- */
+/* ---- consent ---- */
 .kyc-facts { margin: 0 0 18px; }
 .kyc-facts div { margin-top: 14px; }
 .kyc-facts dt { font-size: 14px; font-weight: 600; color: var(--kyc-text); }
@@ -123,7 +131,7 @@
 }
 .kyc-agree input { width: 20px; height: 20px; margin: 1px 0 0; flex: none; accent-color: var(--kyc-primary); }
 
-/* ---- nút ---- */
+/* ---- buttons ---- */
 .kyc-button {
   width: 100%;
   height: 44px;
@@ -162,7 +170,7 @@
 }
 .kyc-link:disabled { color: var(--kyc-faint); cursor: not-allowed; }
 
-/* ---- thông báo ---- */
+/* ---- alerts ---- */
 .kyc-alert {
   padding: 10px 12px;
   border-radius: 8px;
@@ -220,7 +228,7 @@
 .kyc-shutter:active:not(:disabled) { transform: scale(0.94); }
 .kyc-shutter:disabled { background: #333333; box-shadow: 0 0 0 4px var(--kyc-card), 0 0 0 6.5px var(--kyc-line); cursor: not-allowed; }
 
-/* ---- xem lại ảnh ---- */
+/* ---- photo review ---- */
 .kyc-shot { display: block; width: 100%; height: auto; border-radius: 12px; background: var(--kyc-stage); }
 .kyc-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 18px; }
 .kyc-chip { font-size: 12.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
@@ -233,7 +241,7 @@
 .kyc-thumb figcaption { margin-top: 6px; font-size: 13px; font-weight: 600; }
 .kyc-thumb .kyc-link { font-size: 12.5px; padding: 4px 0; }
 
-/* ---- kết quả ---- */
+/* ---- result ---- */
 .kyc-result-icon { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; margin-bottom: 18px; }
 .kyc-result-icon--ok { background: rgba(34, 197, 94, 0.12); color: #4ade80; }
 .kyc-result-icon--warn { background: rgba(245, 158, 11, 0.12); color: #fbbf24; }

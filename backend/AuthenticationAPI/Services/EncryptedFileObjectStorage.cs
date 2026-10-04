@@ -43,27 +43,24 @@ namespace AuthenticationAPI.Services
             await content.CopyToAsync(ms);
             var plain = ms.ToArray();
 
-            // ===== TẠM COMMENT ĐỂ TEST CHỤP ẢNH - NHỚ BỎ COMMENT LẠI SAU KHI TEST XONG =====
-            // var nonce = RandomNumberGenerator.GetBytes(NonceSize);
-            // var cipher = new byte[plain.Length];
-            // var tag = new byte[TagSize];
-            //
-            // using (var gcm = new AesGcm(_key, TagSize))
-            // {
-            //     gcm.Encrypt(nonce, plain, cipher, tag, Encoding.UTF8.GetBytes(objectKey));
-            // }
-            //
-            // await using var fs = new FileStream(fullPath, FileMode.Create, FileAccess.Write);
-            // await fs.WriteAsync(Magic);
-            // await fs.WriteAsync(nonce);
-            // await fs.WriteAsync(tag);
-            // await fs.WriteAsync(cipher);
+            var nonce = RandomNumberGenerator.GetBytes(NonceSize);
+            var cipher = new byte[plain.Length];
+            var tag = new byte[TagSize];
 
-            // --- Ghi thẳng file gốc, không mã hóa (CHỈ DÙNG ĐỂ TEST) ---
-            await File.WriteAllBytesAsync(fullPath, plain);
-            // ===== HẾT PHẦN TẠM COMMENT =====
+            using (var gcm = new AesGcm(_key, TagSize))
+            {
+                gcm.Encrypt(nonce, plain, cipher, tag, Encoding.UTF8.GetBytes(objectKey));
+            }
 
-            return objectKey;
+            await using (var fs = new FileStream(fullPath, FileMode.Create, FileAccess.Write))
+            {
+                await fs.WriteAsync(Magic);
+                await fs.WriteAsync(nonce);
+                await fs.WriteAsync(tag);
+                await fs.WriteAsync(cipher);
+
+                return objectKey;
+            }
         }
 
         public async Task<Stream?> DownloadAsync(string objectKey)
