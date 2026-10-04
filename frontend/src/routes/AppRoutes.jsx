@@ -34,6 +34,21 @@ import SelectTicketPage from "../pages/customer/SelectTicketPage"
 import QuestionFormPage from "../pages/customer/QuestionFormPage";
 import PaymentInfoPage from "../pages/customer/PaymentInfoPage";
 import PaymentResult from "../pages/customer/PaymentResult";
+import KycPage from "../pages/KycPage";
+import KycConsentAdminPage from "../pages/admin/KycConsentAdminPage";
+import KycDeletionAdminPage from "../pages/admin/KycDeletionAdminPage";
+import KycImagesAdminPage from "../pages/admin/KycImagesAdminPage";
+import KycSettingsAdminPage from "../pages/admin/KycSettingsAdminPage";
+import KycAccessLogAdminPage from "../pages/admin/KycAccessLogAdminPage";
+import AuditLogAdminPage from "../pages/admin/AuditLogAdminPage";
+import ChangePasswordPage from "../pages/ChangePasswordPage";
+import FraudAlertDashboardPage from "../pages/admin/FraudAlertDashboardPage";
+import FraudAlertDetailPage from "../pages/admin/FraudAlertDetailPage";
+import RiskDecisionDetailPage from "../pages/admin/RiskDecisionDetailPage";
+import AppealAdminListPage from "../pages/admin/AppealAdminListPage";
+import RiskBlocksPage from "../pages/admin/RiskBlocksPage";
+import AppealReviewPage from "../pages/admin/AppealReviewPage";
+import SubmitAppealPage from "../pages/SubmitAppealPage";
 
 export default function AppRoutes() {
   return (
@@ -72,6 +87,7 @@ export default function AppRoutes() {
       />
       <Route path="/payment/result" element={<PaymentResult />} />
       
+<Route path="/profile/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
       {/* Any logged-in Customer may create and configure a Draft concert. */}
       <Route
         path="/organizer/dashboard"
@@ -204,6 +220,19 @@ export default function AppRoutes() {
       <Route path="/organizer/vouchers" element={<ProtectedRoute organizerOnly><VoucherManagementPage /></ProtectedRoute>} />
 
       <Route path="/admin/wishlists" element={<AdminRoute><WishlistManagementPage /></AdminRoute>} />
+      <Route path="/admin/kyc/consent" element={<AdminRoute><KycConsentAdminPage /></AdminRoute>} />
+      <Route path="/admin/kyc/deletion-requests" element={<AdminRoute><KycDeletionAdminPage /></AdminRoute>} />
+      <Route path="/admin/kyc-images" element={<AdminRoute><KycImagesAdminPage /></AdminRoute>} />
+      <Route path="/admin/kyc/settings" element={<AdminRoute><KycSettingsAdminPage /></AdminRoute>} />
+      <Route path="/admin/kyc/access-logs" element={<AdminRoute><KycAccessLogAdminPage /></AdminRoute>} />
+      <Route path="/admin/audit-logs" element={<AdminRoute><AuditLogAdminPage /></AdminRoute>} />
+      <Route path="/admin/fraud-alerts" element={<AdminRoute><FraudAlertDashboardPage /></AdminRoute>} />
+      <Route path="/admin/fraud-alerts/:id" element={<AdminRoute><FraudAlertDetailPage /></AdminRoute>} />
+      <Route path="/admin/risk/decisions/:id" element={<AdminRoute><RiskDecisionDetailPage /></AdminRoute>} />
+      <Route path="/admin/risk/blocks" element={<AdminRoute><RiskBlocksPage /></AdminRoute>} />
+      <Route path="/admin/risk/appeals" element={<AdminRoute><AppealAdminListPage /></AdminRoute>} />
+      <Route path="/admin/risk/appeals/:id" element={<AdminRoute><AppealReviewPage /></AdminRoute>} />
+      <Route path="/risk/decisions/:id/appeal" element={<ProtectedRoute><SubmitAppealPage /></ProtectedRoute>} />
       <Route path="/admin/seating-templates" element={<AdminRoute><AdminSeatingTemplatesPage /></AdminRoute>} />
       <Route path="/admin/vouchers" element={<AdminRoute><VoucherManagementPage /></AdminRoute>} />
     </Routes>

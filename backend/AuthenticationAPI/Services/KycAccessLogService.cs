@@ -20,6 +20,12 @@ namespace AuthenticationAPI.Services
         public const string DeletionApproved = "DELETION_APPROVED";
         public const string DeletionRejected = "DELETION_REJECTED";
         public const string DataPurged = "DATA_PURGED";
+        public const string Submit = "SUBMIT";
+        public const string SharedWithProvider = "SHARED_WITH_PROVIDER";
+        public const string ReviewApproved = "REVIEW_APPROVED";
+        public const string ReviewRejected = "REVIEW_REJECTED";
+        public const string LegalHoldSet = "LEGAL_HOLD_SET";
+        public const string LegalHoldCleared = "LEGAL_HOLD_CLEARED";
     }
 
 
@@ -100,6 +106,48 @@ namespace AuthenticationAPI.Services
                 .ToListAsync();
 
             return new KycPagedResult<KycAccessLogDto> { Items = items, Total = total, Page = page, PageSize = pageSize };
+        }
+
+        public async Task<KycPagedResult<KycMyAccessLogDto>> SearchMineAsync(int userId, int page, int pageSize)
+        {
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+
+            var q = _db.KycAccessLogs.AsNoTracking().Where(x => x.SubjectUserId == userId);
+            var total = await q.CountAsync();
+            var rows = await q
+                .OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id)
+                .Skip((page - 1) * pageSize).Take(pageSize)
+                .Select(x => new { x.Id, x.ActorType, x.Action, x.Details, x.CreatedAt })
+                .ToListAsync();
+
+            return new KycPagedResult<KycMyAccessLogDto>
+            {
+                Items = rows.Select(r => new KycMyAccessLogDto
+                {
+                    Id = r.Id,
+                    ActorType = r.ActorType,
+                    Action = r.Action,
+                    Purpose = ExtractPurpose(r.Details),
+                    CreatedAt = r.CreatedAt
+                }).ToList(),
+                Total = total,
+                Page = page,
+                PageSize = pageSize
+            };
+        }
+
+        /// <summary>Details are written as "purpose=xxx; key=value; ..." (BR-232).</summary>
+        private static string? ExtractPurpose(string? details)
+        {
+            if (string.IsNullOrWhiteSpace(details)) return null;
+            foreach (var part in details.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                var kv = part.Trim();
+                if (kv.StartsWith("purpose=", StringComparison.OrdinalIgnoreCase))
+                    return kv["purpose=".Length..].Trim();
+            }
+            return null;
         }
 
         private static DateTime ToUtc(DateTime value) => value.Kind switch

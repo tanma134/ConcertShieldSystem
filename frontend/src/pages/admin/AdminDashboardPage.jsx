@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import AdminShell from "./AdminShell";
 import { useNavigate } from "react-router-dom";
 import adminApi from "../../api/adminApi";
 import { useAuth } from "../../context/AuthContext";
@@ -66,6 +67,7 @@ export default function AdminDashboardPage() {
 
     <main className="admin-main">
       <header className="admin-topbar"><div className="topbar-title">Admin Panel</div><button type="button" className="admin-button" onClick={handleLogout}>Logout</button></header>
+  return <AdminShell title="Admin Panel">
       {error && <div className="auth-message error">{error}<button type="button" onClick={() => setError("")}>Dismiss</button></div>}
       <section className="admin-header"><div><p>Admin dashboard</p><h1>System Management</h1></div></section>
       <section className="summary-grid" aria-label="Summary statistics">
@@ -73,6 +75,6 @@ export default function AdminDashboardPage() {
         <div className="summary-card"><span className="label">Active users</span><div className="value">{activeUsers ?? "..."}</div><span className="trend">{totalUsers ? `${Math.round((activeUsers / totalUsers) * 100)}% active` : "Loading"}</span></div>
         <div className="summary-card"><span className="label">Total roles</span><div className="value">{totalRoles ?? "..."}</div><span className="trend">{adminCount ?? "..."} administrators</span></div>
       </section>
-    </main>
-  </div>;
+    
+  </AdminShell>;
 }

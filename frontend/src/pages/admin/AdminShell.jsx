@@ -18,6 +18,15 @@ const links = [
   ["/admin/wishlists", "Wishlist Management"],
   ["/admin/seating-templates", "Seating Templates"],
   ["/admin/vouchers", "Voucher Management"],
+  ["/admin/kyc/consent", "eKYC Consent"],
+  ["/admin/kyc/deletion-requests", "eKYC Deletion Requests"],
+  ["/admin/kyc-images", "eKYC Images"],
+  ["/admin/kyc/settings", "eKYC Data Retention"],
+  ["/admin/kyc/access-logs", "eKYC Access Logs"],
+  ["/admin/audit-logs", "Activity Log"],
+  ["/admin/fraud-alerts", "Fraud Alert Dashboard"],
+  ["/admin/risk/blocks", "Risk Blocks"],
+  ["/admin/risk/appeals", "Appeals"]
 ];
 
 export default function AdminShell({ children, title = "Admin Panel" }) {

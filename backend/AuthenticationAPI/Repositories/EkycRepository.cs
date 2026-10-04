@@ -59,13 +59,12 @@ namespace AuthenticationAPI.Repositories
                 .FirstOrDefaultAsync();
         }
 
-        public async Task<List<EkycVerification>> GetPurgeCandidatesAsync(DateTime cutoffUtc, int take)
+        public async Task<List<EkycVerification>> GetRecentByUserAsync(int userId, int take)
         {
             return await _context.EkycVerifications
-                .Where(e => e.DataPurgedAt == null
-                            && e.Status != "ManualReview"
-                            && e.CreatedAt < cutoffUtc)
-                .OrderBy(e => e.EkycId)
+                .AsNoTracking()
+                .Where(e => e.UserId == userId)
+                .OrderByDescending(e => e.EkycId)
                 .Take(take)
                 .ToListAsync();
         }
