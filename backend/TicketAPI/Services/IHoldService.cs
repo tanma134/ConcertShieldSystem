@@ -25,4 +25,8 @@ public interface IHoldService
     Task<List<int>> GetHeldSeatIdsAsync(int eventId, IReadOnlyCollection<int> seatIds);
 
     Task<HoldSessionResponse> SaveAttendeesAsync(string holdId, int userId, List<HoldAttendeeDto> attendees);
+
+    Task CancelHoldSessionAsync(string holdId, int userId);
+
+    Task<HoldSessionResponse?> GetActiveHoldSessionAsync(int userId);
 }

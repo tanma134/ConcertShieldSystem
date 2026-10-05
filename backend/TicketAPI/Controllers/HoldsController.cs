@@ -175,5 +175,65 @@ namespace TicketAPI.Controllers
                 return Forbid();
             }
         }
+
+        [HttpPost("session/{holdId}/cancel")]
+        public async Task<IActionResult> CancelHoldSession(string holdId)
+        {
+            var userId = GetUserId();
+
+            if (userId == null)
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "Token không hợp lệ."
+                });
+            }
+
+            try
+            {
+                await _holdService.CancelHoldSessionAsync(holdId, userId.Value);
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Reservation cancelled and tickets released."
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Lỗi hủy hold session {HoldId} cho user {UserId}",
+                    holdId,
+                    userId.Value);
+
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Could not cancel the reservation."
+                });
+            }
+        }
     }
 }

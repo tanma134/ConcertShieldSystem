@@ -34,6 +34,16 @@ namespace TicketAPI.Services
 
         public async Task<int> Add(CreateOrderDTO dto, int customerId)
         {
+            if (string.IsNullOrWhiteSpace(dto.HoldId))
+                throw new ArgumentException("HoldId không hợp lệ.");
+
+            var hold = await _holdService.GetHoldDetailsAsync(
+                dto.HoldId,
+                customerId);
+
+            if (hold.EventId != dto.EventId)
+                throw new ArgumentException("Hold không thuộc sự kiện này.");
+
             await ValidateRedisHoldAsync(dto, customerId);
 
             var eventInfo = await _eventApiClient.GetEventByIdAsync(dto.EventId);
@@ -53,7 +63,8 @@ namespace TicketAPI.Services
                 StartsAt = eventInfo.StartsAt,
                 EndsAt = eventInfo.EndsAt,
 
-                HoldToken = Guid.NewGuid().ToString(),
+                HoldToken = hold.HoldId,
+                ExpiresAt = hold.ExpiresAtUtc,
                 Status = "Pending",
 
                 OrderDate = DateTime.UtcNow,
@@ -446,6 +457,28 @@ namespace TicketAPI.Services
                 QrToken = newToken,
                 ExpiresAtUtc = expiresAt
             };
+        }
+
+        public async Task<List<OrderHistoryItemDto>> GetOrderHistoryAsync(int customerId)
+        {
+            var orders = await _orderRepository.GetOrdersByCustomerIdAsync(customerId);
+
+            return orders.Select(order => new OrderHistoryItemDto
+            {
+                OrderId = order.OrderId,
+                EventId = order.EventId,
+                EventName = order.EventName,
+                PosterUrl = order.PosterUrl,
+                OrderDate = order.OrderDate,
+                StartsAt = order.StartsAt,
+                TotalAmount = order.TotalAmount,
+                DiscountAmount = order.DiscountAmount ?? 0,
+                FinalAmount = order.FinalAmount,
+                PaymentMethod = order.PaymentMethod,
+                Status = order.Status,
+                ExpiresAt = order.ExpiresAt,
+                TicketCount = order.OrderDetails?.Sum(detail => detail.Quantity) ?? 0
+            }).ToList();
         }
     }
 }

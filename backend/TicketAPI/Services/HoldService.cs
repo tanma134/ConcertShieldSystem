@@ -644,5 +644,85 @@ namespace TicketAPI.Services
 
             return ToResponse(session, remainingSeconds);
         }
+
+        public async Task CancelHoldSessionAsync(string holdId, int userId)
+        {
+            if (string.IsNullOrWhiteSpace(holdId))
+                throw new ArgumentException("HoldId không hợp lệ.");
+
+            ValidatePositive(userId, nameof(userId));
+
+            var sessionKey = SessionKey(holdId);
+            var json = await _db.StringGetAsync(sessionKey);
+
+            if (json.IsNull)
+            {
+                throw new KeyNotFoundException(
+                    "Phiên giữ vé không tồn tại hoặc đã hết hạn.");
+            }
+
+            var session = JsonSerializer.Deserialize<HoldSession>(
+                json.ToString(),
+                JsonOptions);
+
+            if (session == null)
+            {
+                throw new InvalidOperationException(
+                    "Dữ liệu hold session không hợp lệ.");
+            }
+
+            if (session.UserId != userId)
+            {
+                throw new UnauthorizedAccessException(
+                    "Bạn không có quyền hủy phiên giữ vé này.");
+            }
+
+            foreach (var ticket in session.Tickets ?? new List<TicketHoldItem>())
+            {
+                await ReleaseTicketsAsync(
+                    ticket.TicketTypeId,
+                    userId,
+                    ticket.Quantity);
+            }
+
+            foreach (var seatId in session.SeatIds ?? new List<int>())
+            {
+                await ReleaseSeatAsync(
+                    session.EventId,
+                    seatId,
+                    userId);
+            }
+
+            await _db.KeyDeleteAsync(sessionKey);
+            await ReleaseUserHoldLockAsync(userId, session.HoldId);
+
+            _logger.LogInformation(
+                "Đã hủy hold session {HoldId} của user {UserId}",
+                holdId,
+                userId);
+        }
+
+        public async Task<HoldSessionResponse?> GetActiveHoldSessionAsync(int userId)
+        {
+            ValidatePositive(userId, nameof(userId));
+
+            var lockKey = $"hold:user:{userId}:active";
+            var holdIdValue = await _db.StringGetAsync(lockKey);
+
+            if (holdIdValue.IsNull)
+                return null;
+
+            var holdId = holdIdValue.ToString();
+
+            try
+            {
+                return await GetHoldDetailsAsync(holdId, userId);
+            }
+            catch (KeyNotFoundException)
+            {
+                await ReleaseUserHoldLockAsync(userId, holdId);
+                return null;
+            }
+        }
     }
 }

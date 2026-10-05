@@ -34,7 +34,6 @@ import SelectTicketPage from "../pages/customer/SelectTicketPage"
 import QuestionFormPage from "../pages/customer/QuestionFormPage";
 import PaymentInfoPage from "../pages/customer/PaymentInfoPage";
 import PaymentResult from "../pages/customer/PaymentResult";
-import KycPage from "../pages/KycPage";
 import KycConsentAdminPage from "../pages/admin/KycConsentAdminPage";
 import KycDeletionAdminPage from "../pages/admin/KycDeletionAdminPage";
 import KycImagesAdminPage from "../pages/admin/KycImagesAdminPage";
@@ -49,6 +48,10 @@ import AppealAdminListPage from "../pages/admin/AppealAdminListPage";
 import RiskBlocksPage from "../pages/admin/RiskBlocksPage";
 import AppealReviewPage from "../pages/admin/AppealReviewPage";
 import SubmitAppealPage from "../pages/SubmitAppealPage";
+import MyTicketsPage from "../pages/customer/MyTicketsPage";
+import TicketDetailsPage from "../pages/customer/TicketDetailsPage";
+import MyOrdersPage from "../pages/customer/MyOrdersPage";
+import OrderDetailsPage from "../pages/customer/OrderDetailsPage";
 
 export default function AppRoutes() {
   return (
@@ -86,6 +89,42 @@ export default function AppRoutes() {
         }
       />
       <Route path="/payment/result" element={<PaymentResult />} />
+
+      <Route
+        path="/my-tickets"
+        element={
+          <ProtectedRoute>
+            <MyTicketsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/my-tickets/:ticketId"
+        element={
+          <ProtectedRoute>
+            <TicketDetailsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/my-orders"
+        element={
+          <ProtectedRoute>
+            <MyOrdersPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/my-orders/:orderId"
+        element={
+          <ProtectedRoute>
+            <OrderDetailsPage />
+          </ProtectedRoute>
+        }
+      />
       
 <Route path="/profile/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
       {/* Any logged-in Customer may create and configure a Draft concert. */}

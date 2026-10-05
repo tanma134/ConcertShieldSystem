@@ -9,5 +9,7 @@ namespace TicketAPI.Repositories
         Task<Order> GetOrderByOrderId(int id);
 
         Task UpdateAsync(Order order);
+
+        Task<List<Order>> GetOrdersByCustomerIdAsync(int customerId);
     }
 }

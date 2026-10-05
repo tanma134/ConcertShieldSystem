@@ -1,6 +1,94 @@
 {
     "Routes": [
         {
+            "Key": "ticket-detail",
+            "DownstreamPathTemplate": "/api/Tickets/{id}",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7268
+                }
+            ],
+            "UpstreamPathTemplate": "/api/Tickets/{id}",
+            "UpstreamHttpMethod": [
+                "Get"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "ticket-my-tickets",
+            "DownstreamPathTemplate": "/api/Tickets/my-tickets",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7268
+                }
+            ],
+            "UpstreamPathTemplate": "/api/Tickets/my-tickets",
+            "UpstreamHttpMethod": [
+                "Get"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "ticket-orders-detail",
+            "DownstreamPathTemplate": "/api/Orders/{id}",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7268
+                }
+            ],
+            "UpstreamPathTemplate": "/api/Orders/{id}",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Put",
+                "Delete"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "order-my-orders",
+            "DownstreamPathTemplate": "/api/Orders/my-orders",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7268
+                }
+            ],
+            "UpstreamPathTemplate": "/api/Orders/my-orders",
+            "UpstreamHttpMethod": [ "Get" ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "ticket-qr-rotate",
+            "DownstreamPathTemplate": "/api/Orders/tickets/{ticketId}/qr/rotate",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7268
+                }
+            ],
+            "UpstreamPathTemplate": "/api/Orders/tickets/{ticketId}/qr/rotate",
+            "UpstreamHttpMethod": [ "Post" ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
             "Key": "ticket-orders-detail",
             "DownstreamPathTemplate": "/api/Orders/{orderId}",
             "DownstreamScheme": "https",
@@ -2610,44 +2698,6 @@
             }
         },
         {
-            "Key": "ticket-my-tickets",
-            "DownstreamPathTemplate": "/api/Tickets/my-tickets",
-            "DownstreamScheme": "https",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "localhost",
-                    "Port": 7108
-                }
-            ],
-            "UpstreamPathTemplate": "/api/Tickets/my-tickets",
-            "UpstreamHttpMethod": [
-                "Get"
-            ],
-            "AuthenticationOptions": {
-                "AuthenticationProviderKey": "Bearer"
-            }
-        },
-        {
-            "Key": "ticket-orders-detail",
-            "DownstreamPathTemplate": "/api/Orders/{id}",
-            "DownstreamScheme": "https",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "localhost",
-                    "Port": 7108
-                }
-            ],
-            "UpstreamPathTemplate": "/api/Orders/{id}",
-            "UpstreamHttpMethod": [
-                "Get",
-                "Put",
-                "Delete"
-            ],
-            "AuthenticationOptions": {
-                "AuthenticationProviderKey": "Bearer"
-            }
-        },
-        {
             "Key": "ticket-orders-apply-voucher",
             "DownstreamPathTemplate": "/api/orders/{id}/apply-voucher",
             "DownstreamScheme": "https",
@@ -2745,24 +2795,6 @@
             "UpstreamPathTemplate": "/api/tickets/{id}/transfer",
             "UpstreamHttpMethod": [
                 "Post"
-            ],
-            "AuthenticationOptions": {
-                "AuthenticationProviderKey": "Bearer"
-            }
-        },
-        {
-            "Key": "ticket-detail",
-            "DownstreamPathTemplate": "/api/Tickets/{id}",
-            "DownstreamScheme": "https",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "localhost",
-                    "Port": 7108
-                }
-            ],
-            "UpstreamPathTemplate": "/api/Tickets/{id}",
-            "UpstreamHttpMethod": [
-                "Get"
             ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"
