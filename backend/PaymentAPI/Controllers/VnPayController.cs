@@ -1,8 +1,10 @@
-﻿using System.Transactions;
+using System.Transactions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PaymentAPI.API;
 using PaymentAPI.DTOs;
+using PaymentAPI.Repositories;
 using PaymentAPI.Services;
 using TicketAPI.DTOs;
 
@@ -15,12 +17,47 @@ namespace PaymentAPI.Controllers
         private readonly IVnPayService _vnPayService;
         private readonly IPaymentTransactionService _paymentTransactionService;
         private readonly ITicketApiClient _ticketApiClient;
+        private readonly IPaymentTransactionRepository _transactions;
 
-        public VnPayController(IVnPayService vnPayService, IPaymentTransactionService paymentTransactionService, ITicketApiClient ticketApiClient)
+        public VnPayController(IVnPayService vnPayService, IPaymentTransactionService paymentTransactionService, ITicketApiClient ticketApiClient,
+            IPaymentTransactionRepository transactions)
         {
             _vnPayService = vnPayService;
             _paymentTransactionService = paymentTransactionService;
             _ticketApiClient = ticketApiClient;
+            _transactions = transactions;
+        }
+
+        // The "Check again" button on the payment result page.
+        // VNPay already confirmed this payment (signature checked when the customer came back), so the
+        // stored Success transaction is replayed to TicketAPI. Safe to repeat: TicketAPI treats a Paid order as done.
+        [Authorize]
+        [HttpPost("reconcile/{orderId:int}")]
+        public async Task<IActionResult> Reconcile(int orderId)
+        {
+            var transaction = await _transactions.GetLatestByOrderIdAsync(orderId, "VNPay");
+            if (transaction == null || transaction.Status != "Success" || string.IsNullOrWhiteSpace(transaction.GatewayTransactionRef))
+            {
+                return Ok(new
+                {
+                    success = false,
+                    message = "VNPay has not reported a successful payment for this order yet."
+                });
+            }
+
+            var (ok, error) = await _ticketApiClient.ConfirmOrderPaymentWithReasonAsync(
+                orderId,
+                new ConfirmOrderPaymentRequestDTO
+                {
+                    Amount = transaction.Amount,
+                    TransactionRef = transaction.GatewayTransactionRef
+                });
+
+            return Ok(new
+            {
+                success = ok,
+                message = ok ? "Order payment confirmed." : error
+            });
         }
 
         [HttpPost("create-payment")]
@@ -28,6 +65,10 @@ namespace PaymentAPI.Controllers
         {
             if (request.OrderId <= 0 || request.FinalAmount <= 0)
                 return BadRequest("Invalid order or amount.");
+
+            // VNPay giới hạn dưới 1 tỷ VND / giao dịch.
+            if (request.FinalAmount > 999_999_999L)
+                return BadRequest("Order amount exceeds the VNPay per-transaction limit (999,999,999 VND).");
 
             var clientIp = string.IsNullOrWhiteSpace(request.ClientIp)
                 ? HttpContext.Connection.RemoteIpAddress?.ToString()
@@ -46,7 +87,7 @@ namespace PaymentAPI.Controllers
 
             var paymentUrl = _vnPayService.CreatePaymentUrl(
                 request.OrderId,
-                checked((int)request.FinalAmount),
+                request.FinalAmount,
                 clientIp);
 
             return Ok(new CreateVnPayPaymentResponseDto
@@ -67,6 +108,8 @@ namespace PaymentAPI.Controllers
             var transactionNo = query["vnp_TransactionNo"].ToString();
 
             var frontendStatus = "failed";
+            string? reason = null;
+            var vnpCode = query["vnp_ResponseCode"].ToString();
 
             if (result == "Payment successful")
             {
@@ -75,10 +118,11 @@ namespace PaymentAPI.Controllers
                     vnpAmount % 100 != 0)
                 {
                     frontendStatus = "pending";
+                    reason = "The payment amount returned by VNPay is invalid.";
                 }
                 else
                 {
-                    var confirmed = await _ticketApiClient.ConfirmOrderPaymentAsync(
+                    var (confirmed, error) = await _ticketApiClient.ConfirmOrderPaymentWithReasonAsync(
                         orderId,
                         new ConfirmOrderPaymentRequestDTO
                         {
@@ -87,11 +131,17 @@ namespace PaymentAPI.Controllers
                         });
 
                     frontendStatus = confirmed ? "success" : "pending";
+                    if (!confirmed) reason = error;
                 }
             }
             else if (result == "Invalid signature")
             {
                 frontendStatus = "invalid";
+            }
+            else if (result == "Payment transaction not found or amount does not match")
+            {
+                frontendStatus = "failed";
+                reason = "No matching payment was found for this order, or the amount does not match.";
             }
 
             var frontendUrl =
@@ -99,7 +149,11 @@ namespace PaymentAPI.Controllers
                 $"?status={frontendStatus}" +
                 (int.TryParse(orderIdText, out _)
                     ? $"&orderId={Uri.EscapeDataString(orderIdText)}"
-                    : "");
+                    : "") +
+                (string.IsNullOrWhiteSpace(vnpCode) ? "" : $"&code={Uri.EscapeDataString(vnpCode)}") +
+                (string.IsNullOrWhiteSpace(reason)
+                    ? ""
+                    : $"&reason={Uri.EscapeDataString(reason.Length > 300 ? reason[..300] : reason)}");
 
             return Redirect(frontendUrl);
         }

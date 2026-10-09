@@ -67,8 +67,8 @@ namespace GatewayAPI
 
                          ?? throw new InvalidOperationException("Jwt:Key is not configured.");
             Console.WriteLine("================================");
-            Console.WriteLine(jwtKey);
-            Console.WriteLine(jwtKey.Length);
+
+
             Console.WriteLine("================================");
             builder.Services
                 .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

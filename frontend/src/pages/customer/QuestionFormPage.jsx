@@ -160,7 +160,7 @@ export default function QuestionFormPage() {
               Number(type.ticketTypeId) === Number(ticket.ticketTypeId)
           );
 
-          if (!ticketType) {
+          if (!ticketType && ticket.typeName == null) {
             throw new Error(
               `Ticket type ${ticket.ticketTypeId} was not found.`
             );
@@ -168,9 +168,9 @@ export default function QuestionFormPage() {
 
           return {
             ticketTypeId: Number(ticket.ticketTypeId),
-            typeName: ticketType.typeName,
+            typeName: ticketType?.typeName ?? ticket.typeName,
             quantity: Number(ticket.quantity),
-            price: Number(ticketType.price) || 0,
+            price: Number(ticketType?.price ?? ticket.unitPrice) || 0,
           };
         });
 

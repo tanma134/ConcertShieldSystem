@@ -11,6 +11,11 @@
     {
         public int TicketTypeId { get; set; }
         public int Quantity { get; set; }
+
+        // Chỉ điền khi trả về cho frontend (lấy từ EventAPI), không lưu trong Redis.
+        // Giúp trang giữ vé / thanh toán luôn hiện được tên vé + giá dù tra cứu ở client bị hụt.
+        public string? TypeName { get; set; }
+        public long? UnitPrice { get; set; }
     }
 
     public class HoldSession
@@ -32,6 +37,7 @@
         public int EventId { get; set; }
         public DateTime ExpiresAtUtc { get; set; }
         public int RemainingSeconds { get; set; }
+        public long TotalAmount { get; set; }
         public List<TicketHoldItem> Tickets { get; set; } = new();
         public List<int> SeatIds { get; set; } = new();
         public List<HoldAttendeeDto> Attendees { get; set; } = new();

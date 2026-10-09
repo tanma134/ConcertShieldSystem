@@ -1,0 +1,57 @@
+/* Dùng chung cho Organizer/Admin: nền tối, chữ sáng và trạng thái rõ ràng. */
+.governance-panel.ow-panel {
+  margin-top: 24px;
+  padding: clamp(20px, 3vw, 32px);
+  background: #181322;
+  border: 1px solid #443653;
+  border-radius: 18px;
+  color: #f4effa;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .16);
+  line-height: 1.65;
+  color-scheme: dark;
+}
+.governance-panel h2, .governance-panel h3, .governance-panel h4 {
+  color: #faf7ff;
+  line-height: 1.3;
+}
+.governance-panel h2 { margin: 28px 0 16px; font-size: 22px; letter-spacing: -.3px; }
+.governance-panel > h2:first-child { margin-top: 0; }
+.governance-panel p { color: #d3c9df; margin: 10px 0; }
+.governance-panel strong { color: #f4effa; }
+.governance-panel form {
+  display: flex; flex-wrap: wrap; gap: 18px; margin: 20px 0;
+  padding: 20px; align-items: end; background: #211a2d; border: 1px solid #493957; border-radius: 12px;
+}
+.governance-panel label { display: flex; flex-direction: column; gap: 8px; min-width: 180px; flex: 1; font-size: 14px; font-weight: 600; color: #e5dbef; }
+.governance-panel textarea { min-height: 96px; resize: vertical; }
+.governance-panel input, .governance-panel select, .governance-panel textarea {
+  width: 100%; box-sizing: border-box; color: #faf7ff; background: #15101e;
+  border: 1px solid #63516f; border-radius: 9px; padding: 11px 12px; font: inherit; font-weight: 400;
+}
+.governance-panel input::placeholder, .governance-panel textarea::placeholder { color: #b6a9c4; opacity: 1; }
+.governance-panel select option { background: #211a2d; color: #faf7ff; }
+.governance-panel input[type=file] { min-height: 46px; }
+.governance-panel input::file-selector-button { background: #3c2b50; color: #f4effa; border: 1px solid #776087; border-radius: 6px; padding: 7px 10px; margin-right: 12px; cursor: pointer; }
+.governance-panel button { cursor: pointer; margin: 4px; padding: 10px 16px; border: 1px solid #756086; border-radius: 9px; color: #f4effa; background: #30223f; font: inherit; font-size: 14px; font-weight: 600; min-height: 42px; }
+.governance-panel button:hover:not(:disabled) { background: #463054; border-color: #b19bc7; }
+.governance-panel button.tb-btn-primary { background: #7c3aed; color: #fff; border-color: #a78bfa; box-shadow: none; }
+.governance-panel button.tb-btn-primary:hover:not(:disabled) { background: #6d28d9; }
+.governance-panel button:disabled { cursor: not-allowed; color: #c0b4cc; background: #302837; border-color: #514859; opacity: 1; }
+.governance-panel :is(button,input,select,textarea,summary):focus-visible { outline: 3px solid #c4b5fd; outline-offset: 3px; }
+.governance-panel details { margin: 20px 0; border: 1px solid #493957; border-radius: 10px; padding: 14px 18px; background: #211a2d; }
+.governance-panel summary { cursor: pointer; font-weight: 600; color: #e5d5fb; }
+.governance-panel ul { padding-left: 22px; }
+.governance-panel li { margin: 8px 0; overflow-wrap: anywhere; }
+.governance-panel [role=status] { background: #143b30; color: #a7f3d0; border: 1px solid #357962; border-radius: 9px; padding: 12px 16px; }
+.governance-panel .ow-error { background: #40212b; color: #fecdd3; border: 1px solid #a25268; font-family: inherit; }
+.governance-change { border: 1px solid #493957; border-radius: 12px; padding: 18px; margin: 14px 0; background: #211a2d; }
+.governance-table { overflow-x: auto; border: 1px solid #493957; border-radius: 10px; }
+.governance-table table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.governance-table td, .governance-table th { padding: 14px 16px; border-bottom: 1px solid #493957; text-align: left; color: #f4effa; }
+.governance-table th { background: #30223f; color: #e9ddf7; font-weight: 600; white-space: nowrap; }
+.governance-table tbody tr:nth-child(even) { background: #211a2d; }
+@media (max-width: 640px) {
+  .governance-panel form { padding: 14px; }
+  .governance-panel label { min-width: 100%; }
+  .governance-panel form > button { width: 100%; margin: 0; }
+}

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import AdminShell from "./AdminShell";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import useAdminPending from "../../hooks/useAdminPending";
 import adminApi from "../../api/adminApi";
 import { useAuth } from "../../context/AuthContext";
 import "./AdminDashboardPage.css";
@@ -15,8 +16,8 @@ const normalizeRoles = (user) => {
 const roleName = (role) => String(role?.roleName || role || "");
 
 export default function AdminDashboardPage() {
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const pending = useAdminPending();
 
   const [totalUsers, setTotalUsers] = useState(null);
   const [activeUsers, setActiveUsers] = useState(null);
@@ -76,11 +77,6 @@ export default function AdminDashboardPage() {
     };
   }, [loadSummary]);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/admin/login");
-  };
-
   const stats = [
     { label: "Total Users", value: totalUsers, color: "#3b82f6" },
     { label: "Active Users", value: activeUsers, color: "#10b981" },
@@ -98,10 +94,28 @@ export default function AdminDashboardPage() {
               Welcome back, <strong>{user?.name || user?.email || "Admin"}</strong>
             </p>
           </div>
-          <button className="btn-logout" onClick={handleLogout}>
-            Logout
-          </button>
         </header>
+
+        <section className="attention-section" aria-label="Needs attention">
+          <h2 className="section-title">Needs your attention</h2>
+          <div className="attention-grid">
+            {[
+              { to: "/admin/events", label: "Events waiting for approval", value: pending.events },
+              { to: "/admin/change-requests", label: "Postpone / reschedule requests", value: pending.changes },
+              { to: "/admin/returns", label: "Ticket return requests", value: pending.returns },
+            ].map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={`attention-card${item.value > 0 ? " has-work" : ""}`}
+              >
+                <span className="attention-count">{item.value ?? "—"}</span>
+                <span className="attention-label">{item.label}</span>
+                <span className="attention-go">{item.value > 0 ? "Review now →" : "All clear"}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
 
         {error && (
           <div className="alert alert-error" role="alert">

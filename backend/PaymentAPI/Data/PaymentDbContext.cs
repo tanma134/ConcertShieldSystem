@@ -13,6 +13,7 @@ namespace PaymentAPI.Data
         public virtual DbSet<Voucher> Vouchers { get; set; } = null!;
         public virtual DbSet<VoucherUsage> VoucherUsages { get; set; } = null!;
         public virtual DbSet<PaymentTransaction> PaymentTransactions { get; set; } = null!;
+        public virtual DbSet<PaymentRefund> PaymentRefunds { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -65,6 +66,8 @@ namespace PaymentAPI.Data
                 entity.Property(e => e.DiscountAmount).HasColumnName("discount_amount").IsRequired();
                 entity.Property(e => e.UsedAt).HasColumnName("used_at").HasDefaultValueSql("now()");
 
+                // Cùng điều kiện lọc với Voucher để EF không cảnh báo (10622).
+                entity.HasQueryFilter(e => !e.Voucher.IsDeleted);
                 entity.HasIndex(e => new { e.VoucherId, e.OrderId, e.UserId })
                     .IsUnique()
                     .HasDatabaseName("uq_voucher_usages_voucher_order_user");
@@ -108,6 +111,25 @@ namespace PaymentAPI.Data
                 entity.Property(e => e.WebhookPayload)
                     .HasColumnType("jsonb")
                     .HasColumnName("webhook_payload");
+            });
+
+            modelBuilder.Entity<PaymentRefund>(entity =>
+            {
+                entity.ToTable("payment_refunds");
+                entity.HasKey(e => e.PaymentRefundId).HasName("payment_refunds_pkey");
+                entity.HasIndex(e => e.ReturnRequestId, "uq_payment_refunds_return").IsUnique();
+                entity.HasIndex(e => e.OrderId, "ix_payment_refunds_order");
+
+                entity.Property(e => e.PaymentRefundId).UseIdentityAlwaysColumn().HasColumnName("payment_refund_id");
+                entity.Property(e => e.ReturnRequestId).HasColumnName("return_request_id");
+                entity.Property(e => e.OrderId).HasColumnName("order_id");
+                entity.Property(e => e.Amount).HasColumnName("amount");
+                entity.Property(e => e.Gateway).HasMaxLength(30).HasColumnName("gateway");
+                entity.Property(e => e.GatewayRefundRef).HasMaxLength(100).HasColumnName("gateway_refund_ref");
+                entity.Property(e => e.Status).HasMaxLength(20).HasColumnName("status");
+                entity.Property(e => e.ErrorMessage).HasMaxLength(500).HasColumnName("error_message");
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+                entity.Property(e => e.CompletedAt).HasColumnName("completed_at");
             });
         }
     }

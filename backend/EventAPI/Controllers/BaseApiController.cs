@@ -8,7 +8,7 @@ namespace EventAPI.Controllers
     [ApiController]
     public abstract class BaseApiController : ControllerBase
     {
-        /// <summary>UserId from the JWT (ClaimTypes.NameIdentifier), set by AuthenticationAPI.</summary>
+        // UserId from the JWT (ClaimTypes.NameIdentifier), set by AuthenticationAPI.
         protected int CurrentUserId
         {
             get
@@ -20,11 +20,11 @@ namespace EventAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Same as <see cref="CurrentUserId"/> but never throws — for [AllowAnonymous]
-        /// endpoints that still need to recognize an owner/Admin caller when a token
-        /// happens to be present (e.g. viewing a Draft's child data).
-        /// </summary>
+        // 
+        // Same as CurrentUserId but never throws — for [AllowAnonymous]
+        // endpoints that still need to recognize an owner/Admin caller when a token
+        // happens to be present (e.g. viewing a Draft's child data).
+        // 
         protected int? CurrentUserIdOrNull
         {
             get
@@ -38,11 +38,11 @@ namespace EventAPI.Controllers
 
         protected bool IsOrganizer => User.IsInRole("Organizer");
 
-        /// <summary>
-        /// The raw JWT from the Authorization header, forwarded to AuthenticationAPI
-        /// when EventAPI needs to act on the caller's behalf (e.g. granting the
-        /// Organizer role during approval). Null when there is no bearer token.
-        /// </summary>
+        // 
+        // The raw JWT from the Authorization header, forwarded to AuthenticationAPI
+        // when EventAPI needs to act on the caller's behalf (e.g. granting the
+        // Organizer role during approval). Null when there is no bearer token.
+        // 
         protected string? BearerToken
         {
             get
@@ -59,15 +59,17 @@ namespace EventAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Maps a service-layer exception to the correct HTTP status code + ApiResponseDTO body.
-        /// Keeps controllers free of repeated try/catch boilerplate.
-        /// </summary>
+        // 
+        // Maps a service-layer exception to the correct HTTP status code + ApiResponseDTO body.
+        // Keeps controllers free of repeated try/catch boilerplate.
+        // 
         protected ActionResult HandleException(Exception ex)
         {
             return ex switch
             {
                 // Incomplete publication data — return every problem at once.
+                GovernanceConflictException => Conflict(ApiResponseDTO<object>.FailResponse(ex.Message)),
+                Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException => Conflict(ApiResponseDTO<object>.FailResponse("Concert changed. Reload and retry.")),
                 SubmissionValidationException sve => BadRequest(new ApiResponseDTO<SubmitValidationResultDTO>
                 {
                     Success = false,
@@ -79,7 +81,7 @@ namespace EventAPI.Controllers
                 UnauthorizedAccessException => StatusCode(403, ApiResponseDTO<object>.FailResponse(ex.Message)),
                 InvalidOperationException => BadRequest(ApiResponseDTO<object>.FailResponse(ex.Message)),
                 ArgumentException => BadRequest(ApiResponseDTO<object>.FailResponse(ex.Message)),
-                _ => StatusCode(500, ApiResponseDTO<object>.FailResponse("Unexpected server error: " + ex.Message))
+                _ => StatusCode(500, ApiResponseDTO<object>.FailResponse("Unexpected server error. Please retry."))
             };
         }
     }

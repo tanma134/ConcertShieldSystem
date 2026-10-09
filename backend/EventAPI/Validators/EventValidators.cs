@@ -30,7 +30,7 @@ namespace EventAPI.Validators
 
             RuleFor(x => x.StartsAt)
                 .NotEmpty().WithMessage("Start date is required")
-                .GreaterThan(DateTime.UtcNow).WithMessage("Start date must be in the future");
+                .Must(value => value > DateTime.UtcNow).WithMessage("Start date and time must be later than now (including hours and minutes)");
 
             RuleFor(x => x.EndsAt)
                 .NotEmpty().WithMessage("End date is required")
@@ -79,9 +79,9 @@ namespace EventAPI.Validators
                 .WithMessage("Longitude must be between -180 and 180");
 
             RuleFor(x => x.StartsAt)
-                .GreaterThan(DateTime.UtcNow)
+                .Must(value => value > DateTime.UtcNow)
                 .When(x => x.StartsAt.HasValue)
-                .WithMessage("Start date must be in the future");
+                .WithMessage("Start date and time must be later than now (including hours and minutes)");
 
             RuleFor(x => x.EndsAt)
                 .GreaterThan(x => x.StartsAt!.Value)

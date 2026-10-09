@@ -10,14 +10,16 @@ namespace TicketAPI.Controllers
     public class HoldsController : ControllerBase
     {
         private readonly IHoldService _holdService;
+        private readonly TicketAPI.API.EventEligibilityClient _eligibility;
         private readonly ILogger<HoldsController> _logger;
 
         public HoldsController(
             IHoldService holdService,
-            ILogger<HoldsController> logger)
+            ILogger<HoldsController> logger, TicketAPI.API.EventEligibilityClient eligibility)
         {
             _holdService = holdService;
             _logger = logger;
+            _eligibility = eligibility;
         }
 
         [HttpPost("session")]
@@ -33,6 +35,7 @@ namespace TicketAPI.Controllers
 
             try
             {
+                await _eligibility.EnsureSalesAsync(request.EventId);
                 var session = await _holdService.CreateHoldSessionAsync(
                     userId.Value,
                     request,

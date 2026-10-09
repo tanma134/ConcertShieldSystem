@@ -358,5 +358,34 @@ namespace EventAPI.Repositories
                 }
             });
         }
+        public async Task<bool> ReleaseReturnedTicketAsync(int eventId, int ticketTypeId, int quantity)
+        {
+            if (quantity <= 0) return false;
+
+            await using var tx = await _context.Database.BeginTransactionAsync();
+            var affected = await _context.Database.ExecuteSqlInterpolatedAsync($@"
+                UPDATE ticket_types
+                SET sold_quantity = GREATEST(sold_quantity - {quantity}, 0),
+                    updated_at = NOW()
+                WHERE event_id = {eventId}
+                  AND ticket_type_id = {ticketTypeId}
+                  AND is_deleted = false");
+
+            if (affected != 1)
+            {
+                await tx.RollbackAsync();
+                return false;
+            }
+
+            await _context.Database.ExecuteSqlInterpolatedAsync($@"
+                UPDATE events
+                SET sold_tickets = GREATEST(COALESCE(sold_tickets, 0) - {quantity}, 0),
+                    updated_at = NOW()
+                WHERE event_id = {eventId} AND is_deleted = false");
+
+            await tx.CommitAsync();
+            return true;
+        }
+
     }
 }

@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { pricingTimeError, nextLocalMinute } from '../../../utils/eventTimeRules';
+import { useToastedError } from "../../../components/ToastProvider";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import ticketTypeApi from "../../../api/ticketTypeApi";
 import seatingApi from "../../../api/seatingApi";
 import seatingTemplateApi from "../../../api/seatingTemplateApi";
@@ -6,6 +8,7 @@ import refundPolicyApi from "../../../api/refundPolicyApi";
 import pricingRuleApi from "../../../api/pricingRuleApi";
 import { formatPrice } from "../../../utils/format";
 import ZoneMapCanvas from "./ZoneMapCanvas";
+import SeatGridPreview from "./SeatGridPreview";
 
 export default function StepTicketsSeating({
   eventId,
@@ -24,7 +27,7 @@ export default function StepTicketsSeating({
   const [chart, setChart] = useState(null); // null = general admission
   const [refundPolicies, setRefundPolicies] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useToastedError();
 
   const loadAll = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -93,6 +96,7 @@ export default function StepTicketsSeating({
 
           {(!only || only === "pricing") && <DynamicPricingSection
             ticketTypes={ticketTypes}
+            event={event}
             readOnly={readOnly}
           />}
 
@@ -131,11 +135,11 @@ const emptyPricingRule = {
   quantityThreshold: "", priority: 0,
 };
 
-function DynamicPricingSection({ ticketTypes, readOnly }) {
+function DynamicPricingSection({ ticketTypes, event, readOnly }) {
   const [rules, setRules] = useState([]);
   const [form, setForm] = useState(emptyPricingRule);
   const [showForm, setShowForm] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useToastedError();
   const [saving, setSaving] = useState(false);
 
   const loadRules = async () => {
@@ -154,18 +158,17 @@ function DynamicPricingSection({ ticketTypes, readOnly }) {
     if (form.adjustmentMode === "price" && form.adjustedPrice === "") { setError("Enter the adjusted price."); return; }
     if (form.adjustmentMode === "discount" && form.discountPercent === "") { setError("Enter the discount percentage."); return; }
     if (form.ruleType === "QuantityBased" && (!form.quantityThreshold || Number(form.quantityThreshold) <= 0)) { setError("Quantity Based rules require a sold-ticket threshold."); return; }
-    if (form.ruleType !== "QuantityBased" && !form.triggerFrom && !form.triggerTo) { setError("Time-based rules require at least one trigger time."); return; }
-    if (form.triggerFrom && form.triggerTo && new Date(form.triggerTo) <= new Date(form.triggerFrom)) {
-      setError("Rule end time must be after its start time."); return;
-    }
+    const selectedTicket = ticketTypes.find(t => t.ticketTypeId === Number(form.ticketTypeId));
+    const timeError = pricingTimeError(form, selectedTicket, event);
+    if (timeError) { setError(timeError); return; }
     setSaving(true); setError("");
     try {
       await pricingRuleApi.create({
         ticketTypeId: Number(form.ticketTypeId), ruleName: form.ruleName.trim(), ruleType: form.ruleType,
         adjustedPrice: form.adjustmentMode === "price" ? Number(form.adjustedPrice) : null,
         discountPercent: form.adjustmentMode === "discount" ? Number(form.discountPercent) : null,
-        triggerFrom: form.triggerFrom ? new Date(form.triggerFrom).toISOString() : null,
-        triggerTo: form.triggerTo ? new Date(form.triggerTo).toISOString() : null,
+        triggerFrom: form.ruleType !== "QuantityBased" && form.triggerFrom ? new Date(form.triggerFrom).toISOString() : null,
+        triggerTo: form.ruleType !== "QuantityBased" && form.triggerTo ? new Date(form.triggerTo).toISOString() : null,
         quantityThreshold: form.quantityThreshold === "" ? null : Number(form.quantityThreshold),
         priority: Number(form.priority) || 0, isActive: true,
       });
@@ -183,7 +186,7 @@ function DynamicPricingSection({ ticketTypes, readOnly }) {
     <div className="ow-section-head"><h3>Dynamic Pricing Rules</h3>{!readOnly && <button type="button" className="tb-btn tb-btn-outline ow-btn-sm" onClick={() => setShowForm((v) => !v)}>{showForm ? "Close" : "+ Add pricing rule"}</button>}</div>
     {error && <div className="ow-error">{error}</div>}
     {!rules.length && <div className="ow-empty-row">No dynamic pricing rules yet.</div>}
-    {!!rules.length && <table className="ow-table"><thead><tr><th>Rule</th><th>Ticket</th><th>Type</th><th>Adjustment</th>{!readOnly && <th></th>}</tr></thead><tbody>{rules.map((r) => <tr key={r.pricingRuleId}><td>{r.ruleName}</td><td>{ticketTypes.find((t) => t.ticketTypeId === r.ticketTypeId)?.typeName}</td><td>{r.ruleType}</td><td>{r.adjustedPrice != null ? formatPrice(r.adjustedPrice) : `${r.discountPercent}% off`}</td>{!readOnly && <td><button type="button" className="ow-link-danger" onClick={() => remove(r.pricingRuleId)}>Delete</button></td>}</tr>)}</tbody></table>}
+    {!!rules.length && <table className="ow-table"><thead><tr><th>Rule</th><th>Ticket</th><th>Type</th><th>Adjustment</th><th>Discount period</th>{!readOnly && <th></th>}</tr></thead><tbody>{rules.map((r) => <tr key={r.pricingRuleId}><td>{r.ruleName}</td><td>{ticketTypes.find((t) => t.ticketTypeId === r.ticketTypeId)?.typeName}</td><td>{r.ruleType}</td><td>{r.adjustedPrice != null ? formatPrice(r.adjustedPrice) : `${r.discountPercent}% off`}</td><td>{r.ruleType === "QuantityBased" ? "Quantity threshold" : `${r.triggerFrom ? new Date(r.triggerFrom).toLocaleString() : "—"} → ${r.triggerTo ? new Date(r.triggerTo).toLocaleString() : "—"}`}</td>{!readOnly && <td><button type="button" className="ow-link-danger" onClick={() => remove(r.pricingRuleId)}>Delete</button></td>}</tr>)}</tbody></table>}
     {!readOnly && showForm && <form className="ow-inline-form" onSubmit={submit}><div className="ow-grid">
       <label className="ow-field"><span>Ticket class *</span><select value={form.ticketTypeId} onChange={(e) => setForm({ ...form, ticketTypeId: e.target.value })}><option value="">-- Select --</option>{ticketTypes.map((t) => <option key={t.ticketTypeId} value={t.ticketTypeId}>{t.typeName}</option>)}</select></label>
       <label className="ow-field"><span>Rule name *</span><input value={form.ruleName} onChange={(e) => setForm({ ...form, ruleName: e.target.value })} /></label>
@@ -191,8 +194,8 @@ function DynamicPricingSection({ ticketTypes, readOnly }) {
       <label className="ow-field"><span>Adjustment method *</span><select value={form.adjustmentMode} onChange={(e) => setForm({ ...form, adjustmentMode: e.target.value })}><option value="discount">Discount percentage</option><option value="price">Fixed adjusted price</option></select></label>
       {form.adjustmentMode === "price" ? <label className="ow-field"><span>Adjusted price *</span><input type="number" min="0" value={form.adjustedPrice} onChange={(e) => setForm({ ...form, adjustedPrice: e.target.value })} /></label> : <label className="ow-field"><span>Discount % *</span><input type="number" min="0" max="100" value={form.discountPercent} onChange={(e) => setForm({ ...form, discountPercent: e.target.value })} /></label>}
       {form.ruleType === "QuantityBased" ? <label className="ow-field"><span>Sold-ticket threshold *</span><input type="number" min="1" value={form.quantityThreshold} onChange={(e) => setForm({ ...form, quantityThreshold: e.target.value })} /></label> : <>
-        <label className="ow-field"><span>Starts</span><input type="datetime-local" value={form.triggerFrom} onChange={(e) => setForm({ ...form, triggerFrom: e.target.value })} /></label>
-        <label className="ow-field"><span>Ends</span><input type="datetime-local" value={form.triggerTo} onChange={(e) => setForm({ ...form, triggerTo: e.target.value })} /></label></>}
+        <label className="ow-field"><span>Discount starts · date & time *</span><input type="datetime-local" required step="60" min={nextLocalMinute()} value={form.triggerFrom} onChange={(e) => setForm({ ...form, triggerFrom: e.target.value })} /></label>
+        <label className="ow-field"><span>Discount ends · date & time *</span><input type="datetime-local" required step="60" min={form.triggerFrom ? nextLocalMinute(Date.parse(form.triggerFrom)) : nextLocalMinute()} value={form.triggerTo} onChange={(e) => setForm({ ...form, triggerTo: e.target.value })} /></label></>}
     </div><button type="submit" className="tb-btn tb-btn-primary ow-btn-sm" disabled={saving}>{saving ? "Saving..." : "Add rule"}</button></form>}
   </section>;
 }
@@ -216,7 +219,7 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null); // null = adding, else TicketTypeId being edited
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useToastedError();
   // Which fields the user has actually interacted with — a field's error
   // only renders once it's touched (or a submit attempt was made), instead
   // of showing every error the moment the form opens.
@@ -266,6 +269,16 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
       )
     );
   }, [form.typeName, ticketTypes, editingId]);
+
+  // TicketTypeIds that are actually referenced by at least one seating zone.
+  // Must mirror the backend's real constraint (TicketTypeService.IsPlacedInLayoutAsync):
+  // Quantity is only backend-managed for a ticket type that a zone points to —
+  // NOT for every ticket type just because the concert happens to have a chart.
+  const placedTicketTypeIds = useMemo(
+    () => new Set((chart?.zones || []).map((z) => z.ticketTypeId)),
+    [chart]
+  );
+  const isEditingPlacedTicketType = !!editingId && placedTicketTypeIds.has(editingId);
 
   // Dynamic, per-field validation: recomputed on every keystroke so each
   // field can show its own message as soon as it's touched, instead of
@@ -515,7 +528,7 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
               )}
             </label>
             <label className="ow-field">
-              <span>Quantity * {hasLayout && editingId ? "(managed by seating zones)" : ""}</span>
+              <span>Quantity *</span>
               <input
                 type="number"
                 min={1}
@@ -523,7 +536,7 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
                 value={form.quantity}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                disabled={hasLayout && !!editingId}
+                disabled={isEditingPlacedTicketType}
                 aria-invalid={!!(touched.quantity && fieldErrors.quantity)}
               />
               {touched.quantity && fieldErrors.quantity && (
@@ -613,8 +626,17 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
   const [form, setForm] = useState(emptyZone);
   const [showForm, setShowForm] = useState(false);
   const [editingZoneId, setEditingZoneId] = useState(null);
+  // Snapshot of the Seated zone's grid (rows/seatsPerRow/rowLabelPrefix) at
+  // the moment editing started, so handleAddZone can tell whether the user
+  // actually changed the seat grid vs. just renaming/re-linking the zone.
+  const [initialSeatedShape, setInitialSeatedShape] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useToastedError();
+  const [expandedZoneId, setExpandedZoneId] = useState(null);
+  // Which fields the user has actually interacted with — a field's error only
+  // renders once it's touched (or a submit attempt was made), same pattern as
+  // the Ticket Types form above.
+  const [touched, setTouched] = useState({});
 
   useEffect(() => {
     setMode(chart ? "assigned" : "general");
@@ -623,12 +645,42 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
+    setTouched((t) => ({ ...t, [name]: true }));
+  };
+
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    setTouched((t) => ({ ...t, [name]: true }));
   };
 
   const selectedTicket = ticketTypes.find((t) => t.ticketTypeId === Number(form.ticketTypeId));
   const enteredCapacity = form.zoneType === "Seated"
     ? Math.max(Number(form.rows) || 0, 0) * Math.max(Number(form.seatsPerRow) || 0, 0)
     : Math.max(Number(form.capacity) || 0, 0);
+
+  // Dynamic, per-field validation: recomputed on every keystroke so each
+  // field can show its own message as soon as it's touched, instead of
+  // waiting for submit and surfacing a single generic banner.
+  const fieldErrors = useMemo(() => {
+    const errors = {};
+    if (!form.zoneName.trim()) errors.zoneName = "Please enter a zone name.";
+    if (!form.ticketTypeId) errors.ticketTypeId = "Please select a ticket type for this zone.";
+    if (form.zoneType === "Standing") {
+      if (form.capacity === "" || Number(form.capacity) <= 0) {
+        errors.capacity = "Capacity must be greater than 0.";
+      }
+    } else {
+      if (form.rows === "" || Number(form.rows) <= 0) {
+        errors.rows = "Number of rows must be greater than 0.";
+      }
+      if (form.seatsPerRow === "" || Number(form.seatsPerRow) <= 0) {
+        errors.seatsPerRow = "Seats per row must be greater than 0.";
+      }
+    }
+    return errors;
+  }, [form]);
+
+  const hasBlockingErrors = Object.keys(fieldErrors).length > 0;
 
   const handleModeChange = async (newMode) => {
     if (newMode === mode) return;
@@ -659,42 +711,44 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
       ? new Set((zone.seats || []).map((seat) => seat.rowLabel)).size || 1 : 1;
     const seatsPerRow = zone.zoneType === "Seated" && rows
       ? Math.max(1, Math.round((zone.totalSeats || zone.capacity || 1) / rows)) : 1;
+    const rowLabelPrefix = zone.seats?.[0]?.rowLabel || "A";
     setEditingZoneId(zone.seatZoneId);
     setForm({
       ticketTypeId: String(zone.ticketTypeId), zoneName: zone.zoneName,
       zoneType: zone.zoneType, rows, seatsPerRow,
-      rowLabelPrefix: zone.seats?.[0]?.rowLabel || "A",
+      rowLabelPrefix,
       capacity: zone.zoneType === "Standing" ? zone.capacity : "",
     });
+    // Only Seated zones have a grid whose change we need to detect; Standing
+    // zones resize freely via `capacity`.
+    setInitialSeatedShape(
+      zone.zoneType === "Seated" ? { rows, seatsPerRow, rowLabelPrefix } : null
+    );
     setShowForm(true);
     setError("");
+    setTouched({});
   };
 
   const resetZoneForm = () => {
     setEditingZoneId(null);
     setForm(emptyZone);
+    setInitialSeatedShape(null);
     setShowForm(false);
+    setTouched({});
   };
 
   const handleAddZone = async (e) => {
     e.preventDefault();
-    if (!form.ticketTypeId) {
-      setError("Please select a ticket type for this zone.");
-      return;
-    }
-    if (!form.zoneName.trim()) {
-      setError("Please enter a zone name.");
-      return;
-    }
-    if (form.zoneType === "Standing" && (!form.capacity || Number(form.capacity) <= 0)) {
-      setError("A standing zone needs a capacity greater than 0.");
-      return;
-    }
-    if (
-      form.zoneType === "Seated" &&
-      (!form.rows || Number(form.rows) <= 0 || !form.seatsPerRow || Number(form.seatsPerRow) <= 0)
-    ) {
-      setError("A seated zone needs a row count and seats-per-row greater than 0.");
+    // Reveal every field's error in case the user jumped straight to submit
+    // without leaving/touching some of the fields.
+    setTouched({
+      zoneName: true,
+      ticketTypeId: true,
+      capacity: true,
+      rows: true,
+      seatsPerRow: true,
+    });
+    if (hasBlockingErrors) {
       return;
     }
 
@@ -708,6 +762,15 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
       capacity: form.capacity === "" ? null : Number(form.capacity),
     };
 
+    // Only send grid dimensions when they changed. This avoids deleting and
+    // regenerating physical Seat rows during a simple rename or ticket-class change.
+    const seatedShapeChanged =
+      zoneDto.zoneType === "Seated" &&
+      !!initialSeatedShape &&
+      (zoneDto.rows !== initialSeatedShape.rows ||
+        zoneDto.seatsPerRow !== initialSeatedShape.seatsPerRow ||
+        zoneDto.rowLabelPrefix !== initialSeatedShape.rowLabelPrefix);
+
     setSaving(true);
     setError("");
     try {
@@ -716,7 +779,9 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
           zoneName: zoneDto.zoneName,
           ticketTypeId: zoneDto.ticketTypeId,
           ...(zoneDto.zoneType === "Seated"
-            ? { rows: zoneDto.rows, seatsPerRow: zoneDto.seatsPerRow, rowLabelPrefix: zoneDto.rowLabelPrefix }
+            ? (seatedShapeChanged
+                ? { rows: zoneDto.rows, seatsPerRow: zoneDto.seatsPerRow, rowLabelPrefix: zoneDto.rowLabelPrefix }
+                : {})
             : { capacity: zoneDto.capacity }),
         });
       } else if (!chart) {
@@ -751,20 +816,16 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
   // Uses a SILENT refresh: the canvas already shows the new position/size
   // optimistically, so re-fetching with the full-page loading state here would
   // make the whole section flicker/reload on every single drag or resize.
-  const handleZoneMove = async (seatZoneId, rect) => {
+  // Lưu nguyên geometry của zone (rectangle hoặc polygon) vào ShapeJson.
+  // EventAPI đã dùng jsonb nên không cần đổi schema khi thêm loại hình mới.
+  const handleZoneShapeChange = async (seatZoneId, shape) => {
     try {
       await seatingApi.updateZone(seatZoneId, {
-        shapeJson: JSON.stringify({
-          x: Math.round(rect.x * 10) / 10,
-          y: Math.round(rect.y * 10) / 10,
-          w: Math.round(rect.w * 10) / 10,
-          h: Math.round(rect.h * 10) / 10,
-          rot: Math.round((rect.rot || 0) * 10) / 10,
-        }),
+        shapeJson: JSON.stringify(shape),
       });
       await onSilentRefresh();
     } catch (err) {
-      setError(err.response?.data?.message || "Could not save the zone position.");
+      setError(err.response?.data?.message || "Could not save the zone shape.");
     }
   };
 
@@ -833,7 +894,7 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
                 zones={chart.zones}
                 ticketTypes={ticketTypes}
                 readOnly={readOnly}
-                onZoneMove={handleZoneMove}
+                onZoneShapeChange={handleZoneShapeChange}
               />
             </>
           )}
@@ -846,42 +907,63 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
                   <th>Type</th>
                   <th>Ticket type</th>
                   <th>Capacity</th>
-                  <th>Available</th>
+                  <th>Seats</th>
                   {!readOnly && <th></th>}
                 </tr>
               </thead>
               <tbody>
                 {chart.zones.map((z) => (
-                  <tr key={z.seatZoneId}>
-                    <td>{z.zoneName}</td>
-                    <td>
-                      <span
-                        className={
-                          "ow-zone-badge " +
-                          (z.zoneType === "Seated" ? "ow-zone-seated" : "ow-zone-standing")
-                        }
-                      >
-                        {z.zoneType === "Seated" ? "Seated" : "Standing"}
-                      </span>
-                    </td>
-                    <td>{ticketTypeName(z.ticketTypeId)}</td>
-                    <td>{z.capacity}</td>
-                    <td>{z.availableSeats}</td>
-                    {!readOnly && (
+                  <Fragment key={z.seatZoneId}>
+                    <tr>
+                      <td>{z.zoneName}</td>
                       <td>
-                        <button type="button" className="ow-link" onClick={() => startEditZone(z)}>
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="ow-link-danger"
-                          onClick={() => handleDeleteZone(z.seatZoneId)}
+                        <span
+                          className={
+                            "ow-zone-badge " +
+                            (z.zoneType === "Seated" ? "ow-zone-seated" : "ow-zone-standing")
+                          }
                         >
-                          Delete
-                        </button>
+                          {z.zoneType === "Seated" ? "Seated" : "Standing"}
+                        </span>
                       </td>
+                      <td>{ticketTypeName(z.ticketTypeId)}</td>
+                      <td>{z.capacity}</td>
+                      <td>
+                        {z.zoneType === "Seated" && (
+                          <button
+                            type="button"
+                            className="ow-link"
+                            onClick={() =>
+                              setExpandedZoneId((id) => (id === z.seatZoneId ? null : z.seatZoneId))
+                            }
+                          >
+                            {expandedZoneId === z.seatZoneId ? "Hide seats" : "View seats"}
+                          </button>
+                        )}
+                      </td>
+                      {!readOnly && (
+                        <td>
+                          <button type="button" className="ow-link" onClick={() => startEditZone(z)}>
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="ow-link-danger"
+                            onClick={() => handleDeleteZone(z.seatZoneId)}
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                    {expandedZoneId === z.seatZoneId && z.zoneType === "Seated" && (
+                      <tr key={`${z.seatZoneId}-seats`}>
+                        <td colSpan={readOnly ? 6 : 7}>
+                          <SeatGridPreview mode="actual" seats={z.seats} />
+                        </td>
+                      </tr>
                     )}
-                  </tr>
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -916,17 +998,39 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
                         name="zoneName"
                         value={form.zoneName}
                         onChange={handleChange}
+                        onBlur={handleBlur}
                         placeholder="e.g. VIP Stand"
                         maxLength={100}
+                        aria-invalid={!!(touched.zoneName && fieldErrors.zoneName)}
                       />
+                      {touched.zoneName && fieldErrors.zoneName && (
+                        <span className="ow-field-error">{fieldErrors.zoneName}</span>
+                      )}
                     </label>
 
                     <label className="ow-field">
                       <span>Zone type *</span>
-                      <select name="zoneType" value={form.zoneType} onChange={handleChange}>
+                      <select
+                        name="zoneType"
+                        value={form.zoneType}
+                        onChange={handleChange}
+                        disabled={!!editingZoneId}
+                      >
                         <option value="Seated">Seated (numbered)</option>
                         <option value="Standing">Standing (headcount only)</option>
                       </select>
+                      {/* The backend has no "change zone type" operation (UpdateSeatZoneDTO
+                          has no ZoneType field) — a Seated zone's identity is its generated
+                          Seat rows, a Standing zone's is its bare headcount. Letting this
+                          stay editable during Edit used to submit a payload shaped for the
+                          NEW type against a zone that is still the OLD type underneath,
+                          which the backend rejected with a confusing capacity/rows error. */}
+                      {editingZoneId && (
+                        <span className="ow-hint">
+                          Zone type can't be changed after creation — delete this zone and add
+                          a new one instead.
+                        </span>
+                      )}
                     </label>
 
                     <label className="ow-field">
@@ -935,6 +1039,8 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
                         name="ticketTypeId"
                         value={form.ticketTypeId}
                         onChange={handleChange}
+                        onBlur={handleBlur}
+                        aria-invalid={!!(touched.ticketTypeId && fieldErrors.ticketTypeId)}
                       >
                         <option value="">-- Select ticket type --</option>
                         {ticketTypes.map((t) => (
@@ -943,11 +1049,13 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
                           </option>
                         ))}
                       </select>
-                      {selectedTicket && (
+                      {touched.ticketTypeId && fieldErrors.ticketTypeId ? (
+                        <span className="ow-field-error">{fieldErrors.ticketTypeId}</span>
+                      ) : selectedTicket ? (
                         <span className="ow-hint">
-                          Chart capacity will automatically update {selectedTicket.typeName}'s quantity.
+                          Zone capacity must stay within {selectedTicket.typeName}'s configured quantity.
                         </span>
-                      )}
+                      ) : null}
                     </label>
 
                     {form.zoneType === "Seated" ? (
@@ -960,7 +1068,12 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
                             name="rows"
                             value={form.rows}
                             onChange={handleChange}
+                            onBlur={handleBlur}
+                            aria-invalid={!!(touched.rows && fieldErrors.rows)}
                           />
+                          {touched.rows && fieldErrors.rows && (
+                            <span className="ow-field-error">{fieldErrors.rows}</span>
+                          )}
                         </label>
                         <label className="ow-field">
                           <span>Seats per row *</span>
@@ -970,7 +1083,12 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
                             name="seatsPerRow"
                             value={form.seatsPerRow}
                             onChange={handleChange}
+                            onBlur={handleBlur}
+                            aria-invalid={!!(touched.seatsPerRow && fieldErrors.seatsPerRow)}
                           />
+                          {touched.seatsPerRow && fieldErrors.seatsPerRow && (
+                            <span className="ow-field-error">{fieldErrors.seatsPerRow}</span>
+                          )}
                         </label>
                         <label className="ow-field">
                           <span>First row label</span>
@@ -992,12 +1110,26 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
                           name="capacity"
                           value={form.capacity}
                           onChange={handleChange}
+                          onBlur={handleBlur}
+                          aria-invalid={!!(touched.capacity && fieldErrors.capacity)}
                         />
+                        {touched.capacity && fieldErrors.capacity && (
+                          <span className="ow-field-error">{fieldErrors.capacity}</span>
+                        )}
                       </label>
                     )}
                   </div>
 
                   <div className="ow-hint">Calculated zone capacity: {enteredCapacity}. This is the source of truth for ticket quantity.</div>
+
+                  {form.zoneType === "Seated" && (
+                    <SeatGridPreview
+                      mode="plan"
+                      rows={form.rows}
+                      seatsPerRow={form.seatsPerRow}
+                      rowLabelPrefix={form.rowLabelPrefix}
+                    />
+                  )}
 
                   <div className="ow-inline-form-actions">
                     <button
@@ -1012,7 +1144,7 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
                     <button
                       type="submit"
                       className="tb-btn tb-btn-primary ow-btn-sm"
-                      disabled={saving}
+                      disabled={saving || hasBlockingErrors}
                     >
                       {saving ? "Saving..." : editingZoneId ? "Save zone" : "Add zone"}
                     </button>
@@ -1090,7 +1222,7 @@ function SeatingTemplateBar({ eventId, chart, ticketTypes, onChanged }) {
 function TemplatePicker({ eventId, ticketTypes, onApplied }) {
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useToastedError();
   const [selected, setSelected] = useState(null); // full SeatingTemplateResponseDTO
   const [mappings, setMappings] = useState({}); // zoneIndex -> editable zone copy
   const [applying, setApplying] = useState(false);
@@ -1212,7 +1344,7 @@ function TemplatePicker({ eventId, ticketTypes, onApplied }) {
         <div className="ow-template-mapping">
           <p className="ow-hint">
             Customize every zone in <strong>{selected.name}</strong>, map it to a
-            ticket type, then apply. Zone capacity becomes the ticket quantity.
+            ticket type, then apply. The mapped zone capacity must stay within that ticket type's Quantity quota.
           </p>
 
           {ticketTypes.length === 0 && (
@@ -1298,7 +1430,7 @@ function SaveAsTemplateForm({ eventId, onSaved }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useToastedError();
   const [success, setSuccess] = useState("");
 
   const handleSave = async (e) => {
@@ -1378,7 +1510,7 @@ function RefundPolicySection({ eventId, refundPolicies, readOnly, onChanged }) {
   const [form, setForm] = useState(emptyPolicy);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useToastedError();
   const [editingId, setEditingId] = useState(null);
 
   const startEdit = (policy) => {

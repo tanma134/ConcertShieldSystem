@@ -122,18 +122,20 @@ export default function PaymentInfoPage() {
               Number(type.ticketTypeId) === Number(ticket.ticketTypeId)
           );
 
-          if (!ticketType) {
+          // Ưu tiên dữ liệu từ EventAPI; nếu hụt thì dùng tên/giá do TicketAPI trả kèm phiên giữ vé.
+          if (!ticketType && ticket.typeName == null) {
             throw new Error(
               `Ticket type ${ticket.ticketTypeId} was not found.`
             );
           }
 
-          const price = Number(ticketType.price) || 0;
+          const price =
+            Number(ticketType?.price ?? ticket.unitPrice) || 0;
           const quantity = Number(ticket.quantity) || 0;
 
           return {
             ticketTypeId: Number(ticket.ticketTypeId),
-            ticketName: ticketType.typeName,
+            ticketName: ticketType?.typeName ?? ticket.typeName,
             quantity,
             price,
             total: quantity * price,
@@ -328,6 +330,8 @@ export default function PaymentInfoPage() {
       }
 
       const payload = {
+        // Backend dùng holdId để tìm phiên giữ vé; thiếu là báo "HoldId không hợp lệ".
+        holdId,
         eventId: Number(holdData.eventId),
         isReservedSeating,
         orderDetails,

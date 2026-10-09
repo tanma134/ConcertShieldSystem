@@ -54,5 +54,6 @@ namespace EventAPI.Services
         Task<Models.Event> GetOwnedEntityAsync(int id, int callerId, bool isAdmin);
 
         Task<bool> ConfirmPaidOrderSaleAsync(int eventId, ConfirmEventSaleRequestDTO request);
+        Task<bool> ReleaseReturnedTicketAsync(int eventId, int ticketTypeId, int quantity);
     }
 }

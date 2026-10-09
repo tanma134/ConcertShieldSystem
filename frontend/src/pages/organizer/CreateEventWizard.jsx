@@ -1,6 +1,6 @@
+import OrganizerShell from "./OrganizerShell";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
-import Header from "../../components/Header";
 import eventApi from "../../api/eventApi";
 import StepInfo from "./steps/StepInfo";
 import StepImages from "./steps/StepImages";
@@ -78,8 +78,7 @@ export default function CreateEventWizard() {
   const canLeaveStep1 = !!eventId;
 
   return (
-    <div className="tb-app">
-      <Header />
+    <OrganizerShell title="Concert Setup">
 
       <div className="tb-container ow-wrap">
         <div className="ow-head">
@@ -90,6 +89,7 @@ export default function CreateEventWizard() {
               can save a draft at any step and come back later.
             </p>
           </div>
+          {eventId && <Link to={`/organizer/events/${eventId}/compliance`} className="tb-btn tb-btn-outline">Compliance documents</Link>}
           <Link to="/organizer/events" className="tb-btn tb-btn-outline">
             ← My Events
           </Link>
@@ -192,6 +192,6 @@ export default function CreateEventWizard() {
           </div>
         )}
       </div>
-    </div>
+    </OrganizerShell>
   );
 }

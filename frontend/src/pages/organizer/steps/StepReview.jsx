@@ -1,3 +1,4 @@
+import { useToast } from "../../../components/ToastProvider";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import eventApi from "../../../api/eventApi";
@@ -8,6 +9,7 @@ export default function StepReview({ eventId, event, onRefresh, onSaved, onBack,
   const [checking, setChecking] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const toast = useToast();
   const [submitted, setSubmitted] = useState(false);
 
   const canSubmit = event && ["Draft", "Rejected"].includes(event.status);
@@ -42,13 +44,19 @@ export default function StepReview({ eventId, event, onRefresh, onSaved, onBack,
     try {
       await eventApi.submit(eventId);
       setSubmitted(true);
+      toast.success("Concert submitted for admin approval.");
       await onSubmitted();
     } catch (err) {
       const apiErrors = err.response?.data?.errors;
-      setError(
+      const message =
         (apiErrors && apiErrors.length > 0 && apiErrors.join(" • ")) ||
-          err.response?.data?.message ||
-          "Submission failed."
+        err.response?.data?.message ||
+        "Submission failed.";
+      setError(message);
+      toast.error(
+        apiErrors && apiErrors.length > 1
+          ? `Cannot submit yet: ${apiErrors.length} requirements are missing.`
+          : message
       );
       // The 400 body also carries a fresh validation result - use it if present.
       const data = err.response?.data?.data;

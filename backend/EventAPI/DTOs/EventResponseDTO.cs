@@ -2,6 +2,10 @@ namespace EventAPI.DTOs
 {
     public class EventResponseDTO
     {
+        public bool CanSell { get; set; }
+        public bool ScheduleAnnounced { get; set; }
+        public string ComplianceStatus { get; set; } = "NotSubmitted";
+
         public int EventId { get; set; }
         public int OrganizerId { get; set; }
         public int CategoryId { get; set; }
@@ -41,10 +45,10 @@ namespace EventAPI.DTOs
         public DateTime? RejectedAt { get; set; }
         public int? ReviewedBy { get; set; }
 
-        /// <summary>Always "Music" in the current scope (CategoryId = 1).</summary>
+        // Always "Music" in the current scope (CategoryId = 1).
         public string Category { get; set; } = "Music";
 
-        /// <summary>True when the concert is publicly visible and bookable.</summary>
+        // True when the concert is publicly visible and bookable.
         public bool IsPublic { get; set; }
 
         public SeatingChartResponseDTO? SeatingChart { get; set; }
@@ -98,11 +102,11 @@ namespace EventAPI.DTOs
         public bool? HasSeatingChart { get; set; }
         public string? SeatingMode { get; set; }
 
-        /// <summary>
-        /// Set by the controller, never bound from the query string: when true the
-        /// repository hard-filters to Published only, so public endpoints can never
-        /// leak Draft/Pending/Rejected concerts regardless of the Status parameter.
-        /// </summary>
+        // 
+        // Set by the controller, never bound from the query string: when true the
+        // repository hard-filters to Published only, so public endpoints can never
+        // leak Draft/Pending/Rejected concerts regardless of the Status parameter.
+        // 
         [System.Text.Json.Serialization.JsonIgnore]
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public bool PublishedOnly { get; set; } = false;

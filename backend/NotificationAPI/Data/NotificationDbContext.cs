@@ -19,6 +19,8 @@ namespace NotificationAPI.Data
             modelBuilder.Entity<Notification>(entity =>
             {
                 entity.ToTable("notifications");
+                entity.Property(x => x.DeliveryKey).HasColumnName("delivery_key").HasMaxLength(200);
+                entity.HasIndex(x => x.DeliveryKey).IsUnique();
 
                 entity.HasKey(e => e.NotificationId);
 

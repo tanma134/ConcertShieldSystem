@@ -27,6 +27,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReviewAPI", "ReviewAPI\Revi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdminAPI.Tests", "AdminAPI.Tests\AdminAPI.Tests.csproj", "{049A5F83-EF0B-4942-B657-1DD475526FC9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventAPI.UnitTests", "EventAPI.UnitTests\EventAPI.UnitTests.csproj", "{5B52F891-EFEE-44B9-BADC-7D3D26EDDCBF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TicketAPI.UnitTests", "TicketAPI.UnitTests\TicketAPI.UnitTests.csproj", "{EC14E1B2-E32F-42AF-882A-B2647213B100}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -81,6 +85,14 @@ Global
 		{049A5F83-EF0B-4942-B657-1DD475526FC9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{049A5F83-EF0B-4942-B657-1DD475526FC9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{049A5F83-EF0B-4942-B657-1DD475526FC9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5B52F891-EFEE-44B9-BADC-7D3D26EDDCBF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5B52F891-EFEE-44B9-BADC-7D3D26EDDCBF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5B52F891-EFEE-44B9-BADC-7D3D26EDDCBF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5B52F891-EFEE-44B9-BADC-7D3D26EDDCBF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EC14E1B2-E32F-42AF-882A-B2647213B100}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EC14E1B2-E32F-42AF-882A-B2647213B100}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EC14E1B2-E32F-42AF-882A-B2647213B100}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EC14E1B2-E32F-42AF-882A-B2647213B100}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

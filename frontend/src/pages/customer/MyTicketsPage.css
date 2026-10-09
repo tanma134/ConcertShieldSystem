@@ -384,3 +384,11 @@
     display: none;
   }
 }
+
+.mt-return-hint {
+  display: block;
+  max-width: 220px;
+  color: var(--tb-text-muted, #a89db8);
+  font-size: 12px;
+  line-height: 1.4;
+}

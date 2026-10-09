@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using TicketAPI.Database;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
@@ -48,14 +49,35 @@ builder.Services.AddHttpClient<IPaymentAPIClient, PaymentAPIClient>(client =>
 {
     var eventApiUrl = builder.Configuration["ApiSettings:PaymentApiUrl"] ?? "https://localhost:7084/";
     client.BaseAddress = new Uri(eventApiUrl);
+    var paymentKey = builder.Configuration["InternalApiKey"];
+    if (!string.IsNullOrEmpty(paymentKey)) client.DefaultRequestHeaders.Add("X-Internal-Api-Key", paymentKey);
 });
 
+builder.Services.AddScoped<EventChangeService>();
+builder.Services.AddScoped<TicketReturnNotifier>();
+builder.Services.AddHttpClient<EventEligibilityClient>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["ApiSettings:EventApiUrl"] ?? "https://localhost:7289/");
+    client.Timeout = TimeSpan.FromSeconds(15);
+    var key = builder.Configuration["Governance:InternalApiKey"];
+    if (!string.IsNullOrEmpty(key)) client.DefaultRequestHeaders.Add("X-Internal-Api-Key", key);
+});
+builder.Services.AddHostedService<TicketChangeNotificationWorker>();
+builder.Services.AddHttpClient("ChangeNotification", client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Governance:NotificationApi"] ?? "https://localhost:7197/");
+    client.Timeout = TimeSpan.FromSeconds(15);
+    var key = builder.Configuration["Governance:InternalApiKey"];
+    if (!string.IsNullOrEmpty(key)) client.DefaultRequestHeaders.Add("X-Internal-Api-Key", key);
+});
 builder.Services.AddScoped<IHoldService, HoldService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<ITicketRepository, TicketRepository>();
 builder.Services.AddScoped<ITicketService, TicketService>();
+builder.Services.AddScoped<ITicketReturnService, TicketReturnService>();
+builder.Services.AddScoped<IReportService, ReportService>();
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"]!;

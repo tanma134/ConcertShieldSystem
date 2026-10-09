@@ -214,8 +214,12 @@
   border-color: var(--tb-primary-2);
 }
 
-.ow-field input[aria-invalid="true"] {
-  border-color: #f87171;
+.ow-field input[aria-invalid="true"],
+.ow-field select[aria-invalid="true"],
+.ow-field textarea[aria-invalid="true"] {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.45);
 }
 
 .ow-field-error {
@@ -833,4 +837,52 @@
 
 .ow-template-mapping {
   margin-top: 4px;
+}
+
+/* ---- Zone map: scale toolbar, rules and real-size info (1 px = 0.1 m) ---- */
+.ow-zonemap-main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ow-zonemap-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ow-zonemap-scale {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--tb-text-muted);
+}
+
+.ow-zonemap-rules {
+  margin: 0;
+  padding: 12px 16px 12px 30px;
+  border: 1px solid var(--tb-border);
+  border-radius: 10px;
+  background: var(--tb-surface-2);
+  color: var(--tb-text);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.ow-zonemap-info {
+  padding: 8px 12px;
+  border: 1px solid var(--tb-border);
+  border-radius: 8px;
+  background: var(--tb-surface);
+  color: var(--tb-text);
+  font-size: 12.5px;
+  min-height: 20px;
+}
+
+.ow-zonemap-info.is-warning {
+  border-color: #f87171;
+  color: #fca5a5;
 }
