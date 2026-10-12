@@ -2,12 +2,12 @@
 
 namespace AdminAPI.DTOs
 {
-   
+
     public class RuleHitDto
     {
-        public string Code { get; set; } = null!;   
-        public int Level { get; set; } = 1;        
-        public string? Value { get; set; }         
+        public string Code { get; set; } = null!;
+        public int Level { get; set; } = 1;
+        public string? Value { get; set; }
     }
 
     public class IngestRiskEventRequest
@@ -36,7 +36,7 @@ namespace AdminAPI.DTOs
         public List<string> DecisionCodes { get; set; } = new();
         public int? FraudAlertId { get; set; }
         public string Level { get; set; } = null!;
-        public string Action { get; set; } = null!;   
+        public string Action { get; set; } = null!;
         public string Dominant { get; set; } = null!;
         public int Score { get; set; }
         public int BotScore { get; set; }
@@ -45,8 +45,8 @@ namespace AdminAPI.DTOs
         public int? BlockHours { get; set; }
         public DateTime? ExpiresAt { get; set; }
         public bool RequiresManualReview { get; set; }
-        public string? ChallengeType { get; set; }      
-        public bool IsShadow { get; set; }          
+        public string? ChallengeType { get; set; }
+        public bool IsShadow { get; set; }
         public string ReasonCode { get; set; } = null!;
         public List<string> IgnoredRules { get; set; } = new();
     }
@@ -91,6 +91,8 @@ namespace AdminAPI.DTOs
         public DateTime CreatedAt { get; set; }
         public int? ReviewedBy { get; set; }
         public DateTime? ReviewedAt { get; set; }
+        public int? AssignedTo { get; set; }
+        public DateTime? AssignedAt { get; set; }
     }
 
     public class RiskDecisionDetailDto
@@ -107,7 +109,7 @@ namespace AdminAPI.DTOs
         public string? DominantType { get; set; }
         public string? HardRule { get; set; }
         public string RuleVersion { get; set; } = null!;
-        public string? ReasonCode { get; set; }          
+        public string? ReasonCode { get; set; }
         public int EscalationLevel { get; set; }
         public DateTime? ExpiresAt { get; set; }
         public string DecidedByType { get; set; } = null!;
@@ -142,7 +144,7 @@ namespace AdminAPI.DTOs
     public class BlockRequest
     {
         public int? FraudAlertId { get; set; }
-        public string Scope { get; set; } = null!;  
+        public string Scope { get; set; } = null!;
         public int? UserId { get; set; }
         public int? TicketId { get; set; }
         public string? SessionId { get; set; }
@@ -159,7 +161,7 @@ namespace AdminAPI.DTOs
 
     public class RiskBlockQuery
     {
-        public string? Status { get; set; }       
+        public string? Status { get; set; }
         public string? Scope { get; set; }
         public int? UserId { get; set; }
         public int? FraudAlertId { get; set; }

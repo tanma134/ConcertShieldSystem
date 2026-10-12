@@ -77,6 +77,12 @@ public partial class FraudAlert
     [Column("ai_summary_at")]
     public DateTime? AiSummaryAt { get; set; }
 
+    [Column("assigned_to")]
+    public int? AssignedTo { get; set; }
+
+    [Column("assigned_at")]
+    public DateTime? AssignedAt { get; set; }
+
     [InverseProperty("FraudAlert")]
     public virtual ICollection<RiskDecision> RiskDecisions { get; set; } = new List<RiskDecision>();
 }

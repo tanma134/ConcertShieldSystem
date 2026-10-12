@@ -54,6 +54,40 @@ const riskApi = {
   // UC_18.4 Restore Account/Ticket
   restoreBlock: (id, reason) =>
     axiosClient.post(`/admin/risk/blocks/${id}/restore`, { reason }),
+
+  // UC_18.8 View Fraud Case List
+  searchCases: (q = {}) =>
+    axiosClient.get("/admin/fraud-cases", {
+      params: {
+        status: q.status || undefined,
+        riskLevel: q.riskLevel || undefined,
+        alertType: q.alertType || undefined,
+        assignedTo: q.assignedTo || undefined,
+        unassigned: q.unassigned ? true : undefined,
+        overdueOnly: q.overdueOnly ? true : undefined,
+        keyword: q.keyword?.trim() || undefined,
+        from: q.from || undefined,
+        to: endOfDay(q.to),
+        sortBy: q.sortBy || undefined,
+        desc: q.desc ?? true,
+        page: q.page || 1,
+        pageSize: q.pageSize || 20,
+      },
+    }),
+
+  // UC_18.9 Assign Fraud Case to Analyst
+  assignCase: (id, analystId, note) =>
+    axiosClient.post(`/admin/fraud-cases/${id}/assign`, { analystId, note: note || undefined }),
+
+  // UC_18.10 Resolve Fraud Case (outcome: Confirmed | FalsePositive | Dismissed)
+  resolveCase: (id, outcome, note) =>
+    axiosClient.post(`/admin/fraud-cases/${id}/resolve`, { outcome, note }),
+
+  // UC_18.11 Configure Risk Policy Parameters
+  getPolicy: (category) =>
+    axiosClient.get("/admin/risk/policy", { params: { category: category || undefined } }),
+  updatePolicy: (items, reason) =>
+    axiosClient.put("/admin/risk/policy", { items, reason }),
 };
 
 export default riskApi;

@@ -10,6 +10,8 @@ public static class RiskServiceCollectionExtensions
         services.AddScoped<IRiskConfigProvider, RiskConfigProvider>();
         services.AddSingleton<RiskScoreCalculator>();
         services.AddScoped<IFraudAlertService, FraudAlertService>();
+        services.AddScoped<IFraudCaseService, FraudCaseService>();
+        services.AddScoped<IRiskPolicyService, RiskPolicyService>();
 
         var timeout = TimeSpan.FromSeconds(30);
         if (string.Equals(config["Ai:Provider"], "Anthropic", StringComparison.OrdinalIgnoreCase))

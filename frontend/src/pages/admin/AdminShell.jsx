@@ -24,8 +24,10 @@ const links = [
   ["/admin/kyc/access-logs", "eKYC Access Logs"],
   ["/admin/audit-logs", "Activity Log"],
   ["/admin/fraud-alerts", "Fraud Alert Dashboard"],
+  ["/admin/fraud-cases", "Fraud Cases"],
   ["/admin/risk/blocks", "Risk Blocks"],
-  ["/admin/risk/appeals", "Appeals"]
+  ["/admin/risk/appeals", "Appeals"],
+  ["/admin/risk/policy", "Risk Policy"]
 ];
 
 export default function AdminShell({ children, title = "Admin Panel" }) {

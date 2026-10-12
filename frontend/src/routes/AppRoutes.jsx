@@ -40,6 +40,8 @@ import FraudAlertDetailPage from "../pages/admin/FraudAlertDetailPage";
 import RiskDecisionDetailPage from "../pages/admin/RiskDecisionDetailPage";
 import AppealAdminListPage from "../pages/admin/AppealAdminListPage";
 import RiskBlocksPage from "../pages/admin/RiskBlocksPage";
+import FraudCaseListPage from "../pages/admin/FraudCaseListPage";
+import RiskPolicyPage from "../pages/admin/RiskPolicyPage";
 import AppealReviewPage from "../pages/admin/AppealReviewPage";
 import SubmitAppealPage from "../pages/SubmitAppealPage";
 
@@ -195,6 +197,8 @@ export default function AppRoutes() {
       <Route path="/admin/fraud-alerts" element={<AdminRoute><FraudAlertDashboardPage /></AdminRoute>} />
       <Route path="/admin/fraud-alerts/:id" element={<AdminRoute><FraudAlertDetailPage /></AdminRoute>} />
       <Route path="/admin/risk/decisions/:id" element={<AdminRoute><RiskDecisionDetailPage /></AdminRoute>} />
+      <Route path="/admin/fraud-cases" element={<AdminRoute><FraudCaseListPage /></AdminRoute>} />
+      <Route path="/admin/risk/policy" element={<AdminRoute><RiskPolicyPage /></AdminRoute>} />
       <Route path="/admin/risk/blocks" element={<AdminRoute><RiskBlocksPage /></AdminRoute>} />
       <Route path="/admin/risk/appeals" element={<AdminRoute><AppealAdminListPage /></AdminRoute>} />
       <Route path="/admin/risk/appeals/:id" element={<AdminRoute><AppealReviewPage /></AdminRoute>} />

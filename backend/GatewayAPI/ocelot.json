@@ -952,6 +952,45 @@
             "AuthenticationOptions": { "AuthenticationProviderKey": "Bearer" }
         },
         {
+            "UpstreamPathTemplate": "/api/admin/risk/policy",
+            "UpstreamHttpMethod": [ "GET", "PUT" ],
+            "DownstreamPathTemplate": "/api/admin/risk/policy",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7076
+                }
+            ],
+            "AuthenticationOptions": { "AuthenticationProviderKey": "Bearer" }
+        },
+        {
+            "UpstreamPathTemplate": "/api/admin/fraud-cases/{everything}",
+            "UpstreamHttpMethod": [ "POST" ],
+            "DownstreamPathTemplate": "/api/admin/fraud-cases/{everything}",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7076
+                }
+            ],
+            "AuthenticationOptions": { "AuthenticationProviderKey": "Bearer" }
+        },
+        {
+            "UpstreamPathTemplate": "/api/admin/fraud-cases",
+            "UpstreamHttpMethod": [ "GET" ],
+            "DownstreamPathTemplate": "/api/admin/fraud-cases",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7076
+                }
+            ],
+            "AuthenticationOptions": { "AuthenticationProviderKey": "Bearer" }
+        },
+        {
             "Key": "admin-system-health",
             "DownstreamPathTemplate": "/api/system-health",
             "DownstreamScheme": "https",
