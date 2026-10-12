@@ -446,6 +446,11 @@ export default function Header() {
                         Vouchers Admin
                       </Link>
                     )}
+
+                    <Link to="/my-orders" className="tb-dropdown-link">
+                      Order History
+                    </Link>
+                    
                     <button type="button" onClick={handleLogout}>
                       Log Out
                     </button>

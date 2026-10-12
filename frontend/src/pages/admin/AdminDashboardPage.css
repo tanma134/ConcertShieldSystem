@@ -488,3 +488,155 @@
   .full-width { grid-column: auto; }
   .modal-footer.full-width { grid-column: auto; }
 }
+
+
+/* ===== Admin dashboard (trước đây các class này chưa có CSS nên trang bị vỡ bố cục) ===== */
+.admin-dashboard-page {
+  padding: 26px 0 8px;
+  color: var(--admin-ink);
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.dashboard-header h1 {
+  margin: 0 0 6px;
+  font-size: 28px;
+  letter-spacing: -0.4px;
+}
+
+.welcome-text {
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 14px;
+}
+
+.welcome-text strong {
+  color: var(--admin-ink);
+}
+
+.stats-grid,
+.attention-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px;
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-line);
+  border-left: 4px solid var(--admin-accent);
+  border-radius: 10px;
+}
+
+.stat-label {
+  color: var(--admin-muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.stat-value {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.attention-section {
+  margin-bottom: 22px;
+}
+
+.section-title {
+  margin: 0 0 12px;
+  font-size: 15px;
+  color: var(--admin-muted);
+  font-weight: 600;
+}
+
+.attention-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-line);
+  border-radius: 10px;
+  color: var(--admin-ink);
+  text-decoration: none;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.attention-card:hover {
+  border-color: var(--admin-accent);
+  transform: translateY(-1px);
+}
+
+.attention-card.has-work {
+  border-color: rgba(236, 72, 153, 0.55);
+  background: linear-gradient(180deg, rgba(236, 72, 153, 0.1), var(--admin-surface));
+}
+
+.attention-count {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.attention-label {
+  color: var(--admin-muted);
+  font-size: 13px;
+}
+
+.attention-go {
+  margin-top: 4px;
+  color: var(--admin-accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.alert {
+  margin: 0 0 16px;
+  padding: 11px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.alert-error {
+  background: var(--admin-danger-soft);
+  border: 1px solid var(--admin-danger);
+  color: var(--admin-danger);
+}
+
+.empty-state {
+  color: var(--admin-muted);
+  font-size: 14px;
+}
+
+/* Badge số việc đang chờ trên sidebar admin */
+.admin-nav-item.has-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.admin-nav-badge {
+  min-width: 20px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--admin-accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}

@@ -373,45 +373,71 @@
   min-height: 440px;
 }
 
+/* Seat zone: a container, so the title bar and the seat dots can size
+   themselves from the zone box (cqw / cqh) instead of fixed pixels. That is what
+   keeps the title bar and the seats inside the zone however small it is drawn. */
 .tb-seat-zone {
   position: absolute;
+  box-sizing: border-box;
+  container-type: size;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 24px 10px 10px;
+  padding: 0;
   border: 2px solid var(--zone-color);
-  border-radius: 12px;
+  border-radius: 10px;
   background: color-mix(in srgb, var(--zone-color) 28%, #111827);
 }
 
+/* Both children need the same bar height, so it is declared once. */
+.tb-seat-zone-title,
+.tb-seat-grid {
+  --bar-h: clamp(14px, 14cqh, 22px);
+  --seat-pad: clamp(2px, 3cqw, 8px);
+}
+
 .tb-seat-zone-title {
-  position: absolute;
-  inset: 0 0 auto;
-  z-index: 1;
-  height: 21px;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--bar-h);
+  padding: 0 6px;
   overflow: hidden;
-  padding: 2px 6px;
   background: var(--zone-color);
-  color: white;
+  color: #fff;
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: clamp(9px, 7cqh, 12px);
   font-weight: 800;
+  line-height: var(--bar-h);
 }
 
+/* The seat size is the largest square that fits every column and every row in
+   the space under the title bar (never below 3px so the dots stay visible). */
 .tb-seat-grid {
+  --seat-gap: clamp(1px, 0.6cqw, 3px);
+  --seat-size: clamp(
+    3px,
+    min(
+      calc((100cqw - 2 * var(--seat-pad) - (var(--seat-columns) - 1) * var(--seat-gap)) / var(--seat-columns)),
+      calc((100cqh - var(--bar-h) - 2 * var(--seat-pad) - (var(--seat-rows) - 1) * var(--seat-gap)) / var(--seat-rows))
+    ),
+    18px
+  );
   display: grid;
-  flex: 1;
-  align-content: space-evenly;
-  justify-content: space-evenly;
-  gap: 4px;
+  flex: 1 1 0;
   min-height: 0;
+  box-sizing: border-box;
+  padding: var(--seat-pad);
+  place-content: center;
+  gap: var(--seat-gap);
+  overflow: hidden;
 }
 
 .tb-seat-dot {
-  width: 13px;
-  height: 13px;
+  width: var(--seat-size);
+  height: var(--seat-size);
   padding: 0;
   border: 1px solid #d4d4d8;
   border-radius: 50%;
@@ -421,7 +447,7 @@
 
 .tb-seat-dot:hover:not(:disabled) {
   z-index: 2;
-  transform: scale(1.45);
+  transform: scale(1.3);
   box-shadow: 0 0 0 2px white;
 }
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import notificationApi from "../api/notificationApi";
 import { useAuth } from "../context/AuthContext";
+import OrganizerShell from "./organizer/OrganizerShell";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import "./organizer/NotificationCenterPage.css";
@@ -20,7 +21,7 @@ const normalizeNotification = (n) => ({
 
 export default function NotificationCenterPage() {
   const navigate = useNavigate();
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin, isOrganizer } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -120,9 +121,8 @@ export default function NotificationCenterPage() {
     return true;
   });
 
-  return (
-    <div className="tb-app">
-      <Header />
+  const page = (
+    <>
       <div className="tb-container nc-container" style={{ padding: "30px 20px", minHeight: "60vh" }}>
         <div className="nc-header">
           <h1 className="nc-title">
@@ -234,6 +234,18 @@ export default function NotificationCenterPage() {
           </div>
         )}
       </div>
+    </>
+  );
+
+  // Organizer dùng sidebar chung; customer giữ header của site.
+  if (isOrganizer && !isAdmin) {
+    return <OrganizerShell title="Notifications">{page}</OrganizerShell>;
+  }
+
+  return (
+    <div className="tb-app">
+      <Header />
+      {page}
       <Footer />
     </div>
   );

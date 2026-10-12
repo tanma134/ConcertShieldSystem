@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,12 +25,34 @@ public partial class TicketDbContext : DbContext
 
     public virtual DbSet<TicketQrToken> TicketQrTokens { get; set; }
 
+    public virtual DbSet<TicketReturnRequest> TicketReturnRequests { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=05_ticket_db;Username=postgres;Password=123456");
+    {
+        // Khi chạy qua DI, Program.cs là nguồn connection string duy nhất.
+        // Fallback này chỉ phục vụ tooling/scaffolding chạy trực tiếp DbContext.
+        if (!optionsBuilder.IsConfigured)
+            optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=05_ticket_db;Username=postgres;Password=123456");
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+
+        modelBuilder.Entity<AppliedEventChange>(b => {
+            b.ToTable("applied_event_changes"); b.HasKey(x => x.ChangeId);
+            b.HasIndex(x => new { x.EventId, x.ScheduleVersion }).IsUnique();
+            foreach (var p in typeof(AppliedEventChange).GetProperties()) b.Property(p.Name).HasColumnName(System.Text.RegularExpressions.Regex.Replace(p.Name, "([a-z0-9])([A-Z])", "$1_$2").ToLowerInvariant());
+            b.Property(x => x.ChangeId).ValueGeneratedNever();
+        });
+        modelBuilder.Entity<AffectedTicket>(b => {
+            b.ToTable("affected_tickets"); b.HasKey(x => x.Id);
+            foreach (var p in typeof(AffectedTicket).GetProperties()) b.Property(p.Name).HasColumnName(System.Text.RegularExpressions.Regex.Replace(p.Name, "([a-z0-9])([A-Z])", "$1_$2").ToLowerInvariant());
+            b.Property(x => x.Id).UseIdentityAlwaysColumn();
+            b.HasIndex(x => new { x.ChangeId, x.TicketId }).IsUnique();
+            b.HasOne<AppliedEventChange>().WithMany().HasForeignKey(x => x.ChangeId);
+            b.HasOne<Ticket>().WithMany().HasForeignKey(x => x.TicketId);
+        });
+
         modelBuilder.Entity<Order>(entity =>
         {
             entity.HasKey(e => e.OrderId).HasName("orders_pkey");
@@ -240,6 +262,46 @@ public partial class TicketDbContext : DbContext
             entity.HasOne(d => d.Ticket).WithMany(p => p.TicketQrTokens)
                 .HasForeignKey(d => d.TicketId)
                 .HasConstraintName("fk_ticket_qr_tokens_ticket");
+        });
+
+        modelBuilder.Entity<TicketReturnRequest>(entity =>
+        {
+            entity.HasKey(e => e.TicketReturnRequestId).HasName("ticket_return_requests_pkey");
+
+            entity.ToTable("ticket_return_requests");
+
+            entity.HasIndex(e => new { e.RequesterUserId, e.CreatedAt }, "ix_ticket_return_requests_requester");
+
+            entity.HasIndex(e => e.TicketId, "uq_ticket_return_requests_open")
+                .IsUnique()
+                .HasFilter("((status)::text = 'Pending'::text)");
+
+            entity.Property(e => e.TicketReturnRequestId)
+                .UseIdentityAlwaysColumn()
+                .HasColumnName("ticket_return_request_id");
+            entity.Property(e => e.TicketId).HasColumnName("ticket_id");
+            entity.Property(e => e.OrderId).HasColumnName("order_id");
+            entity.Property(e => e.EventId).HasColumnName("event_id");
+            entity.Property(e => e.RequesterUserId).HasColumnName("requester_user_id");
+            entity.Property(e => e.Reason).HasMaxLength(500).HasColumnName("reason");
+            entity.Property(e => e.Status)
+                .HasMaxLength(20)
+                .HasDefaultValueSql("'Pending'::character varying")
+                .HasColumnName("status");
+            entity.Property(e => e.RefundAmount).HasColumnName("refund_amount");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+            entity.Property(e => e.CancelledAt).HasColumnName("cancelled_at");
+            entity.Property(e => e.ReviewedBy).HasColumnName("reviewed_by");
+            entity.Property(e => e.ReviewedAt).HasColumnName("reviewed_at");
+            entity.Property(e => e.ReviewNote).HasMaxLength(500).HasColumnName("review_note");
+            entity.Property(e => e.RefundedAt).HasColumnName("refunded_at");
+            entity.Property(e => e.RefundReference).HasMaxLength(100).HasColumnName("refund_reference");
+            entity.Property(e => e.RefundError).HasMaxLength(500).HasColumnName("refund_error");
+
+            entity.HasOne(d => d.Ticket).WithMany()
+                .HasForeignKey(d => d.TicketId)
+                .HasConstraintName("fk_ticket_return_requests_ticket");
         });
 
         OnModelCreatingPartial(modelBuilder);

@@ -27,5 +27,6 @@ namespace EventAPI.Repositories
         Task IncrementViewCountAsync(int id);
 
         Task<bool> ConfirmPaidOrderSaleAsync(int eventId, int orderId, IReadOnlyCollection<ConfirmEventSaleItemDTO> items);
+        Task<bool> ReleaseReturnedTicketAsync(int eventId, int ticketTypeId, int quantity);
     }
 }

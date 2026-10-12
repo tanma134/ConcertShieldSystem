@@ -8,6 +8,9 @@ namespace PaymentAPI.Services
 {
     public class VnPayService : IVnPayService
     {
+        // VNPay chỉ nhận mỗi giao dịch dưới 1 tỷ VND.
+        private const long MaxVnPayAmountVnd = 999_999_999L;
+
         private readonly VnPayConfig _config;
         private readonly IPaymentTransactionService _paymentTransactionService;
 
@@ -20,8 +23,14 @@ namespace PaymentAPI.Services
             _config = config.Value;
             _paymentTransactionService = paymentTransactionService;
         }
-        public string CreatePaymentUrl(long orderId, int amount, string ipAddress)
+        public string CreatePaymentUrl(long orderId, long amount, string ipAddress)
         {
+            // vnp_Amount = số tiền VND x 100. PHẢI tính bằng long: với int, 50.000.000 x 100 = 5 tỷ
+            // vượt 2,147,483,647 nên bị tràn số và VNPay nhận ~7 triệu thay vì 50 triệu.
+            if (amount <= 0 || amount > MaxVnPayAmountVnd)
+                throw new ArgumentOutOfRangeException(nameof(amount),
+                    $"Số tiền phải từ 1 đến {MaxVnPayAmountVnd:N0} VND.");
+
             var vnpUrl = _config.BaseUrl;
             var tmnCode = _config.TmnCode;
             var hashSecret = _config.HashSecret;
@@ -32,7 +41,7 @@ namespace PaymentAPI.Services
                 { "vnp_Version", "2.1.0" },
                 { "vnp_Command", "pay" },
                 { "vnp_TmnCode", tmnCode },
-                { "vnp_Amount", (amount * 100).ToString() },
+                { "vnp_Amount", checked(amount * 100L).ToString() },
                 { "vnp_CreateDate", DateTime.Now.ToString("yyyyMMddHHmmss") },
                 { "vnp_CurrCode", "VND" },
                 { "vnp_IpAddr", ipAddress ?? "127.0.0.1" },

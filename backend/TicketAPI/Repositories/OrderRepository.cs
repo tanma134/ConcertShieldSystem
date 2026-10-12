@@ -37,5 +37,17 @@ namespace TicketAPI.Repositories
             _context.Orders.Update(order);
             await _context.SaveChangesAsync();
         }
+
+        public async Task<List<Order>> GetOrdersByCustomerIdAsync(int customerId)
+        {
+            return await _context.Orders
+                .AsNoTracking()
+                .Where(order =>
+                    order.CustomerId == customerId &&
+                    !order.IsDeleted)
+                .Include(order => order.OrderDetails)
+                .OrderByDescending(order => order.OrderDate)
+                .ToListAsync();
+        }
     }
 }

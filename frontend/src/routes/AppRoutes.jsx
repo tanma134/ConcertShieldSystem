@@ -34,7 +34,6 @@ import SelectTicketPage from "../pages/customer/SelectTicketPage"
 import QuestionFormPage from "../pages/customer/QuestionFormPage";
 import PaymentInfoPage from "../pages/customer/PaymentInfoPage";
 import PaymentResult from "../pages/customer/PaymentResult";
-import KycPage from "../pages/KycPage";
 import KycConsentAdminPage from "../pages/admin/KycConsentAdminPage";
 import KycDeletionAdminPage from "../pages/admin/KycDeletionAdminPage";
 import KycImagesAdminPage from "../pages/admin/KycImagesAdminPage";
@@ -51,10 +50,23 @@ import FraudCaseListPage from "../pages/admin/FraudCaseListPage";
 import RiskPolicyPage from "../pages/admin/RiskPolicyPage";
 import AppealReviewPage from "../pages/admin/AppealReviewPage";
 import SubmitAppealPage from "../pages/SubmitAppealPage";
+import MyTicketsPage from "../pages/customer/MyTicketsPage";
+import TicketDetailsPage from "../pages/customer/TicketDetailsPage";
+import MyOrdersPage from "../pages/customer/MyOrdersPage";
+import OrderDetailsPage from "../pages/customer/OrderDetailsPage";
+import RevenueDashboardPage from "../pages/organizer/RevenueDashboardPage";
+import CheckinManagementPage from "../pages/organizer/CheckinManagementPage";
+import TicketReturnReviewPage from "../pages/admin/TicketReturnReviewPage";
+import EventGovernancePage from "../pages/organizer/EventGovernancePage";
+import ChangeRequestsPage from "../pages/admin/ChangeRequestsPage";
 
 export default function AppRoutes() {
   return (
     <Routes>
+      <Route path="/organizer/events/:id/compliance" element={<ProtectedRoute organizerOnly><EventGovernancePage /></ProtectedRoute>} />
+      <Route path="/organizer/events/:id/changes" element={<ProtectedRoute organizerOnly><EventGovernancePage /></ProtectedRoute>} />
+      <Route path="/admin/change-requests" element={<ProtectedRoute adminOnly><ChangeRequestsPage /></ProtectedRoute>} />
+      <Route path="/admin/events/:id/governance" element={<ProtectedRoute adminOnly><EventGovernancePage admin /></ProtectedRoute>} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/login" element={<LoginPage />} />
@@ -88,6 +100,51 @@ export default function AppRoutes() {
         }
       />
       <Route path="/payment/result" element={<PaymentResult />} />
+
+      <Route
+        path="/my-tickets"
+        element={
+          <ProtectedRoute>
+            <MyTicketsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/my-tickets/:ticketId"
+        element={
+          <ProtectedRoute>
+            <TicketDetailsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/my-orders"
+        element={
+          <ProtectedRoute>
+            <MyOrdersPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/my-orders/:orderId"
+        element={
+          <ProtectedRoute>
+            <OrderDetailsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* UC_9 return review (Staff/Admin) */}
+      <Route path="/staff/returns" element={<ProtectedRoute><TicketReturnReviewPage /></ProtectedRoute>} />
+      <Route path="/admin/returns" element={<ProtectedRoute adminOnly><TicketReturnReviewPage /></ProtectedRoute>} />
+
+      {/* UC_13 revenue dashboard and UC_14 check-in report / staff (the organizer of the concert). */}
+      <Route path="/organizer/events/:id/revenue" element={<ProtectedRoute organizerOnly><RevenueDashboardPage /></ProtectedRoute>} />
+      <Route path="/organizer/events/:id/checkin" element={<ProtectedRoute organizerOnly><CheckinManagementPage /></ProtectedRoute>} />
+      <Route path="/organizer/events/:id/staff" element={<ProtectedRoute organizerOnly><CheckinManagementPage /></ProtectedRoute>} />
       
 <Route path="/profile/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
       {/* Any logged-in Customer may create and configure a Draft concert. */}

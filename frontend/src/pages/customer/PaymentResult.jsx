@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import ticketApi from "../../api/ticketApi";
+import paymentApi from "../../api/paymentApi";
 import "./PaymentResult.css";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
@@ -14,10 +15,16 @@ const formatCurrency = (amount) =>
 export default function PaymentResult() {
   const [searchParams] = useSearchParams();
   const orderId = searchParams.get("orderId");
+  // PaymentAPI adds these when VNPay sends the customer back.
+  const returnStatus = searchParams.get("status"); // success | pending | failed | invalid
+  const vnpCode = searchParams.get("code");
+  const returnReason = searchParams.get("reason");
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [retrying, setRetrying] = useState(false);
+  const [retryMessage, setRetryMessage] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -54,6 +61,25 @@ export default function PaymentResult() {
       cancelled = true;
     };
   }, [orderId]);
+
+  // Ask the server to confirm the payment again, then reload the order if it worked.
+  const handleCheckAgain = async () => {
+    setRetrying(true);
+    setRetryMessage("");
+    try {
+      const response = await paymentApi.reconcile(orderId);
+      const result = response.data?.data ?? response.data;
+      if (result?.success) {
+        window.location.reload();
+        return;
+      }
+      setRetryMessage(result?.message || "The payment could not be confirmed yet.");
+    } catch (err) {
+      setRetryMessage(err.response?.data?.message || "Could not reach the payment service.");
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -94,26 +120,49 @@ export default function PaymentResult() {
     status
   );
 
-  const result = isPaid
-    ? {
-        className: "is-success",
-        icon: "✓",
-        title: "Payment successful",
-        message: "Your payment has been confirmed and your order is complete.",
-      }
-    : isFailed
-      ? {
-          className: "is-failed",
-          icon: "×",
-          title: "Payment not completed",
-          message: "This order was not marked as paid.",
-        }
-      : {
-          className: "is-pending",
-          icon: "…",
-          title: "Payment is pending",
-          message: "Your payment has not been confirmed yet. Please check again shortly.",
-        };
+  const vnpMessages = {
+    "24": "You cancelled the payment at VNPay.",
+    "51": "The card or account does not have enough balance.",
+    "65": "The daily transaction limit was exceeded.",
+    "75": "The bank is under maintenance.",
+    "11": "The payment session at VNPay timed out.",
+  };
+
+  let result;
+  if (isPaid) {
+    result = {
+      className: "is-success",
+      icon: "✓",
+      title: "Payment successful",
+      message: "Your payment has been confirmed and your order is complete.",
+    };
+  } else if (returnStatus === "invalid") {
+    result = {
+      className: "is-failed",
+      icon: "×",
+      title: "Payment could not be verified",
+      message: "The response from VNPay failed our security check, so the order was not marked as paid.",
+    };
+  } else if (isFailed || returnStatus === "failed") {
+    result = {
+      className: "is-failed",
+      icon: "×",
+      title: "Payment not completed",
+      message:
+        (vnpCode && vnpMessages[vnpCode]) ||
+        returnReason ||
+        (vnpCode ? `VNPay did not complete the payment (code ${vnpCode}).` : "This order was not marked as paid."),
+    };
+  } else {
+    result = {
+      className: "is-pending",
+      icon: "…",
+      title: "Payment is pending",
+      message: returnStatus === "pending"
+        ? `VNPay received your payment, but we could not confirm the order yet.${returnReason ? " Reason: " + returnReason : ""}`
+        : "Your payment has not been confirmed yet. Please check again shortly.",
+    };
+  }
 
   return (
     <>
@@ -127,6 +176,11 @@ export default function PaymentResult() {
         <p className="payment-result-eyebrow">CONCERTSHIELD CHECKOUT</p>
         <h1>{result.title}</h1>
         <p className="payment-result-message">{result.message}</p>
+        {retryMessage && !isPaid && (
+          <p className="payment-result-message" role="alert">
+            {retryMessage}
+          </p>
+        )}
 
         <dl className="payment-result-details">
           <div>
@@ -161,9 +215,10 @@ export default function PaymentResult() {
             <button
               type="button"
               className="payment-result-button is-secondary"
-              onClick={() => window.location.reload()}
+              disabled={retrying}
+              onClick={handleCheckAgain}
             >
-              Check again
+              {retrying ? "Checking..." : "Check again"}
             </button>
           )}
 

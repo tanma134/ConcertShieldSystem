@@ -32,5 +32,32 @@ namespace TicketAPI.Repositories
                     t.OwnerUserId == userId &&
                     !t.IsDeleted);
         }
+
+        public async Task<List<Ticket>> GetMyTicketsAsync(int userId)
+        {
+            return await _context.Tickets
+                .AsNoTracking()
+                .Include(ticket => ticket.Order)
+                    .ThenInclude(order => order.OrderDetails)
+                .Where(ticket =>
+                    ticket.OwnerUserId == userId &&
+                    !ticket.IsDeleted &&
+                    !ticket.Order.IsDeleted)
+                .OrderByDescending(ticket => ticket.Order.OrderDate)
+                .ToListAsync();
+        }
+
+        public async Task<Ticket?> GetMyTicketByIdAsync(int ticketId, int userId)
+        {
+            return await _context.Tickets
+                .AsNoTracking()
+                .Include(ticket => ticket.Order)
+                    .ThenInclude(order => order.OrderDetails)
+                .FirstOrDefaultAsync(ticket =>
+                    ticket.TicketId == ticketId &&
+                    ticket.OwnerUserId == userId &&
+                    !ticket.IsDeleted &&
+                    !ticket.Order.IsDeleted);
+        }
     }
 }

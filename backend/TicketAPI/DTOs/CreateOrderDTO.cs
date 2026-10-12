@@ -12,6 +12,8 @@
         public string Phone { get; set; }
 
         public string? VoucherCode { get; set; }
+
+        public string HoldId { get; set; } = "";
         public List<HoldAttendeeDto> Attendees { get; set; } = new();
     }
 }

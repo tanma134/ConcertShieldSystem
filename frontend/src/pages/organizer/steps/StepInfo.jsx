@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { startTimeError, nextLocalMinute } from '../../../utils/eventTimeRules';
+import { useEffect, useMemo, useRef, useState } from "react";
 import eventApi from "../../../api/eventApi";
 import VN_PROVINCES from "../../../data/vnProvinces";
+import { useToast } from "../../../components/ToastProvider";
 
 // Convert "2027-03-15T19:00:00Z" (from API) <-> "2027-03-15T19:00" (datetime-local input)
 function toLocalInput(iso) {
@@ -31,10 +33,16 @@ const emptyForm = {
 
 export default function StepInfo({ eventId, event, onCreated, onSaved, onNext }) {
   const [form, setForm] = useState(emptyForm);
+  const [clock, setClock] = useState(Date.now());
+  useEffect(() => { const timer = window.setInterval(() => setClock(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
   const [showSeo, setShowSeo] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [touched, setTouched] = useState({});
+  // Sau lần bấm Save đầu tiên, mọi trường lỗi đều hiện đỏ (kể cả trường chưa chạm vào).
+  const [attempted, setAttempted] = useState(false);
+  const toast = useToast();
+  const formRef = useRef(null);
   const [slugState, setSlugState] = useState({ checking: false, available: null, suggestion: "" });
 
   const readOnly = event && !["Draft", "Rejected"].includes(event.status);
@@ -99,25 +107,53 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
     return "";
   }, [form.startsAt, form.endsAt]);
 
-  const fieldErrors = useMemo(() => {
+  // Các trường backend bắt buộc ngay khi lưu nháp (CreateEventDTO).
+  const DRAFT_REQUIRED = ["title", "slug", "startsAt", "endsAt"];
+
+  // Tất cả lỗi hiện có, theo từng trường. Trường nào đủ điều kiện "nộp duyệt"
+  // (EventSubmissionValidator) cũng được kiểm ở đây để organizer thấy sớm.
+  const allErrors = useMemo(() => {
     const errors = {};
-    if (touched.title && !form.title.trim()) errors.title = "Event name is required.";
+    if (!form.title.trim()) errors.title = "Event name is required.";
+
     const normalizedSlug = normalizeSlug(form.slug || form.title);
-    if ((touched.slug || touched.title) && normalizedSlug.length < 3) errors.slug = "Slug must contain at least 3 characters.";
+    if (normalizedSlug.length < 3) errors.slug = "Slug must contain at least 3 characters.";
     else if (slugState.available === false) errors.slug = `This slug is already used. Try '${slugState.suggestion}'.`;
-    if (touched.startsAt && !form.startsAt) errors.startsAt = "Start time is required.";
-    if (form.startsAt && new Date(form.startsAt) <= new Date()) errors.startsAt = "Start time must be in the future.";
-    if (touched.endsAt && !form.endsAt) errors.endsAt = "End time is required.";
-    if (dateRangeError) errors.endsAt = dateRangeError;
+
+    if (!form.shortDescription.trim() && !form.description.trim())
+      errors.shortDescription = "Add a short description (or a full description).";
+    if (!form.locationName.trim()) errors.locationName = "Venue name is required.";
+    if (!form.address.trim()) errors.address = "Address is required.";
+    if (!form.city) errors.city = "Please select a province/city.";
+
+    if (!form.startsAt) errors.startsAt = "Start time is required.";
+    else if (startTimeError(form.startsAt, clock)) errors.startsAt = startTimeError(form.startsAt, clock);
+
+    if (!form.endsAt) errors.endsAt = "End time is required.";
+    else if (dateRangeError) errors.endsAt = dateRangeError;
+
     const min = form.minTicketsPerAccount === "" ? null : Number(form.minTicketsPerAccount);
     const max = form.maxTicketsPerAccount === "" ? null : Number(form.maxTicketsPerAccount);
-    if (min != null && min < 1) errors.minTicketsPerAccount = "Minimum must be at least 1.";
-    if (max != null && max < 1) errors.maxTicketsPerAccount = "Maximum must be at least 1.";
-    if (min != null && max != null && min > max) errors.maxTicketsPerAccount = "Maximum must be greater than or equal to minimum.";
+    if (min != null && (!Number.isInteger(min) || min < 1)) errors.minTicketsPerAccount = "Minimum must be a whole number of at least 1.";
+    if (max != null && (!Number.isInteger(max) || max < 1)) errors.maxTicketsPerAccount = "Maximum must be a whole number of at least 1.";
+    if (min != null && max != null && min > max && !errors.maxTicketsPerAccount)
+      errors.maxTicketsPerAccount = "Maximum must be greater than or equal to minimum.";
     return errors;
-  }, [form, touched, dateRangeError, slugState]);
+  }, [form, dateRangeError, slugState, clock]);
 
-  const hasLiveErrors = Object.keys(fieldErrors).length > 0;
+  // Chỉ hiện lỗi của trường đã chạm vào, hoặc tất cả sau khi bấm Save.
+  const fieldErrors = useMemo(() => {
+    const visible = {};
+    for (const [name, message] of Object.entries(allErrors)) {
+      if (attempted || touched[name]) visible[name] = message;
+    }
+    // Start/End liên quan nhau: lỗi khoảng thời gian luôn hiện ngay khi có.
+    if (dateRangeError) visible.endsAt = dateRangeError;
+    return visible;
+  }, [allErrors, attempted, touched, dateRangeError]);
+
+  // Gắn aria-invalid để CSS tô viền đỏ cho ô nhập.
+  const invalid = (name) => !!fieldErrors[name];
 
   const buildDto = () => {
     const dto = {
@@ -140,23 +176,37 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
     return dto;
   };
 
-  const validateClientSide = () => {
-    if (!form.title.trim()) return "Please enter an event name.";
-    if (!eventId) {
-      // Create requires StartsAt/EndsAt right away (CreateEventDTO marks them Required).
-      if (!form.startsAt || !form.endsAt)
-        return "Please choose a start time and an end time.";
-    }
-    if (dateRangeError) return dateRangeError;
-    return "";
+  // Kiểm tra trước khi gọi API. mode "draft" chỉ chặn các trường backend bắt buộc;
+  // mode "next" yêu cầu đủ thông tin cần cho bước nộp duyệt.
+  // Trả về true nếu hợp lệ; nếu không thì tô đỏ, báo toast và cuộn tới ô lỗi đầu tiên.
+  const validateBeforeSave = (mode) => {
+    setAttempted(true);
+    const freshErrors = { ...allErrors };
+    const timeError = startTimeError(form.startsAt);
+    if (timeError) freshErrors.startsAt = timeError;
+    setClock(Date.now());
+    const names = Object.keys(freshErrors);
+    const blocking = mode === "draft"
+      ? names.filter((n) => DRAFT_REQUIRED.includes(n) || ["minTicketsPerAccount", "maxTicketsPerAccount"].includes(n))
+      : names;
+    if (blocking.length === 0) return true;
+
+    setError("");
+    toast.error(
+      blocking.length === 1
+        ? freshErrors[blocking[0]]
+        : `Please fix ${blocking.length} highlighted fields before continuing.`
+    );
+    window.setTimeout(() => {
+      const first = formRef.current?.querySelector('[aria-invalid="true"]');
+      first?.scrollIntoView({ behavior: "smooth", block: "center" });
+      first?.focus?.();
+    }, 0);
+    return false;
   };
 
-  const save = async () => {
-    const clientError = validateClientSide();
-    if (clientError) {
-      setError(clientError);
-      return null;
-    }
+  const save = async (mode) => {
+    if (!validateBeforeSave(mode)) return null;
 
     setSaving(true);
     setError("");
@@ -167,34 +217,37 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
         const res = await eventApi.create(dto);
         const created = res.data?.data;
         onCreated(created);
+        toast.success("Draft created. You can keep configuring the concert.");
         return created;
       }
 
       const res = await eventApi.update(eventId, dto);
       const updated = res.data?.data;
       onSaved(updated);
+      toast.success("Event info saved.");
       return updated;
     } catch (err) {
       const apiErrors = err.response?.data?.errors;
-      setError(
+      const message =
         (apiErrors && apiErrors.join(" ")) ||
-          err.response?.data?.message ||
-          "Could not save the information. Please try again."
-      );
+        err.response?.data?.message ||
+        "Could not save the information. Please try again.";
+      setError(message);
+      toast.error(message);
       return null;
     } finally {
       setSaving(false);
     }
   };
 
-  const handleSaveDraft = () => save();
+  const handleSaveDraft = () => save("draft");
 
   const handleNext = async () => {
     if (readOnly) {
       onNext();
       return;
     }
-    const result = await save();
+    const result = await save("next");
     if (result) onNext();
   };
 
@@ -211,7 +264,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
 
       {error && <div className="ow-error">{error}</div>}
 
-      <fieldset disabled={readOnly || saving} className="ow-fieldset">
+      <fieldset ref={formRef} disabled={readOnly || saving} className="ow-fieldset">
         <div className="ow-grid">
           <label className="ow-field ow-span-2">
             <span>Event name *</span>
@@ -219,6 +272,8 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
               name="title"
               value={form.title}
               onChange={handleChange}
+              onBlur={() => setTouched((c) => ({ ...c, title: true }))}
+              aria-invalid={invalid("title")}
               placeholder="e.g. Son Tung M-TP Live in Can Tho"
               maxLength={200}
             />
@@ -232,6 +287,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
               value={form.slug}
               onChange={handleChange}
               onBlur={() => setTouched((current) => ({ ...current, slug: true }))}
+              aria-invalid={invalid("slug")}
               placeholder={normalizeSlug(form.title) || "event-url-slug"}
               maxLength={200}
             />
@@ -241,14 +297,17 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
           </label>
 
           <label className="ow-field ow-span-2">
-            <span>Short description</span>
+            <span>Short description *</span>
             <input
               name="shortDescription"
               value={form.shortDescription}
               onChange={handleChange}
+              onBlur={() => setTouched((c) => ({ ...c, shortDescription: true }))}
+              aria-invalid={invalid("shortDescription")}
               placeholder="A short one-line intro, shown on the event card"
               maxLength={500}
             />
+            {fieldErrors.shortDescription && <span className="ow-field-error">{fieldErrors.shortDescription}</span>}
           </label>
 
           <label className="ow-field ow-span-2">
@@ -263,24 +322,31 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
           </label>
 
           <label className="ow-field">
-            <span>Starts *</span>
+            <span>Starts · date & time *</span>
             <input
               type="datetime-local"
               name="startsAt"
+              step="60"
+              min={nextLocalMinute(clock)}
               value={form.startsAt}
               onChange={handleChange}
+              onBlur={() => setTouched((c) => ({ ...c, startsAt: true }))}
+              aria-invalid={invalid("startsAt")}
             />
             {fieldErrors.startsAt && <span className="ow-field-error">{fieldErrors.startsAt}</span>}
           </label>
 
           <label className="ow-field">
-            <span>Ends *</span>
+            <span>Ends · date & time *</span>
             <input
               type="datetime-local"
               name="endsAt"
+              step="60"
+              min={form.startsAt ? nextLocalMinute(Date.parse(form.startsAt)) : nextLocalMinute(clock)}
               value={form.endsAt}
               onChange={handleChange}
-              aria-invalid={!!dateRangeError}
+              onBlur={() => setTouched((c) => ({ ...c, endsAt: true }))}
+              aria-invalid={invalid("endsAt")}
             />
             {fieldErrors.endsAt && (
               <span className="ow-field-error">{fieldErrors.endsAt}</span>
@@ -288,31 +354,43 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
           </label>
 
           <label className="ow-field ow-span-2">
-            <span>Venue name</span>
+            <span>Venue name *</span>
             <input
               name="locationName"
               value={form.locationName}
               onChange={handleChange}
+              onBlur={() => setTouched((c) => ({ ...c, locationName: true }))}
+              aria-invalid={invalid("locationName")}
               placeholder="e.g. Can Tho Convention Center"
               maxLength={200}
             />
+            {fieldErrors.locationName && <span className="ow-field-error">{fieldErrors.locationName}</span>}
           </label>
 
           <label className="ow-field ow-span-2">
-            <span>Address</span>
+            <span>Address *</span>
             <input
               name="address"
               value={form.address}
               onChange={handleChange}
+              onBlur={() => setTouched((c) => ({ ...c, address: true }))}
+              aria-invalid={invalid("address")}
               placeholder="Street number, street name..."
               maxLength={300}
             />
+            {fieldErrors.address && <span className="ow-field-error">{fieldErrors.address}</span>}
           </label>
 
 
           <label className="ow-field">
-            <span>City</span>
-            <select name="city" value={form.city} onChange={handleChange}>
+            <span>City *</span>
+            <select
+              name="city"
+              value={form.city}
+              onChange={handleChange}
+              onBlur={() => setTouched((c) => ({ ...c, city: true }))}
+              aria-invalid={invalid("city")}
+            >
               <option value="">-- Select a province/city --</option>
               {VN_PROVINCES.map((p) => (
                 <option key={p} value={p}>
@@ -320,6 +398,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
                 </option>
               ))}
             </select>
+            {fieldErrors.city && <span className="ow-field-error">{fieldErrors.city}</span>}
           </label>
 
           <label className="ow-field">
@@ -330,6 +409,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
               name="minTicketsPerAccount"
               value={form.minTicketsPerAccount}
               onChange={handleChange}
+              aria-invalid={invalid("minTicketsPerAccount")}
             />
             {fieldErrors.minTicketsPerAccount && <span className="ow-field-error">{fieldErrors.minTicketsPerAccount}</span>}
           </label>
@@ -342,6 +422,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
               name="maxTicketsPerAccount"
               value={form.maxTicketsPerAccount}
               onChange={handleChange}
+              aria-invalid={invalid("maxTicketsPerAccount")}
             />
             {fieldErrors.maxTicketsPerAccount && <span className="ow-field-error">{fieldErrors.maxTicketsPerAccount}</span>}
           </label>
@@ -384,7 +465,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
           type="button"
           className="tb-btn tb-btn-outline"
           onClick={handleSaveDraft}
-          disabled={saving || slugState.checking || readOnly || hasLiveErrors}
+          disabled={saving || slugState.checking || readOnly}
         >
           {saving ? "Saving..." : "💾 Save draft"}
         </button>
@@ -392,7 +473,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
           type="button"
           className="tb-btn tb-btn-primary"
           onClick={handleNext}
-          disabled={saving || slugState.checking || (!readOnly && hasLiveErrors)}
+          disabled={saving || slugState.checking}
         >
           {readOnly ? "Next →" : saving ? "Saving..." : "Save & Next →"}
         </button>

@@ -741,8 +741,8 @@ export default function SelectTicketPage() {
                       <div
                         className="tb-seat-grid"
                         style={{
-                          gridTemplateColumns: `repeat(${columns}, minmax(12px, 1fr))`,
-                          gridTemplateRows: `repeat(${rows}, minmax(12px, 1fr))`,
+                          gridTemplateColumns: `repeat(${columns}, var(--seat-size))`,
+                          gridTemplateRows: `repeat(${rows}, var(--seat-size))`,
                         }}
                       >
                         {seats.map((seat) => {

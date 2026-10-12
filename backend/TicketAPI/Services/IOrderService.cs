@@ -16,5 +16,7 @@ namespace TicketAPI.Services
         Task ConfirmPaymentAsync(int orderId, long amount, string transactionRef);
 
         Task<TicketQrResponseDto> RotateTicketQrAsync(int ticketId, int userId);
+
+        Task<List<OrderHistoryItemDto>> GetOrderHistoryAsync(int customerId);
     }
 }

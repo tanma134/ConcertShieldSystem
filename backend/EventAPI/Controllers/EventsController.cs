@@ -492,5 +492,23 @@ namespace EventAPI.Controllers
                 });
             }
         }
+        [HttpPut("{eventId}/ticket-types/{ticketTypeId}/release-returned")]
+        public async Task<IActionResult> ReleaseReturnedTicket(
+            int eventId, int ticketTypeId,
+            [FromQuery] int quantity,
+            [FromHeader(Name = "X-Internal-Api-Key")] string apiKey,
+            [FromServices] IConfiguration configuration)
+        {
+            var expectedKey = configuration["EventApi:InternalApiKey"];
+            if (string.IsNullOrWhiteSpace(expectedKey) || !string.Equals(apiKey, expectedKey, StringComparison.Ordinal))
+                return Unauthorized(new { success = false, message = "Invalid service credentials." });
+            if (quantity <= 0) return BadRequest(new { success = false, message = "Quantity must be positive." });
+
+            var released = await _eventService.ReleaseReturnedTicketAsync(eventId, ticketTypeId, quantity);
+            return released
+                ? Ok(new { success = true, message = "Returned ticket released back to inventory." })
+                : NotFound(new { success = false, message = "Event ticket type not found." });
+        }
+
     }
 }

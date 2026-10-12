@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using EventAPI.Common;
 using EventAPI.Data;
 using EventAPI.DTOs;
@@ -17,8 +18,9 @@ namespace EventAPI.Services
         private readonly ICloudinaryService _cloudinary;
         private readonly EventDbContext _context; // only used for unique-slug lookup (reuses existing SlugHelper)
         private readonly ILogger<EventService> _logger;
+        private readonly GovernanceService _governance;
 
-        /// <summary>CategoryId 1 == Music. Concerts are always Music in this system.</summary>
+        // CategoryId 1 == Music. Concerts are always Music in this system.
         public const int MusicCategoryId = 1;
         public const string MusicCategoryName = "Music";
 
@@ -30,7 +32,7 @@ namespace EventAPI.Services
             IIdentityRoleClient roleClient,
             ICloudinaryService cloudinary,
             EventDbContext context,
-            ILogger<EventService> logger)
+            ILogger<EventService> logger, GovernanceService governance)
         {
             _eventRepository = eventRepository;
             _ticketTypeRepository = ticketTypeRepository;
@@ -40,6 +42,7 @@ namespace EventAPI.Services
             _cloudinary = cloudinary;
             _context = context;
             _logger = logger;
+            _governance = governance;
         }
 
         public async Task<EventResponseDTO> CreateAsync(CreateEventDTO dto, int organizerId)
@@ -102,10 +105,10 @@ namespace EventAPI.Services
             };
         }
 
-        /// <param name="publicOnly">
-        /// True for anonymous/public endpoints: a concert that isn't Published is
-        /// reported as "not found" so drafts can't be discovered by guessing ids.
-        /// </param>
+        // 
+        // True for anonymous/public endpoints: a concert that isn't Published is
+        // reported as "not found" so drafts can't be discovered by guessing ids.
+        // 
         public async Task<EventResponseDTO> GetByIdAsync(int id, bool incrementView = false, bool publicOnly = true)
         {
             var entity = await _eventRepository.GetByIdAsync(id, includeChildren: true)
@@ -309,7 +312,8 @@ namespace EventAPI.Services
 
         public async Task<EventResponseDTO> SubmitAsync(int id, int callerId)
         {
-            var entity = await GetOwnedEntityAsync(id, callerId, isAdmin: false);
+            await using var submissionTransaction = await _context.Database.BeginTransactionAsync();
+            var entity = await _governance.GetAsync(id, callerId, false, true, CancellationToken.None);
 
             var status = EventStatus.Normalize(entity.Status);
             if (!EventStatus.Submittable.Contains(status))
@@ -321,12 +325,17 @@ namespace EventAPI.Services
             if (!validation.IsValid)
                 throw new SubmissionValidationException(validation);
 
+            await _governance.EnsureCompleteAsync(entity, CancellationToken.None);
+            if (entity.ComplianceReviewedVersion == entity.ComplianceVersion && entity.ComplianceStatus != "Approved")
+                throw new InvalidOperationException("Replace or supplement the reviewed documents before resubmitting.");
+            entity.ComplianceStatus = GovernanceRules.ComplianceApproved(entity) ? "Approved" : "PendingReview";
             entity.Status = EventStatus.Pending;
             entity.RejectedReason = null;
             entity.RejectedAt = null;
             entity.SubmittedAt = DateTime.UtcNow;
             entity.UpdatedBy = callerId;
             await _eventRepository.UpdateAsync(entity);
+            await submissionTransaction.CommitAsync();
 
             _logger.LogInformation("Concert {EventId} submitted for approval by user {UserId}", id, callerId);
 
@@ -370,18 +379,19 @@ namespace EventAPI.Services
         public async Task<(EventResponseDTO Event, GrantRoleResult RoleGrant)> ApproveAsync(
             int id, int adminId, string? adminBearerToken)
         {
-            var entity = await _eventRepository.GetByIdAsync(id)
-                ?? throw new KeyNotFoundException($"Event {id} not found.");
+            await using var approvalTransaction = await _context.Database.BeginTransactionAsync();
+            var entity = await _governance.GetAsync(id, adminId, true, true, CancellationToken.None);
 
             var status = EventStatus.Normalize(entity.Status);
             if (status != EventStatus.Pending)
                 throw new InvalidOperationException($"Only Pending concerts can be approved. Current status: '{status}'.");
 
-            // Re-run the publication checks: the concert has been sitting in the queue
-            // and something (e.g. a deleted ticket type) may have changed since submit.
-            var validation = await _submissionValidator.ValidateAsync(id);
-            if (!validation.IsValid)
-                throw new SubmissionValidationException(validation);
+            // Duyệt đúng phiên bản hồ sơ và cấu hình hiện tại trước khi Published.
+            await _governance.EnsureCompleteAsync(entity, CancellationToken.None);
+            if (!GovernanceRules.ComplianceApproved(entity))
+                throw new InvalidOperationException("The current compliance documents must be approved first.");
+            var publication = await _submissionValidator.ValidateAsync(id);
+            if (!publication.IsValid) throw new SubmissionValidationException(publication);
 
             var now = DateTime.UtcNow;
             entity.Status = EventStatus.Published;
@@ -391,88 +401,9 @@ namespace EventAPI.Services
             entity.PublishedAt = now;
             entity.ReviewedBy = adminId;
             entity.UpdatedBy = adminId;
+            _governance.Queue("Notification", new NotificationMessage(entity.OrganizerId, "Concert approved", $"{entity.Title} has been published.", "event_approved", $"/events/{entity.Slug}"));
             await _eventRepository.UpdateAsync(entity);
-
-            _logger.LogInformation("Concert {EventId} approved and published by admin {AdminId}", id, adminId);
-
-            var organizerUserId = entity.OrganizerId;
-            var eventTitle = entity.Title;
-            var eventSlug = entity.Slug;
-            _ = Task.Run(async () =>
-            {
-                // 1. Direct persistence to notification_db
-                try
-                {
-                    using var conn = new Npgsql.NpgsqlConnection("Host=localhost;Port=5432;Database=notification_db;Username=postgres;Password=123456");
-                    await conn.OpenAsync();
-                    // 1. Notification to Organizer
-                    using (var cmd = new Npgsql.NpgsqlCommand(
-                        "INSERT INTO notifications (user_id, title, message, content, type, category, target_url, is_read, created_at, is_deleted) VALUES (@uid, @title, @msg, @content, @type, @cat, @url, false, NOW(), false);", conn))
-                    {
-                        cmd.Parameters.AddWithValue("uid", organizerUserId);
-                        cmd.Parameters.AddWithValue("title", "Sự kiện của bạn đã được phê duyệt");
-                        var msg = $"Chúc mừng! Sự kiện '{eventTitle}' của bạn đã được Admin phê duyệt và xuất bản.";
-                        cmd.Parameters.AddWithValue("msg", msg);
-                        cmd.Parameters.AddWithValue("content", msg);
-                        cmd.Parameters.AddWithValue("type", "event_approved");
-                        cmd.Parameters.AddWithValue("cat", "event_approved");
-                        cmd.Parameters.AddWithValue("url", $"/events/{eventSlug}");
-                        await cmd.ExecuteNonQueryAsync();
-                    }
-
-                    // 2. Broadcast Notification to all Customers for the new published Event
-                    using (var cmd2 = new Npgsql.NpgsqlCommand(
-                        "INSERT INTO notifications (user_id, title, message, content, type, category, target_url, is_read, created_at, is_deleted) VALUES (@uid, @title, @msg, @content, @type, @cat, @url, false, NOW(), false);", conn))
-                    {
-                        cmd2.Parameters.AddWithValue("uid", 0);
-                        cmd2.Parameters.AddWithValue("title", $"Sự kiện mới: {eventTitle}");
-                        var msg2 = $"Sự kiện '{eventTitle}' đã chính thức được phê duyệt và mở bán vé! Mua vé ngay hôm nay.";
-                        cmd2.Parameters.AddWithValue("msg", msg2);
-                        cmd2.Parameters.AddWithValue("content", msg2);
-                        cmd2.Parameters.AddWithValue("type", "event_new");
-                        cmd2.Parameters.AddWithValue("cat", "event_new");
-                        cmd2.Parameters.AddWithValue("url", $"/events/{eventSlug}");
-                        await cmd2.ExecuteNonQueryAsync();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Direct DB notification failed for event approval {EventId}", id);
-                }
-
-                // 2. HTTP Realtime ping
-                try
-                {
-                    var handler = new System.Net.Http.HttpClientHandler
-                    {
-                        ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true
-                    };
-                    using var httpClient = new System.Net.Http.HttpClient(handler) { Timeout = TimeSpan.FromSeconds(3) };
-                    var payload = new
-                    {
-                        userId = organizerUserId,
-                        title = "Sự kiện của bạn đã được phê duyệt",
-                        message = $"Chúc mừng! Sự kiện '{eventTitle}' của bạn đã được Admin phê duyệt và xuất bản.",
-                        category = "event_approved",
-                        targetUrl = $"/events/{eventSlug}"
-                    };
-                    var content = new System.Net.Http.StringContent(System.Text.Json.JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
-                    var endpoints = new[] { "https://localhost:7197/api/notifications", "http://localhost:5174/api/notifications" };
-                    foreach (var ep in endpoints)
-                    {
-                        try
-                        {
-                            var res = await httpClient.PostAsync(ep, content);
-                            if (res.IsSuccessStatusCode) break;
-                        }
-                        catch { }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to send HTTP notification for approved event {EventId}", id);
-                }
-            });
+            await approvalTransaction.CommitAsync();
 
             var roleGrant = await _roleClient.GrantRoleAsync(
                 entity.OrganizerId, "Organizer", adminBearerToken);
@@ -610,6 +541,9 @@ namespace EventAPI.Services
 
         public static EventResponseDTO MapToResponse(Event e) => new()
         {
+            ComplianceStatus = e.ComplianceStatus,
+            ScheduleAnnounced = e.Status != EventStatus.Postponed,
+            CanSell = EventStatus.Normalize(e.Status) == EventStatus.Published && !e.SalesFrozen && GovernanceRules.ComplianceApproved(e) && e.StartsAt > DateTime.UtcNow && e.TicketTypes.Any(t => !t.IsDeleted && t.Status == "Active" && t.Quantity > t.SoldQuantity && (!t.SalesStartsAt.HasValue || t.SalesStartsAt <= DateTime.UtcNow) && (!t.SalesEndsAt.HasValue || t.SalesEndsAt > DateTime.UtcNow)),
             EventId = e.EventId,
             OrganizerId = e.OrganizerId,
             CategoryId = e.CategoryId,
@@ -683,10 +617,10 @@ namespace EventAPI.Services
             RejectedReason = e.RejectedReason
         };
 
-        /// <summary>
-        /// MapToResponse plus the seating chart, which lives in its own aggregate and
-        /// therefore isn't part of the Event's Include graph.
-        /// </summary>
+        // 
+        // MapToResponse plus the seating chart, which lives in its own aggregate and
+        // therefore isn't part of the Event's Include graph.
+        // 
         private async Task<EventResponseDTO> MapToResponseWithSeatingAsync(Event e)
         {
             var dto = MapToResponse(e);
@@ -775,5 +709,8 @@ namespace EventAPI.Services
 
             return await _eventRepository.ConfirmPaidOrderSaleAsync(eventId, request.OrderId, request.Items);
         }
+        public Task<bool> ReleaseReturnedTicketAsync(int eventId, int ticketTypeId, int quantity)
+            => _eventRepository.ReleaseReturnedTicketAsync(eventId, ticketTypeId, quantity);
+
     }
 }

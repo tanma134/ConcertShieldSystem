@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using TicketAPI.API;
 using TicketAPI.DTOs;
@@ -13,6 +13,8 @@ namespace TicketAPI.Services
     {
         private readonly TicketDbContext _context;
         private readonly IEventApiClient _eventApiClient;
+        private readonly EventEligibilityClient _eligibility;
+        private readonly EventChangeService _changes;
         private readonly IHoldService _holdService;
         private readonly IEmailService _emailService;
         private readonly IHttpClientFactory _httpClientFactory;
@@ -20,7 +22,7 @@ namespace TicketAPI.Services
         private readonly ITicketRepository _ticketRepository;
         private readonly ILogger<HoldService> _logger;
 
-        public OrderService(TicketDbContext context, IEventApiClient eventApiClient, IHoldService holdService, IHttpClientFactory httpClientFactory, IOrderRepository orderRepository, ILogger<HoldService> logger, IEmailService emailService, ITicketRepository ticketRepository)
+        public OrderService(TicketDbContext context, IEventApiClient eventApiClient, IHoldService holdService, IHttpClientFactory httpClientFactory, IOrderRepository orderRepository, ILogger<HoldService> logger, IEmailService emailService, ITicketRepository ticketRepository, EventEligibilityClient eligibility, EventChangeService changes)
         {
             _context = context;
             _eventApiClient = eventApiClient;
@@ -28,14 +30,27 @@ namespace TicketAPI.Services
             _httpClientFactory = httpClientFactory;
             _orderRepository = orderRepository;
             _logger = logger;
+            _eligibility = eligibility;
+            _changes = changes;
             _emailService = emailService;
             _ticketRepository = ticketRepository;
         }
 
         public async Task<int> Add(CreateOrderDTO dto, int customerId)
         {
+            if (string.IsNullOrWhiteSpace(dto.HoldId))
+                throw new ArgumentException("HoldId không hợp lệ.");
+
+            var hold = await _holdService.GetHoldDetailsAsync(
+                dto.HoldId,
+                customerId);
+
+            if (hold.EventId != dto.EventId)
+                throw new ArgumentException("Hold không thuộc sự kiện này.");
+
             await ValidateRedisHoldAsync(dto, customerId);
 
+            await _eligibility.EnsureSalesAsync(dto.EventId);
             var eventInfo = await _eventApiClient.GetEventByIdAsync(dto.EventId);
             if (eventInfo == null) throw new Exception("Không tìm thấy sự kiện");
             if (eventInfo.Status != "Published") throw new Exception($"Sự kiện không mở bán. (Trạng thái: {eventInfo.Status})");
@@ -53,7 +68,8 @@ namespace TicketAPI.Services
                 StartsAt = eventInfo.StartsAt,
                 EndsAt = eventInfo.EndsAt,
 
-                HoldToken = Guid.NewGuid().ToString(),
+                HoldToken = hold.HoldId,
+                ExpiresAt = hold.ExpiresAtUtc,
                 Status = "Pending",
 
                 OrderDate = DateTime.UtcNow,
@@ -70,6 +86,8 @@ namespace TicketAPI.Services
                 var ticketType = eventInfo.TicketTypes.FirstOrDefault(t => t.TicketTypeId == detailDto.TicketTypeId);
                 if (ticketType == null) throw new Exception($"Loại vé ID {detailDto.TicketTypeId} không tồn tại.");
 
+                if (ticketType.Status != "Active" || ticketType.SalesStartsAt > DateTime.UtcNow || ticketType.SalesEndsAt <= DateTime.UtcNow)
+                    throw new InvalidOperationException("This ticket type is not currently on sale.");
                 if (detailDto.Quantity < ticketType.MinPerOrder) throw new Exception($"Vé {ticketType.TypeName} yêu cầu ít nhất {ticketType.MinPerOrder} vé.");
                 if (detailDto.Quantity > ticketType.MaxPerOrder) throw new Exception($"Vé {ticketType.TypeName} tối đa {ticketType.MaxPerOrder} vé.");
 
@@ -125,6 +143,7 @@ namespace TicketAPI.Services
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
+                await _eligibility.EnsureSalesAsync(dto.EventId);
                 await _orderRepository.AddCompleteOrderAsync(newOrder);
 
                 await _context.SaveChangesAsync();
@@ -206,6 +225,7 @@ namespace TicketAPI.Services
                 {
                     throw new Exception("Not found order");
                 }
+                await _eligibility.EnsureSalesAsync(order.EventId);
                 var createVnPayPaymentRequestDto = new CreateVnPayPaymentRequestDto
                 {
                     FinalAmount = order.FinalAmount,
@@ -240,6 +260,8 @@ namespace TicketAPI.Services
             if (order == null)
                 throw new KeyNotFoundException("Order not found.");
 
+            await _changes.LockEventAsync(order.EventId, CancellationToken.None);
+            await _context.Entry(order).ReloadAsync();
             if (order.Status == "Paid")
                 return;
 
@@ -365,6 +387,22 @@ namespace TicketAPI.Services
             await _ticketRepository.AddQrTokensAsync(qrTokens);
             await _context.SaveChangesAsync();
 
+            // Bổ sung vé vào đợt đổi lịch (nếu có) là việc phụ. Dùng savepoint để nếu bước này lỗi
+            // (ví dụ DB chưa có bảng applied_event_changes) thì chỉ hoàn tác riêng nó, thanh toán vẫn thành công.
+            await dbTransaction.CreateSavepointAsync("late_payment");
+            try
+            {
+                await _changes.AttachLatePaymentAsync(order, tickets, CancellationToken.None);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                await dbTransaction.RollbackToSavepointAsync("late_payment");
+                _logger.LogError(ex,
+                    "Không gắn được Order {OrderId} vào đợt đổi lịch; thanh toán vẫn được xác nhận.",
+                    order.OrderId);
+            }
+
             await dbTransaction.CommitAsync();
 
             try
@@ -392,9 +430,20 @@ namespace TicketAPI.Services
         public async Task<TicketQrResponseDto> RotateTicketQrAsync(int ticketId, int userId)
         {
             var ticket = await _ticketRepository.GetTicketForQrRotationAsync(ticketId, userId);
+            if (ticket != null)
+            {
+                var ev = await _eligibility.GetAsync(ticket.EventId);
+                if (ev.Status != "Published") throw new InvalidOperationException("QR is unavailable while this concert is postponed or cancelled.");
+            }
 
             if (ticket == null)
                 throw new KeyNotFoundException("Không tìm thấy vé.");
+
+            if (ticket.Status == "ReturnPending")
+            {
+                throw new InvalidOperationException(
+                    "Vé đang chờ xử lý yêu cầu trả vé (ReturnPending) nên không thể tạo mã QR.");
+            }
 
             if (ticket.Order.Status != "Paid" ||
                 ticket.Status != "Active" ||
@@ -446,6 +495,28 @@ namespace TicketAPI.Services
                 QrToken = newToken,
                 ExpiresAtUtc = expiresAt
             };
+        }
+
+        public async Task<List<OrderHistoryItemDto>> GetOrderHistoryAsync(int customerId)
+        {
+            var orders = await _orderRepository.GetOrdersByCustomerIdAsync(customerId);
+
+            return orders.Select(order => new OrderHistoryItemDto
+            {
+                OrderId = order.OrderId,
+                EventId = order.EventId,
+                EventName = order.EventName,
+                PosterUrl = order.PosterUrl,
+                OrderDate = order.OrderDate,
+                StartsAt = order.StartsAt,
+                TotalAmount = order.TotalAmount,
+                DiscountAmount = order.DiscountAmount ?? 0,
+                FinalAmount = order.FinalAmount,
+                PaymentMethod = order.PaymentMethod,
+                Status = order.Status,
+                ExpiresAt = order.ExpiresAt,
+                TicketCount = order.OrderDetails?.Sum(detail => detail.Quantity) ?? 0
+            }).ToList();
         }
     }
 }

@@ -4,6 +4,7 @@ namespace NotificationAPI.Models
 {
     public class Notification
     {
+        public string? DeliveryKey { get; set; }
         public int NotificationId { get; set; }
         public int UserId { get; set; }
         public string Title { get; set; } = null!;

@@ -1,7 +1,9 @@
-﻿namespace BookingAPI.DTOS
+namespace BookingAPI.DTOS
 {
     public class TicketTypeApiResponseDto
     {
+        public DateTime? SalesStartsAt { get; set; }
+        public DateTime? SalesEndsAt { get; set; }
         public int TicketTypeId { get; set; }
         public string TypeName { get; set; } = null!;
         public long Price { get; set; }

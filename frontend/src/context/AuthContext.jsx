@@ -148,6 +148,8 @@ export function AuthProvider({ children }) {
 
   const isOrganizer = normalizedRoles.includes("organizer");
 
+  const isStaff = normalizedRoles.includes("staff");
+
   // =========================
   // PROVIDER
   // =========================
@@ -165,6 +167,7 @@ export function AuthProvider({ children }) {
         isAuthenticated,
         isAdmin,
         isOrganizer,
+        isStaff,
       }}
     >
       {children}

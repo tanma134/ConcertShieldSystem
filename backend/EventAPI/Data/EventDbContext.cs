@@ -23,10 +23,12 @@ namespace EventAPI.Data
         public virtual DbSet<SeatingTemplate> SeatingTemplates { get; set; } = null!;
 
         public virtual DbSet<EventSaleConfirmation> EventSaleConfirmations { get; set; } = null!;
+        public virtual DbSet<EventStaff> EventStaff { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.ConfigureGovernance();
 
             // Events
             modelBuilder.Entity<Event>(entity =>
@@ -365,6 +367,35 @@ namespace EventAPI.Data
                     .WithMany()
                     .HasForeignKey(x => x.EventId)
                     .HasConstraintName("fk_event_sale_confirmations_event");
+            });
+
+            modelBuilder.Entity<EventStaff>(entity =>
+            {
+                entity.ToTable("event_staff");
+
+                entity.HasKey(x => x.EventStaffId);
+
+                entity.Property(x => x.EventStaffId)
+                    .UseIdentityAlwaysColumn()
+                    .HasColumnName("event_staff_id");
+                entity.Property(x => x.EventId).HasColumnName("event_id");
+                entity.Property(x => x.StaffUserId).HasColumnName("staff_user_id");
+                entity.Property(x => x.GateName).HasMaxLength(100).HasDefaultValue("Main Gate").HasColumnName("gate_name");
+                entity.Property(x => x.CanReviewReturns).HasDefaultValue(false).HasColumnName("can_review_returns");
+                entity.Property(x => x.AssignedBy).HasColumnName("assigned_by");
+                entity.Property(x => x.AssignedAt).HasColumnName("assigned_at");
+                entity.Property(x => x.IsActive).HasDefaultValue(true).HasColumnName("is_active");
+                entity.Property(x => x.UnassignedBy).HasColumnName("unassigned_by");
+                entity.Property(x => x.UnassignedAt).HasColumnName("unassigned_at");
+
+                entity.HasIndex(x => new { x.EventId, x.StaffUserId }, "uq_event_staff_active")
+                    .IsUnique()
+                    .HasFilter("is_active = true");
+
+                entity.HasOne<Event>()
+                    .WithMany()
+                    .HasForeignKey(x => x.EventId)
+                    .HasConstraintName("fk_event_staff_event");
             });
         }
     }

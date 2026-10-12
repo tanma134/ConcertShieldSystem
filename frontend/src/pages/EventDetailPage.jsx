@@ -135,15 +135,15 @@ export default function EventDetailPage() {
   }, [event, now]);
 
   const canBuy =
-    timingStatus === "ongoing" &&
+    event?.canSell === true &&
     event?.status !== "Cancelled" &&
     (availableTickets === null || availableTickets > 0);
 
   const buyBlockedMessage = useMemo(() => {
     if (event?.status === "Cancelled") return "This event has been cancelled.";
     if (timingStatus === "ended") return "This event has already ended.";
-    if (timingStatus === "upcoming")
-      return "Ticket sales open once the event begins.";
+    if (event?.status === "Postponed") return "This concert is postponed. The new date will be announced.";
+    if (!event?.canSell) return "Ticket sales are not open yet.";
     if (availableTickets === 0) return "Sold out.";
     return null;
   }, [event, timingStatus, availableTickets]);
@@ -286,7 +286,7 @@ export default function EventDetailPage() {
                       strokeLinecap="round"
                     />
                   </svg>
-                  {formatDateRange(event.startsAt, event.endsAt)}
+                  {event.scheduleAnnounced === false ? "To be announced" : formatDateRange(event.startsAt, event.endsAt)}
                 </div>
 
                 {(event.locationName || event.city) && (

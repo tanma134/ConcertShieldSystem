@@ -1,4 +1,4 @@
-﻿using PaymentAPI.DTOs;
+using PaymentAPI.DTOs;
 
 namespace PaymentAPI.API
 {
@@ -19,6 +19,14 @@ namespace PaymentAPI.API
             int orderId,
             ConfirmOrderPaymentRequestDTO request)
         {
+            var (ok, _) = await ConfirmOrderPaymentWithReasonAsync(orderId, request);
+            return ok;
+        }
+
+        public async Task<(bool Ok, string? Error)> ConfirmOrderPaymentWithReasonAsync(
+            int orderId,
+            ConfirmOrderPaymentRequestDTO request)
+        {
             try
             {
                 using var response = await _httpClient.PutAsJsonAsync(
@@ -26,7 +34,7 @@ namespace PaymentAPI.API
                     request);
 
                 if (response.IsSuccessStatusCode)
-                    return true;
+                    return (true, null);
 
                 var body = await response.Content.ReadAsStringAsync();
 
@@ -36,7 +44,7 @@ namespace PaymentAPI.API
                     response.StatusCode,
                     body);
 
-                return false;
+                return (false, ExtractReason((int)response.StatusCode, body));
             }
             catch (Exception ex)
             {
@@ -45,8 +53,24 @@ namespace PaymentAPI.API
                     "Lỗi gọi TicketAPI xác nhận thanh toán cho Order {OrderId}",
                     orderId);
 
-                return false;
+                return (false, $"Cannot reach TicketAPI ({ex.GetType().Name}: {ex.Message}).");
             }
+        }
+
+        // Prefers the "message" field TicketAPI returns; falls back to the start of the raw body.
+        private static string ExtractReason(int status, string body)
+        {
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(body);
+                if (doc.RootElement.TryGetProperty("message", out var m) && m.ValueKind == System.Text.Json.JsonValueKind.String)
+                    return $"TicketAPI {status}: {m.GetString()}";
+            }
+            catch (System.Text.Json.JsonException) { }
+
+            var text = string.IsNullOrWhiteSpace(body) ? "no details" : body.Trim();
+            if (text.Length > 300) text = text[..300] + "...";
+            return $"TicketAPI {status}: {text}";
         }
     }
 }

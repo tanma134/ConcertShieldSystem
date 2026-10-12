@@ -10,14 +10,16 @@ namespace TicketAPI.Controllers
     public class HoldsController : ControllerBase
     {
         private readonly IHoldService _holdService;
+        private readonly TicketAPI.API.EventEligibilityClient _eligibility;
         private readonly ILogger<HoldsController> _logger;
 
         public HoldsController(
             IHoldService holdService,
-            ILogger<HoldsController> logger)
+            ILogger<HoldsController> logger, TicketAPI.API.EventEligibilityClient eligibility)
         {
             _holdService = holdService;
             _logger = logger;
+            _eligibility = eligibility;
         }
 
         [HttpPost("session")]
@@ -33,6 +35,7 @@ namespace TicketAPI.Controllers
 
             try
             {
+                await _eligibility.EnsureSalesAsync(request.EventId);
                 var session = await _holdService.CreateHoldSessionAsync(
                     userId.Value,
                     request,
@@ -173,6 +176,66 @@ namespace TicketAPI.Controllers
             catch (UnauthorizedAccessException)
             {
                 return Forbid();
+            }
+        }
+
+        [HttpPost("session/{holdId}/cancel")]
+        public async Task<IActionResult> CancelHoldSession(string holdId)
+        {
+            var userId = GetUserId();
+
+            if (userId == null)
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "Token không hợp lệ."
+                });
+            }
+
+            try
+            {
+                await _holdService.CancelHoldSessionAsync(holdId, userId.Value);
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Reservation cancelled and tickets released."
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Lỗi hủy hold session {HoldId} cho user {UserId}",
+                    holdId,
+                    userId.Value);
+
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Could not cancel the reservation."
+                });
             }
         }
     }

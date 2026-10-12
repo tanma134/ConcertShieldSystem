@@ -10,7 +10,7 @@ namespace TicketAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class OrdersController : ControllerBase 
+    public class OrdersController : ControllerBase
     {
         private readonly IOrderService _orderService;
         private readonly ILogger<OrdersController> _logger;
@@ -224,6 +224,27 @@ namespace TicketAPI.Controllers
             {
                 return Conflict(new { success = false, message = ex.Message });
             }
+        }
+
+        [HttpGet("my-orders")]
+        public async Task<IActionResult> GetMyOrderHistory()
+        {
+            var customerIdValue =
+                User.FindFirst(ClaimTypes.NameIdentifier)?.Value ??
+                User.FindFirst("sub")?.Value;
+
+            if (!int.TryParse(customerIdValue, out var customerId))
+            {
+                return Unauthorized();
+            }
+
+            var orders = await _orderService.GetOrderHistoryAsync(customerId);
+
+            return Ok(new
+            {
+                success = true,
+                data = orders
+            });
         }
     }
 }
