@@ -41,6 +41,8 @@ public partial class AdminDbContext : DbContext
         {
             entity.HasKey(e => e.FraudAlertId).HasName("fraud_alerts_pkey");
 
+            entity.HasIndex(e => e.AssignedTo, "ix_fraud_alerts_assigned_to").HasFilter("(assigned_to IS NOT NULL)");
+
             entity.Property(e => e.FraudAlertId).UseIdentityAlwaysColumn();
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.RiskLevel).HasDefaultValueSql("'Low'::character varying");

@@ -580,7 +580,9 @@ public sealed class FraudAlertService : IFraudAlertService
         Status = a.Status,
         CreatedAt = a.CreatedAt,
         ReviewedBy = a.ReviewedBy,
-        ReviewedAt = a.ReviewedAt
+        ReviewedAt = a.ReviewedAt,
+        AssignedTo = a.AssignedTo,
+        AssignedAt = a.AssignedAt
     };
 
     private static RiskBlockResultDto ToResult(RiskDecision d) => new()

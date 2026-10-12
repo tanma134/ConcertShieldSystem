@@ -479,3 +479,52 @@
   .fr-page .fr-kv > span { margin-top: 10px; }
   .fr-page .fr-radios { grid-template-columns: 1fr; }
 }
+
+/* ==========================================================================
+   Fraud Case List (UC_18.8-18.10) + Risk Policy (UC_18.11)
+   ========================================================================== */
+.fr-page .fr-seg { display: inline-flex; border: 1px solid var(--fr-line); border-radius: 8px; overflow: hidden; }
+.fr-page .fr-seg button { height: 42px; padding: 0 16px; border: none; background: var(--fr-panel-2); color: var(--fr-ink-soft); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.fr-page .fr-seg button + button { border-left: 1px solid var(--fr-line); }
+.fr-page .fr-seg button.on { background: var(--fr-grad); color: #fff; }
+
+.fr-page .fr-check { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--fr-ink-soft); cursor: pointer; }
+.fr-page .fr-check input { width: 16px; height: 16px; accent-color: var(--fr-pink); }
+
+.fr-page .fr-sla-bar { height: 4px; border-radius: 4px; background: var(--fr-line); margin-top: 6px; overflow: hidden; min-width: 90px; }
+.fr-page .fr-sla-bar i { display: block; height: 100%; background: var(--fr-ok); }
+.fr-page .fr-sla-bar i.warn { background: var(--fr-warn); }
+.fr-page .fr-sla-bar i.bad { background: var(--fr-error); }
+
+.fr-page tr.fr-overdue td:first-child { box-shadow: inset 3px 0 0 var(--fr-error); }
+
+.fr-modal-back { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(5, 3, 12, .72); }
+.fr-modal { width: 100%; max-width: 520px; max-height: 92vh; overflow: auto; border-radius: 14px; background: #171325; border: 1px solid #2b2542; padding: 0 26px 24px; color: #fff; }
+.fr-modal header { margin: 0 -26px 18px; padding: 20px 26px; border-bottom: 1px solid #2b2542; }
+.fr-modal header h2 { margin: 0; font-size: 19px; }
+.fr-modal header p { margin: 4px 0 0; font-size: 13px; color: #b9adcf; }
+
+.fr-page .fr-group { margin-bottom: 18px; border: 1px solid var(--fr-line); border-radius: 12px; overflow: hidden; background: var(--fr-panel); }
+.fr-page .fr-group > summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 22px; cursor: pointer; font-size: 16px; font-weight: 700; color: var(--fr-ink); }
+.fr-page .fr-group > summary::-webkit-details-marker { display: none; }
+.fr-page .fr-group > summary small { font-weight: 400; font-size: 12.5px; color: var(--fr-ink-faint); }
+.fr-page .fr-group-body { padding: 4px 22px 20px; border-top: 1px solid var(--fr-line); }
+
+.fr-page .fr-param { display: grid; grid-template-columns: minmax(200px, 1fr) 220px; gap: 6px 24px; align-items: center; padding: 12px 0; }
+.fr-page .fr-param + .fr-param { border-top: 1px solid var(--fr-line); }
+.fr-page .fr-param code { font-size: 13px; color: var(--fr-ink); }
+.fr-page .fr-param small { display: block; margin-top: 3px; font-size: 12.5px; color: var(--fr-ink-faint); line-height: 1.45; }
+.fr-page .fr-param input, .fr-page .fr-param select { width: 100%; }
+.fr-page .fr-param.changed input, .fr-page .fr-param.changed select { border-color: var(--fr-warn); }
+.fr-page .fr-param .fr-was { font-size: 12px; color: var(--fr-warn); margin-top: 4px; }
+.fr-page .fr-param .fr-err { grid-column: 1 / -1; }
+
+.fr-page .fr-savebar { position: sticky; bottom: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 14px 20px; margin-top: 8px; border-radius: 12px; background: #1d1830; border: 1px solid var(--fr-pink); box-shadow: 0 -8px 30px rgba(0, 0, 0, .45); }
+
+.fr-page .fr-diff { width: 100%; border-collapse: collapse; font-size: 13px; }
+.fr-page .fr-diff td, .fr-page .fr-diff th { padding: 7px 8px; text-align: left; border-bottom: 1px solid var(--fr-line); }
+.fr-page .fr-diff th { color: var(--fr-ink-faint); font-weight: 600; }
+.fr-page .fr-diff .old { color: var(--fr-ink-faint); text-decoration: line-through; }
+.fr-page .fr-diff .new { color: var(--fr-ok); font-weight: 700; }
+
+@media (max-width: 720px) { .fr-page .fr-param { grid-template-columns: 1fr; } }
