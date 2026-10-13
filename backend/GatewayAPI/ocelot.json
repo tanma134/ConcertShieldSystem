@@ -2569,6 +2569,60 @@
       }
     },
     {
+      "Key": "queue-prequeue-register",
+      "DownstreamPathTemplate": "/api/queue/{eventId}/prequeue/register",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7310
+        }
+      ],
+      "UpstreamPathTemplate": "/api/queue/{eventId}/prequeue/register",
+      "UpstreamHttpMethod": [
+        "Post"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
+    },
+    {
+      "Key": "queue-prequeue-configure",
+      "DownstreamPathTemplate": "/api/queue/{eventId}/prequeue/configure",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7310
+        }
+      ],
+      "UpstreamPathTemplate": "/api/queue/{eventId}/prequeue/configure",
+      "UpstreamHttpMethod": [
+        "Post"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
+    },
+    {
+      "Key": "queue-status",
+      "DownstreamPathTemplate": "/api/queue/{eventId}/status",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7310
+        }
+      ],
+      "UpstreamPathTemplate": "/api/queue/{eventId}/status",
+      "UpstreamHttpMethod": [
+        "Get"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
+    },
+    {
       "Key": "queue-position",
       "DownstreamPathTemplate": "/api/queue/{eventId}/position",
       "DownstreamScheme": "https",
@@ -3525,6 +3579,28 @@
       "UpstreamPathTemplate": "/api/chatbot/ask",
       "UpstreamHttpMethod": [
         "Post"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
+    },
+    {
+      "Key": "queue-admin-everything",
+      "DownstreamPathTemplate": "/api/queue/admin/{everything}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7310
+        }
+      ],
+      "UpstreamPathTemplate": "/api/queue/admin/{everything}",
+      "UpstreamHttpMethod": [
+        "Get",
+        "Post",
+        "Put",
+        "Patch",
+        "Delete"
       ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer"

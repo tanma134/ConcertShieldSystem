@@ -10,6 +10,7 @@ import { useAuth } from "../context/AuthContext";
 import { formatDateRange, formatPrice } from "../utils/format";
 import "../styles/theme-dark.css";
 import "./EventDetailPage.css";
+import "./VirtualQueuePage.css";
 
 const STATUS_LABELS = {
   Published: "On Sale",
@@ -252,6 +253,23 @@ export default function EventDetailPage() {
                   </div>
                 </section>
               )}
+
+              <section className="tb-detail-block queue-entry-block">
+                <div>
+                  <span className="queue-kicker">
+                    {event.requiresVirtualQueue ? "Virtual Queue" : "Virtual Queue Test"}
+                  </span>
+                  <h2>Fair access to tickets</h2>
+                  <p className="tb-detail-desc">
+                    {event.requiresVirtualQueue
+                      ? "To ensure fair access to tickets, customers enter a randomized virtual queue before ticket purchasing begins."
+                      : "Use this entry point to test the virtual queue flow for this event."}
+                  </p>
+                </div>
+                <Link className="tb-btn-primary" to={`/events/${event.eventId}/queue`}>
+                  Enter Virtual Queue
+                </Link>
+              </section>
 
               <ReviewSection eventId={event.eventId} />
             </div>

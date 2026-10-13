@@ -30,6 +30,11 @@ import EventConfigurationPage from "../pages/organizer/EventConfigurationPage";
 import AdminSeatingTemplatesPage from "../pages/admin/AdminSeatingTemplatesPage";
 import VoucherManagementPage from "../pages/admin/VoucherManagementPage";
 import NotificationCenterPage from "../pages/NotificationCenterPage";
+import VirtualQueuePage from "../pages/VirtualQueuePage";
+import TicketPlaceholderPage from "../pages/TicketPlaceholderPage";
+import QueueManagementPage from "../pages/admin/QueueManagementPage";
+import QueueAbuseAlertsPage from "../pages/admin/QueueAbuseAlertsPage";
+import QueueAbuseAlertDetailPage from "../pages/admin/QueueAbuseAlertDetailPage";
 
 export default function AppRoutes() {
   return (
@@ -45,6 +50,8 @@ export default function AppRoutes() {
           the matching EventAPI endpoints are all [AllowAnonymous]. */}
       <Route path="/" element={<HomePage />} />
       <Route path="/events/:slug" element={<EventDetailPage />} />
+      <Route path="/events/:eventId/queue" element={<ProtectedRoute><VirtualQueuePage /></ProtectedRoute>} />
+      <Route path="/events/:eventId/tickets" element={<ProtectedRoute><TicketPlaceholderPage /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><MyProfilePage /></ProtectedRoute>} />
       <Route path="/profile/edit" element={<ProtectedRoute><EditProfilePage /></ProtectedRoute>} />
 
@@ -141,6 +148,9 @@ export default function AppRoutes() {
           </AdminRoute>
         }
       />
+      <Route path="/admin/queue" element={<AdminRoute><QueueManagementPage /></AdminRoute>} />
+      <Route path="/admin/queue/abuse-alerts" element={<AdminRoute><QueueAbuseAlertsPage /></AdminRoute>} />
+      <Route path="/admin/queue/abuse-alerts/:alertId" element={<AdminRoute><QueueAbuseAlertDetailPage /></AdminRoute>} />
       <Route
         path="/admin/users"
         element={

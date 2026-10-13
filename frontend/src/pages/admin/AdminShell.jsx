@@ -18,6 +18,8 @@ const links = [
   ["/admin/wishlists", "Wishlist Management"],
   ["/admin/seating-templates", "Seating Templates"],
   ["/admin/vouchers", "Voucher Management"],
+  ["/admin/queue", "Virtual Queue"],
+  ["/admin/queue/abuse-alerts", "Queue Abuse Alerts"],
 ];
 
 export default function AdminShell({ children, title = "Admin Panel" }) {
