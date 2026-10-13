@@ -13,6 +13,7 @@ const eventApi = {
   getByCategory: (categoryId, filter = {}) =>
     axiosClient.get(`/events/category/${categoryId}`, { params: filter }),
   getBySlug: (slug) => axiosClient.get(`/events/slug/${slug}`),
+  getById: (id) => axiosClient.get(`/events/${id}`),
   checkSlug: (slug, excludeEventId = null) =>
     axiosClient.get("/events/slug-availability", {
       params: { slug, ...(excludeEventId ? { excludeEventId } : {}) },
