@@ -8,7 +8,7 @@ namespace AuthenticationAPI.Controllers
 {
     [ApiController]
     [Route("api/kyc")]
-    [Authorize]
+    [Authorize(Policy = "Customer")] // BR-40: only a Customer can use eKYC
     public class KycController : ControllerBase
     {
         private const long MaxImageBytes = 6 * 1024 * 1024; // 3 ảnh x 6MB < giới hạn request 20MB
@@ -16,12 +16,15 @@ namespace AuthenticationAPI.Controllers
 
         private readonly IKycService _kycService;
         private readonly IKycConsentService _consentService;
+        private readonly IKycAccessLogService _accessLog;
         private readonly ILogger<KycController> _logger;
 
-        public KycController(IKycService kycService, IKycConsentService consentService, ILogger<KycController> logger)
+        public KycController(IKycService kycService, IKycConsentService consentService,
+                             IKycAccessLogService accessLog, ILogger<KycController> logger)
         {
             _kycService = kycService;
             _consentService = consentService;
+            _accessLog = accessLog;
             _logger = logger;
         }
 
@@ -74,8 +77,17 @@ namespace AuthenticationAPI.Controllers
 
             try
             {
-                var result = await _kycService.SubmitAsync(request, userId);
+                var result = await _kycService.SubmitAsync(request, userId, HttpContext.Connection.RemoteIpAddress?.ToString());
                 return Ok(result);
+            }
+            catch (EkycLockedException ex)
+            {
+                // BR-03: 3 consecutive failures -> locked for 24 hours
+                return StatusCode(423, new
+                {
+                    message = $"Bạn đã xác thực thất bại 3 lần liên tiếp. Vui lòng thử lại sau {ex.LockedUntilUtc:yyyy-MM-dd HH:mm} (UTC).",
+                    lockedUntil = DateTime.SpecifyKind(ex.LockedUntilUtc, DateTimeKind.Utc)
+                });
             }
             catch (Exception ex)
             {
@@ -102,6 +114,24 @@ namespace AuthenticationAPI.Controllers
             catch (UnauthorizedAccessException)
             {
                 return Forbid();
+            }
+        }
+
+        /// <summary>BR-235: the user can see who accessed their eKYC data and for what purpose.</summary>
+        [HttpGet("access-logs/me")]
+        public async Task<IActionResult> GetMyAccessLogs([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        {
+            if (!TryGetCurrentUserId(out var userId))
+                return Unauthorized(new { message = "Token không hợp lệ" });
+
+            try
+            {
+                return Ok(await _accessLog.SearchMineAsync(userId, page, pageSize));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi đọc nhật ký truy cập eKYC của user {UserId}", userId);
+                return StatusCode(500, new { message = "Có lỗi xảy ra, vui lòng thử lại" });
             }
         }
 

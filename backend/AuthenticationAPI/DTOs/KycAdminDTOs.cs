@@ -52,9 +52,13 @@
     // ---------- 3.5 Retention ----------
     public class KycSettingDto
     {
-        /// <summary>0 = không tự động xóa.</summary>
+        /// <summary>Phải nằm trong [MinRetentionDays, MaxRetentionDays]; không còn giá trị 0.</summary>
         public int RetentionDays { get; set; }
         public bool KeepDocumentHashAfterDeletion { get; set; }
+        /// <summary>BR-217: shortest retention allowed (legal minimum).</summary>
+        public int MinRetentionDays { get; set; }
+        /// <summary>BR-217: longest retention allowed (not longer than necessary).</summary>
+        public int MaxRetentionDays { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public int? UpdatedBy { get; set; }
     }
@@ -74,12 +78,40 @@
         public DateTime RequestedAt { get; set; }
         public DateTime? ProcessedAt { get; set; }
         public int? ProcessedBy { get; set; }
+        public string? ReasonCode { get; set; }
         public string? Note { get; set; }
+        /// <summary>BR-56: deadline = RequestedAt + 72h.</summary>
+        public DateTime DueAt { get; set; }
+        public bool IsOverdue { get; set; }
     }
 
     public class RejectKycDeletionDto
     {
+        /// <summary>BR-228: LegalRetention | LegalHold | AuthorityRequest.</summary>
+        public string ReasonCode { get; set; } = "";
         public string Note { get; set; } = "";
+    }
+
+    // ---------- eKYC manual review (BR-50, BR-55, BR-109) ----------
+    public class KycReviewItemDto
+    {
+        public int EkycId { get; set; }
+        public int UserId { get; set; }
+        public string Status { get; set; } = "";
+        public decimal? FaceMatchScore { get; set; }
+        public bool? LivenessPassed { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+    public class RejectKycReviewDto
+    {
+        public string Reason { get; set; } = "";
+    }
+
+    public class SetKycLegalHoldDto
+    {
+        public bool Hold { get; set; }
+        public string? Reason { get; set; }
     }
 
     // ---------- 3.7 Access log ----------
@@ -93,6 +125,17 @@
         public string Action { get; set; } = "";
         public string? IpAddress { get; set; }
         public string? Details { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+    /// <summary>BR-235: what a data subject sees about access to their own eKYC data (no admin id, no IP).</summary>
+    public class KycMyAccessLogDto
+    {
+        public long Id { get; set; }
+        /// <summary>User | Admin | System</summary>
+        public string ActorType { get; set; } = "";
+        public string Action { get; set; } = "";
+        public string? Purpose { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 

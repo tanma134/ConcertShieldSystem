@@ -8,5 +8,7 @@ namespace AuthenticationAPI.Services
                       string action, string? ipAddress = null, string? details = null);
 
         Task<KycPagedResult<KycAccessLogDto>> SearchAsync(KycAccessLogQuery query);
+
+        Task<KycPagedResult<KycMyAccessLogDto>> SearchMineAsync(int userId, int page, int pageSize);
     }
 }

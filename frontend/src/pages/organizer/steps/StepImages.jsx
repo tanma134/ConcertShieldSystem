@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import eventApi from "../../../api/eventApi";
+import { useToast } from "../../../components/ToastProvider";
 import eventImageApi from "../../../api/eventImageApi";
 
 export default function StepImages({
@@ -13,6 +14,7 @@ export default function StepImages({
   const [gallery, setGallery] = useState([]);
   const [uploading, setUploading] = useState({ poster: false, banner: false, gallery: false });
   const [error, setError] = useState("");
+  const toast = useToast();
   const posterInput = useRef(null);
   const bannerInput = useRef(null);
   const galleryInput = useRef(null);
@@ -34,7 +36,9 @@ export default function StepImages({
   }, [eventId]);
 
   const handleError = (err, fallback) => {
-    setError(err.response?.data?.message || fallback);
+    const message = err.response?.data?.message || fallback;
+    setError(message);
+    toast.error(message);
   };
 
   const handlePosterChange = async (e) => {
@@ -45,6 +49,7 @@ export default function StepImages({
     try {
       await eventApi.uploadPoster(eventId, file);
       await onRefresh();
+      toast.success("Poster uploaded.");
     } catch (err) {
       handleError(err, "Failed to upload poster.");
     } finally {
@@ -58,6 +63,7 @@ export default function StepImages({
     try {
       await eventApi.deletePoster(eventId);
       await onRefresh();
+      toast.success("Poster removed.");
     } catch (err) {
       handleError(err, "Failed to delete poster.");
     }
@@ -71,6 +77,7 @@ export default function StepImages({
     try {
       await eventApi.uploadBanner(eventId, file);
       await onRefresh();
+      toast.success("Banner uploaded.");
     } catch (err) {
       handleError(err, "Failed to upload banner.");
     } finally {
@@ -84,6 +91,7 @@ export default function StepImages({
     try {
       await eventApi.deleteBanner(eventId);
       await onRefresh();
+      toast.success("Banner removed.");
     } catch (err) {
       handleError(err, "Failed to delete banner.");
     }
@@ -97,6 +105,7 @@ export default function StepImages({
     try {
       await eventImageApi.uploadMultiple(eventId, files);
       await loadGallery();
+      toast.success("Gallery images uploaded.");
     } catch (err) {
       handleError(err, "Failed to upload gallery images.");
     } finally {
@@ -110,6 +119,7 @@ export default function StepImages({
     try {
       await eventImageApi.remove(imageId);
       await loadGallery();
+      toast.success("Image removed.");
     } catch (err) {
       handleError(err, "Failed to delete image.");
     }
@@ -120,6 +130,7 @@ export default function StepImages({
     try {
       await eventImageApi.setMain(imageId);
       await loadGallery();
+      toast.success("Main image updated.");
     } catch (err) {
       handleError(err, "Failed to set main image.");
     }

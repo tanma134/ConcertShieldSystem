@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import organizerRequestApi from "../../api/organizerRequestApi";
 import AdminShell from "./AdminShell";
-import "../../styles/organizerRequest.css";
+import "../../styles/organizerrequest.css";
 import "./AdminPages.css";
 
 const FILTERS = [

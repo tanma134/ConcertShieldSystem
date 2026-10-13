@@ -1,28 +1,17 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.Collections.Generic;
 
-namespace AuthenticationAPI.Models
+namespace AuthenticationAPI.Models;
+
+public partial class KycSetting
 {
-    [Table("kyc_settings")]
-    public class KycSetting
-    {
-        [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.None)]
-        [Column("id")]
-        public int Id { get; set; } = 1;
+    public int Id { get; set; }
 
-        /// <summary>0 = never auto-delete.</summary>
-        [Column("retention_days")]
-        public int RetentionDays { get; set; } = 30;
+    public int RetentionDays { get; set; }
 
-        [Column("keep_document_hash_after_deletion")]
-        public bool KeepDocumentHashAfterDeletion { get; set; } = true;
+    public bool KeepDocumentHashAfterDeletion { get; set; }
 
-        [Column("updated_at")]
-        public DateTime UpdatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
 
-        [Column("updated_by")]
-        public int? UpdatedBy { get; set; }
-    }
-
+    public int? UpdatedBy { get; set; }
 }

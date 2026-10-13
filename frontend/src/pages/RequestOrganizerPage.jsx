@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import organizerRequestApi from "../api/organizerRequestApi";
-import "../styles/organizerRequest.css";
+import "../styles/organizerrequest.css";
 
 const STATUS_LABEL = {
   Pending: "Pending",

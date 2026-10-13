@@ -90,6 +90,12 @@ namespace AuthenticationAPI.Services
             if (dto.Items.Any(i => string.IsNullOrWhiteSpace(i.Heading) || string.IsNullOrWhiteSpace(i.Content)))
                 throw new InvalidOperationException("Every section needs both a heading and content");
 
+            // BR-213: purpose, data collected, retention period and data subject rights must all be stated
+            if (dto.Items.Count < 4)
+                throw new InvalidOperationException("Consent content needs at least 4 sections: purpose of use, data collected, retention period and data subject rights");
+            if (!dto.Items.Any(i => (i.Content ?? "").Contains("{retentionDays}", StringComparison.Ordinal)))
+                throw new InvalidOperationException("The retention period must be stated: use the {retentionDays} placeholder in one section");
+
             if (await _db.KycConsentVersions.AnyAsync(x => x.Version == version))
                 throw new InvalidOperationException($"Version '{version}' already exists");
 

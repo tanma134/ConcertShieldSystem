@@ -18,8 +18,10 @@ namespace AuthenticationAPI.Services
         private readonly IConfiguration _configuration;
         private readonly IMemoryCache _cache;
         private readonly ILogger<AuthenticationService> _logger;
+        private readonly IAuditLogClient _auditLog;
 
         private const string DefaultRoleName = "Customer";
+        private const string AdminRoleName = "Admin";
         private const string GenericOtpInvalidMessage = "Invalid or expired OTP.";
 
         public AuthenticationService(
@@ -27,14 +29,22 @@ namespace AuthenticationAPI.Services
             IEmailService emailService,
             IConfiguration configuration,
             IMemoryCache cache,
-            ILogger<AuthenticationService> logger)
+            ILogger<AuthenticationService> logger,
+            IAuditLogClient auditLog)
         {
             _userRepository = userRepository;
             _emailService = emailService;
             _configuration = configuration;
             _cache = cache;
             _logger = logger;
+            _auditLog = auditLog;
         }
+
+        // Xác định actor_type ghi vào audit log dựa theo role THẬT của user, thay vì hardcode "user".
+        private static string ResolveActorType(User user) =>
+            user.UserRoles != null && user.UserRoles.Any(ur => ur.Role.RoleName == AdminRoleName)
+                ? "admin"
+                : "user";
 
         public async Task RegisterAsync(RegisterDTO dto)
         {
@@ -120,7 +130,7 @@ namespace AuthenticationAPI.Services
             _logger.LogInformation("Account {Email} verified and created successfully (UserId={UserId}).", user.Email, user.UserId);
         }
 
-        public async Task<LoginResponseDTO> LoginAsync(LoginDTO dto)
+        public async Task<LoginResponseDTO> LoginAsync(LoginDTO dto, string? ipAddress = null, string? userAgent = null)
         {
             var user = await _userRepository.GetByEmailAsync(dto.Email)
                 ?? throw new KeyNotFoundException("Invalid email or password.");
@@ -129,7 +139,14 @@ namespace AuthenticationAPI.Services
                 throw new InvalidOperationException("Account is not verified. Please verify your email first.");
 
             if (!user.IsActive)
+            {
+                _logger.LogWarning("Login blocked: UserId={UserId} account is locked.", user.UserId);
+
+                await _auditLog.LogAsync(user.UserId, ResolveActorType(user), "LOGIN_BLOCKED_ACCOUNT", "User", user.UserId.ToString(),
+                    ipAddress: ipAddress, userAgent: userAgent);
+
                 throw new UnauthorizedAccessException("Your account has been locked. Please contact the administrator.");
+            }
 
             if (!user.HasPassword)
             {
@@ -141,6 +158,10 @@ namespace AuthenticationAPI.Services
             if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
             {
                 _logger.LogWarning("Login failed: incorrect password for {Email}.", dto.Email);
+
+                await _auditLog.LogAsync(user.UserId, ResolveActorType(user), "LOGIN_FAILED", "User", user.UserId.ToString(),
+                    ipAddress: ipAddress, userAgent: userAgent);
+
                 throw new UnauthorizedAccessException("Invalid email or password.");
             }
 
@@ -161,6 +182,9 @@ namespace AuthenticationAPI.Services
 
             _logger.LogInformation("Login successful: {Email} (UserId={UserId}).", user.Email, user.UserId);
 
+            await _auditLog.LogAsync(user.UserId, ResolveActorType(user), "LOGIN", "User", user.UserId.ToString(),
+                ipAddress: ipAddress, userAgent: userAgent);
+
             return new LoginResponseDTO
             {
                 AccessToken = accessToken,
@@ -179,7 +203,7 @@ namespace AuthenticationAPI.Services
             };
         }
 
-        public async Task<RefreshResponseDTO> RefreshTokenAsync(RefreshTokenDTO dto)
+        public async Task<RefreshResponseDTO> RefreshTokenAsync(RefreshTokenDTO dto, string? ipAddress = null, string? userAgent = null)
         {
             string tokenHash = HashValue(dto.RefreshToken);
 
@@ -191,6 +215,9 @@ namespace AuthenticationAPI.Services
                 _logger.LogWarning(
                     "Detected reuse of a revoked refresh token (UserId={UserId}). Revoking all sessions.",
                     tokenEntity.UserId);
+
+                await _auditLog.LogAsync(tokenEntity.UserId, ResolveActorType(tokenEntity.User), "REFRESH_TOKEN_REUSE_DETECTED", "User", tokenEntity.UserId.ToString(),
+                    ipAddress: ipAddress, userAgent: userAgent);
 
                 // TODO: requires a RevokeAllRefreshTokensAsync(int userId) method on IUserRepository
                 // await _userRepository.RevokeAllRefreshTokensAsync(tokenEntity.UserId);
@@ -204,6 +231,10 @@ namespace AuthenticationAPI.Services
             if (!tokenEntity.User.IsActive)
             {
                 _logger.LogWarning("Refresh failed: account UserId={UserId} is locked.", tokenEntity.UserId);
+
+                await _auditLog.LogAsync(tokenEntity.UserId, ResolveActorType(tokenEntity.User), "LOGIN_BLOCKED_ACCOUNT", "User", tokenEntity.UserId.ToString(),
+                    ipAddress: ipAddress, userAgent: userAgent);
+
                 throw new UnauthorizedAccessException("Your account has been locked. Please contact the administrator.");
             }
 
@@ -299,7 +330,7 @@ namespace AuthenticationAPI.Services
             };
         }
 
-        public async Task ResetPasswordAsync(ResetPasswordDTO dto)
+        public async Task ResetPasswordAsync(ResetPasswordDTO dto, string? ipAddress = null, string? userAgent = null)
         {
             var user = await _userRepository.GetByEmailAsync(dto.Email);
 
@@ -322,6 +353,9 @@ namespace AuthenticationAPI.Services
             // await _userRepository.RevokeAllRefreshTokensAsync(user.UserId);
 
             _logger.LogInformation("Password reset successful for {Email} (UserId={UserId}).", user.Email, user.UserId);
+
+            await _auditLog.LogAsync(user.UserId, ResolveActorType(user), "PASSWORD_RESET", "User", user.UserId.ToString(),
+                ipAddress: ipAddress, userAgent: userAgent);
         }
 
         private (string token, DateTime expiry) GenerateAccessToken(User user)
@@ -358,7 +392,7 @@ namespace AuthenticationAPI.Services
             return (new JwtSecurityTokenHandler().WriteToken(token), expiry);
         }
 
-        public async Task<LoginResponseDTO> GoogleLoginAsync(GoogleLoginDTO dto)
+        public async Task<LoginResponseDTO> GoogleLoginAsync(GoogleLoginDTO dto, string? ipAddress = null, string? userAgent = null)
         {
             GoogleJsonWebSignature.Payload payload;
             try
@@ -382,6 +416,7 @@ namespace AuthenticationAPI.Services
             }
 
             var user = await _userRepository.GetByEmailAsync(payload.Email);
+            bool isNewUser = user == null;
 
             if (user == null)
             {
@@ -418,7 +453,12 @@ namespace AuthenticationAPI.Services
             else
             {
                 if (!user.IsActive)
+                {
+                    await _auditLog.LogAsync(user.UserId, ResolveActorType(user), "LOGIN_BLOCKED_ACCOUNT", "User", user.UserId.ToString(),
+                        ipAddress: ipAddress, userAgent: userAgent);
+
                     throw new UnauthorizedAccessException("Your account has been locked. Please contact the administrator.");
+                }
 
                 if (!user.IsVerified)
                 {
@@ -427,6 +467,8 @@ namespace AuthenticationAPI.Services
                 }
             }
 
+            // Load lại đầy đủ UserRoles (bắt buộc để ResolveActorType đọc đúng role,
+            // nhất là với user vừa tạo mới ở nhánh trên, hoặc nếu GetByEmailAsync ban đầu chưa Include đủ)
             user = await _userRepository.GetByEmailAsync(user.Email) ?? user;
 
             var (accessToken, accessTokenExpiry) = GenerateAccessToken(user);
@@ -444,6 +486,10 @@ namespace AuthenticationAPI.Services
 
             _logger.LogInformation("Google login successful: {Email} (UserId={UserId}).", user.Email, user.UserId);
 
+            await _auditLog.LogAsync(user.UserId, ResolveActorType(user), isNewUser ? "USER_REGISTERED" : "LOGIN", "User", user.UserId.ToString(),
+                newValue: isNewUser ? new { provider = "google" } : null,
+                ipAddress: ipAddress, userAgent: userAgent);
+
             return new LoginResponseDTO
             {
                 AccessToken = accessToken,
@@ -460,6 +506,40 @@ namespace AuthenticationAPI.Services
                     HasPassword = user.HasPassword
                 }
             };
+        }
+
+        public async Task ChangePasswordAsync(int userId, ChangePasswordDTO dto, string? ipAddress = null, string? userAgent = null)
+        {
+            var user = await _userRepository.GetByIdAsync(userId)
+                ?? throw new KeyNotFoundException("User not found.");
+            if (!user.HasPassword)
+            {
+                _logger.LogWarning("Change-password failed: UserId={UserId} has no local password (provider {Provider}).", userId, user.AuthProvider);
+                throw new InvalidOperationException(
+                    "This account has no password yet. Please use 'Forgot Password' to set one first.");
+            }
+
+            if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash))
+            {
+                _logger.LogWarning("Change-password failed: incorrect current password for UserId={UserId}.", userId);
+                throw new UnauthorizedAccessException("The current password is incorrect.");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.NewPassword) || dto.NewPassword.Length < 8)
+                throw new InvalidOperationException("The new password must be at least 8 characters.");
+
+            if (dto.NewPassword != dto.ConfirmPassword)
+                throw new InvalidOperationException("New password and confirmation do not match.");
+
+            if (dto.CurrentPassword == dto.NewPassword)
+                throw new InvalidOperationException("The new password must be different from the current password.");
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            await _userRepository.SaveChangesAsync();
+            _logger.LogInformation("Password changed successfully for UserId={UserId}.", userId);
+
+            await _auditLog.LogAsync(userId, ResolveActorType(user), "PASSWORD_CHANGED", "User", userId.ToString(),
+                ipAddress: ipAddress, userAgent: userAgent);
         }
 
         private static string GenerateRefreshToken()

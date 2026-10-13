@@ -55,7 +55,7 @@ namespace AuthenticationAPI.Services
         }
 
         // 093204010643 -> 093*****0643
-        private static string MaskId(string id)
+        public static string MaskId(string id)
         {
             var t = id.Trim();
             if (t.Length <= 6)

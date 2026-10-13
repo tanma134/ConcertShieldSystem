@@ -4,6 +4,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using EventAPI.Common;
+using static EventAPI.DTOs.ConfirmEventSaleDTO;
 
 namespace EventAPI.Controllers
 {
@@ -426,5 +427,88 @@ namespace EventAPI.Controllers
             }
             catch (Exception ex) { return HandleException(ex); }
         }
+
+        [HttpPut("{eventId}/orders/{orderId}/confirm-sale")]
+        public async Task<IActionResult> ConfirmPaidOrderSale(
+            int eventId,
+            int orderId,
+            [FromBody] ConfirmEventSaleRequestDTO request,
+            [FromHeader(Name = "X-Internal-Api-Key")] string apiKey,
+            [FromServices] IConfiguration configuration)
+        {
+            var expectedKey = configuration["EventApi:InternalApiKey"];
+
+            if (string.IsNullOrWhiteSpace(expectedKey) ||
+                !string.Equals(apiKey, expectedKey, StringComparison.Ordinal))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "Invalid service credentials."
+                });
+            }
+
+            if (request.OrderId != orderId)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "OrderId in the URL does not match the request."
+                });
+            }
+
+            try
+            {
+                await _eventService.ConfirmPaidOrderSaleAsync(eventId, request);
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Order sale recorded."
+                });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+        [HttpPut("{eventId}/ticket-types/{ticketTypeId}/release-returned")]
+        public async Task<IActionResult> ReleaseReturnedTicket(
+            int eventId, int ticketTypeId,
+            [FromQuery] int quantity,
+            [FromHeader(Name = "X-Internal-Api-Key")] string apiKey,
+            [FromServices] IConfiguration configuration)
+        {
+            var expectedKey = configuration["EventApi:InternalApiKey"];
+            if (string.IsNullOrWhiteSpace(expectedKey) || !string.Equals(apiKey, expectedKey, StringComparison.Ordinal))
+                return Unauthorized(new { success = false, message = "Invalid service credentials." });
+            if (quantity <= 0) return BadRequest(new { success = false, message = "Quantity must be positive." });
+
+            var released = await _eventService.ReleaseReturnedTicketAsync(eventId, ticketTypeId, quantity);
+            return released
+                ? Ok(new { success = true, message = "Returned ticket released back to inventory." })
+                : NotFound(new { success = false, message = "Event ticket type not found." });
+        }
+
     }
 }

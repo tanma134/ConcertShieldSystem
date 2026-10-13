@@ -17,8 +17,6 @@ public partial class User
 
     public string? AvatarUrl { get; set; }
 
-    public string? AvatarPublicId { get; set; }
-
     public bool IsVerified { get; set; }
 
     public string? OtpHash { get; set; }
@@ -30,8 +28,12 @@ public partial class User
     public DateTime CreatedAt { get; set; }
 
     public bool IsActive { get; set; }
-    public string AuthProvider { get; set; } = "local";
-    public bool HasPassword { get; set; } = true;
+
+    public string AuthProvider { get; set; } = null!;
+
+    public bool HasPassword { get; set; }
+
+    public string? AvatarPublicId { get; set; }
 
     public virtual ICollection<EkycVerification> EkycVerifications { get; set; } = new List<EkycVerification>();
 

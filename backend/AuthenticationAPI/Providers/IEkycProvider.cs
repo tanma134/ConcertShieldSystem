@@ -14,6 +14,8 @@
         public bool Success { get; set; }
         public string? ErrorMessage { get; set; }
         public string? IdNumber { get; set; }
+        public string? FullName { get; set; }
+        public string? DateOfBirth { get; set; }
         public string? RawResponseJson { get; set; }
     }
 

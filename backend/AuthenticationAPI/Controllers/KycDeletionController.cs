@@ -130,7 +130,7 @@ namespace AuthenticationAPI.Controllers
         {
             try
             {
-                return Ok(await _service.RejectAsync(id, GetCurrentUserId(), dto.Note, GetClientIp()));
+                return Ok(await _service.RejectAsync(id, GetCurrentUserId(), dto.ReasonCode, dto.Note, GetClientIp()));
             }
             catch (KeyNotFoundException ex)
             {

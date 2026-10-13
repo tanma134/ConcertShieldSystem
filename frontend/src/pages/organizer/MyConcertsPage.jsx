@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import Header from "../../components/Header";
-import Footer from "../../components/Footer";
+import OrganizerShell from "./OrganizerShell";
 import { useAuth } from "../../context/AuthContext";
 import eventApi from "../../api/eventApi";
 import { formatDateRange, formatPrice } from "../../utils/format";
@@ -10,7 +9,8 @@ import "./MyConcertsPage.css";
 const STATUS_LABELS = {
   Draft: "Draft",
   Pending: "Pending Review",
-  Published: "On Sale",
+  Published: "Published",
+  Postponed: "Postponed",
   Rejected: "Rejected",
   Cancelled: "Cancelled",
 };
@@ -59,8 +59,7 @@ export default function MyConcertsPage() {
   };
 
   return (
-    <div className="tb-app">
-      <Header />
+    <OrganizerShell title="My Concerts">
 
       <div className="tb-container mc-wrap">
         <div className="mc-head">
@@ -111,6 +110,8 @@ export default function MyConcertsPage() {
                 </div>
                 </Link>
                 {["Draft", "Rejected"].includes(ev.status) && <div className="mc-config-links">
+                  <Link to={`/organizer/events/${ev.eventId}/compliance`}>Compliance</Link>
+                  <Link to={`/organizer/events/${ev.eventId}/changes`}>Schedule changes</Link>
                   <Link to={`/organizer/events/${ev.eventId}/seating`}>Seating</Link>
                   <Link to={`/organizer/events/${ev.eventId}/pricing`}>Pricing</Link>
                   <Link to={`/organizer/events/${ev.eventId}/refunds`}>Refund policies</Link>
@@ -133,7 +134,6 @@ export default function MyConcertsPage() {
         )}
       </div>
 
-      <Footer />
-    </div>
+      </OrganizerShell>
   );
 }

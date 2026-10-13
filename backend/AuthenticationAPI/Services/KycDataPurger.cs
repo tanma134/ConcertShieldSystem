@@ -16,6 +16,9 @@ namespace AuthenticationAPI.Services
 
         public async Task PurgeAsync(EkycVerification record, bool keepDocumentHash, CancellationToken ct = default)
         {
+            if (record.LegalHold)
+                throw new InvalidOperationException($"eKYC record {record.EkycId} is under legal hold and cannot be purged");
+
             foreach (var key in new[] { record.CccdFrontObjectKey, record.CccdBackObjectKey, record.FaceCaptureObjectKey })
             {
                 if (!string.IsNullOrEmpty(key))

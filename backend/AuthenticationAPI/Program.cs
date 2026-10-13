@@ -107,6 +107,7 @@ builder.Services.AddScoped<IKycSettingService, KycSettingService>();
 builder.Services.AddScoped<IKycConsentService, KycConsentService>();
 builder.Services.AddScoped<IKycDataPurger, KycDataPurger>();
 builder.Services.AddScoped<IKycDeletionService, KycDeletionService>();
+builder.Services.AddScoped<IKycReviewService, KycReviewService>();
 
 // eKYC VNPT: đăng ký HttpClient kèm header Token-id / Token-key / Authorization / mac-address
 // (đọc từ section "Vnpt" trong appsettings). Thay cho AddHttpClient<IEkycProvider, VnptEkycProvider>() cũ.
@@ -118,7 +119,12 @@ builder.Services.AddScoped<ICccdDataProtector, AesDataProtector>();
 builder.Services.AddHostedService<KycRetentionService>();
 builder.Services.AddScoped<IAvatarStorageService, AvatarStorageService>();
 
-
+builder.Services.AddHttpClient<IAuditLogClient, AuditLogClient>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["AdminApi:BaseUrl"]
+        ?? "https://localhost:7076");
+    client.DefaultRequestHeaders.Add("X-Internal-Api-Key", builder.Configuration["InternalApi:Key"]);
+});
 
 var app = builder.Build();
 

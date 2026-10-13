@@ -4,32 +4,34 @@ import kycApi from "../api/kycApi";
 import CameraCapture from "../components/kyc/CameraCapture";
 import { CAPTURE_KINDS, qualityChips } from "../utils/cameraUtils";
 import "../styles/kyc.css";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
 
 const RAIL = ["consent", "front", "back", "selfie", "review"];
 const STEP_LABEL = {
-  consent: "Đồng ý",
-  front: "Mặt trước",
-  back: "Mặt sau",
-  selfie: "Khuôn mặt",
-  review: "Kiểm tra",
+  consent: "Consent",
+  front: "Front",
+  back: "Back",
+  selfie: "Face",
+  review: "Review",
 };
 const NEXT = { front: "back", back: "selfie", selfie: "review" };
 
 /* ---------------------------------------------------------------- *
- * Bước 1: thông báo + đồng ý xử lý dữ liệu
+ * Step 1: notice + consent to data processing
  * ---------------------------------------------------------------- */
 function ConsentStep({ state, error, consent, agreed, notice, onAgree, onRetry, onNext }) {
   if (state === "loading") {
-    return <p className="kyc-muted">Đang tải nội dung...</p>;
+    return <p className="kyc-muted">Loading content...</p>;
   }
 
   if (state === "error") {
     return (
       <>
-        <h2 className="kyc-title" tabIndex={-1}>Chưa mở được trang này</h2>
+        <h2 className="kyc-title" tabIndex={-1}>Couldn't load this page</h2>
         <div className="kyc-alert kyc-alert--error" role="alert">{error}</div>
         <button type="button" className="kyc-button kyc-button--primary" onClick={onRetry}>
-          Thử lại
+          Retry
         </button>
       </>
     );
@@ -38,9 +40,9 @@ function ConsentStep({ state, error, consent, agreed, notice, onAgree, onRetry, 
   return (
     <>
       {notice && <div className="kyc-alert kyc-alert--warn" role="status">{notice}</div>}
-      <h2 className="kyc-title" tabIndex={-1}>Xác thực danh tính</h2>
+      <h2 className="kyc-title" tabIndex={-1}>Identity Verification</h2>
       <p className="kyc-lead">
-        Bạn cần chụp 3 ảnh trực tiếp bằng camera: mặt trước CCCD, mặt sau CCCD và khuôn mặt của bạn.
+        You need to take 3 live photos using your camera: the front of your ID card, the back of your ID card, and a selfie of your face.
       </p>
 
       <dl className="kyc-facts">
@@ -58,14 +60,14 @@ function ConsentStep({ state, error, consent, agreed, notice, onAgree, onRetry, 
       </label>
 
       <button type="button" className="kyc-button kyc-button--primary" disabled={!agreed} onClick={onNext}>
-        Đồng ý và bắt đầu chụp
+        Agree and start capturing
       </button>
     </>
   );
 }
 
 /* ---------------------------------------------------------------- *
- * Bước 2-4: chụp ảnh rồi xem lại ngay
+ * Steps 2-4: capture a photo, then review it immediately
  * ---------------------------------------------------------------- */
 function CaptureStep({ kind, onAccept }) {
   const info = CAPTURE_KINDS[kind];
@@ -74,7 +76,7 @@ function CaptureStep({ kind, onAccept }) {
   const acceptedRef = useRef(false);
   draftRef.current = draft;
 
-  // Nếu rời trang khi chưa dùng ảnh nháp thì giải phóng bộ nhớ
+  // Release memory if the user leaves the page before using the draft photo
   useEffect(
     () => () => {
       if (draftRef.current && !acceptedRef.current) URL.revokeObjectURL(draftRef.current.url);
@@ -109,11 +111,11 @@ function CaptureStep({ kind, onAccept }) {
 
   return (
     <>
-      <h2 className="kyc-title" tabIndex={-1}>Kiểm tra ảnh vừa chụp</h2>
+      <h2 className="kyc-title" tabIndex={-1}>Review your photo</h2>
       <p className="kyc-lead">
         {hasWarn
-          ? "Ảnh có vẻ chưa tốt. Nên chụp lại để tránh bị từ chối khi xác thực."
-          : "Ảnh đạt kiểm tra sơ bộ trên thiết bị. Hệ thống sẽ kiểm tra kỹ hơn khi bạn gửi."}
+          ? "This photo doesn't look great. We recommend retaking it to avoid rejection during verification."
+          : "The photo passed the on-device check. The system will check it more thoroughly when you submit."}
       </p>
       <img className="kyc-shot" src={draft.url} alt={info.label} />
       <div className="kyc-chips">
@@ -122,23 +124,23 @@ function CaptureStep({ kind, onAccept }) {
         ))}
       </div>
       <button type="button" className="kyc-button kyc-button--primary" onClick={handleAccept}>
-        Dùng ảnh này
+        Use this photo
       </button>
       <button type="button" className="kyc-button kyc-button--ghost" onClick={handleRetake}>
-        Chụp lại
+        Retake
       </button>
     </>
   );
 }
 
 /* ---------------------------------------------------------------- *
- * Bước 5: xem lại 3 ảnh và gửi
+ * Step 5: review the 3 photos and submit
  * ---------------------------------------------------------------- */
 function ReviewStep({ shots, submitting, error, onRetake, onSubmit }) {
   return (
     <>
-      <h2 className="kyc-title" tabIndex={-1}>Kiểm tra ảnh trước khi gửi</h2>
-      <p className="kyc-lead">Đảm bảo thẻ và khuôn mặt rõ nét, không bị cắt hoặc lóa sáng.</p>
+      <h2 className="kyc-title" tabIndex={-1}>Review your photos before submitting</h2>
+      <p className="kyc-lead">Make sure the card and your face are clear, not cropped, and not overexposed.</p>
 
       <div className="kyc-thumbs">
         {["front", "back", "selfie"].map((kind) => (
@@ -146,7 +148,7 @@ function ReviewStep({ shots, submitting, error, onRetake, onSubmit }) {
             <img src={shots[kind].url} alt={CAPTURE_KINDS[kind].label} />
             <figcaption>{CAPTURE_KINDS[kind].label}</figcaption>
             <button type="button" className="kyc-link" disabled={submitting} onClick={() => onRetake(kind)}>
-              Chụp lại
+              Retake
             </button>
           </figure>
         ))}
@@ -155,14 +157,14 @@ function ReviewStep({ shots, submitting, error, onRetake, onSubmit }) {
       {error && <div className="kyc-alert kyc-alert--error" role="alert">{error}</div>}
 
       <button type="button" className="kyc-button kyc-button--primary" disabled={submitting} onClick={onSubmit}>
-        {submitting ? "Đang xác thực..." : "Gửi để xác thực"}
+        {submitting ? "Verifying..." : "Submit for verification"}
       </button>
     </>
   );
 }
 
 /* ---------------------------------------------------------------- *
- * Kết quả
+ * Result
  * ---------------------------------------------------------------- */
 const RESULT_ICON = {
   ok: <path d="M5 12.5l4.5 4.5L19 7.5" />,
@@ -180,20 +182,20 @@ function ResultStep({ result, onRestart, onHome }) {
     {
       Passed: {
         tone: "ok",
-        title: "Xác thực thành công",
-        text: "Danh tính của bạn đã được xác thực. Bạn có thể tiếp tục mua vé.",
+        title: "Verification successful",
+        text: "Your identity has been verified. You can continue purchasing tickets.",
       },
       ManualReview: {
         tone: "warn",
-        title: "Hồ sơ đang chờ kiểm duyệt",
-        text: result.message || "Chúng tôi sẽ thông báo khi có kết quả.",
+        title: "Your submission is under review",
+        text: result.message || "We'll notify you once there's a result.",
       },
       Failed: {
         tone: "bad",
-        title: "Chưa xác thực được",
-        text: result.message || "Vui lòng chụp lại và thử lại.",
+        title: "Verification unsuccessful",
+        text: result.message || "Please retake your photos and try again.",
       },
-    }[result.status] || { tone: "bad", title: "Chưa xác thực được", text: result.message || "Vui lòng thử lại." };
+    }[result.status] || { tone: "bad", title: "Verification unsuccessful", text: result.message || "Please try again." };
 
   return (
     <>
@@ -207,11 +209,11 @@ function ResultStep({ result, onRestart, onHome }) {
 
       {result.status === "Failed" ? (
         <button type="button" className="kyc-button kyc-button--primary" onClick={onRestart}>
-          Chụp lại từ đầu
+          Start over
         </button>
       ) : (
         <button type="button" className="kyc-button kyc-button--ghost" onClick={onHome}>
-          Về trang chủ
+          Back to home
         </button>
       )}
     </>
@@ -219,7 +221,7 @@ function ResultStep({ result, onRestart, onHome }) {
 }
 
 /* ---------------------------------------------------------------- *
- * Trang chính
+ * Main page
  * ---------------------------------------------------------------- */
 export default function KycPage() {
   const navigate = useNavigate();
@@ -250,7 +252,7 @@ export default function KycPage() {
       setConsentState("ready");
     } catch (err) {
       setConsentError(
-        err.response?.data?.message || "Không tải được nội dung đồng ý. Kiểm tra kết nối rồi thử lại."
+        err.response?.data?.message || "Couldn't load the consent content. Check your connection and try again."
       );
       setConsentState("error");
     }
@@ -260,7 +262,7 @@ export default function KycPage() {
     loadConsent();
   }, [loadConsent]);
 
-  // Giải phóng các ảnh còn giữ trong bộ nhớ khi rời trang
+  // Release any photos still held in memory when leaving the page
   useEffect(
     () => () => {
       Object.values(shotsRef.current).forEach((s) => s && URL.revokeObjectURL(s.url));
@@ -268,7 +270,7 @@ export default function KycPage() {
     []
   );
 
-  // Chuyển bước thì đưa focus lên tiêu đề để trình đọc màn hình đọc nội dung mới
+  // On step change, move focus to the heading so screen readers announce the new content
   useEffect(() => {
     window.scrollTo({ top: 0 });
     const t = setTimeout(() => document.querySelector(".kyc-title")?.focus(), 0);
@@ -308,13 +310,13 @@ export default function KycPage() {
     try {
       const res = await kycApi.submit(formData);
       setResult(res.data);
-      if (res.data.status !== "Failed") clearShots(); // không giữ ảnh CCCD trong bộ nhớ khi không cần
+      if (res.data.status !== "Failed") clearShots(); // don't keep ID photos in memory once they're no longer needed
       setStep("result");
     } catch (err) {
       const data = err.response?.data;
       if (err.response?.status === 400 && data?.currentVersion) {
-        // Nội dung đồng ý vừa đổi phiên bản: bắt đọc và xác nhận lại
-        setNotice("Nội dung đồng ý vừa được cập nhật. Vui lòng đọc lại và xác nhận.");
+        // The consent content just changed version: require re-reading and re-confirming
+        setNotice("The consent content has just been updated. Please read it again and confirm.");
         setAgreed(false);
         loadConsent();
         setStep("consent");
@@ -323,8 +325,8 @@ export default function KycPage() {
       setSubmitError(
         data?.message ||
           (err.response
-            ? "Có lỗi xảy ra khi xử lý. Vui lòng thử lại."
-            : "Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.")
+            ? "Something went wrong while processing. Please try again."
+            : "Couldn't connect to the server. Check your network and try again.")
       );
     } finally {
       setSubmitting(false);
@@ -339,58 +341,64 @@ export default function KycPage() {
   };
 
   const railIndex = RAIL.indexOf(step);
-  const stepText = step === "result" ? "Hoàn tất" : `Bước ${railIndex + 1} trên ${RAIL.length}: ${STEP_LABEL[step]}`;
+  const stepText = step === "result" ? "Done" : `Step ${railIndex + 1} of ${RAIL.length}: ${STEP_LABEL[step]}`;
 
   return (
-    <div className="kyc-page">
-      <div className="kyc-card">
-        <header className="kyc-head">
-          <Link to="/" className="kyc-back">← Trang chủ</Link>
-          <p className="kyc-step-text" aria-live="polite">{stepText}</p>
-          <div className="kyc-rail" aria-hidden="true">
-            {RAIL.map((s, i) => {
-              const idx = step === "result" ? RAIL.length : railIndex;
-              return <i key={s} className={i < idx ? "is-done" : i === idx ? "is-now" : ""} />;
-            })}
+    <>
+      <Header />
+
+      <div className="kyc-page">
+        <div className="kyc-card">
+          <header className="kyc-head">
+            <Link to="/" className="kyc-back">← Home</Link>
+            <p className="kyc-step-text" aria-live="polite">{stepText}</p>
+            <div className="kyc-rail" aria-hidden="true">
+              {RAIL.map((s, i) => {
+                const idx = step === "result" ? RAIL.length : railIndex;
+                return <i key={s} className={i < idx ? "is-done" : i === idx ? "is-now" : ""} />;
+              })}
+            </div>
+          </header>
+
+          <div className="kyc-body">
+            {step === "consent" && (
+              <ConsentStep
+                state={consentState}
+                error={consentError}
+                consent={consent}
+                agreed={agreed}
+                notice={notice}
+                onAgree={setAgreed}
+                onRetry={loadConsent}
+                onNext={() => {
+                  setNotice("");
+                  setStep("front");
+                }}
+              />
+            )}
+
+            {(step === "front" || step === "back" || step === "selfie") && (
+              <CaptureStep key={step} kind={step} onAccept={acceptShot} />
+            )}
+
+            {step === "review" && (
+              <ReviewStep
+                shots={shots}
+                submitting={submitting}
+                error={submitError}
+                onRetake={retakeFromReview}
+                onSubmit={handleSubmit}
+              />
+            )}
+
+            {step === "result" && result && (
+              <ResultStep result={result} onRestart={restart} onHome={() => navigate("/")} />
+            )}
           </div>
-        </header>
-
-        <div className="kyc-body">
-          {step === "consent" && (
-            <ConsentStep
-              state={consentState}
-              error={consentError}
-              consent={consent}
-              agreed={agreed}
-              notice={notice}
-              onAgree={setAgreed}
-              onRetry={loadConsent}
-              onNext={() => {
-                setNotice("");
-                setStep("front");
-              }}
-            />
-          )}
-
-          {(step === "front" || step === "back" || step === "selfie") && (
-            <CaptureStep key={step} kind={step} onAccept={acceptShot} />
-          )}
-
-          {step === "review" && (
-            <ReviewStep
-              shots={shots}
-              submitting={submitting}
-              error={submitError}
-              onRetake={retakeFromReview}
-              onSubmit={handleSubmit}
-            />
-          )}
-
-          {step === "result" && result && (
-            <ResultStep result={result} onRestart={restart} onHome={() => navigate("/")} />
-          )}
         </div>
       </div>
-    </div>
+
+      <Footer />
+    </>
   );
 }

@@ -20,7 +20,7 @@ namespace AuthenticationAPI.Repositories
         /// <summary>CCCD (theo hash) đã được tài khoản KHÁC xác thực/đang chờ duyệt chưa.</summary>
         Task<bool> IsCccdUsedByAnotherUserAsync(string cccdHash, int userId);
 
-        /// <summary>Hồ sơ đã quá hạn lưu trữ ảnh/OCR (chưa purge, không phải ManualReview).</summary>
-        Task<List<EkycVerification>> GetPurgeCandidatesAsync(DateTime cutoffUtc, int take);
+        /// <summary>N record mới nhất của user (mới nhất trước), dùng để đếm số lần thất bại liên tiếp (BR-03).</summary>
+        Task<List<EkycVerification>> GetRecentByUserAsync(int userId, int take);
     }
 }

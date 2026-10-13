@@ -5,6 +5,7 @@ import eventApi from "../../api/eventApi";
 import { formatDateRange } from "../../utils/format";
 import "../organizer/OrganizerWizard.css";
 import "./AdminPages.css";
+import GovernancePanel from "../../components/GovernancePanel";
 import StepTicketsSeating from "../organizer/steps/StepTicketsSeating";
 
 export default function AdminEventDetailPage() {
@@ -12,6 +13,7 @@ export default function AdminEventDetailPage() {
   const navigate = useNavigate();
 
   const [event, setEvent] = useState(null);
+  const [complianceReady, setComplianceReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -38,6 +40,7 @@ export default function AdminEventDetailPage() {
   }, [id]);
 
   const handleApprove = async () => {
+    if (!complianceReady) { setError("Review and approve the current compliance documents first."); return; }
     if (!window.confirm("Approve this event and publish it?")) return;
     setSubmitting(true);
     setError("");
@@ -176,6 +179,7 @@ export default function AdminEventDetailPage() {
               />
             </section>
 
+            <GovernancePanel event={event} admin onUpdated={load} onCompliance={setComplianceReady} />
             {canDecide && (
               <div className="ow-actions">
                 <button
@@ -197,7 +201,7 @@ export default function AdminEventDetailPage() {
                   type="button"
                   className="tb-btn tb-btn-primary"
                   onClick={handleApprove}
-                  disabled={submitting}
+                  disabled={submitting || !complianceReady}
                 >
                   {submitting ? "Working..." : "✓ Approve & Publish"}
                 </button>

@@ -1,6 +1,7 @@
 import axiosClient from "./axiosClient";
 
 const eventApi = {
+  getById: (id) => axiosClient.get(`/events/${id}`),
   // ---- Public reads (Published only) ----
   getList: (filter = {}) => axiosClient.get("/events", { params: filter }),
   getFeatured: (count = 5) =>

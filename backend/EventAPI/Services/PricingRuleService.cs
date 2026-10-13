@@ -5,16 +5,16 @@ using EventAPI.Repositories;
 
 namespace EventAPI.Services
 {
-    /// <summary>
-    /// Dynamic pricing rules layered on top of a TicketType's base price — e.g. an
-    /// Early Bird discount that expires at a fixed time, or a price step-up once a
-    /// quantity threshold sells out.
-    ///
-    /// EventAPI only owns the CONFIGURATION of these rules. Resolving them into an
-    /// actual sale price at checkout time (which rule wins when several are active,
-    /// applying it to the order total, etc.) is TicketAPI/order-flow responsibility —
-    /// keeping that logic here would duplicate state across services.
-    /// </summary>
+
+    // Dynamic pricing rules layered on top of a TicketType's base price — e.g. an
+    // Early Bird discount that expires at a fixed time, or a price step-up once a
+    // quantity threshold sells out.
+    //
+    // EventAPI only owns the CONFIGURATION of these rules. Resolving them into an
+    // actual sale price at checkout time (which rule wins when several are active,
+    // applying it to the order total, etc.) is TicketAPI/order-flow responsibility —
+    // keeping that logic here would duplicate state across services.
+
     public class PricingRuleService : IPricingRuleService
     {
         private static readonly string[] TimeBasedRuleTypes = { "EarlyBird", "LastMinute", "TimeBased" };
@@ -62,6 +62,7 @@ namespace EventAPI.Services
                     $"A pricing rule named '{dto.RuleName}' already exists for ticket type '{ticketType.TypeName}'.");
 
             ValidateRuleShape(dto.RuleType, dto.AdjustedPrice, dto.DiscountPercent, dto.TriggerFrom, dto.TriggerTo, dto.QuantityThreshold);
+            await ValidateScheduleAsync(ticketType, dto.RuleType, dto.TriggerFrom, dto.TriggerTo, true);
 
             var entity = new PricingRule
             {
@@ -88,7 +89,10 @@ namespace EventAPI.Services
             var entity = await _pricingRuleRepository.GetByIdAsync(pricingRuleId)
                 ?? throw new KeyNotFoundException($"Pricing rule {pricingRuleId} not found.");
 
-            await GetEditableTicketTypeAsync(entity.TicketTypeId, callerId, isAdmin);
+            var ticketType = await GetEditableTicketTypeAsync(entity.TicketTypeId, callerId, isAdmin);
+            var scheduleChanged = (dto.RuleType != null && dto.RuleType != entity.RuleType)
+                || (dto.TriggerFrom.HasValue && dto.TriggerFrom != entity.TriggerFrom)
+                || (dto.TriggerTo.HasValue && dto.TriggerTo != entity.TriggerTo);
 
             if (dto.RuleName != null) entity.RuleName = dto.RuleName;
             if (dto.RuleType != null) entity.RuleType = dto.RuleType;
@@ -103,6 +107,7 @@ namespace EventAPI.Services
             ValidateRuleShape(entity.RuleType, entity.AdjustedPrice, entity.DiscountPercent,
                 entity.TriggerFrom, entity.TriggerTo, entity.QuantityThreshold);
 
+            await ValidateScheduleAsync(ticketType, entity.RuleType, entity.TriggerFrom, entity.TriggerTo, scheduleChanged);
             await _pricingRuleRepository.UpdateAsync(entity);
             return Map(entity);
         }
@@ -116,16 +121,15 @@ namespace EventAPI.Services
             await _pricingRuleRepository.DeleteAsync(pricingRuleId);
         }
 
-        /// <summary>
-        /// Cross-checks a rule's shape against its declared RuleType so a saved rule
-        /// can never be ambiguous about when or how it applies:
-        ///   - EarlyBird / LastMinute / TimeBased -> needs at least one trigger time.
-        ///   - QuantityBased -> needs a positive QuantityThreshold.
-        ///   - Every rule needs a price effect: AdjustedPrice and/or DiscountPercent.
-        /// FluentValidation (CreatePricingRuleValidator) already covers most of this
-        /// on Create; it is re-checked here because Update can clear one field
-        /// without the request going back through the validator.
-        /// </summary>
+        // Cross-checks a rule's shape against its declared RuleType so a saved rule
+        // can never be ambiguous about when or how it applies:
+        //   - EarlyBird / LastMinute / TimeBased -> needs at least one trigger time.
+        //   - QuantityBased -> needs a positive QuantityThreshold.
+        //   - Every rule needs a price effect: AdjustedPrice and/or DiscountPercent.
+        // FluentValidation (CreatePricingRuleValidator) already covers most of this
+        // on Create; it is re-checked here because Update can clear one field
+        // without the request going back through the validator.
+
         private static void ValidateRuleShape(
             string ruleType, long? adjustedPrice, decimal? discountPercent,
             DateTime? triggerFrom, DateTime? triggerTo, int? quantityThreshold)
@@ -149,12 +153,11 @@ namespace EventAPI.Services
                 throw new InvalidOperationException($"Rule type '{QuantityBasedRuleType}' needs a QuantityThreshold greater than 0.");
         }
 
-        /// <summary>
-        /// Ownership + status gate, reached through the ticket type's parent event.
-        /// Pricing rules are only configurable while the concert is Draft or Rejected
-        /// (an Admin may override) — the same rule already applied to ticket types
-        /// and refund policies.
-        /// </summary>
+        // Ownership + status gate, reached through the ticket type's parent event.
+        // Pricing rules are only configurable while the concert is Draft or Rejected
+        // (an Admin may override) — the same rule already applied to ticket types
+        // and refund policies.
+
         private async Task<TicketType> GetEditableTicketTypeAsync(int ticketTypeId, int callerId, bool isAdmin)
         {
             var ticketType = await _ticketTypeRepository.GetByIdAsync(ticketTypeId)
@@ -172,6 +175,15 @@ namespace EventAPI.Services
                     $"Pricing rules can only be changed while the concert is Draft or Rejected. Current status: '{status}'.");
 
             return ticketType;
+        }
+
+        // Đọc lịch concert hiện tại trước khi chấp nhận cấu hình giảm giá.
+        private async Task ValidateScheduleAsync(TicketType ticket, string type, DateTime? from, DateTime? to, bool requireFuture)
+        {
+            var ev = await _eventRepository.GetByIdAsync(ticket.EventId)
+                ?? throw new KeyNotFoundException("Concert not found.");
+            PricingScheduleRules.Validate(type, from, to, ticket.SalesStartsAt, ticket.SalesEndsAt,
+                ev.StartsAt, DateTime.UtcNow, requireFuture);
         }
 
         private static PricingRuleResponseDTO Map(PricingRule r) => new()

@@ -1,8 +1,10 @@
-using EventAPI.Common;
+﻿using EventAPI.Common;
 using EventAPI.Data;
 using EventAPI.DTOs;
 using EventAPI.Models;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using static EventAPI.DTOs.ConfirmEventSaleDTO;
 
 namespace EventAPI.Repositories
 {
@@ -253,5 +255,137 @@ namespace EventAPI.Repositories
                 .Where(e => e.EventId == id)
                 .ExecuteUpdateAsync(s => s.SetProperty(e => e.ViewCount, e => e.ViewCount + 1));
         }
+
+        public async Task<bool> ConfirmPaidOrderSaleAsync(
+            int eventId,
+            int orderId,
+            IReadOnlyCollection<ConfirmEventSaleItemDTO> items)
+        {
+            var strategy = _context.Database.CreateExecutionStrategy();
+
+            return await strategy.ExecuteAsync(async () =>
+            {
+                // Dọn trạng thái tracking nếu execution strategy chạy lại operation.
+                _context.ChangeTracker.Clear();
+
+                await using var transaction =
+                    await _context.Database.BeginTransactionAsync();
+
+                var existingConfirmation = await _context.EventSaleConfirmations
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.OrderId == orderId);
+
+                if (existingConfirmation != null)
+                {
+                    if (existingConfirmation.EventId != eventId)
+                    {
+                        throw new InvalidOperationException(
+                            "This order was already confirmed for a different event.");
+                    }
+
+                    await transaction.CommitAsync();
+                    return true;
+                }
+
+                var eventEntity = await _context.Events
+                    .FirstOrDefaultAsync(x => x.EventId == eventId);
+
+                if (eventEntity == null)
+                    throw new KeyNotFoundException("Event not found.");
+
+                var totalQuantity = 0;
+
+                foreach (var item in items)
+                {
+                    totalQuantity = checked(totalQuantity + item.Quantity);
+
+                    var affectedRows =
+                        await _context.Database.ExecuteSqlInterpolatedAsync($@"
+                    UPDATE ticket_types
+                    SET sold_quantity = sold_quantity + {item.Quantity},
+                        updated_at = now()
+                    WHERE ticket_type_id = {item.TicketTypeId}
+                      AND event_id = {eventId}
+                      AND is_deleted = false
+                      AND sold_quantity + {item.Quantity} <= quantity");
+
+                    if (affectedRows == 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Ticket type {item.TicketTypeId} was not found for this event or has insufficient capacity.");
+                    }
+                }
+
+                eventEntity.SoldTickets = checked(
+                    eventEntity.SoldTickets + totalQuantity);
+
+                eventEntity.UpdatedAt = DateTime.UtcNow;
+
+                _context.EventSaleConfirmations.Add(new EventSaleConfirmation
+                {
+                    OrderId = orderId,
+                    EventId = eventId,
+                    ConfirmedAtUtc = DateTime.UtcNow
+                });
+
+                try
+                {
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                    return true;
+                }
+                catch (DbUpdateException ex)
+                    when (ex.InnerException is PostgresException postgresException &&
+                          postgresException.SqlState == PostgresErrorCodes.UniqueViolation)
+                {
+                    await transaction.RollbackAsync();
+                    _context.ChangeTracker.Clear();
+
+                    // Một callback đồng thời đã ghi nhận OrderId này.
+                    var duplicate = await _context.EventSaleConfirmations
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(x => x.OrderId == orderId);
+
+                    if (duplicate?.EventId == eventId)
+                        return true;
+
+                    throw;
+                }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            });
+        }
+        public async Task<bool> ReleaseReturnedTicketAsync(int eventId, int ticketTypeId, int quantity)
+        {
+            if (quantity <= 0) return false;
+
+            await using var tx = await _context.Database.BeginTransactionAsync();
+            var affected = await _context.Database.ExecuteSqlInterpolatedAsync($@"
+                UPDATE ticket_types
+                SET sold_quantity = GREATEST(sold_quantity - {quantity}, 0),
+                    updated_at = NOW()
+                WHERE event_id = {eventId}
+                  AND ticket_type_id = {ticketTypeId}
+                  AND is_deleted = false");
+
+            if (affected != 1)
+            {
+                await tx.RollbackAsync();
+                return false;
+            }
+
+            await _context.Database.ExecuteSqlInterpolatedAsync($@"
+                UPDATE events
+                SET sold_tickets = GREATEST(COALESCE(sold_tickets, 0) - {quantity}, 0),
+                    updated_at = NOW()
+                WHERE event_id = {eventId} AND is_deleted = false");
+
+            await tx.CommitAsync();
+            return true;
+        }
+
     }
 }

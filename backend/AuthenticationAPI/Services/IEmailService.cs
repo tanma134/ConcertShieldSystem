@@ -9,5 +9,7 @@
     public interface IEmailService
     {
         Task SendOTPAsync(string toEmail, string otp, EmailPurpose purpose);
+
+        Task SendKycDeletionResultAsync(string toEmail, bool approved, string? reason);
     }
 }

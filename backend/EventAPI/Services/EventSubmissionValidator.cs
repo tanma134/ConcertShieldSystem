@@ -146,6 +146,23 @@ namespace EventAPI.Services
                     result.Warnings.Add($"{label}: no sale window set — tickets go on sale as soon as the concert is published.");
             }
 
+            // Kiểm tra lại rule theo lịch hiện tại: event/ticket có thể đã được sửa sau khi tạo rule.
+            var ticketIds = ticketTypes.Select(t => t.TicketTypeId).ToList();
+            var activePricing = await _context.PricingRules.AsNoTracking()
+                .Where(r => ticketIds.Contains(r.TicketTypeId) && r.IsActive).ToListAsync();
+            foreach (var rule in activePricing)
+            {
+                var ticket = ticketTypes.First(t => t.TicketTypeId == rule.TicketTypeId);
+                try
+                {
+                    PricingScheduleRules.Validate(rule.RuleType, rule.TriggerFrom, rule.TriggerTo,
+                        ticket.SalesStartsAt, ticket.SalesEndsAt, ev.StartsAt, DateTime.UtcNow, false);
+                    if (rule.RuleType != "QuantityBased" && rule.TriggerTo <= DateTime.UtcNow)
+                        result.Errors.Add($"Pricing rule '{rule.RuleName}' has expired; disable it before submitting.");
+                }
+                catch (InvalidOperationException error) { result.Errors.Add($"Pricing rule '{rule.RuleName}': {error.Message}"); }
+            }
+
             // Per-account limits must be satisfiable by at least one ticket type.
             if (ev.MinTicketsPerAccount.HasValue && ev.MaxTicketsPerAccount.HasValue &&
                 ev.MinTicketsPerAccount > ev.MaxTicketsPerAccount)
@@ -250,6 +267,10 @@ namespace EventAPI.Services
                     "A layout exists but HasSeatingChart is false — it will be ignored and the concert sold as general admission.");
             }
 
+            var requiredTypes = _configuration.GetSection("Compliance:RequiredTypes").Get<string[]>() ?? new[] { "EventPermit", "SafetyPlan" };
+            var uploadedTypes = await _context.Set<EventAPI.Models.ComplianceDocument>().AsNoTracking()
+                .Where(x => x.EventId == eventId && x.Version == ev.ComplianceVersion).Select(x => x.DocumentType).ToListAsync();
+            foreach (var missing in requiredTypes.Except(uploadedTypes)) result.Errors.Add("Compliance document required: " + missing);
             return result;
         }
     }

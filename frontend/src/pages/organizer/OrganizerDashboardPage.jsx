@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import Header from "../../components/Header";
-import Footer from "../../components/Footer";
+import OrganizerShell from "./OrganizerShell";
 import { useAuth } from "../../context/AuthContext";
 import eventApi from "../../api/eventApi";
+import reportApi from "../../api/reportApi";
 import { formatDate, formatPrice } from "../../utils/format";
 import "./MyConcertsPage.css";
 import "./OrganizerWizard.css";
@@ -36,8 +36,31 @@ export default function OrganizerDashboardPage() {
     setLoading(true);
     eventApi
       .getMyDashboard()
-      .then((res) => {
-        if (!cancelled) setSummary(res.data?.data || null);
+      .then(async (res) => {
+        const base = res.data?.data || null;
+        if (!base) return;
+
+        // EventAPI owns event configuration, while paid orders/tickets live in TicketAPI.
+        // Merge TicketAPI report totals so the outer dashboard and the event revenue page
+        // always show the same sold-ticket/revenue numbers.
+        const mergedEvents = await Promise.all((base.events || []).map(async (ev) => {
+          try {
+            const report = await reportApi.getRevenue(ev.eventId, {});
+            const data = report.data?.data;
+            const totals = data?.summary || data;
+            return totals ? { ...ev, soldTickets: totals.ticketsSold ?? 0, revenue: totals.grossRevenue ?? 0 } : ev;
+          } catch {
+            return ev;
+          }
+        }));
+
+        const merged = {
+          ...base,
+          events: mergedEvents,
+          totalTicketsSold: mergedEvents.reduce((sum, ev) => sum + (ev.soldTickets || 0), 0),
+          totalRevenue: mergedEvents.reduce((sum, ev) => sum + (ev.revenue || 0), 0),
+        };
+        if (!cancelled) setSummary(merged);
       })
       .catch(() => {
         if (!cancelled) setError("Could not load your dashboard.");
@@ -53,8 +76,7 @@ export default function OrganizerDashboardPage() {
   const events = summary?.events || [];
 
   return (
-    <div className="tb-app">
-      <Header />
+    <OrganizerShell title="Organizer Dashboard">
 
       <div className="tb-container od-wrap">
         <div className="od-head">
@@ -160,6 +182,18 @@ export default function OrganizerDashboardPage() {
                           <Link to={`/organizer/events/${ev.eventId}/edit`} className="ow-link">
                             Manage
                           </Link>
+                          {ev.status === "Published" && (
+                            <>
+                              {" · "}
+                              <Link to={`/organizer/events/${ev.eventId}/revenue`} className="ow-link">
+                                Revenue
+                              </Link>
+                              {" · "}
+                              <Link to={`/organizer/events/${ev.eventId}/staff`} className="ow-link">
+                                Check-in &amp; staff
+                              </Link>
+                            </>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -171,7 +205,6 @@ export default function OrganizerDashboardPage() {
         )}
       </div>
 
-      <Footer />
-    </div>
+      </OrganizerShell>
   );
 }

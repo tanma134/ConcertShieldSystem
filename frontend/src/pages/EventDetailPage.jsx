@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import EventCard from "../components/EventCard";
@@ -33,6 +33,16 @@ export default function EventDetailPage() {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [wishlistError, setWishlistError] = useState("");
+
+  const navigate = useNavigate();
+
+  const handleBuyTickets = () => {
+    if (event && event.eventId) {
+      navigate(`/events/${event.eventId}/select-tickets`);
+    } else {
+      console.warn("Chưa có thông tin sự kiện để mua vé");
+    }
+  };
 
   // Event data is synchronized with the current route.
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -126,15 +136,15 @@ export default function EventDetailPage() {
   }, [event, now]);
 
   const canBuy =
-    timingStatus === "ongoing" &&
+    event?.canSell === true &&
     event?.status !== "Cancelled" &&
     (availableTickets === null || availableTickets > 0);
 
   const buyBlockedMessage = useMemo(() => {
     if (event?.status === "Cancelled") return "This event has been cancelled.";
     if (timingStatus === "ended") return "This event has already ended.";
-    if (timingStatus === "upcoming")
-      return "Ticket sales open once the event begins.";
+    if (event?.status === "Postponed") return "This concert is postponed. The new date will be announced.";
+    if (!event?.canSell) return "Ticket sales are not open yet.";
     if (availableTickets === 0) return "Sold out.";
     return null;
   }, [event, timingStatus, availableTickets]);
@@ -294,7 +304,7 @@ export default function EventDetailPage() {
                       strokeLinecap="round"
                     />
                   </svg>
-                  {formatDateRange(event.startsAt, event.endsAt)}
+                  {event.scheduleAnnounced === false ? "To be announced" : formatDateRange(event.startsAt, event.endsAt)}
                 </div>
 
                 {(event.locationName || event.city) && (
@@ -344,7 +354,7 @@ export default function EventDetailPage() {
                 {wishlistError && <div className="tb-buy-blocked">{wishlistError}</div>}
 
                 {canBuy ? (
-                  <button type="button" className="tb-btn tb-btn-primary tb-buy-btn">
+                  <button type="button" className="tb-btn tb-btn-primary tb-buy-btn" onClick={handleBuyTickets}>
                     Buy Tickets
                   </button>
                 ) : (

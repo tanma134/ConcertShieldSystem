@@ -3,8 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import voucherApi from "../../api/voucherApi";
 import { useAuth } from "../../context/AuthContext";
 import AdminShell from "./AdminShell";
-import Header from "../../components/Header";
-import Footer from "../../components/Footer";
+import OrganizerShell from "../organizer/OrganizerShell";
 import { formatDateTime, formatPrice } from "../../utils/format";
 import "./AdminDashboardPage.css";
 import "./VoucherManagementPage.css";
@@ -1049,14 +1048,12 @@ export default function VoucherManagementPage() {
 
   if (!isAdminView) {
     return (
-      <div className="tb-app">
-        <Header />
-        <div className="tb-container" style={{ padding: "30px 20px", minHeight: "75vh" }}>
+      <OrganizerShell title="Vouchers">
+        <div className="tb-container" style={{ padding: "30px 20px" }}>
           {mainContent}
         </div>
         {renderModals()}
-        <Footer />
-      </div>
+      </OrganizerShell>
     );
   }
 

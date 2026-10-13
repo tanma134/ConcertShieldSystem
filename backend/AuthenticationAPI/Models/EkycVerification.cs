@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace AuthenticationAPI.Models;
 
@@ -12,11 +10,6 @@ public partial class EkycVerification
     public int UserId { get; set; }
 
     public string? CccdNumberEncrypted { get; set; }
-
-    /// <summary>HMAC-SHA256 (hex, 64 ký tự) của số giấy tờ - dùng để phát hiện 1 CCCD bị dùng cho nhiều tài khoản.</summary>
-    [Column("cccd_number_hash")]
-    [StringLength(64)]
-    public string? CccdNumberHash { get; set; }
 
     public string? CccdFrontObjectKey { get; set; }
 
@@ -42,17 +35,23 @@ public partial class EkycVerification
 
     public DateTime CreatedAt { get; set; }
 
-    /// <summary>Phiên bản nội dung đồng ý mà người dùng đã xác nhận.</summary>
-    [Column("consent_version")]
-    [StringLength(20)]
+    public string? CccdNumberHash { get; set; }
+
     public string? ConsentVersion { get; set; }
 
-    [Column("consented_at")]
     public DateTime? ConsentedAt { get; set; }
 
-    /// <summary>Thời điểm đã xóa ảnh gốc + dữ liệu OCR (job retention). Null = chưa xóa.</summary>
-    [Column("data_purged_at")]
     public DateTime? DataPurgedAt { get; set; }
+
+    public bool LegalHold { get; set; }
+
+    public string? LegalHoldReason { get; set; }
+
+    public DateTime? LegalHoldAt { get; set; }
+
+    public int? ReviewedBy { get; set; }
+
+    public DateTime? ReviewedAt { get; set; }
 
     public virtual User User { get; set; } = null!;
 }
