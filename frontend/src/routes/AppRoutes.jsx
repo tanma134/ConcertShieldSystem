@@ -64,6 +64,9 @@ import TicketPlaceholderPage from "../pages/TicketPlaceholderPage";
 import QueueManagementPage from "../pages/admin/QueueManagementPage";
 import QueueAbuseAlertsPage from "../pages/admin/QueueAbuseAlertsPage";
 import QueueAbuseAlertDetailPage from "../pages/admin/QueueAbuseAlertDetailPage";
+import IncidentListPage from "../pages/staff/IncidentListPage";
+import IncidentReportPage from "../pages/staff/IncidentReportPage";
+import IncidentDetailPage from "../pages/staff/IncidentDetailPage";
 
 export default function AppRoutes() {
   return (
@@ -147,6 +150,15 @@ export default function AppRoutes() {
       {/* UC_9 return review (Staff/Admin) */}
       <Route path="/staff/returns" element={<ProtectedRoute><TicketReturnReviewPage /></ProtectedRoute>} />
       <Route path="/admin/returns" element={<ProtectedRoute adminOnly><TicketReturnReviewPage /></ProtectedRoute>} />
+
+      {/* UC_16 On-site Incident Management (UC_16.1 - UC_16.5) */}
+      <Route path="/staff/incidents" element={<ProtectedRoute><IncidentListPage /></ProtectedRoute>} />
+      <Route path="/staff/incidents/new" element={<ProtectedRoute><IncidentReportPage /></ProtectedRoute>} />
+      <Route path="/staff/incidents/:id" element={<ProtectedRoute><IncidentDetailPage /></ProtectedRoute>} />
+
+      <Route path="/admin/incidents" element={<AdminRoute><IncidentListPage /></AdminRoute>} />
+      <Route path="/admin/incidents/new" element={<AdminRoute><IncidentReportPage /></AdminRoute>} />
+      <Route path="/admin/incidents/:id" element={<AdminRoute><IncidentDetailPage /></AdminRoute>} />
 
       {/* UC_13 revenue dashboard and UC_14 check-in report / staff (the organizer of the concert). */}
       <Route path="/organizer/events/:id/revenue" element={<ProtectedRoute organizerOnly><RevenueDashboardPage /></ProtectedRoute>} />

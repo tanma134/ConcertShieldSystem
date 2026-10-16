@@ -25,9 +25,10 @@ export const ADMIN_LINKS = [
   ["/admin/fraud-cases", "Fraud Cases"],
   ["/admin/risk/blocks", "Risk Blocks"],
   ["/admin/risk/appeals", "Appeals"],
-  ["/admin/risk/policy", "Risk Policy"]
+  ["/admin/risk/policy", "Risk Policy"],
   ["/admin/queue", "Virtual Queue"],
   ["/admin/queue/abuse-alerts", "Queue Abuse Alerts"],
+  ["/admin/incidents", "Incident Escalations & Resolutions"],
 ];
 
 export default function AdminShell({ children, title = "Admin Panel" }) {

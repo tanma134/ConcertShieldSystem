@@ -138,6 +138,33 @@ namespace EventAPI.Services
                 .ToListAsync();
         }
 
+        // Returns active event and gate assignments for the given staff member.
+        public async Task<List<StaffEventAssignmentDTO>> GetAssignmentsByStaffAsync(int staffUserId)
+        {
+            var query = from s in _context.EventStaff.AsNoTracking()
+                        where s.StaffUserId == staffUserId && s.IsActive
+                        join e in _context.Events.AsNoTracking() on s.EventId equals e.EventId
+                        where !e.IsDeleted
+                        orderby s.AssignedAt descending
+                        select new StaffEventAssignmentDTO
+                        {
+                            EventStaffId = s.EventStaffId,
+                            EventId = s.EventId,
+                            StaffUserId = s.StaffUserId,
+                            GateName = s.GateName,
+                            EventTitle = e.Title,
+                            City = e.City ?? string.Empty,
+                            LocationName = e.LocationName ?? e.Address ?? string.Empty,
+                            StartsAt = e.StartsAt,
+                            EndsAt = e.EndsAt,
+                            Status = e.Status,
+                            CanReviewReturns = s.CanReviewReturns,
+                            AssignedAt = s.AssignedAt
+                        };
+
+            return await query.ToListAsync();
+        }
+
         // UC_14.4: removes a staff member from the event; the row is kept as history.
         public async Task UnassignAsync(int eventId, int staffUserId, int callerId, bool isAdmin)
         {
