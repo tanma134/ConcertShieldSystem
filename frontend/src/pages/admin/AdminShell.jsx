@@ -26,6 +26,8 @@ export const ADMIN_LINKS = [
   ["/admin/risk/blocks", "Risk Blocks"],
   ["/admin/risk/appeals", "Appeals"],
   ["/admin/risk/policy", "Risk Policy"]
+  ["/admin/queue", "Virtual Queue"],
+  ["/admin/queue/abuse-alerts", "Queue Abuse Alerts"],
 ];
 
 export default function AdminShell({ children, title = "Failed Transaction Queue" }) {

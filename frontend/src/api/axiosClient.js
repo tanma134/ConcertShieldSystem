@@ -17,10 +17,18 @@ const PUBLIC_ENDPOINTS = [
 const isPublicEndpoint = (url = "") =>
   PUBLIC_ENDPOINTS.some((endpoint) => url.includes(endpoint));
 
+const isQueueSessionError = (error) => {
+  const code = error.response?.data?.code;
+  return error.config?.url?.includes("/queue/") &&
+    (code === "TOKEN_INVALID" || code === "TOKEN_REVOKED");
+};
+
 const axiosClient = axios.create({
   baseURL: BASE_URL,
   headers: { "Content-Type": "application/json" },
 });
+
+let refreshPromise = null;
 
 // Attach the access token to every request, EXCEPT the public endpoints above
 axiosClient.interceptors.request.use((config) => {
@@ -47,7 +55,8 @@ axiosClient.interceptors.response.use(
     const shouldTryRefresh =
       error.response?.status === 401 &&
       !originalRequest._retry &&
-      !isPublicEndpoint(originalRequest.url);
+      !isPublicEndpoint(originalRequest.url) &&
+      !isQueueSessionError(error);
 
     if (shouldTryRefresh) {
       originalRequest._retry = true;
@@ -57,9 +66,9 @@ axiosClient.interceptors.response.use(
           throw new Error("No refresh token available");
         }
 
-        const res = await axios.post(`${BASE_URL}/auth/refresh`, {
-          refreshToken,
-        });
+        refreshPromise ??= axios.post(`${BASE_URL}/auth/refresh`, { refreshToken })
+          .finally(() => { refreshPromise = null; });
+        const res = await refreshPromise;
 
         localStorage.setItem("accessToken", res.data.accessToken);
         if (res.data.refreshToken) {
