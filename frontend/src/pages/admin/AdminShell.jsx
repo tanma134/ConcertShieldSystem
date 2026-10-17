@@ -30,7 +30,7 @@ export const ADMIN_LINKS = [
   ["/admin/queue/abuse-alerts", "Queue Abuse Alerts"],
 ];
 
-export default function AdminShell({ children, title = "Admin Panel" }) {
+export default function AdminShell({ children, title = "Failed Transaction Queue" }) {
   // Badge đỏ trên sidebar để admin biết còn việc chờ duyệt.
   const pending = useAdminPending();
   const badges = {

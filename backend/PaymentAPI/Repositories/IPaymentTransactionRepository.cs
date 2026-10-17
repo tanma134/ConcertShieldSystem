@@ -11,5 +11,9 @@ namespace PaymentAPI.Repositories
         Task UpdateAsync(PaymentTransaction transaction);
 
         Task<PaymentTransaction?> GetLatestByOrderIdAsync(int orderId, string gateway);
+
+        Task<List<PaymentTransaction>> GetAllForReconciliationAsync();
+
+        Task<PaymentTransaction?> GetByIdAsync(int paymentTransactionId);
     }
 }

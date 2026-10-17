@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using TicketAPI.API;
 using TicketAPI.DTOs;
@@ -6,13 +7,15 @@ public class PaymentAPIClient : IPaymentAPIClient
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<PaymentAPIClient> _logger;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     public PaymentAPIClient(
         HttpClient httpClient,
-        ILogger<PaymentAPIClient> logger)
+        ILogger<PaymentAPIClient> logger, IHttpContextAccessor httpContextAccessor)
     {
         _httpClient = httpClient;
         _logger = logger;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<CreateVnPayPaymentResponseDto> CreateVnPayPaymentAsync(
@@ -76,5 +79,46 @@ public class PaymentAPIClient : IPaymentAPIClient
         public string? Status { get; set; }
         public string? Reference { get; set; }
         public string? Error { get; set; }
+    }
+
+    public async Task<ApplyVoucherResponseDto> ApplyVoucherAsync(
+        ApplyVoucherRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using var httpRequest = new HttpRequestMessage(
+                HttpMethod.Post,
+                "api/v1/vouchers/apply")
+            {
+                Content = JsonContent.Create(request)
+            };
+
+            var bearerToken = _httpContextAccessor.HttpContext?
+                .Request.Headers.Authorization.ToString();
+
+            if (!string.IsNullOrWhiteSpace(bearerToken) &&
+                AuthenticationHeaderValue.TryParse(bearerToken, out var authorization))
+            {
+                httpRequest.Headers.Authorization = authorization;
+            }
+
+            using var response = await _httpClient.SendAsync(
+                httpRequest,
+                cancellationToken);
+
+            response.EnsureSuccessStatusCode();
+
+            var result = await response.Content
+                .ReadFromJsonAsync<ApplyVoucherResponseDto>(
+                    cancellationToken: cancellationToken);
+
+            return result ?? throw new InvalidOperationException("PaymentAPI không trả về kết quả áp dụng voucher.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi gọi PaymentAPI áp dụng voucher");
+            throw;
+        }
     }
 }

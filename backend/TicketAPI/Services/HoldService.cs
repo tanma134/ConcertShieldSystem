@@ -16,19 +16,20 @@ namespace TicketAPI.Services
             };
 
         private readonly IDatabase _db;
-        private readonly EventEligibilityClient _eligibility;
         private readonly IEventApiClient _eventApiClient;
         private readonly ILogger<HoldService> _logger;
+        private readonly IStatusHistoryService _statusHistoryService;
 
         public HoldService(
             IConnectionMultiplexer redis,
             ILogger<HoldService> logger,
-            IEventApiClient eventApiClient, EventEligibilityClient eligibility)
+            IEventApiClient eventApiClient,
+            IStatusHistoryService statusHistoryService)
         {
             _db = redis.GetDatabase();
             _logger = logger;
             _eventApiClient = eventApiClient;
-            _eligibility = eligibility;
+            _statusHistoryService = statusHistoryService;
         }
 
         public async Task<bool> TryHoldSeatAsync(
@@ -42,7 +43,6 @@ namespace TicketAPI.Services
             ValidatePositive(userId, nameof(userId));
             ValidateDuration(durationSeconds);
 
-            await _eligibility.EnsureSalesAsync(eventId);
             return await _db.StringSetAsync(
                 SeatKey(eventId, seatId),
                 userId,
@@ -278,7 +278,6 @@ namespace TicketAPI.Services
                     "Danh sách SeatIds không hợp lệ hoặc có ghế bị lặp.");
             }
 
-            await _eligibility.EnsureSalesAsync(request.EventId);
             var eventInfo =
                 await _eventApiClient.GetEventByIdAsync(request.EventId);
 
@@ -301,8 +300,6 @@ namespace TicketAPI.Services
                         $"Loại vé {ticket.TicketTypeId} không thuộc sự kiện này.");
                 }
 
-                if (ticketInfo.Status != "Active" || ticketInfo.SalesStartsAt > DateTime.UtcNow || ticketInfo.SalesEndsAt <= DateTime.UtcNow)
-                    throw new InvalidOperationException("This ticket type is not currently on sale.");
                 ticketCapacities[ticket.TicketTypeId] =
                     Math.Max(0, ticketInfo.Quantity - ticketInfo.SoldQuantity);
             }
@@ -385,6 +382,49 @@ namespace TicketAPI.Services
                 if (!saved)
                     throw new InvalidOperationException(
                         "Không lưu được hold session.");
+
+                var historyItems = new List<StatusHistory>();
+
+                foreach (var ticket in tickets)
+                {
+                    historyItems.Add(new StatusHistory
+                    {
+                        TargetType = "TicketTypeInventory",
+                        TargetId = ticket.TicketTypeId,
+                        EventId = request.EventId,
+                        TicketTypeId = ticket.TicketTypeId,
+                        HoldId = holdId,
+                        CustomerId = userId,
+                        Action = "HoldCreated",
+                        OldStatus = "Available",
+                        NewStatus = "Held",
+                        Quantity = ticket.Quantity,
+                        ActorUserId = userId,
+                        ActorRole = "Customer",
+                        Metadata = "{}"
+                    });
+                }
+
+                foreach (var seatId in seatIds)
+                {
+                    historyItems.Add(new StatusHistory
+                    {
+                        TargetType = "Seat",
+                        TargetId = seatId,
+                        EventId = request.EventId,
+                        SeatId = seatId,
+                        HoldId = holdId,
+                        CustomerId = userId,
+                        Action = "HoldCreated",
+                        OldStatus = "Available",
+                        NewStatus = "Held",
+                        ActorUserId = userId,
+                        ActorRole = "Customer",
+                        Metadata = "{}"
+                    });
+                }
+
+                await _statusHistoryService.RecordRangeAsync(historyItems);
 
                 _logger.LogInformation(
                     "Tạo hold session {HoldId} cho user {UserId}, event {EventId}",
@@ -477,42 +517,7 @@ namespace TicketAPI.Services
                     "Phiên giữ vé đã hết hạn.");
             }
 
-            await _eligibility.EnsureSalesAsync(session.EventId);
-            var response = ToResponse(session, remainingSeconds);
-            await EnrichTicketsAsync(response);
-            return response;
-        }
-
-        // Gắn tên vé + đơn giá (nguồn: EventAPI) vào phản hồi để frontend hiển thị "vé đang mua".
-        private async Task EnrichTicketsAsync(HoldSessionResponse response)
-        {
-            try
-            {
-                var eventInfo = await _eventApiClient.GetEventByIdAsync(response.EventId);
-                if (eventInfo?.TicketTypes == null) return;
-
-                response.Tickets = response.Tickets.Select(ticket =>
-                {
-                    var type = eventInfo.TicketTypes.FirstOrDefault(
-                        t => t.TicketTypeId == ticket.TicketTypeId);
-
-                    return new TicketHoldItem
-                    {
-                        TicketTypeId = ticket.TicketTypeId,
-                        Quantity = ticket.Quantity,
-                        TypeName = type?.TypeName,
-                        UnitPrice = type?.Price
-                    };
-                }).ToList();
-
-                response.TotalAmount = response.Tickets.Sum(
-                    t => (t.UnitPrice ?? 0L) * t.Quantity);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex,
-                    "Không lấy được tên/giá vé cho hold {HoldId}", response.HoldId);
-            }
+            return ToResponse(session, remainingSeconds);
         }
 
         public async Task<bool> ReleaseSeatAsync(
@@ -683,7 +688,6 @@ namespace TicketAPI.Services
             if (!saved)
                 throw new KeyNotFoundException("Phiên giữ vé đã hết hạn.");
 
-            await _eligibility.EnsureSalesAsync(session.EventId);
             return ToResponse(session, remainingSeconds);
         }
 
@@ -721,18 +725,59 @@ namespace TicketAPI.Services
 
             foreach (var ticket in session.Tickets ?? new List<TicketHoldItem>())
             {
-                await ReleaseTicketsAsync(
+                var released = await ReleaseTicketsAsync(
                     ticket.TicketTypeId,
                     userId,
                     ticket.Quantity);
+
+                if (released)
+                {
+                    await _statusHistoryService.RecordAsync(new StatusHistory
+                    {
+                        TargetType = "TicketTypeInventory",
+                        TargetId = ticket.TicketTypeId,
+                        EventId = session.EventId,
+                        TicketTypeId = ticket.TicketTypeId,
+                        HoldId = session.HoldId,
+                        CustomerId = userId,
+                        Action = "HoldReleased",
+                        OldStatus = "Held",
+                        NewStatus = "Available",
+                        Quantity = ticket.Quantity,
+                        ActorUserId = userId,
+                        ActorRole = "Customer",
+                        Reason = "CustomerCancelledHold",
+                        Metadata = "{}"
+                    });
+                }
             }
 
             foreach (var seatId in session.SeatIds ?? new List<int>())
             {
-                await ReleaseSeatAsync(
+                var released = await ReleaseSeatAsync(
                     session.EventId,
                     seatId,
                     userId);
+
+                if (released)
+                {
+                    await _statusHistoryService.RecordAsync(new StatusHistory
+                    {
+                        TargetType = "Seat",
+                        TargetId = seatId,
+                        EventId = session.EventId,
+                        SeatId = seatId,
+                        HoldId = session.HoldId,
+                        CustomerId = userId,
+                        Action = "HoldReleased",
+                        OldStatus = "Held",
+                        NewStatus = "Available",
+                        ActorUserId = userId,
+                        ActorRole = "Customer",
+                        Reason = "CustomerCancelledHold",
+                        Metadata = "{}"
+                    });
+                }
             }
 
             await _db.KeyDeleteAsync(sessionKey);

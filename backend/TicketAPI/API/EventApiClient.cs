@@ -1,5 +1,6 @@
 using BookingAPI.DTOS;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using static TicketAPI.DTOs.ConfirmEventSaleDto;
 
 namespace TicketAPI.API

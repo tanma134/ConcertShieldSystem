@@ -523,3 +523,118 @@
     animation: none;
   }
 }
+
+.qf-change-tickets,
+.tb-change-tickets {
+  width: 100%;
+  margin: 16px 0 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(192, 132, 252, 0.32);
+  border-radius: 9px;
+  color: #e3b8fa;
+  background: rgba(168, 85, 247, 0.06);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.qf-change-tickets:hover,
+.tb-change-tickets:hover {
+  border-color: #c084fc;
+  background: rgba(168, 85, 247, 0.14);
+}
+
+.hold-cancel-backdrop {
+  position: fixed;
+  z-index: 3000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.hold-cancel-dialog {
+  width: min(440px, 100%);
+  padding: 26px;
+  border: 1px solid #393341;
+  border-radius: 16px;
+  color: #f5f2f8;
+  background: #17151d;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+}
+
+.hold-cancel-dialog h2 {
+  margin: 0 0 9px;
+  color: #fff;
+  font-size: 21px;
+}
+
+.hold-cancel-dialog > p {
+  margin: 0;
+  color: #aaa5b2;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.hold-cancel-dialog .hold-cancel-error {
+  margin-top: 14px;
+  color: #ff9b9b;
+}
+
+.hold-cancel-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.hold-cancel-actions button {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.hold-cancel-actions button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.hold-cancel-stay {
+  border: 1px solid #47414f;
+  color: #e8e2ed;
+  background: transparent;
+}
+
+.hold-cancel-confirm {
+  border: 1px solid #a82d48;
+  color: #fff;
+  background: #a92340;
+}
+
+.qf-order-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.qf-order-heading .qf-eyebrow {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.qf-order-heading .qf-change-tickets {
+  width: auto;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 10px;
+  white-space: nowrap;
+}

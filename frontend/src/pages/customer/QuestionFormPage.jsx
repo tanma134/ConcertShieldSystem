@@ -128,6 +128,30 @@ export default function QuestionFormPage() {
   const [isExpired, setIsExpired] = useState(false);
   const [loadError, setLoadError] = useState("");
 
+  const [showCancelHoldDialog, setShowCancelHoldDialog] = useState(false);
+  const [isCancellingHold, setIsCancellingHold] = useState(false);
+  const [cancelHoldError, setCancelHoldError] = useState("");
+
+  async function confirmCancelHold() {
+    try {
+      setIsCancellingHold(true);
+      setCancelHoldError("");
+
+      await ticketApi.cancelHoldSession(holdId);
+
+      navigate(`/events/${holdData.eventId}/select-tickets`, {
+        replace: true,
+      });
+    } catch (error) {
+      setCancelHoldError(
+        error.response?.data?.message ||
+          "Could not cancel your reservation. Please try again."
+      );
+    } finally {
+      setIsCancellingHold(false);
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
 
@@ -160,7 +184,7 @@ export default function QuestionFormPage() {
               Number(type.ticketTypeId) === Number(ticket.ticketTypeId)
           );
 
-          if (!ticketType && ticket.typeName == null) {
+          if (!ticketType) {
             throw new Error(
               `Ticket type ${ticket.ticketTypeId} was not found.`
             );
@@ -168,9 +192,9 @@ export default function QuestionFormPage() {
 
           return {
             ticketTypeId: Number(ticket.ticketTypeId),
-            typeName: ticketType?.typeName ?? ticket.typeName,
+            typeName: ticketType.typeName,
             quantity: Number(ticket.quantity),
-            price: Number(ticketType?.price ?? ticket.unitPrice) || 0,
+            price: Number(ticketType.price) || 0,
           };
         });
 
@@ -564,7 +588,21 @@ export default function QuestionFormPage() {
           </section>
 
           <section className="qf-panel">
-            <p className="qf-eyebrow">YOUR ORDER</p>
+            <div className="qf-order-heading">
+              <p className="qf-eyebrow">YOUR ORDER</p>
+
+              <button
+                type="button"
+                className="qf-change-tickets"
+                onClick={() => {
+                  setCancelHoldError("");
+                  setShowCancelHoldDialog(true);
+                }}
+              >
+                Choose different tickets
+              </button>
+            </div>
+
             <h2>{eventData.title ?? "Booking summary"}</h2>
 
             <div className="qf-summary-list">
@@ -603,6 +641,56 @@ export default function QuestionFormPage() {
         </aside>
       </div>
     </main>
+
+    {showCancelHoldDialog && (
+    <div
+      className="hold-cancel-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !isCancellingHold) {
+          setShowCancelHoldDialog(false);
+        }
+      }}
+    >
+      <section
+        className="hold-cancel-dialog"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="hold-cancel-title"
+      >
+        <h2 id="hold-cancel-title">Cancel your reservation?</h2>
+
+        <p>
+          Your currently held tickets will be released so you can choose again.
+        </p>
+
+        {cancelHoldError && (
+          <p className="hold-cancel-error" role="alert">
+            {cancelHoldError}
+          </p>
+        )}
+
+        <div className="hold-cancel-actions">
+          <button
+            type="button"
+            className="hold-cancel-stay"
+            disabled={isCancellingHold}
+            onClick={() => setShowCancelHoldDialog(false)}
+          >
+            Stay here
+          </button>
+
+          <button
+            type="button"
+            className="hold-cancel-confirm"
+            disabled={isCancellingHold}
+            onClick={confirmCancelHold}
+          >
+            {isCancellingHold ? "Cancelling..." : "Cancel reservation"}
+          </button>
+        </div>
+      </section>
+    </div>
+  )}
     <Footer />
   </>
   );
