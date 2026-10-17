@@ -1,19 +1,23 @@
 ﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using TicketAPI.DTOs;
 using TicketAPI.Services;
 
 namespace TicketAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class TicketsController : ControllerBase
+    public class TicketsController : TicketApiControllerBase
     {
         private readonly ITicketService _ticketService;
+        private readonly IStatusHistoryService _statusHistoryService;
 
-        public TicketsController(ITicketService ticketService)
+        public TicketsController(ITicketService ticketService, IStatusHistoryService statusHistoryService)
         {
             _ticketService = ticketService;
+            _statusHistoryService = statusHistoryService;
         }
 
         [HttpGet("my-tickets")]
@@ -55,6 +59,42 @@ namespace TicketAPI.Controllers
                 return NotFound(new { success = false, message = "Ticket not found." });
 
             return Ok(new { success = true, data = ticket });
+        }
+
+
+        [HttpGet("{ticketId}/history")]
+        public async Task<IActionResult> GetMyTicketHistory(int ticketId)
+        {
+            var claim = User.FindFirst(ClaimTypes.NameIdentifier)
+                        ?? User.FindFirst("sub");
+
+            if (claim == null || !int.TryParse(claim.Value, out var userId))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "Token không hợp lệ."
+                });
+            }
+
+            var history = await _statusHistoryService.GetMyTicketHistoryAsync(
+                ticketId,
+                userId);
+
+            if (history == null)
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = "Ticket not found."
+                });
+            }
+
+            return Ok(new
+            {
+                success = true,
+                data = history
+            });
         }
     }
 }

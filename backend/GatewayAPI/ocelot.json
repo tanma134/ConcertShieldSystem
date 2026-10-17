@@ -1,6 +1,194 @@
 {
     "Routes": [
         {
+            "Key": "organizer-event-orders-list",
+            "DownstreamPathTemplate": "/api/organizer/events/{eventId}/orders",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7268
+                }
+            ],
+            "UpstreamPathTemplate": "/api/organizer/events/{eventId}/orders",
+            "UpstreamHttpMethod": [
+                "Get"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "failed-transaction-queue",
+            "DownstreamPathTemplate": "/api/admin/failed-transaction-queue",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7227
+                }
+            ],
+            "UpstreamPathTemplate": "/api/admin/failed-transaction-queue",
+            "UpstreamHttpMethod": [ "Get" ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "admin-tickets-list",
+            "DownstreamPathTemplate": "/api/admin/tickets",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7268
+                }
+            ],
+            "UpstreamPathTemplate": "/api/admin/tickets",
+            "UpstreamHttpMethod": [ "Get" ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "admin-ticket-detail",
+            "DownstreamPathTemplate": "/api/admin/tickets/{ticketId}",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7268
+                }
+            ],
+            "UpstreamPathTemplate": "/api/admin/tickets/{ticketId}",
+            "UpstreamHttpMethod": [ "Get" ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "admin-ticket-reissue",
+            "DownstreamPathTemplate": "/api/admin/tickets/{ticketId}/reissue",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7268
+                }
+            ],
+            "UpstreamPathTemplate": "/api/admin/tickets/{ticketId}/reissue",
+            "UpstreamHttpMethod": [ "Post" ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "admin-ticket-revoke",
+            "DownstreamPathTemplate": "/api/admin/tickets/{ticketId}/revoke",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7268
+                }
+            ],
+            "UpstreamPathTemplate": "/api/admin/tickets/{ticketId}/revoke",
+            "UpstreamHttpMethod": [ "Post" ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "ticket-admin-revoke",
+            "DownstreamPathTemplate": "/api/Tickets/{ticketId}/revoke",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7268
+                }
+            ],
+            "UpstreamPathTemplate": "/api/Tickets/{ticketId}/revoke",
+            "UpstreamHttpMethod": [
+                "Post"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "payment-reconciliation-resolve",
+            "DownstreamPathTemplate": "/api/admin/payment-reconciliation/exceptions/{paymentTransactionId}/resolve",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7227
+                }
+            ],
+            "UpstreamPathTemplate": "/api/admin/payment-reconciliation/exceptions/{paymentTransactionId}/resolve",
+            "UpstreamHttpMethod": [
+                "Post"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "payment-reconciliation-exceptions",
+            "DownstreamPathTemplate": "/api/admin/payment-reconciliation/exceptions",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7227
+                }
+            ],
+            "UpstreamPathTemplate": "/api/admin/payment-reconciliation/exceptions",
+            "UpstreamHttpMethod": [
+                "Get"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "ticket-my-ticket-history",
+            "DownstreamPathTemplate": "/api/Tickets/{ticketId}/history",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7268
+                }
+            ],
+            "UpstreamPathTemplate": "/api/Tickets/{ticketId}/history",
+            "UpstreamHttpMethod": [
+                "Get"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "ticket-admin-status-histories",
+            "DownstreamPathTemplate": "/api/admin/status-histories",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7268
+                }
+            ],
+            "UpstreamPathTemplate": "/api/admin/status-histories",
+            "UpstreamHttpMethod": [
+                "Get"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
             "Key": "admin-change-requests",
             "DownstreamPathTemplate": "/api/admin/change-requests",
             "DownstreamScheme": "https",

@@ -421,3 +421,115 @@
     grid-template-columns: 1fr;
   }
 }
+
+.ticket-history-card {
+  overflow: hidden;
+  padding: 22px;
+  border: 1px solid #27272a;
+  border-radius: 16px;
+  background: #131316;
+}
+
+.ticket-history-header {
+  padding-bottom: 16px;
+  border-bottom: 1px solid #27272a;
+}
+
+.ticket-history-header h2 {
+  margin: 0;
+  color: #fafafa;
+  font-size: 20px;
+}
+
+.ticket-history-state {
+  margin: 0;
+  padding: 22px 0 4px;
+  color: #a1a1aa;
+  font-size: 14px;
+}
+
+.ticket-history-state.is-error {
+  color: #fca5a5;
+}
+
+.ticket-history-list {
+  position: relative;
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 20px 0 0;
+  list-style: none;
+}
+
+.ticket-history-list::before {
+  position: absolute;
+  top: 28px;
+  bottom: 18px;
+  left: 7px;
+  width: 1px;
+  background: #3f3f46;
+  content: "";
+}
+
+.ticket-history-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 14px;
+  padding-bottom: 22px;
+}
+
+.ticket-history-item:last-child {
+  padding-bottom: 0;
+}
+
+.ticket-history-marker {
+  z-index: 1;
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+  border: 3px solid #a21caf;
+  border-radius: 50%;
+  background: #131316;
+}
+
+.ticket-history-content {
+  min-width: 0;
+}
+
+.ticket-history-main {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ticket-history-main strong {
+  color: #f4f4f5;
+  font-size: 14px;
+}
+
+.ticket-history-main time {
+  flex: 0 0 auto;
+  color: #a1a1aa;
+  font-size: 12px;
+}
+
+.ticket-history-status,
+.ticket-history-meta {
+  margin: 7px 0 0;
+  color: #a1a1aa;
+  font-size: 12px;
+}
+
+@media (max-width: 560px) {
+  .ticket-history-card {
+    padding: 18px;
+  }
+
+  .ticket-history-main {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+}

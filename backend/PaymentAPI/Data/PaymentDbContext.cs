@@ -15,6 +15,8 @@ namespace PaymentAPI.Data
         public virtual DbSet<PaymentTransaction> PaymentTransactions { get; set; } = null!;
         public virtual DbSet<PaymentRefund> PaymentRefunds { get; set; } = null!;
 
+        public DbSet<PaymentReconciliationResolution> PaymentReconciliationResolutions => Set<PaymentReconciliationResolution>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -71,6 +73,10 @@ namespace PaymentAPI.Data
                 entity.HasIndex(e => new { e.VoucherId, e.OrderId, e.UserId })
                     .IsUnique()
                     .HasDatabaseName("uq_voucher_usages_voucher_order_user");
+
+                entity.HasIndex(e => e.OrderId)
+                    .IsUnique()
+                    .HasDatabaseName("uq_voucher_usages_order_id");
 
                 entity.HasOne(d => d.Voucher)
                     .WithMany(p => p.Usages)
@@ -130,6 +136,59 @@ namespace PaymentAPI.Data
                 entity.Property(e => e.ErrorMessage).HasMaxLength(500).HasColumnName("error_message");
                 entity.Property(e => e.CreatedAt).HasColumnName("created_at");
                 entity.Property(e => e.CompletedAt).HasColumnName("completed_at");
+            });
+
+            modelBuilder.Entity<PaymentReconciliationResolution>(entity =>
+            {
+                entity.ToTable("payment_reconciliation_resolutions");
+
+                entity.HasKey(x => x.PaymentReconciliationResolutionId);
+
+                entity.Property(x => x.PaymentReconciliationResolutionId)
+                    .HasColumnName("payment_reconciliation_resolution_id")
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(x => x.PaymentTransactionId)
+                    .HasColumnName("payment_transaction_id")
+                    .IsRequired();
+
+                entity.Property(x => x.ResolutionStatus)
+                    .HasColumnName("resolution_status")
+                    .HasMaxLength(20)
+                    .IsRequired();
+
+                entity.Property(x => x.ResolutionNote)
+                    .HasColumnName("resolution_note")
+                    .IsRequired();
+
+                entity.Property(x => x.ResolvedByUserId)
+                    .HasColumnName("resolved_by_user_id")
+                    .IsRequired();
+
+                entity.Property(x => x.ResolvedAt)
+                    .HasColumnName("resolved_at")
+                    .HasColumnType("timestamp with time zone")
+                    .HasDefaultValueSql("now()")
+                    .IsRequired();
+
+                entity.HasIndex(x => x.PaymentTransactionId)
+                    .IsUnique()
+                    .HasDatabaseName("uq_reconciliation_resolution_transaction");
+
+                entity.HasOne(x => x.PaymentTransaction)
+                    .WithOne()
+                    .HasForeignKey<PaymentReconciliationResolution>(
+                        x => x.PaymentTransactionId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.ToTable(table => table.HasCheckConstraint(
+                    "ck_reconciliation_resolution_status",
+                    "resolution_status IN ('Resolved', 'Dismissed')"));
+
+                entity.Property(x => x.ResolutionAction)
+                    .HasColumnName("resolution_action")
+                    .HasMaxLength(50)
+                    .IsRequired();
             });
         }
     }

@@ -154,3 +154,8 @@
 }
 .mc-config-links { display: flex; flex-wrap: wrap; gap: 12px; padding: 0 16px 12px; }
 .mc-config-links a { color: #d28cff; font-size: 13px; text-decoration: none; }
+
+.mc-view-orders {
+  margin: 0 16px 14px;
+  align-self: flex-start;
+}

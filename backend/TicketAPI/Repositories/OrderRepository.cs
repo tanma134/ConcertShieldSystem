@@ -21,7 +21,13 @@ namespace TicketAPI.Repositories
         {
             try
             {
-                var order = await _context.Orders.Include(o => o.OrderDetails).Include(o => o.OrderAttendees).FirstOrDefaultAsync(o => o.OrderId == id);
+                var order = await _context.Orders
+                    .Include(o => o.OrderDetails)
+                    .Include(o => o.OrderAttendees)
+                    .Include(o => o.Tickets)
+                        .ThenInclude(t => t.TicketQrTokens)
+                    .AsSplitQuery()
+                    .FirstOrDefaultAsync(o => o.OrderId == id);
 
                 return order;
 
@@ -48,6 +54,72 @@ namespace TicketAPI.Repositories
                 .Include(order => order.OrderDetails)
                 .OrderByDescending(order => order.OrderDate)
                 .ToListAsync();
+        }
+
+        public async Task<(List<Order> Items, int TotalCount)> GetEventOrdersAsync(
+            int eventId,
+            string? search,
+            string? status,
+            DateTime? fromDate,
+            DateTime? toDateExclusive,
+            int page,
+            int pageSize)
+        {
+            var query = _context.Orders
+                .AsNoTracking()
+                .Where(order =>
+                    order.EventId == eventId &&
+                    !order.IsDeleted);
+
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                query = query.Where(order => order.Status == status.Trim());
+            }
+
+            if (fromDate.HasValue)
+            {
+                query = query.Where(order =>
+                    order.OrderDate.HasValue &&
+                    order.OrderDate.Value >= fromDate.Value);
+            }
+
+            if (toDateExclusive.HasValue)
+            {
+                query = query.Where(order =>
+                    order.OrderDate.HasValue &&
+                    order.OrderDate.Value < toDateExclusive.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim();
+
+                if (int.TryParse(term, out var orderId))
+                {
+                    query = query.Where(order =>
+                        order.OrderId == orderId ||
+                        (order.FullName != null && order.FullName.Contains(term)) ||
+                        (order.Email != null && order.Email.Contains(term)));
+                }
+                else
+                {
+                    query = query.Where(order =>
+                        (order.FullName != null && order.FullName.Contains(term)) ||
+                        (order.Email != null && order.Email.Contains(term)));
+                }
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .Include(order => order.OrderDetails)
+                .OrderByDescending(order => order.OrderDate)
+                .ThenByDescending(order => order.OrderId)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, totalCount);
         }
     }
 }

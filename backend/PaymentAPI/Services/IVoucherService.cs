@@ -22,5 +22,10 @@ namespace PaymentAPI.Services
         Task<VoucherResponseDTO> UpdateVoucherStatusAsync(int id, bool isActive, int currentUserId, bool isAdmin, bool isOrganizer);
         Task<VoucherResponseDTO> UpdateVoucherAsync(int id, UpdateVoucherDTO dto, int currentUserId, bool isAdmin, bool isOrganizer);
         Task<bool> SoftDeleteVoucherAsync(int id, int currentUserId, bool isAdmin, bool isOrganizer);
+        Task<ApplyVoucherResponseDTO> ApplyVoucherAsync(ApplyVoucherRequestDTO request, int userId);
+
+        Task<List<VoucherResponseDTO>> GetAvailableForUserAsync(int eventId, int userId);
+
+        Task RecordUsageForOrderAsync(int orderId);
     }
 }

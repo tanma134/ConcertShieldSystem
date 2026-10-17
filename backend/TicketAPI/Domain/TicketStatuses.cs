@@ -9,6 +9,7 @@ public static class TicketStatuses
     public const string Active = "Active";
     public const string ReturnPending = "ReturnPending";
     public const string Returned = "Returned";
+    public const string Revoked = "Revoked";
 }
 
 // Status values stored in ticket_return_requests.status.

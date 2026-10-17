@@ -11,5 +11,13 @@ namespace TicketAPI.Repositories
         Task UpdateAsync(Order order);
 
         Task<List<Order>> GetOrdersByCustomerIdAsync(int customerId);
+        Task<(List<Order> Items, int TotalCount)> GetEventOrdersAsync(
+            int eventId,
+            string? search,
+            string? status,
+            DateTime? fromDate,
+            DateTime? toDateExclusive,
+            int page,
+            int pageSize);
     }
 }

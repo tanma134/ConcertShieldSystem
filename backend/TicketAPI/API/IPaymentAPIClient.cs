@@ -8,6 +8,8 @@ namespace TicketAPI.API
 
         // Asks PaymentAPI to pay the money of an approved return back to the customer.
         Task<RefundOutcome> RefundAsync(int returnRequestId, int orderId, long amount, CancellationToken cancellationToken = default);
+
+        Task<ApplyVoucherResponseDto> ApplyVoucherAsync(ApplyVoucherRequestDto request, CancellationToken cancellationToken = default);
     }
 
     public sealed record RefundOutcome(bool Success, string? Reference, string? Error);

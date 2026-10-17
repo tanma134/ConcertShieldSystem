@@ -59,6 +59,12 @@ import CheckinManagementPage from "../pages/organizer/CheckinManagementPage";
 import TicketReturnReviewPage from "../pages/admin/TicketReturnReviewPage";
 import EventGovernancePage from "../pages/organizer/EventGovernancePage";
 import ChangeRequestsPage from "../pages/admin/ChangeRequestsPage";
+import TicketStatusHistoryPage from "../pages/admin/TicketStatusHistoryPage";
+import PaymentReconciliationExceptionsPage from "../pages/admin/PaymentReconciliationExceptionsPage";
+import AdminTicketsPage from "../pages/admin/AdminTicketsPage";
+import AdminTicketDetailPage from "../pages/admin/AdminTicketDetailPage";
+import FailedTransactionQueuePage from "../pages/admin/FailedTransactionQueuePage";
+import ConcertOrderListPage from "../pages/organizer/ConcertOrderListPage";
 
 export default function AppRoutes() {
   return (
@@ -133,6 +139,56 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute>
             <OrderDetailsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/ticket-status-history"
+        element={
+          <AdminRoute>
+            <TicketStatusHistoryPage />
+          </AdminRoute>
+        }
+      />
+
+      <Route
+        path="/admin/payment-reconciliation"
+        element={
+          <AdminRoute>
+            <PaymentReconciliationExceptionsPage />
+          </AdminRoute>
+        }
+      />
+
+      <Route
+        path="/admin/tickets"
+        element={
+          <AdminRoute>
+            <AdminTicketsPage />
+          </AdminRoute>
+        }
+      />
+
+      <Route
+        path="/admin/tickets/:ticketId"
+        element={
+          <AdminRoute>
+            <AdminTicketDetailPage />
+          </AdminRoute>
+        }
+      />
+
+      <Route
+        path="/admin/failed-transaction-queue"
+        element={<FailedTransactionQueuePage />}
+      />
+
+      <Route
+        path="/organizer/events/:id/orders"
+        element={
+          <ProtectedRoute organizerOnly>
+            <ConcertOrderListPage />
           </ProtectedRoute>
         }
       />

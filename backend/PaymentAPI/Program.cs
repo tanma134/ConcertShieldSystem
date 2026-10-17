@@ -37,6 +37,14 @@ builder.Services.AddHttpClient<ITicketApiClient, TicketApiClient>(client =>
     client.DefaultRequestHeaders.Add("X-Internal-Api-Key", internalApiKey);
 });
 
+builder.Services.AddHttpClient<IEventApiClient, EventApiClient>(client =>
+{
+    var eventApiUrl = builder.Configuration["ApiSettings:EventApiUrl"]
+        ?? throw new InvalidOperationException("EventApiUrl is missing.");
+
+    client.BaseAddress = new Uri(eventApiUrl);
+});
+
 // Repositories & Services
 builder.Services.AddScoped<IVoucherRepository, VoucherRepository>();
 builder.Services.AddScoped<IVoucherService, VoucherService>();
@@ -47,6 +55,8 @@ builder.Services.AddScoped<IVnPayService, VnPayService>();
 builder.Services.AddScoped<IPaymentTransactionService, PaymentTransactionService>();
 builder.Services.AddScoped<IPaymentTransactionRepository, PaymentTransactionRepository>();
 builder.Services.AddScoped<IRefundService, RefundService>();
+builder.Services.AddScoped<IPaymentReconciliationService, PaymentReconciliationService>();
+builder.Services.AddScoped<IPaymentReconciliationResolutionRepository, PaymentReconciliationResolutionRepository>();
 
 // JWT Authentication
 var jwtSecretKey = builder.Configuration["JwtSettings:SecretKey"] ?? throw new InvalidOperationException("Configure JwtSettings:SecretKey");

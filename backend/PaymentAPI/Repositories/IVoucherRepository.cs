@@ -22,5 +22,10 @@ namespace PaymentAPI.Repositories
         Task<Voucher> CreateAsync(Voucher voucher);
         Task<Voucher> UpdateAsync(Voucher voucher);
         Task<List<VoucherUsage>> GetUsagesByVoucherIdAsync(int voucherId);
+        Task<int> CountUserUsagesAsync(int voucherId, int userId);
+
+        Task<List<Voucher>> GetAvailableForUserAsync(int eventId, int eventOrganizerId, int userId, DateTime now);
+
+        Task<bool> RecordUsageAsync(VoucherUsage usage);
     }
 }

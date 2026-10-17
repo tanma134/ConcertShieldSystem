@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import eventApi from "../../api/eventApi";
 import ticketApi from "../../api/ticketApi";
+import voucherApi from "../../api/voucherApi";
 import "./PaymentInfoPage.css";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
@@ -60,6 +61,39 @@ const formatEventDate = (value) => {
   });
 };
 
+const getResponseData = (response) =>
+  response?.data?.data ?? response?.data ?? {};
+
+const getVoucherCode = (voucher) =>
+  voucher?.code ?? voucher?.Code ?? "";
+
+const getVoucherId = (voucher) =>
+  voucher?.voucher_id ?? voucher?.voucherId ?? getVoucherCode(voucher);
+
+const getVoucherDiscount = (voucher) =>
+  Number(voucher?.discount_amount ?? voucher?.discountAmount) || 0;
+
+const getVoucherDiscountLabel = (voucher) => {
+  const type = voucher?.discount_type ?? voucher?.discountType;
+
+  if (type === "PERCENT") {
+    const percent =
+      voucher?.discount_percent ?? voucher?.discountPercent ?? 0;
+
+    return `${percent}% off`;
+  }
+
+  return `${formatCurrency(
+    voucher?.discount_amount ?? voucher?.discountAmount
+  )} off`;
+};
+
+const hasCodePrefix = (voucher, prefix) =>
+  getVoucherCode(voucher)
+    .trim()
+    .toUpperCase()
+    .startsWith(prefix);
+
 export default function PaymentInfoPage() {
   const { holdId } = useParams();
   const navigate = useNavigate();
@@ -71,22 +105,93 @@ export default function PaymentInfoPage() {
 
   const [timeLeft, setTimeLeft] = useState(0);
   const [isExpired, setIsExpired] = useState(false);
+
   const [voucherCode, setVoucherCode] = useState("");
+  const [availableVouchers, setAvailableVouchers] = useState([]);
+  const [voucherLoading, setVoucherLoading] = useState(false);
+  const [voucherError, setVoucherError] = useState("");
+  const [voucherMessage, setVoucherMessage] = useState("");
+  const [appliedVoucher, setAppliedVoucher] = useState(null);
+  const [showVoucherModal, setShowVoucherModal] = useState(false);
+  const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
+
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
     useState("vnpay");
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const [showCancelHoldDialog, setShowCancelHoldDialog] = useState(false);
+  const [isCancellingHold, setIsCancellingHold] = useState(false);
+  const [cancelHoldError, setCancelHoldError] = useState("");
+
   const items = holdData?.items ?? [];
   const attendees = holdData?.attendees ?? [];
 
-  // Người mua chính là attendee được chọn ở QuestionForm,
-  // không mặc định attendee đầu tiên.
   const primaryHolder = useMemo(
-    () => attendees.find((attendee) => attendee.isPrimaryBuyer === true) ?? {},
+    () =>
+      attendees.find((attendee) => attendee.isPrimaryBuyer === true) ?? {},
     [attendees]
   );
 
   const totalAmount = Number(holdData?.totalAmount) || 0;
+  const eventId = event?.eventId ?? event?.id;
+
+  const adminVouchers = useMemo(
+    () =>
+      availableVouchers.filter((voucher) =>
+        hasCodePrefix(voucher, "A")
+      ),
+    [availableVouchers]
+  );
+
+  const organizerVouchers = useMemo(
+    () =>
+      availableVouchers.filter((voucher) =>
+        hasCodePrefix(voucher, "OR")
+      ),
+    [availableVouchers]
+  );
+
+  const otherVouchers = useMemo(
+    () =>
+      availableVouchers.filter(
+        (voucher) =>
+          !hasCodePrefix(voucher, "A") &&
+          !hasCodePrefix(voucher, "OR")
+      ),
+    [availableVouchers]
+  );
+
+  const appliedDiscount = appliedVoucher
+    ? getVoucherDiscount(appliedVoucher)
+    : 0;
+
+  const payableAmount = appliedVoucher
+    ? Number(
+        appliedVoucher.final_amount ??
+          appliedVoucher.finalAmount ??
+          Math.max(0, totalAmount - appliedDiscount)
+      )
+    : totalAmount;
+
+  const confirmCancelHold = async () => {
+    try {
+      setIsCancellingHold(true);
+      setCancelHoldError("");
+
+      await ticketApi.cancelHoldSession(holdId);
+
+      navigate(`/events/${holdData.eventId}/select-tickets`, {
+        replace: true,
+      });
+    } catch (error) {
+      setCancelHoldError(
+        error.response?.data?.message ||
+          "Could not cancel your reservation. Please try again."
+      );
+    } finally {
+      setIsCancellingHold(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -122,20 +227,18 @@ export default function PaymentInfoPage() {
               Number(type.ticketTypeId) === Number(ticket.ticketTypeId)
           );
 
-          // Ưu tiên dữ liệu từ EventAPI; nếu hụt thì dùng tên/giá do TicketAPI trả kèm phiên giữ vé.
-          if (!ticketType && ticket.typeName == null) {
+          if (!ticketType) {
             throw new Error(
               `Ticket type ${ticket.ticketTypeId} was not found.`
             );
           }
 
-          const price =
-            Number(ticketType?.price ?? ticket.unitPrice) || 0;
+          const price = Number(ticketType.price) || 0;
           const quantity = Number(ticket.quantity) || 0;
 
           return {
             ticketTypeId: Number(ticket.ticketTypeId),
-            ticketName: ticketType?.typeName ?? ticket.typeName,
+            ticketName: ticketType.typeName,
             quantity,
             price,
             total: quantity * price,
@@ -186,6 +289,48 @@ export default function PaymentInfoPage() {
   }, [holdId, navigate]);
 
   useEffect(() => {
+    if (!eventId) return undefined;
+
+    let cancelled = false;
+
+    async function loadAvailableVouchers() {
+      try {
+        setVoucherLoading(true);
+        setVoucherError("");
+
+        const response =
+          await voucherApi.getAvailableVouchers(eventId);
+
+        const data = getResponseData(response);
+        const vouchers = Array.isArray(data)
+          ? data
+          : data?.items ?? [];
+
+        if (!cancelled) {
+          setAvailableVouchers(vouchers);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setVoucherError(
+            error.response?.data?.message ||
+              "Could not load available vouchers."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setVoucherLoading(false);
+        }
+      }
+    }
+
+    loadAvailableVouchers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [eventId]);
+
+  useEffect(() => {
     if (!holdData?.expiresAtUtc) return undefined;
 
     const expiresAt = new Date(holdData.expiresAtUtc).getTime();
@@ -211,6 +356,19 @@ export default function PaymentInfoPage() {
     return () => window.clearInterval(timer);
   }, [holdData?.expiresAtUtc]);
 
+  useEffect(() => {
+    if (!showVoucherModal) return undefined;
+
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setShowVoucherModal(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showVoucherModal]);
+
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
     const remainder = seconds % 60;
@@ -219,6 +377,56 @@ export default function PaymentInfoPage() {
       2,
       "0"
     )}`;
+  };
+
+  const handleApplyVoucher = async () => {
+    const code = voucherCode.trim();
+
+    if (!code) {
+      setVoucherMessage("Enter or select a voucher code.");
+      return;
+    }
+
+    try {
+      setIsApplyingVoucher(true);
+      setVoucherMessage("");
+
+      const response = await voucherApi.applyVoucher({
+        code,
+        event_id: Number(eventId),
+        order_amount: totalAmount,
+      });
+
+      const result = getResponseData(response);
+      const isValid = result?.is_valid ?? result?.isValid;
+
+      if (!isValid) {
+        setAppliedVoucher(null);
+        setVoucherMessage(
+          result?.message || "This voucher cannot be applied."
+        );
+        return;
+      }
+
+      setAppliedVoucher(result);
+      setVoucherCode(getVoucherCode(result) || code);
+      setVoucherMessage(result.message || "Voucher applied.");
+      setShowVoucherModal(false);
+    } catch (error) {
+      setAppliedVoucher(null);
+      setVoucherMessage(
+        error.response?.data?.message ||
+          "Could not apply this voucher."
+      );
+    } finally {
+      setIsApplyingVoucher(false);
+    }
+  };
+
+  const handleRemoveVoucher = () => {
+    setAppliedVoucher(null);
+    setVoucherCode("");
+    setVoucherMessage("");
   };
 
   const handlePayment = async () => {
@@ -276,7 +484,6 @@ export default function PaymentInfoPage() {
       const isReservedSeating = heldSeatIds.length > 0;
       const seatIdsByTicketType = new Map();
 
-      // Ghép từng ghế đang giữ với TicketTypeId tương ứng trong sơ đồ.
       if (isReservedSeating) {
         for (const zone of event?.seatingChart?.zones ?? []) {
           const zoneTicketTypeId = Number(zone.ticketTypeId);
@@ -330,20 +537,16 @@ export default function PaymentInfoPage() {
       }
 
       const payload = {
-        // Backend dùng holdId để tìm phiên giữ vé; thiếu là báo "HoldId không hợp lệ".
         holdId,
         eventId: Number(holdData.eventId),
         isReservedSeating,
         orderDetails,
-
-        // Các cột thông tin liên hệ trong Order lấy từ đúng chủ tài khoản.
         fullName: primaryHolder.fullName.trim(),
         email: primaryHolder.email.trim(),
         phone: primaryHolder.phone.trim(),
-
-        voucherCode: voucherCode.trim() || null,
-
-        // Gửi đủ dữ liệu để backend ghép attendee với đúng loại vé/ghế.
+        voucherCode: appliedVoucher
+          ? getVoucherCode(appliedVoucher)
+          : null,
         attendees: attendees.map((attendee) => ({
           fullName: attendee.fullName?.trim() || "",
           citizenId:
@@ -360,8 +563,6 @@ export default function PaymentInfoPage() {
           isPrimaryBuyer: attendee.isPrimaryBuyer === true,
         })),
       };
-
-      console.log("Create order payload:", payload);
 
       const response = await ticketApi.createOrder(payload);
       const result = response.data?.data ?? response.data;
@@ -399,10 +600,8 @@ export default function PaymentInfoPage() {
           <div className="qf-spinner" aria-hidden="true">
             <span />
           </div>
-
           <h2>Preparing your checkout</h2>
           <p>Loading reservation</p>
-
           <div className="qf-loading-skeleton" aria-hidden="true">
             <i />
             <i />
@@ -448,217 +647,501 @@ export default function PaymentInfoPage() {
     .filter(Boolean)
     .join(" · ");
 
+  const renderVoucherGroup = (title, vouchers, emptyText) => (
+    <section className="voucher-group">
+      <div className="voucher-group-heading">
+        <h3>{title}</h3>
+        <span>{vouchers.length}</span>
+      </div>
+
+      {vouchers.length === 0 ? (
+        <p className="voucher-empty">{emptyText}</p>
+      ) : (
+        <div className="voucher-options">
+          {vouchers.map((voucher) => {
+            const code = getVoucherCode(voucher);
+            const selected = voucherCode === code;
+
+            return (
+              <button
+                type="button"
+                key={getVoucherId(voucher)}
+                className={`voucher-option ${
+                  selected ? "is-selected" : ""
+                }`}
+                onClick={() => {
+                  setVoucherCode(code);
+                  setVoucherMessage("");
+                }}
+              >
+                <span className="voucher-option-mark">%</span>
+                <span className="voucher-option-copy">
+                  <strong>{code}</strong>
+                  <small>{getVoucherDiscountLabel(voucher)}</small>
+                </span>
+                <span className="voucher-option-action">
+                  {selected ? "Selected" : "Select"}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+
   return (
     <>
-    <Header />
-    <main className="tb-payment-page">
-      <div className="tb-page-container tb-payment-layout">
-        <section className="tb-payment-main">
-          <article className="tb-panel">
-            <div className="tb-panel-heading">
-              <div>
-                <span className="tb-eyebrow">YOUR BOOKING</span>
-                <h2>Event information</h2>
-              </div>
-              <span className="tb-event-tag">TICKET RESERVATION</span>
-            </div>
+      <Header />
 
-            <div className="tb-event-card">
-              {event?.posterUrl ? (
-                <img
-                  className="tb-event-poster"
-                  src={event.posterUrl}
-                  alt={`${eventTitle} poster`}
-                />
+      <main className="tb-payment-page">
+        <div className="tb-page-container tb-payment-layout">
+          <section className="tb-payment-main">
+            <article className="tb-panel">
+              <div className="tb-panel-heading">
+                <div>
+                  <span className="tb-eyebrow">YOUR BOOKING</span>
+                  <h2>Event information</h2>
+                </div>
+                <span className="tb-event-tag">TICKET RESERVATION</span>
+              </div>
+
+              <div className="tb-event-card">
+                {event?.posterUrl ? (
+                  <img
+                    className="tb-event-poster"
+                    src={event.posterUrl}
+                    alt={`${eventTitle} poster`}
+                  />
+                ) : (
+                  <div className="tb-event-poster tb-poster-fallback">
+                    EVENT
+                  </div>
+                )}
+
+                <div className="tb-event-copy">
+                  <h3>{eventTitle}</h3>
+                  <div className="tb-event-meta">
+                    <span>
+                      <b>When</b>
+                      {formatEventDate(event?.startsAt || event?.startDate)}
+                    </span>
+                    <span>
+                      <b>Where</b>
+                      {eventLocation ||
+                        event?.address ||
+                        "Location to be announced"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article className="tb-panel">
+              <div className="tb-panel-heading">
+                <div>
+                  <span className="tb-eyebrow">TICKET DELIVERY</span>
+                  <h2>Contact information</h2>
+                </div>
+              </div>
+
+              <div className="tb-contact-grid">
+                <div className="tb-contact-item">
+                  <span>Account holder</span>
+                  <strong>{primaryHolder.fullName || "—"}</strong>
+                </div>
+                <div className="tb-contact-item">
+                  <span>Email address</span>
+                  <strong>{primaryHolder.email || "—"}</strong>
+                </div>
+                <div className="tb-contact-item">
+                  <span>Phone number</span>
+                  <strong>{primaryHolder.phone || "—"}</strong>
+                </div>
+              </div>
+            </article>
+
+            <article className="tb-panel tb-checkout-voucher-panel">
+              <div className="tb-panel-heading">
+                <div>
+                  <span className="tb-eyebrow">DISCOUNT</span>
+                  <h2>Apply voucher</h2>
+                </div>
+              </div>
+
+              {appliedVoucher ? (
+                <div className="tb-applied-voucher">
+                  <div>
+                    <strong>{getVoucherCode(appliedVoucher)} applied</strong>
+                    <small>You saved {formatCurrency(appliedDiscount)}</small>
+                  </div>
+                  <button
+                    type="button"
+                    className="tb-voucher-remove"
+                    onClick={handleRemoveVoucher}
+                    disabled={isProcessing}
+                  >
+                    Remove
+                  </button>
+                </div>
               ) : (
-                <div className="tb-event-poster tb-poster-fallback">
-                  EVENT
+                <button
+                  type="button"
+                  className="tb-voucher-open-button"
+                  onClick={() => {
+                    setVoucherMessage("");
+                    setShowVoucherModal(true);
+                  }}
+                >
+                  <span className="tb-voucher-open-icon">%</span>
+                  <span className="tb-voucher-open-copy">
+                    <strong>Choose or enter a voucher</strong>
+                    <small>Admin and organizer offers</small>
+                  </span>
+                  <span className="tb-voucher-open-arrow">→</span>
+                </button>
+              )}
+
+              {voucherError && (
+                <p className="tb-voucher-inline-error" role="alert">
+                  {voucherError}
+                </p>
+              )}
+            </article>
+
+            <article className="tb-panel">
+              <div className="tb-panel-heading">
+                <div>
+                  <span className="tb-eyebrow">SECURE CHECKOUT</span>
+                  <h2>Choose payment method</h2>
+                </div>
+                <span className="tb-secure-badge">Secure</span>
+              </div>
+
+              <div className="tb-payment-method-list">
+                {PAYMENT_METHODS.map((method) => (
+                  <label
+                    key={method.id}
+                    className={[
+                      "tb-method-card",
+                      selectedPaymentMethod === method.id
+                        ? "is-selected"
+                        : "",
+                      !method.available ? "is-unavailable" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value={method.id}
+                      checked={selectedPaymentMethod === method.id}
+                      disabled={!method.available}
+                      onChange={() =>
+                        setSelectedPaymentMethod(method.id)
+                      }
+                    />
+                    <span className={`tb-method-mark tb-mark-${method.id}`}>
+                      {method.mark}
+                    </span>
+                    <span className="tb-method-copy">
+                      <strong>{method.name}</strong>
+                      <small>{method.description}</small>
+                    </span>
+                    <span
+                      className={`tb-method-badge ${
+                        method.available ? "is-ready" : ""
+                      }`}
+                    >
+                      {method.badge}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </article>
+          </section>
+
+          <aside className="tb-payment-sidebar">
+            <section className="tb-panel tb-countdown-panel">
+              <div className="tb-countdown-label">
+                TIME LEFT TO COMPLETE
+              </div>
+              <div
+                className={`tb-countdown ${
+                  timeLeft < 120 ? "is-urgent" : ""
+                }`}
+              >
+                {formatTime(timeLeft)}
+              </div>
+              <p>Your reservation will be released when the timer expires.</p>
+            </section>
+
+            <section className="tb-panel tb-summary-panel">
+              <div className="tb-panel-heading tb-order-panel-heading">
+                <div className="tb-order-heading-copy">
+                  <span className="tb-eyebrow">ORDER</span>
+                  <h2>Booking summary</h2>
+                </div>
+
+                <button
+                  type="button"
+                  className="tb-change-tickets"
+                  onClick={() => {
+                    setCancelHoldError("");
+                    setShowCancelHoldDialog(true);
+                  }}
+                >
+                  Choose different tickets
+                </button>
+              </div>
+
+              <div className="tb-hold-reference">
+                <span>Reservation ID</span>
+                <code>{holdId?.slice(0, 12).toUpperCase()}</code>
+              </div>
+
+              <div className="tb-summary-items">
+                {items.map((item, index) => (
+                  <div
+                    className="tb-summary-item"
+                    key={`${item.ticketTypeId}-${index}`}
+                  >
+                    <div>
+                      <strong>
+                        {item.ticketName ||
+                          `Ticket ${item.ticketTypeId}`}
+                      </strong>
+                      <span>
+                        {item.quantity} × {formatCurrency(item.price)}
+                      </span>
+                    </div>
+                    <b>{formatCurrency(item.total)}</b>
+                  </div>
+                ))}
+              </div>
+
+              <div className="tb-summary-total">
+                <span>Subtotal</span>
+                <strong>{formatCurrency(totalAmount)}</strong>
+              </div>
+
+              {appliedVoucher && (
+                <div className="tb-summary-total tb-summary-discount">
+                  <span>Voucher discount</span>
+                  <strong>-{formatCurrency(appliedDiscount)}</strong>
                 </div>
               )}
 
-              <div className="tb-event-copy">
-                <h3>{eventTitle}</h3>
-                <div className="tb-event-meta">
-                  <span>
-                    <b>When</b>
-                    {formatEventDate(event?.startsAt || event?.startDate)}
-                  </span>
-                  <span>
-                    <b>Where</b>
-                    {eventLocation ||
-                      event?.address ||
-                      "Location to be announced"}
-                  </span>
-                </div>
+              <div className="tb-summary-total">
+                <span>Total due</span>
+                <strong>{formatCurrency(payableAmount)}</strong>
               </div>
-            </div>
-          </article>
 
-          <article className="tb-panel">
-            <div className="tb-panel-heading">
-              <div>
-                <span className="tb-eyebrow">TICKET DELIVERY</span>
-                <h2>Contact information</h2>
-              </div>
-            </div>
-
-            <div className="tb-contact-grid">
-              <div className="tb-contact-item">
-                <span>Account holder</span>
-                <strong>{primaryHolder.fullName || "—"}</strong>
-              </div>
-              <div className="tb-contact-item">
-                <span>Email address</span>
-                <strong>{primaryHolder.email || "—"}</strong>
-              </div>
-              <div className="tb-contact-item">
-                <span>Phone number</span>
-                <strong>{primaryHolder.phone || "—"}</strong>
-              </div>
-            </div>
-          </article>
-
-          <article className="tb-panel">
-            <div className="tb-panel-heading">
-              <div>
-                <span className="tb-eyebrow">SECURE CHECKOUT</span>
-                <h2>Choose payment method</h2>
-              </div>
-              <span className="tb-secure-badge">Secure</span>
-            </div>
-
-            <div className="tb-payment-method-list">
-              {PAYMENT_METHODS.map((method) => (
-                <label
-                  key={method.id}
-                  className={[
-                    "tb-method-card",
-                    selectedPaymentMethod === method.id ? "is-selected" : "",
-                    !method.available ? "is-unavailable" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                >
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value={method.id}
-                    checked={selectedPaymentMethod === method.id}
-                    disabled={!method.available}
-                    onChange={() => setSelectedPaymentMethod(method.id)}
-                  />
-
-                  <span className={`tb-method-mark tb-mark-${method.id}`}>
-                    {method.mark}
-                  </span>
-
-                  <span className="tb-method-copy">
-                    <strong>{method.name}</strong>
-                    <small>{method.description}</small>
-                  </span>
-
-                  <span
-                    className={`tb-method-badge ${
-                      method.available ? "is-ready" : ""
+              <button
+                type="button"
+                className="tb-pay-button"
+                onClick={handlePayment}
+                disabled={
+                  isProcessing ||
+                  timeLeft <= 0 ||
+                  items.length === 0 ||
+                  isApplyingVoucher
+                }
+              >
+                {isProcessing
+                  ? "Preparing payment..."
+                  : `Continue with ${
+                      selectedPaymentMethod === "vnpay"
+                        ? "VNPay"
+                        : "payment"
                     }`}
-                  >
-                    {method.badge}
-                  </span>
-                </label>
-              ))}
-            </div>
+                {!isProcessing && <span aria-hidden="true">→</span>}
+              </button>
 
-            <div className="tb-voucher-box">
-              <label htmlFor="voucherCode">Promo code</label>
-              <div className="tb-voucher-control">
+              <div className="tb-payment-note">
+                <span aria-hidden="true">🔒</span>
+                Your payment is processed through a secure checkout.
+              </div>
+            </section>
+          </aside>
+        </div>
+      </main>
+
+      {showVoucherModal && (
+        <div
+          className="voucher-modal-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setShowVoucherModal(false);
+            }
+          }}
+        >
+          <section
+            className="voucher-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="voucher-modal-title"
+          >
+            <header className="voucher-modal-header">
+              <div>
+                <span className="tb-eyebrow">CHECKOUT DISCOUNTS</span>
+                <h2 id="voucher-modal-title">Apply a voucher</h2>
+                <p>Choose an offer or enter a voucher code.</p>
+              </div>
+              <button
+                type="button"
+                className="voucher-modal-close"
+                aria-label="Close"
+                onClick={() => setShowVoucherModal(false)}
+              >
+                ×
+              </button>
+            </header>
+
+            <form
+              className="voucher-manual-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                handleApplyVoucher();
+              }}
+            >
+              <label htmlFor="voucherCode">Voucher code</label>
+              <div className="voucher-manual-control">
                 <input
                   id="voucherCode"
-                  type="text"
                   value={voucherCode}
-                  onChange={(event) => setVoucherCode(event.target.value)}
-                  placeholder="Enter a promo code"
+                  onChange={(event) => {
+                    setVoucherCode(event.target.value);
+                    setVoucherMessage("");
+                  }}
+                  placeholder="Enter code, e.g. A111 or OR2"
+                  autoComplete="off"
                 />
-              </div>
-              <small>
-                The promo code will be validated when the order is submitted.
-              </small>
-            </div>
-          </article>
-        </section>
-
-        <aside className="tb-payment-sidebar">
-          <section className="tb-panel tb-countdown-panel">
-            <div className="tb-countdown-label">TIME LEFT TO COMPLETE</div>
-            <div
-              className={`tb-countdown ${
-                timeLeft < 120 ? "is-urgent" : ""
-              }`}
-            >
-              {formatTime(timeLeft)}
-            </div>
-            <p>Your reservation will be released when the timer expires.</p>
-          </section>
-
-          <section className="tb-panel tb-summary-panel">
-            <div className="tb-panel-heading">
-              <div>
-                <span className="tb-eyebrow">ORDER</span>
-                <h2>Booking summary</h2>
-              </div>
-            </div>
-
-            <div className="tb-hold-reference">
-              <span>Reservation ID</span>
-              <code>{holdId?.slice(0, 12).toUpperCase()}</code>
-            </div>
-
-            <div className="tb-summary-items">
-              {items.map((item, index) => (
-                <div
-                  className="tb-summary-item"
-                  key={`${item.ticketTypeId}-${index}`}
+                <button
+                  type="submit"
+                  disabled={!voucherCode.trim() || isApplyingVoucher}
                 >
-                  <div>
-                    <strong>
-                      {item.ticketName || `Ticket ${item.ticketTypeId}`}
-                    </strong>
-                    <span>
-                      {item.quantity} × {formatCurrency(item.price)}
-                    </span>
-                  </div>
-                  <b>{formatCurrency(item.total)}</b>
-                </div>
-              ))}
-            </div>
+                  {isApplyingVoucher ? "Applying..." : "Apply"}
+                </button>
+              </div>
 
-            <div className="tb-summary-total">
-              <span>Total due</span>
-              <strong>{formatCurrency(totalAmount)}</strong>
-            </div>
-
-            <button
-              type="button"
-              className="tb-pay-button"
-              onClick={handlePayment}
-              disabled={isProcessing || timeLeft <= 0 || items.length === 0}
-            >
-              {isProcessing
-                ? "Preparing payment..."
-                : `Continue with ${
-                    selectedPaymentMethod === "vnpay" ? "VNPay" : "payment"
+              {voucherMessage && (
+                <p
+                  className={`voucher-feedback ${
+                    appliedVoucher ? "is-success" : "is-error"
                   }`}
-              {!isProcessing && <span aria-hidden="true">→</span>}
-            </button>
+                  role="status"
+                >
+                  {voucherMessage}
+                </p>
+              )}
+            </form>
 
-            <div className="tb-payment-note">
-              <span aria-hidden="true">🔒</span>
-              Your payment is processed through a secure checkout.
+            <div className="voucher-modal-list">
+              {voucherLoading ? (
+                <p className="voucher-empty">
+                  Loading available vouchers...
+                </p>
+              ) : (
+                <>
+                  {renderVoucherGroup(
+                    "Admin vouchers",
+                    adminVouchers,
+                    "No available admin vouchers."
+                  )}
+
+                  {renderVoucherGroup(
+                    "Organizer vouchers",
+                    organizerVouchers,
+                    "No available organizer vouchers."
+                  )}
+
+                  {otherVouchers.length > 0 &&
+                    renderVoucherGroup(
+                      "Other vouchers",
+                      otherVouchers,
+                      "No other vouchers."
+                    )}
+                </>
+              )}
+
+              {voucherError && (
+                <p className="voucher-feedback is-error" role="alert">
+                  {voucherError}
+                </p>
+              )}
+            </div>
+
+            <footer className="voucher-modal-footer">
+              <span>Order total: {formatCurrency(totalAmount)}</span>
+              <button
+                type="button"
+                onClick={() => setShowVoucherModal(false)}
+              >
+                Close
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
+
+      {showCancelHoldDialog && (
+        <div
+          className="hold-cancel-backdrop"
+          onMouseDown={(event) => {
+            if (
+              event.target === event.currentTarget &&
+              !isCancellingHold
+            ) {
+              setShowCancelHoldDialog(false);
+            }
+          }}
+        >
+          <section
+            className="hold-cancel-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="hold-cancel-title"
+          >
+            <h2 id="hold-cancel-title">Cancel your reservation?</h2>
+            <p>
+              Your currently held tickets will be released so you can choose
+              again.
+            </p>
+
+            {cancelHoldError && (
+              <p className="hold-cancel-error" role="alert">
+                {cancelHoldError}
+              </p>
+            )}
+
+            <div className="hold-cancel-actions">
+              <button
+                type="button"
+                className="hold-cancel-stay"
+                disabled={isCancellingHold}
+                onClick={() => setShowCancelHoldDialog(false)}
+              >
+                Stay here
+              </button>
+
+              <button
+                type="button"
+                className="hold-cancel-confirm"
+                disabled={isCancellingHold}
+                onClick={confirmCancelHold}
+              >
+                {isCancellingHold
+                  ? "Cancelling..."
+                  : "Cancel reservation"}
+              </button>
             </div>
           </section>
-        </aside>
-      </div>
-    </main>
-    <Footer />
-  </>
+        </div>
+      )}
+
+      <Footer />
+    </>
   );
 }

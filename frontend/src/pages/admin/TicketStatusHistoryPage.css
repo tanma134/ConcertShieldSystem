@@ -1,0 +1,367 @@
+.tsh-page {
+  display: grid;
+  gap: 20px;
+  padding: 28px;
+  color: #f4f4f5;
+}
+
+.tsh-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.tsh-eyebrow {
+  margin: 0 0 7px;
+  color: #c084fc;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.tsh-heading h1 {
+  margin: 0;
+  color: #fafafa;
+  font-size: clamp(25px, 3vw, 34px);
+}
+
+.tsh-heading > div:first-child > p:last-child {
+  max-width: 680px;
+  margin: 9px 0 0;
+  color: #a1a1aa;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.tsh-total {
+  display: grid;
+  min-width: 110px;
+  padding: 12px 16px;
+  border: 1px solid rgba(192, 132, 252, 0.25);
+  border-radius: 12px;
+  background: rgba(126, 34, 206, 0.12);
+  text-align: right;
+}
+
+.tsh-total strong {
+  color: #f5d0fe;
+  font-size: 20px;
+}
+
+.tsh-total span {
+  color: #a1a1aa;
+  font-size: 12px;
+}
+
+.tsh-filters {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.7fr) minmax(180px, 1fr)
+    minmax(190px, 1fr) minmax(190px, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid #2d2936;
+  border-radius: 14px;
+  background: #15131a;
+}
+
+.tsh-filter-field {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.tsh-filter-field > span {
+  color: #c4c0cc;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tsh-filter-field input,
+.tsh-filter-field select {
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 11px;
+  border: 1px solid #393443;
+  border-radius: 8px;
+  outline: none;
+  color: #f4f4f5;
+  background: #201d27;
+  font: inherit;
+  font-size: 13px;
+}
+
+.tsh-filter-field input:focus,
+.tsh-filter-field select:focus {
+  border-color: #c084fc;
+  box-shadow: 0 0 0 3px rgba(192, 132, 252, 0.14);
+}
+
+.tsh-filter-field input::placeholder {
+  color: #77717f;
+}
+
+.tsh-filter-field select option {
+  color: #f4f4f5;
+  background: #201d27;
+}
+
+.tsh-filter-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.tsh-button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 13px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.tsh-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.tsh-button-primary {
+  color: #fff;
+  background: linear-gradient(135deg, #7c3aed, #c026d3);
+}
+
+.tsh-button-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #8b5cf6, #d946ef);
+}
+
+.tsh-button-secondary {
+  border-color: #393443;
+  color: #e4e4e7;
+  background: #201d27;
+}
+
+.tsh-button-secondary:hover:not(:disabled) {
+  border-color: #6b5f79;
+  background: #292431;
+}
+
+.tsh-error {
+  padding: 12px 14px;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: 10px;
+  color: #fca5a5;
+  background: rgba(127, 29, 29, 0.2);
+  font-size: 13px;
+}
+
+.tsh-table-card {
+  overflow: hidden;
+  border: 1px solid #2d2936;
+  border-radius: 14px;
+  background: #15131a;
+}
+
+.tsh-table-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #2d2936;
+}
+
+.tsh-table-heading h2 {
+  margin: 0;
+  color: #f4f4f5;
+  font-size: 17px;
+}
+
+.tsh-table-heading p {
+  margin: 5px 0 0;
+  color: #96919e;
+  font-size: 12px;
+}
+
+.tsh-page-indicator {
+  color: #b8b2c1;
+  font-size: 12px;
+}
+
+.tsh-table-scroll {
+  overflow-x: auto;
+}
+
+.tsh-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.tsh-table th {
+  padding: 12px 15px;
+  border-bottom: 1px solid #302b38;
+  color: #9d97a7;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tsh-table td {
+  padding: 14px 15px;
+  border-bottom: 1px solid rgba(57, 52, 67, 0.65);
+  color: #dedbe4;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.tsh-table tbody tr:hover {
+  background: rgba(192, 132, 252, 0.045);
+}
+
+.tsh-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.tsh-time {
+  min-width: 160px;
+  color: #aaa4b2 !important;
+  white-space: nowrap;
+}
+
+.tsh-target {
+  display: inline-flex;
+  padding: 5px 8px;
+  border: 1px solid #3a3444;
+  border-radius: 7px;
+  color: #e9d5ff;
+  background: rgba(126, 34, 206, 0.12);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tsh-target-seat {
+  border-color: rgba(96, 165, 250, 0.25);
+  color: #bfdbfe;
+  background: rgba(30, 64, 175, 0.14);
+}
+
+.tsh-target-ticket {
+  border-color: rgba(74, 222, 128, 0.22);
+  color: #bbf7d0;
+  background: rgba(20, 83, 45, 0.18);
+}
+
+.tsh-status-change {
+  color: #d4d4d8;
+  white-space: nowrap;
+}
+
+.tsh-details {
+  min-width: 130px;
+}
+
+.tsh-details span {
+  display: block;
+  margin: 2px 0;
+  color: #a7a1ae;
+  font-size: 11px;
+}
+
+.tsh-state {
+  padding: 48px 20px;
+  color: #a1a1aa;
+  text-align: center;
+  font-size: 13px;
+}
+
+.tsh-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 14px 18px;
+  border-top: 1px solid #2d2936;
+  color: #a1a1aa;
+  font-size: 12px;
+}
+
+.tsh-pagination-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 1100px) {
+  .tsh-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tsh-filter-actions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 650px) {
+  .tsh-page {
+    gap: 15px;
+    padding: 20px 14px;
+  }
+
+  .tsh-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .tsh-total {
+    min-width: 0;
+    grid-template-columns: auto auto;
+    align-items: baseline;
+    gap: 8px;
+    text-align: left;
+  }
+
+  .tsh-filters {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .tsh-filter-actions {
+    grid-column: auto;
+  }
+
+  .tsh-filter-actions .tsh-button {
+    flex: 1;
+  }
+
+  .tsh-table-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .tsh-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .tsh-pagination-buttons {
+    width: 100%;
+  }
+
+  .tsh-pagination-buttons .tsh-button {
+    flex: 1;
+  }
+}

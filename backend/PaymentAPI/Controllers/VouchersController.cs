@@ -168,5 +168,38 @@ namespace PaymentAPI.Controllers
                 return HandleException(ex);
             }
         }
+
+        [HttpGet("available")]
+        public async Task<IActionResult> GetAvailableForUser([FromQuery(Name = "event_id")] int eventId)
+        {
+            try
+            {
+                var vouchers = await _voucherService.GetAvailableForUserAsync(eventId, CurrentUserId);
+
+                return Ok(ApiResponseDTO<List<VoucherResponseDTO>>.SuccessResponse(
+                        vouchers,
+                        "Lấy danh sách voucher khả dụng thành công."));
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
+
+        [HttpPost("apply")]
+        public async Task<IActionResult> ApplyVoucher(
+            [FromBody] ApplyVoucherRequestDTO request)
+        {
+            try
+            {
+                var result = await _voucherService.ApplyVoucherAsync(request, CurrentUserId);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
     }
 }

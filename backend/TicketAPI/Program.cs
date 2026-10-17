@@ -44,6 +44,8 @@ builder.Services.AddHttpClient<IEventApiClient, EventApiClient>(client =>
     client.DefaultRequestHeaders.Add("X-Internal-Api-Key", apiKey);
 });
 
+builder.Services.AddHttpContextAccessor();
+
 builder.Services.AddHttpClient<IPaymentAPIClient, PaymentAPIClient>(client =>
 
 {
@@ -78,6 +80,8 @@ builder.Services.AddScoped<ITicketRepository, TicketRepository>();
 builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<ITicketReturnService, TicketReturnService>();
 builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.AddScoped<IStatusHistoryRepository, StatusHistoryRepository>();
+builder.Services.AddScoped<IStatusHistoryService, StatusHistoryService>();
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"]!;

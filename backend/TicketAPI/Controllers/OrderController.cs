@@ -246,5 +246,122 @@ namespace TicketAPI.Controllers
                 data = orders
             });
         }
+
+        [HttpGet("{orderId}/voucher-info")]
+        public async Task<IActionResult> GetOrderVoucherInfo(
+            int orderId,
+            [FromHeader(Name = "X-Internal-Api-Key")] string apiKey,
+            [FromServices] IConfiguration configuration)
+        {
+            var expectedKey = configuration["InternalApiKey"];
+
+            if (string.IsNullOrWhiteSpace(expectedKey) ||
+                !string.Equals(apiKey, expectedKey, StringComparison.Ordinal))
+            {
+                return Unauthorized();
+            }
+
+            var result = await _orderService.GetOrderVoucherInfoAsync(orderId);
+
+            return result == null ? NotFound() : Ok(result);
+        }
+
+        [HttpGet("{orderId}/reconciliation-info")]
+        public async Task<IActionResult> GetOrderReconciliationInfo(
+            int orderId,
+            [FromHeader(Name = "X-Internal-Api-Key")] string apiKey,
+            [FromServices] IConfiguration configuration)
+        {
+            var expectedKey = configuration["InternalApiKey"];
+
+            if (string.IsNullOrWhiteSpace(expectedKey) ||
+                !string.Equals(apiKey, expectedKey, StringComparison.Ordinal))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "Invalid service credentials."
+                });
+            }
+
+            if (orderId <= 0)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Invalid order ID."
+                });
+            }
+
+            var result = await _orderService.GetOrderReconciliationInfoAsync(orderId);
+
+            if (result == null)
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = "Order not found."
+                });
+            }
+
+            return Ok(new
+            {
+                success = true,
+                data = result
+            });
+        }
+
+        [HttpPost("{orderId}/repair-paid-artifacts")]
+        public async Task<IActionResult> RepairPaidOrderArtifacts(
+            int orderId,
+            [FromBody] ConfirmOrderPaymentRequestDTO request,
+            [FromHeader(Name = "X-Internal-Api-Key")] string apiKey,
+            [FromServices] IConfiguration configuration)
+        {
+            var expectedKey = configuration["InternalApiKey"];
+
+            if (string.IsNullOrWhiteSpace(expectedKey) ||
+                !string.Equals(apiKey, expectedKey, StringComparison.Ordinal))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "Invalid service credentials."
+                });
+            }
+
+            if (orderId <= 0 ||
+                request.Amount <= 0 ||
+                string.IsNullOrWhiteSpace(request.TransactionRef))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Invalid repair request."
+                });
+            }
+
+            try
+            {
+                await _orderService.RepairPaidOrderArtifactsAsync(
+                    orderId,
+                    request.Amount,
+                    request.TransactionRef);
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Paid order artifacts repaired."
+                });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { success = false, message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
     }
 }

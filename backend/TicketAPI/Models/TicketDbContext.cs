@@ -27,6 +27,8 @@ public partial class TicketDbContext : DbContext
 
     public virtual DbSet<TicketReturnRequest> TicketReturnRequests { get; set; }
 
+    public virtual DbSet<StatusHistory> StatusHistories { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         // Khi chạy qua DI, Program.cs là nguồn connection string duy nhất.
@@ -305,6 +307,105 @@ public partial class TicketDbContext : DbContext
         });
 
         OnModelCreatingPartial(modelBuilder);
+
+        modelBuilder.Entity<StatusHistory>(entity =>
+        {
+            entity.HasKey(e => e.StatusHistoryId)
+                .HasName("status_histories_pkey");
+
+            entity.ToTable("status_histories");
+
+            entity.Property(e => e.StatusHistoryId)
+                .HasColumnName("status_history_id");
+
+            entity.Property(e => e.TargetType)
+                .HasMaxLength(30)
+                .HasColumnName("target_type");
+
+            entity.Property(e => e.TargetId)
+                .HasColumnName("target_id");
+
+            entity.Property(e => e.EventId)
+                .HasColumnName("event_id");
+
+            entity.Property(e => e.OrderId)
+                .HasColumnName("order_id");
+
+            entity.Property(e => e.TicketId)
+                .HasColumnName("ticket_id");
+
+            entity.Property(e => e.TicketTypeId)
+                .HasColumnName("ticket_type_id");
+
+            entity.Property(e => e.SeatId)
+                .HasColumnName("seat_id");
+
+            entity.Property(e => e.HoldId)
+                .HasMaxLength(255)
+                .HasColumnName("hold_id");
+
+            entity.Property(e => e.CustomerId)
+                .HasColumnName("customer_id");
+
+            entity.Property(e => e.Action)
+                .HasMaxLength(50)
+                .HasColumnName("action");
+
+            entity.Property(e => e.OldStatus)
+                .HasMaxLength(30)
+                .HasColumnName("old_status");
+
+            entity.Property(e => e.NewStatus)
+                .HasMaxLength(30)
+                .HasColumnName("new_status");
+
+            entity.Property(e => e.Quantity)
+                .HasColumnName("quantity");
+
+            entity.Property(e => e.ActorUserId)
+                .HasColumnName("actor_user_id");
+
+            entity.Property(e => e.ActorRole)
+                .HasMaxLength(30)
+                .HasColumnName("actor_role");
+
+            entity.Property(e => e.Reason)
+                .HasColumnName("reason");
+
+            entity.Property(e => e.CreatedAt)
+                .HasColumnName("created_at")
+                .HasDefaultValueSql("now()");
+
+            entity.Property(e => e.Metadata)
+                .HasColumnType("jsonb")
+                .HasColumnName("metadata")
+                .HasDefaultValueSql("'{}'::jsonb");
+
+            entity.HasIndex(e => new { e.CustomerId, e.CreatedAt })
+                .HasDatabaseName("ix_status_histories_customer_created");
+
+            entity.HasIndex(e => new { e.EventId, e.CreatedAt })
+                .HasDatabaseName("ix_status_histories_event_created");
+
+            entity.HasIndex(e => new { e.TargetType, e.TargetId, e.CreatedAt })
+                .HasDatabaseName("ix_status_histories_target_created");
+
+            entity.HasIndex(e => new { e.OrderId, e.CreatedAt })
+                .HasDatabaseName("ix_status_histories_order_created");
+
+            entity.HasIndex(e => new { e.TicketId, e.CreatedAt })
+                .HasDatabaseName("ix_status_histories_ticket_created");
+
+            entity.HasOne<Order>()
+                .WithMany()
+                .HasForeignKey(e => e.OrderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne<Ticket>()
+                .WithMany()
+                .HasForeignKey(e => e.TicketId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
     }
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
