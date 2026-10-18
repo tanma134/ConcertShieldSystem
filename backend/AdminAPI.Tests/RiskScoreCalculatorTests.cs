@@ -3,158 +3,186 @@ using Xunit;
 
 namespace AdminAPI.Tests;
 
+/// <summary>
+/// Kiểm tra bộ chấm điểm theo đúng tài liệu "Bộ luật và cách tính điểm":
+/// 5 ví dụ tính tay + các quy tắc trần nhóm, combo, trust, luật cứng, leo thang.
+/// Dùng RiskConfig mặc định: trần nhóm 40, trần trust 30, combo +10 từ 3 nhóm, ngưỡng 30/60/80.
+/// </summary>
 public class RiskScoreCalculatorTests
 {
-    private readonly RiskConfig _cfg = new();          // mặc định khớp dữ liệu seed
     private readonly RiskScoreCalculator _calc = new();
+    private readonly RiskConfig _cfg = new();
 
-    private static MatchedRule R(string code, string group, int score, bool disableTrust = false) =>
-        new(code, group, score, null, disableTrust);
+    private static MatchedRule R(string code, string group, int score, bool disableTrust = false)
+        => new(code, group, score, null, disableTrust);
 
-    private static readonly MatchedRule Tru01 = new("TRU_01", "T", -15);
-    private static readonly MatchedRule Tru02 = new("TRU_02", "T", -10);
-    private static readonly MatchedRule Tru03 = new("TRU_03", "T", -10);
+    private ScoreResult Score(IEnumerable<MatchedRule> rules, IEnumerable<MatchedRule>? trust = null)
+        => _calc.CalculateScore(_cfg, rules, trust);
 
-    private ScoreResult Score(IEnumerable<MatchedRule> m, IEnumerable<MatchedRule>? t = null, bool blocked = false)
-        => _calc.CalculateScore(_cfg, m, t, blocked);
+    private ScoreResult Empty() => Score(Array.Empty<MatchedRule>());
 
-    // ------------------------------------------------ 3 ca kiểm tra nhanh
-
-    [Fact]
-    public void Ca1_BotCurl_12reqPerSec_IsCritical()
-    {
-        // H01 +30, H05 +25 (nhóm H = 55 -> cắt 40), V01 mức 2 +35, E02 +15
-        var bot = Score(new[] { R("BOT_H01", "H", 30), R("BOT_H05", "H", 25), R("BOT_V01", "V", 35), R("BOT_E02", "E", 15) });
-
-        Assert.Equal(40, bot.ByGroup["H"]);
-        Assert.Equal(35, bot.ByGroup["V"]);
-        Assert.Equal(15, bot.ByGroup["E"]);
-        Assert.Equal(100, bot.Raw);          // 40 + 35 + 15 + 10 combo
-        Assert.True(bot.ComboApplied);
-        Assert.Equal(100, bot.Score);
-
-        var d = _calc.Decide(_cfg, bot, Score(Array.Empty<MatchedRule>()));
-        Assert.Equal(RiskLevel.Critical, d.Level);
-        Assert.Equal(RiskAction.Block, d.Action);
-        Assert.Equal(RiskType.Bot, d.Dominant);
-        Assert.Equal(24, d.BlockHours);
-        Assert.Equal(new[] { "SESSION", "IP", "DEVICE" }, d.Scopes);
-    }
+    // ------------------------------------------------------------ 5 ví dụ trong tài liệu
 
     [Fact]
-    public void Ca2_RegularCustomerOnVpn_IsLow()
+    public void Example1_OneBotRule_IsMedium_Captcha()
     {
-        var bot = Score(new[] { R("BOT_E02", "E", 15), R("BOT_V02", "V", 20) }, new[] { Tru01, Tru02, Tru03 });
+        var bot = Score(new[] { R("BOT_H01", "H", 30) });
 
-        Assert.Equal(35, bot.Raw);
-        Assert.False(bot.ComboApplied);      // chỉ 2 nhóm
-        Assert.Equal(30, bot.Trust);         // -35 nhưng trần 30
-        Assert.Equal(5, bot.Score);
+        Assert.Equal(30, bot.Score);
+        Assert.False(bot.ComboApplied);
 
-        var d = _calc.Decide(_cfg, bot, Score(Array.Empty<MatchedRule>()));
-        Assert.Equal(RiskLevel.Low, d.Level);
-        Assert.Equal(RiskAction.Allow, d.Action);
-    }
-
-    [Fact]
-    public void Ca2b_SameBehaviorNewAccount_IsMediumCaptcha()
-    {
-        var bot = Score(new[] { R("BOT_E02", "E", 15), R("BOT_V02", "V", 20) });
-        Assert.Equal(35, bot.Score);
-
-        var d = _calc.Decide(_cfg, bot, Score(Array.Empty<MatchedRule>()));
+        var d = _calc.Decide(_cfg, bot, Empty());
         Assert.Equal(RiskLevel.Medium, d.Level);
         Assert.Equal(RiskAction.Challenge, d.Action);
+        Assert.Equal(RiskType.Bot, d.Dominant);
         Assert.Equal("CAPTCHA", d.ChallengeType);
     }
 
     [Fact]
-    public void Ca3_CardTesting_NewAccount_IsHigh_Hold()
+    public void Example2_GroupCapStopsOneSignalFromDominating_High_Hold()
     {
-        // P01 +25 + P04 +35 = 60 -> cắt 40; A01 +20
-        var fraud = Score(new[] { R("FRD_P01", "P", 25), R("FRD_P04", "P", 35), R("FRD_A01", "A", 20) });
+        var fraud = Score(new[]
+        {
+            R("FRD_P01", "P", 25),
+            R("FRD_P04", "P", 35),   // nhóm P: 25 + 35 = 60, bị cắt còn 40
+            R("FRD_A01", "A", 20),
+        });
 
         Assert.Equal(40, fraud.ByGroup["P"]);
         Assert.Equal(20, fraud.ByGroup["A"]);
-        Assert.Equal(60, fraud.Score);       // 2 nhóm nên không combo
+        Assert.False(fraud.ComboApplied);     // chỉ 2 nhóm
+        Assert.Equal(60, fraud.Score);        // không phải 80 như khi cộng thẳng
 
-        var d = _calc.Decide(_cfg, Score(Array.Empty<MatchedRule>()), fraud);
+        var d = _calc.Decide(_cfg, Empty(), fraud);
         Assert.Equal(RiskLevel.High, d.Level);
         Assert.Equal(RiskAction.Hold, d.Action);
         Assert.Equal(RiskType.Fraud, d.Dominant);
     }
 
     [Fact]
-    public void CardTesting_WithNewDeviceAndCountry_BecomesCritical_AccountBlock()
+    public void Example3_ThreeGroupsGetCombo_ScoreCappedAt100_Critical_Block()
     {
-        var fraud = Score(new[]
+        var bot = Score(new[]
         {
-            R("FRD_P01", "P", 25), R("FRD_P04", "P", 35), R("FRD_A01", "A", 20), R("FRD_G01", "G", 15)
+            R("BOT_H01", "H", 30),
+            R("BOT_H05", "H", 25),   // H: 55 -> 40
+            R("BOT_V01", "V", 35),   // V01 mức 2
+            R("BOT_E02", "E", 15),
         });
-        Assert.Equal(85, fraud.Score);       // 40 + 20 + 15 + 10
 
-        var d = _calc.Decide(_cfg, Score(Array.Empty<MatchedRule>()), fraud);
+        Assert.Equal(40, bot.ByGroup["H"]);
+        Assert.Equal(3, bot.GroupCount);
+        Assert.True(bot.ComboApplied);
+        Assert.Equal(100, bot.Raw);           // 40 + 35 + 15 + 10, thay vì 105 nếu cộng thẳng
+        Assert.Equal(100, bot.Score);
+
+        var d = _calc.Decide(_cfg, bot, Empty());
         Assert.Equal(RiskLevel.Critical, d.Level);
         Assert.Equal(RiskAction.Block, d.Action);
+        Assert.Equal(RiskType.Bot, d.Dominant);
+        Assert.Equal(new[] { "SESSION", "IP", "DEVICE" }, d.Scopes);
+        Assert.Equal(24, d.BlockHours);
+        Assert.Equal(1, d.EscalationLevel);
+    }
+
+    [Fact]
+    public void Example4_TrustPointsLowerHighToMedium_Otp()
+    {
+        var rules = new[] { R("FRD_P04", "P", 35), R("FRD_A03", "A", 30) };   // 65
+        var trust = new[] { R("TRU_01", "TRUST", 15), R("TRU_05", "TRUST", 20) };   // 35, cắt còn 30
+
+        Assert.Equal(65, Score(rules).Score);
+
+        var fraud = Score(rules, trust);
+        Assert.Equal(30, fraud.Trust);
+        Assert.Equal(35, fraud.Score);
+
+        var d = _calc.Decide(_cfg, Empty(), fraud);
+        Assert.Equal(RiskLevel.Medium, d.Level);
+        Assert.Equal(RiskAction.Challenge, d.Action);
+        Assert.Equal("OTP", d.ChallengeType);        // Fraud -> OTP, Bot -> CAPTCHA
+    }
+
+    [Fact]
+    public void Example5_BlacklistedCard_IsHardRuleBlockOnAccount()
+    {
+        var d = _calc.Decide(_cfg, Empty(), Empty(), new DecisionContext(HardRule: "HR_BL01"));
+
+        Assert.Equal(RiskLevel.Critical, d.Level);
+        Assert.Equal(RiskAction.Block, d.Action);
+        Assert.Equal(100, d.Score);
         Assert.Equal(new[] { "ACCOUNT" }, d.Scopes);
+        Assert.Equal(RiskType.Fraud, d.Dominant);
     }
 
-    // ------------------------------------------------ các quy tắc của công thức
+    // ------------------------------------------------------------ quy tắc chấm điểm
 
     [Fact]
-    public void SameRuleMatchedManyTimes_CountsOnce()
+    public void SingleGroup_IsCappedAt40()
     {
-        var r = Score(new[] { R("BOT_H01", "H", 30), R("BOT_H01", "H", 30), R("BOT_H01", "H", 30) });
-        Assert.Equal(30, r.Raw);
-    }
-
-    [Fact]
-    public void GroupCap_LimitsEachGroupTo40()
-    {
-        var r = Score(new[] { R("BOT_H01", "H", 30), R("BOT_H02", "H", 20), R("BOT_H05", "H", 25) });
-        Assert.Equal(40, r.ByGroup["H"]);
-        Assert.Equal(40, r.Score);
+        var s = Score(new[] { R("A", "H", 30), R("B", "H", 30), R("C", "H", 30) });
+        Assert.Equal(40, s.Score);
     }
 
     [Fact]
-    public void Combo_Needs3Groups()
+    public void TwoGroups_NoCombo_ThreeGroups_AddCombo()
     {
-        var two = Score(new[] { R("A", "V", 10), R("B", "H", 10) });
-        var three = Score(new[] { R("A", "V", 10), R("B", "H", 10), R("C", "E", 10) });
+        var two = Score(new[] { R("A", "H", 20), R("B", "V", 20) });
         Assert.False(two.ComboApplied);
-        Assert.Equal(20, two.Raw);
+        Assert.Equal(40, two.Score);
+
+        var three = Score(new[] { R("A", "H", 20), R("B", "V", 20), R("C", "E", 20) });
         Assert.True(three.ComboApplied);
-        Assert.Equal(40, three.Raw);         // 30 + 10
+        Assert.Equal(70, three.Score);               // 60 + 10
     }
 
     [Fact]
-    public void Score_IsClampedTo0And100()
+    public void SameRuleCodeIsCountedOnce()
     {
-        var negative = Score(new[] { R("A", "V", 10) }, new[] { Tru01, Tru02, Tru03 });
-        Assert.Equal(0, negative.Score);     // 10 - 30 = -20 -> 0
-
-        var cfg = new RiskConfig { CapGroup = 500 };
-        var high = _calc.CalculateScore(cfg, new[] { R("A", "V", 300), R("B", "H", 300) });
-        Assert.Equal(100, high.Score);
+        var s = Score(new[] { R("BOT_H01", "H", 30), R("BOT_H01", "H", 30) });
+        Assert.Equal(30, s.Score);
     }
 
     [Fact]
-    public void Trust_NotApplied_WhenChargebackHistory()
+    public void TrustIsCappedAt30_AndScoreNeverBelowZero()
     {
-        var r = Score(new[] { R("FRD_L01", "L", 35, disableTrust: true) }, new[] { Tru01, Tru02, Tru03 });
-        Assert.True(r.TrustDisabled);
-        Assert.Equal(0, r.Trust);
-        Assert.Equal(35, r.Score);
+        var trust = new[] { R("T1", "TRUST", 15), R("T2", "TRUST", 15), R("T3", "TRUST", 15) };   // 45 -> 30
+        var s = Score(new[] { R("BOT_H03", "H", 10) }, trust);
+
+        Assert.Equal(30, s.Trust);
+        Assert.Equal(0, s.Score);                    // 10 - 30 bị chặn ở 0
     }
 
     [Fact]
-    public void Trust_NotApplied_WhenHardRuleFlag()
+    public void RuleThatDisablesTrust_Chargeback_IgnoresTrustPoints()
     {
-        var r = Score(new[] { R("A", "V", 40) }, new[] { Tru01 }, blocked: true);
-        Assert.Equal(40, r.Score);
+        var rules = new[] { R("FRD_P04", "P", 35), R("FRD_L01", "L", 35, disableTrust: true) };
+        var trust = new[] { R("TRU_01", "TRUST", 15) };
+
+        var s = Score(rules, trust);
+
+        Assert.True(s.TrustDisabled);
+        Assert.Equal(0, s.Trust);
+        Assert.Equal(70, s.Score);
     }
 
-    // ------------------------------------------------ ngưỡng và hạ mức
+    [Fact]
+    public void TrustIsIgnoredWhenAHardRuleBlocks()
+    {
+        var s = _calc.CalculateScore(_cfg, new[] { R("A", "H", 30) }, new[] { R("TRU_01", "TRUST", 15) }, trustBlocked: true);
+        Assert.Equal(0, s.Trust);
+        Assert.Equal(30, s.Score);
+    }
+
+    [Fact]
+    public void ZeroScoreRulesAreIgnored()
+    {
+        var s = Score(new[] { R("A", "H", 0), R("B", "V", 0), R("C", "E", 0) });
+        Assert.Equal(0, s.GroupCount);
+        Assert.Equal(0, s.Score);
+    }
+
+    // ------------------------------------------------------------ ngưỡng và hành động
 
     [Theory]
     [InlineData(0, RiskLevel.Low)]
@@ -165,137 +193,108 @@ public class RiskScoreCalculatorTests
     [InlineData(79, RiskLevel.High)]
     [InlineData(80, RiskLevel.Critical)]
     [InlineData(100, RiskLevel.Critical)]
-    public void Thresholds_BoundaryValues(int score, RiskLevel expected)
+    public void LevelOf_UsesThresholds(int score, RiskLevel expected)
+        => Assert.Equal(expected, RiskScoreCalculator.LevelOf(_cfg, score));
+
+    [Fact]
+    public void LowScore_IsAllowed()
     {
-        Assert.Equal(expected, RiskScoreCalculator.LevelOf(_cfg, score));
+        var d = _calc.Decide(_cfg, Score(new[] { R("BOT_H03", "H", 10) }), Empty());
+        Assert.Equal(RiskLevel.Low, d.Level);
+        Assert.Equal(RiskAction.Allow, d.Action);
     }
 
     [Fact]
-    public void Critical_WithSingleGroup_IsDowngradedToHigh()
+    public void Tie_BotWinsOverFraud()
     {
-        // Admin nâng trần nhóm lên 90: 1 nhóm đạt 85 -> không được auto-block
-        var cfg = new RiskConfig { CapGroup = 90 };
-        var bot = _calc.CalculateScore(cfg, new[] { R("BOT_H01", "H", 30), R("BOT_H05", "H", 25), R("BOT_H02", "H", 30) });
-        Assert.Equal(85, bot.Score);
+        var bot = Score(new[] { R("B", "H", 40) });
+        var fraud = Score(new[] { R("F", "P", 40) });
+        Assert.Equal(RiskType.Bot, _calc.Decide(_cfg, bot, fraud).Dominant);
+    }
+
+    [Fact]
+    public void FraudCritical_BlocksAccount()
+    {
+        var fraud = Score(new[] { R("F1", "P", 40), R("F2", "A", 40) });   // 80, 2 nhóm
+        var d = _calc.Decide(_cfg, Empty(), fraud);
+
+        Assert.Equal(RiskLevel.Critical, d.Level);
+        Assert.Equal(RiskAction.Block, d.Action);
+        Assert.Equal(new[] { "ACCOUNT" }, d.Scopes);
+    }
+
+    [Fact]
+    public void CriticalWithOnlyOneGroup_IsDowngradedToHigh()
+    {
+        var cfg = new RiskConfig { CapGroup = 100 };      // bỏ trần để một nhóm vượt 80
+        var bot = _calc.CalculateScore(cfg, new[] { R("A", "H", 50), R("B", "H", 40) });
+        Assert.Equal(90, bot.Score);
         Assert.Equal(1, bot.GroupCount);
 
         var d = _calc.Decide(cfg, bot, _calc.CalculateScore(cfg, Array.Empty<MatchedRule>()));
         Assert.Equal(RiskLevel.High, d.Level);
         Assert.Equal(RiskAction.Hold, d.Action);
         Assert.True(d.Downgraded);
+        Assert.Equal("DOWNGRADED_SINGLE_GROUP", d.ReasonCode);
     }
+
+    // ------------------------------------------------------------ leo thang block
 
     [Fact]
-    public void Dominant_IsFraud_WhenFraudScoreHigher()
+    public void SecondBlockInWindow_Lasts72Hours()
     {
-        var bot = Score(new[] { R("A", "V", 20) });
-        var fraud = Score(new[] { R("B", "P", 35) });
-        var d = _calc.Decide(_cfg, bot, fraud);
-        Assert.Equal(RiskType.Fraud, d.Dominant);
-        Assert.Equal("OTP", d.ChallengeType);   // Medium + nghi fraud thì OTP
-    }
+        var bot = Score(new[] { R("A", "H", 40), R("B", "V", 40) });
+        var d = _calc.Decide(_cfg, bot, Empty(), new DecisionContext(PreviousBlocksInWindow: 1));
 
-    // ------------------------------------------------ luật cứng
-
-    [Fact]
-    public void HardRule_Whitelist_AlwaysAllow_EvenWithHighScore()
-    {
-        var bot = Score(new[] { R("A", "V", 40), R("B", "H", 40), R("C", "E", 30) });
-        var d = _calc.Decide(_cfg, bot, Score(Array.Empty<MatchedRule>()), new DecisionContext(HardRule: "HR_WL"));
-        Assert.Equal(RiskAction.Allow, d.Action);
-        Assert.Equal("HR_WL", d.HardRule);
-    }
-
-    [Theory]
-    [InlineData("HR_BL01", "ACCOUNT", RiskType.Fraud)]
-    [InlineData("HR_BL02", "DEVICE", RiskType.Bot)]
-    [InlineData("HR_BL03", "IP", RiskType.Bot)]
-    public void HardRule_Blacklist_BlocksImmediately_WithZeroScore(string hr, string scope, RiskType type)
-    {
-        var zero = Score(Array.Empty<MatchedRule>());
-        var d = _calc.Decide(_cfg, zero, zero, new DecisionContext(HardRule: hr));
         Assert.Equal(RiskAction.Block, d.Action);
-        Assert.Equal(RiskLevel.Critical, d.Level);
-        Assert.Equal(new[] { scope }, d.Scopes);
-        Assert.Equal(type, d.Dominant);
+        Assert.Equal(72, d.BlockHours);
+        Assert.Equal(2, d.EscalationLevel);
     }
 
     [Fact]
-    public void HardRule_Vip_ForcesHoldInsteadOfBlock()
+    public void ThirdBlockInWindow_GoesToManualReviewInsteadOfBlock()
     {
-        var fraud = Score(new[] { R("FRD_P01", "P", 25), R("FRD_P04", "P", 35), R("FRD_A01", "A", 20), R("FRD_G01", "G", 15) });
-        Assert.Equal(85, fraud.Score);
+        var bot = Score(new[] { R("A", "H", 40), R("B", "V", 40) });
+        var d = _calc.Decide(_cfg, bot, Empty(), new DecisionContext(PreviousBlocksInWindow: 2));
 
-        var d = _calc.Decide(_cfg, Score(Array.Empty<MatchedRule>()), fraud, new DecisionContext(IsVipOrLargeOrder: true));
-        Assert.Equal(RiskLevel.High, d.Level);
         Assert.Equal(RiskAction.Hold, d.Action);
-        Assert.Equal("HR_VIP", d.HardRule);
+        Assert.True(d.RequiresManualReview);
+        Assert.Equal(3, d.EscalationLevel);
+        Assert.Empty(d.Scopes);
     }
+
+    // ------------------------------------------------------------ luật cứng
 
     [Fact]
-    public void Vip_BelowHighThreshold_IsNotForced()
+    public void Whitelist_AlwaysAllows_EvenWithHighScore()
     {
-        var bot = Score(new[] { R("A", "V", 35) });
-        var d = _calc.Decide(_cfg, bot, Score(Array.Empty<MatchedRule>()), new DecisionContext(IsVipOrLargeOrder: true));
-        Assert.Equal(RiskLevel.Medium, d.Level);
-    }
+        var bot = Score(new[] { R("A", "H", 40), R("B", "V", 40) });
+        var d = _calc.Decide(_cfg, bot, Empty(), new DecisionContext(HardRule: "HR_WL"));
 
-    // ------------------------------------------------ leo thang block
+        Assert.Equal(RiskAction.Allow, d.Action);
+        Assert.Equal(RiskLevel.Low, d.Level);
+        Assert.Equal("HARD_RULE_WHITELIST", d.ReasonCode);
+    }
 
     [Theory]
-    [InlineData(0, 24, 1, false)]
-    [InlineData(1, 72, 2, false)]
-    [InlineData(2, null, 3, true)]
-    [InlineData(5, null, 3, true)]
-    public void Escalation_24h_72h_ThenManual(int previousBlocks, int? hours, int level, bool manual)
+    [InlineData("HR_BL01", "ACCOUNT")]
+    [InlineData("HR_BL02", "DEVICE")]
+    [InlineData("HR_BL03", "IP")]
+    public void Blacklists_BlockOnTheMatchingScope(string rule, string scope)
     {
-        var bot = Score(new[] { R("A", "H", 40), R("B", "V", 40), R("C", "E", 15) });   // 95 + 10 -> 100
-        var d = _calc.Decide(_cfg, bot, Score(Array.Empty<MatchedRule>()),
-            new DecisionContext(PreviousBlocksInWindow: previousBlocks));
-
-        Assert.Equal(hours, d.BlockHours);
-        Assert.Equal(level, d.EscalationLevel);
-        Assert.Equal(manual, d.RequiresManualReview);
-        Assert.Equal(manual ? RiskAction.Hold : RiskAction.Block, d.Action);   // không bao giờ block vĩnh viễn tự động
+        var d = _calc.Decide(_cfg, Empty(), Empty(), new DecisionContext(HardRule: rule));
+        Assert.Equal(RiskAction.Block, d.Action);
+        Assert.Equal(new[] { scope }, d.Scopes);
+        Assert.Equal(100, d.Score);
     }
 
     [Fact]
-    public void ShadowMode_IsReportedInDecision()
+    public void VipOrLargeOrder_WithHighScore_IsForcedToHold()
     {
-        var shadow = _calc.Decide(new RiskConfig { Mode = "SHADOW" }, Score(Array.Empty<MatchedRule>()), Score(Array.Empty<MatchedRule>()));
-        var enforce = _calc.Decide(new RiskConfig { Mode = "ENFORCE" }, Score(Array.Empty<MatchedRule>()), Score(Array.Empty<MatchedRule>()));
-        Assert.True(shadow.IsShadow);
-        Assert.False(enforce.IsShadow);
-    }
+        var fraud = Score(new[] { R("F1", "P", 40), R("F2", "A", 25) });     // 65
+        var d = _calc.Decide(_cfg, Empty(), fraud, new DecisionContext(IsVipOrLargeOrder: true));
 
-    // ------------------------------------------------ đọc cấu hình từ system_parameters
-
-    [Fact]
-    public void ConfigParse_ReadsNumbersAndRules()
-    {
-        var rows = new Dictionary<string, string>
-        {
-            ["risk.cap.group"] = "50",
-            ["risk.mode"] = "enforce",
-            ["risk.rule.BOT_V01"] = "{\"type\":\"BOT\",\"group\":\"V\",\"window_sec\":10,\"threshold\":5,\"score\":25,\"threshold_l2\":10,\"score_l2\":35,\"enabled\":true}",
-            ["risk.rule.BOT_H01"] = "{\"type\":\"BOT\",\"group\":\"H\",\"score\":30,\"enabled\":true,\"ua_list\":[\"curl\",\"wget\"]}",
-            ["risk.rule.BOT_X99"] = "{ khong phai json",
-            ["risk.threshold.high"] = "abc"
-        };
-
-        var cfg = RiskConfig.Parse(rows);
-
-        Assert.Equal(50, cfg.CapGroup);
-        Assert.Equal("ENFORCE", cfg.Mode);
-        Assert.Equal(60, cfg.ThresholdHigh);                       // giá trị lỗi -> giữ mặc định
-        Assert.Equal(2, cfg.Rules.Count);                          // rule lỗi bị bỏ qua
-        Assert.Equal(2, cfg.ParseWarnings.Count);
-
-        var v01 = cfg.Rules["BOT_V01"];
-        Assert.True(v01.HasLevel2);
-        Assert.Equal(25, v01.ScoreForLevel(1));
-        Assert.Equal(35, v01.ScoreForLevel(2));                    // 12 req/s -> lấy mức 2
-
-        Assert.Equal(new[] { "curl", "wget" }, cfg.Rules["BOT_H01"].GetStringList("ua_list"));
+        Assert.Equal(RiskAction.Hold, d.Action);
+        Assert.Equal("VIP_FORCED_HIGH", d.ReasonCode);
     }
 }

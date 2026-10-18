@@ -70,6 +70,17 @@ public sealed class FraudAlertService : IFraudAlertService
                 && await HadBlockAsync(uid, now.AddSeconds(-Math.Max(1, l02.WindowSec)), ct))
                 fraud.Add(ToMatched("FRD_L02", l02, 1, "recent block"));
 
+            // FRD_A03: vừa đổi/đặt lại mật khẩu rồi giữ vé hoặc tạo đơn (sự kiện đặt vé luôn có EventId)
+            if (req.EventId != null && cfg.Rules.TryGetValue("FRD_A03", out var a03) && a03.Enabled
+                && fraud.All(r => r.Code != "FRD_A03"))
+            {
+                var credSince = now.AddSeconds(-Math.Max(1, a03.WindowSec));
+                var credentialActions = new[] { "PASSWORD_CHANGED", "PASSWORD_RESET" };
+                if (await _db.AuditLogs.AsNoTracking().AnyAsync(a =>
+                        a.UserId == uid && credentialActions.Contains(a.Action) && a.CreatedAt >= credSince, ct))
+                    fraud.Add(ToMatched("FRD_A03", a03, 1, "password changed shortly before booking"));
+            }
+
             if (cfg.Rules.TryGetValue("TRU_05", out var t05) && t05.Enabled && trust.All(r => r.Code != "TRU_05"))
             {
                 var since = t05.WindowSec > 0 ? now.AddSeconds(-t05.WindowSec) : now.AddDays(-cfg.TrustRestoreDays);

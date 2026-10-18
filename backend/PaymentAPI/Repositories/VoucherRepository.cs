@@ -154,7 +154,7 @@ namespace PaymentAPI.Repositories
                         (v.Scope == "EVENT" &&
                          v.EventId == eventId)
                     ) &&
-                    v.Usages.Count(u => u.UserId == userId) < v.MaxUsagePerUser)
+                    v.VoucherUsages.Count(u => u.UserId == userId) < v.MaxUsagePerUser)
                 .OrderBy(v => v.EndsAt)
                 .ToListAsync();
         }

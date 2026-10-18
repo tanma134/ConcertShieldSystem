@@ -1,4 +1,5 @@
 import axios from "axios";
+import { riskHeaders } from "../utils/riskSignals";
 
 // TODO: point this at your actual API Gateway address
 const BASE_URL = "https://localhost:7164/api";
@@ -17,18 +18,10 @@ const PUBLIC_ENDPOINTS = [
 const isPublicEndpoint = (url = "") =>
   PUBLIC_ENDPOINTS.some((endpoint) => url.includes(endpoint));
 
-const isQueueSessionError = (error) => {
-  const code = error.response?.data?.code;
-  return error.config?.url?.includes("/queue/") &&
-    (code === "TOKEN_INVALID" || code === "TOKEN_REVOKED");
-};
-
 const axiosClient = axios.create({
   baseURL: BASE_URL,
   headers: { "Content-Type": "application/json" },
 });
-
-let refreshPromise = null;
 
 // Attach the access token to every request, EXCEPT the public endpoints above
 axiosClient.interceptors.request.use((config) => {
@@ -36,6 +29,8 @@ axiosClient.interceptors.request.use((config) => {
     delete config.headers["Content-Type"];
     delete config.headers["content-type"];
   }
+  // Risk Engine: gửi tín hiệu thiết bị/phiên kèm mọi request (kể cả login/register)
+  Object.assign(config.headers, riskHeaders());
   if (!isPublicEndpoint(config.url)) {
     const token = localStorage.getItem("accessToken");
     if (token) {
@@ -55,8 +50,7 @@ axiosClient.interceptors.response.use(
     const shouldTryRefresh =
       error.response?.status === 401 &&
       !originalRequest._retry &&
-      !isPublicEndpoint(originalRequest.url) &&
-      !isQueueSessionError(error);
+      !isPublicEndpoint(originalRequest.url);
 
     if (shouldTryRefresh) {
       originalRequest._retry = true;
@@ -66,9 +60,9 @@ axiosClient.interceptors.response.use(
           throw new Error("No refresh token available");
         }
 
-        refreshPromise ??= axios.post(`${BASE_URL}/auth/refresh`, { refreshToken })
-          .finally(() => { refreshPromise = null; });
-        const res = await refreshPromise;
+        const res = await axios.post(`${BASE_URL}/auth/refresh`, {
+          refreshToken,
+        });
 
         localStorage.setItem("accessToken", res.data.accessToken);
         if (res.data.refreshToken) {
