@@ -376,7 +376,8 @@ namespace AuthenticationAPI.Services
                 new(JwtRegisteredClaimNames.Email, user.Email),
                 new(ClaimTypes.Email,              user.Email),
                 new("fullName",                    user.FullName),
-                new(JwtRegisteredClaimNames.Jti,   Guid.NewGuid().ToString())
+                new(JwtRegisteredClaimNames.Jti,   Guid.NewGuid().ToString()),
+                new("account_created_at",          DateTime.SpecifyKind(user.CreatedAt, DateTimeKind.Utc).ToString("O"))
             };
             claims.AddRange(user.UserRoles.Select(ur => new Claim(ClaimTypes.Role, ur.Role.RoleName)));
 

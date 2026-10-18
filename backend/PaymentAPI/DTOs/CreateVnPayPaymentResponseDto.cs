@@ -1,4 +1,4 @@
-﻿namespace TicketAPI.DTOs
+﻿namespace PaymentAPI.DTOs
 {
     public class CreateVnPayPaymentResponseDto
     {

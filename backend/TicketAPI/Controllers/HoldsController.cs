@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using TicketAPI.DTOs;
+using TicketAPI.Risk;
 using TicketAPI.Services;
 
 namespace TicketAPI.Controllers
@@ -12,11 +13,14 @@ namespace TicketAPI.Controllers
         private readonly IHoldService _holdService;
         private readonly TicketAPI.API.EventEligibilityClient _eligibility;
         private readonly ILogger<HoldsController> _logger;
+        private readonly ITicketRiskService _risk;
 
         public HoldsController(
             IHoldService holdService,
-            ILogger<HoldsController> logger, TicketAPI.API.EventEligibilityClient eligibility)
+            ILogger<HoldsController> logger, TicketAPI.API.EventEligibilityClient eligibility,
+            ITicketRiskService risk)
         {
+            _risk = risk;
             _holdService = holdService;
             _logger = logger;
             _eligibility = eligibility;
@@ -32,6 +36,10 @@ namespace TicketAPI.Controllers
                     success = false,
                     message = "Token không hợp lệ."
                 });
+
+            // Risk Engine: kiểm tra block + ghi nhận rule đáng ngờ (fail-open nếu AdminAPI lỗi)
+            var verdict = await _risk.CheckHoldAsync(HttpContext, userId.Value, request);
+            if (!verdict.Allowed) return verdict.ToActionResult();
 
             try
             {

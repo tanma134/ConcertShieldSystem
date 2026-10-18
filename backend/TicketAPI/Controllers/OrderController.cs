@@ -4,6 +4,7 @@ using PaymentAPI.DTOs;
 using System.Security.Claims;
 using TicketAPI.API;
 using TicketAPI.DTOs;
+using TicketAPI.Risk;
 using TicketAPI.Services;
 
 namespace TicketAPI.Controllers
@@ -15,9 +16,11 @@ namespace TicketAPI.Controllers
         private readonly IOrderService _orderService;
         private readonly ILogger<OrdersController> _logger;
         private readonly IPaymentAPIClient _paymentApiClient;
+        private readonly ITicketRiskService _risk;
 
-        public OrdersController(IOrderService orderService, ILogger<OrdersController> logger, IPaymentAPIClient paymentApiClient)
+        public OrdersController(IOrderService orderService, ILogger<OrdersController> logger, IPaymentAPIClient paymentApiClient, ITicketRiskService risk)
         {
+            _risk = risk;
             _orderService = orderService;
             _logger = logger;
             _paymentApiClient = paymentApiClient;
@@ -32,6 +35,10 @@ namespace TicketAPI.Controllers
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
                 return Unauthorized(new { success = false, message = "Token không hợp lệ!" });
+
+            // Risk Engine: kiểm tra block + ghi nhận rule đáng ngờ (fail-open nếu AdminAPI lỗi)
+            var verdict = await _risk.CheckOrderAsync(HttpContext, userId, dto);
+            if (!verdict.Allowed) return verdict.ToActionResult();
 
             TimeZoneInfo vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
 
@@ -48,6 +55,13 @@ namespace TicketAPI.Controllers
                 if (order.FinalAmount <= 0) return BadRequest("Invalid amount");
 
                 CancellationToken cancellationToken = default;
+
+                // Truyền IP/thiết bị thật sang PaymentAPI (trước đây IP bị gán cứng 127.0.0.1)
+                var rc = RiskRequestContext.From(HttpContext);
+                order.UserId = userId;
+                order.ClientIp = rc.Ip ?? "127.0.0.1";
+                order.DeviceFp = rc.DeviceFp;
+                order.SessionId = rc.SessionId;
 
                 var paymentUrl = await _paymentApiClient.CreateVnPayPaymentAsync(order, cancellationToken);
 
@@ -245,123 +259,6 @@ namespace TicketAPI.Controllers
                 success = true,
                 data = orders
             });
-        }
-
-        [HttpGet("{orderId}/voucher-info")]
-        public async Task<IActionResult> GetOrderVoucherInfo(
-            int orderId,
-            [FromHeader(Name = "X-Internal-Api-Key")] string apiKey,
-            [FromServices] IConfiguration configuration)
-        {
-            var expectedKey = configuration["InternalApiKey"];
-
-            if (string.IsNullOrWhiteSpace(expectedKey) ||
-                !string.Equals(apiKey, expectedKey, StringComparison.Ordinal))
-            {
-                return Unauthorized();
-            }
-
-            var result = await _orderService.GetOrderVoucherInfoAsync(orderId);
-
-            return result == null ? NotFound() : Ok(result);
-        }
-
-        [HttpGet("{orderId}/reconciliation-info")]
-        public async Task<IActionResult> GetOrderReconciliationInfo(
-            int orderId,
-            [FromHeader(Name = "X-Internal-Api-Key")] string apiKey,
-            [FromServices] IConfiguration configuration)
-        {
-            var expectedKey = configuration["InternalApiKey"];
-
-            if (string.IsNullOrWhiteSpace(expectedKey) ||
-                !string.Equals(apiKey, expectedKey, StringComparison.Ordinal))
-            {
-                return Unauthorized(new
-                {
-                    success = false,
-                    message = "Invalid service credentials."
-                });
-            }
-
-            if (orderId <= 0)
-            {
-                return BadRequest(new
-                {
-                    success = false,
-                    message = "Invalid order ID."
-                });
-            }
-
-            var result = await _orderService.GetOrderReconciliationInfoAsync(orderId);
-
-            if (result == null)
-            {
-                return NotFound(new
-                {
-                    success = false,
-                    message = "Order not found."
-                });
-            }
-
-            return Ok(new
-            {
-                success = true,
-                data = result
-            });
-        }
-
-        [HttpPost("{orderId}/repair-paid-artifacts")]
-        public async Task<IActionResult> RepairPaidOrderArtifacts(
-            int orderId,
-            [FromBody] ConfirmOrderPaymentRequestDTO request,
-            [FromHeader(Name = "X-Internal-Api-Key")] string apiKey,
-            [FromServices] IConfiguration configuration)
-        {
-            var expectedKey = configuration["InternalApiKey"];
-
-            if (string.IsNullOrWhiteSpace(expectedKey) ||
-                !string.Equals(apiKey, expectedKey, StringComparison.Ordinal))
-            {
-                return Unauthorized(new
-                {
-                    success = false,
-                    message = "Invalid service credentials."
-                });
-            }
-
-            if (orderId <= 0 ||
-                request.Amount <= 0 ||
-                string.IsNullOrWhiteSpace(request.TransactionRef))
-            {
-                return BadRequest(new
-                {
-                    success = false,
-                    message = "Invalid repair request."
-                });
-            }
-
-            try
-            {
-                await _orderService.RepairPaidOrderArtifactsAsync(
-                    orderId,
-                    request.Amount,
-                    request.TransactionRef);
-
-                return Ok(new
-                {
-                    success = true,
-                    message = "Paid order artifacts repaired."
-                });
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return NotFound(new { success = false, message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { success = false, message = ex.Message });
-            }
         }
     }
 }
