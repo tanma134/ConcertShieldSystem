@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +8,7 @@ using PaymentAPI.API;
 using PaymentAPI.Data;
 using PaymentAPI.Models;
 using PaymentAPI.Repositories;
+using PaymentAPI.Risk;
 using PaymentAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -37,6 +38,14 @@ builder.Services.AddHttpClient<ITicketApiClient, TicketApiClient>(client =>
     client.DefaultRequestHeaders.Add("X-Internal-Api-Key", internalApiKey);
 });
 
+builder.Services.AddHttpClient<IEventApiClient, EventApiClient>(client =>
+{
+    var eventApiUrl = builder.Configuration["ApiSettings:EventApiUrl"]
+        ?? throw new InvalidOperationException("EventApiUrl is missing.");
+
+    client.BaseAddress = new Uri(eventApiUrl);
+});
+
 // Repositories & Services
 builder.Services.AddScoped<IVoucherRepository, VoucherRepository>();
 builder.Services.AddScoped<IVoucherService, VoucherService>();
@@ -47,6 +56,10 @@ builder.Services.AddScoped<IVnPayService, VnPayService>();
 builder.Services.AddScoped<IPaymentTransactionService, PaymentTransactionService>();
 builder.Services.AddScoped<IPaymentTransactionRepository, PaymentTransactionRepository>();
 builder.Services.AddScoped<IRefundService, RefundService>();
+
+// Risk Engine
+builder.Services.AddRiskClient(builder.Configuration);
+builder.Services.AddScoped<IPaymentRiskService, PaymentRiskService>();
 
 // JWT Authentication
 var jwtSecretKey = builder.Configuration["JwtSettings:SecretKey"] ?? throw new InvalidOperationException("Configure JwtSettings:SecretKey");
@@ -126,6 +139,34 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+
+// Thêm cột cho Risk Engine nếu chưa có (cùng cách AuthenticationAPI đang làm)
+using (var riskSchemaScope = app.Services.CreateScope())
+{
+    var riskDb = riskSchemaScope.ServiceProvider.GetRequiredService<PaymentDbContext>();
+    await riskDb.Database.ExecuteSqlRawAsync(@"
+        ALTER TABLE payment_transactions ADD COLUMN IF NOT EXISTS user_id integer;
+        ALTER TABLE payment_transactions ADD COLUMN IF NOT EXISTS client_ip varchar(64);
+        ALTER TABLE payment_transactions ADD COLUMN IF NOT EXISTS device_fp varchar(128);
+        ALTER TABLE payment_transactions ADD COLUMN IF NOT EXISTS session_id varchar(128);
+        CREATE INDEX IF NOT EXISTS ix_payment_transactions_user_status ON payment_transactions (user_id, status);
+
+        CREATE TABLE IF NOT EXISTS payment_refunds (
+            payment_refund_id integer GENERATED ALWAYS AS IDENTITY,
+            return_request_id integer NOT NULL,
+            order_id integer NOT NULL,
+            amount bigint NOT NULL,
+            gateway varchar(30) NOT NULL DEFAULT 'VNPay',
+            gateway_refund_ref varchar(100),
+            status varchar(20) NOT NULL DEFAULT 'Pending',
+            error_message varchar(500),
+            created_at timestamp without time zone NOT NULL DEFAULT now(),
+            completed_at timestamp without time zone,
+            CONSTRAINT payment_refunds_pkey PRIMARY KEY (payment_refund_id)
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_payment_refunds_return_request ON payment_refunds (return_request_id);
+        CREATE INDEX IF NOT EXISTS ix_payment_refunds_order_id ON payment_refunds (order_id);");
+}
 
 if (app.Environment.IsDevelopment())
 {

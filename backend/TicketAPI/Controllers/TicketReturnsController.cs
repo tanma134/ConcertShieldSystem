@@ -1,7 +1,8 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TicketAPI.API;
 using TicketAPI.DTOs;
+using TicketAPI.Risk;
 using TicketAPI.Services;
 
 namespace TicketAPI.Controllers
@@ -14,9 +15,11 @@ namespace TicketAPI.Controllers
         private readonly ITicketReturnService _service;
 
         private readonly IEventApiClient _eventApiClient;
+        private readonly ITicketRiskService _risk;
 
-        public TicketReturnsController(ITicketReturnService service, IEventApiClient eventApiClient)
+        public TicketReturnsController(ITicketReturnService service, IEventApiClient eventApiClient, ITicketRiskService risk)
         {
+            _risk = risk;
             _service = service;
             _eventApiClient = eventApiClient;
         }
@@ -33,6 +36,10 @@ namespace TicketAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> Submit([FromBody] SubmitTicketReturnDto dto)
         {
+            // Risk Engine: FRD_T02 (mua rồi hoàn nhiều lần)
+            var verdict = await _risk.CheckReturnAsync(HttpContext, CurrentUserId, dto.TicketId);
+            if (!verdict.Allowed) return verdict.ToActionResult();
+
             try
             {
                 var result = await _service.SubmitAsync(CurrentUserId, dto);

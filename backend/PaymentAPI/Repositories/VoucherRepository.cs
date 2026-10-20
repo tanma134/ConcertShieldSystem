@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -127,6 +127,70 @@ namespace PaymentAPI.Repositories
                 .Where(u => u.VoucherId == voucherId)
                 .OrderByDescending(u => u.UsedAt)
                 .ToListAsync();
+        }
+
+        public Task<int> CountUserUsagesAsync(int voucherId, int userId)
+        {
+            return _context.VoucherUsages.CountAsync(u => u.VoucherId == voucherId && u.UserId == userId);
+        }
+
+        public Task<List<Voucher>> GetAvailableForUserAsync(
+            int eventId,
+            int eventOrganizerId,
+            int userId,
+            DateTime now)
+        {
+            return _context.Vouchers
+                .AsNoTracking()
+                .Where(v =>
+                    v.IsActive &&
+                    v.StartsAt <= now &&
+                    v.EndsAt >= now &&
+                    v.UsedQuantity < v.TotalQuantity &&
+                    (
+                        v.Scope == "SYSTEM" ||
+                        (v.Scope == "ORGANIZER" &&
+                         v.OrganizerId == eventOrganizerId) ||
+                        (v.Scope == "EVENT" &&
+                         v.EventId == eventId)
+                    ) &&
+                    v.VoucherUsages.Count(u => u.UserId == userId) < v.MaxUsagePerUser)
+                .OrderBy(v => v.EndsAt)
+                .ToListAsync();
+        }
+
+        public async Task<bool> RecordUsageAsync(VoucherUsage usage)
+        {
+            var strategy = _context.Database.CreateExecutionStrategy();
+
+            return await strategy.ExecuteAsync(async () =>
+            {
+                await using var transaction =
+                    await _context.Database.BeginTransactionAsync();
+
+                var alreadyRecorded = await _context.VoucherUsages
+                    .AnyAsync(x => x.OrderId == usage.OrderId);
+
+                if (alreadyRecorded)
+                {
+                    await transaction.CommitAsync();
+                    return false;
+                }
+
+                var voucher = await _context.Vouchers
+                    .FirstOrDefaultAsync(x => x.VoucherId == usage.VoucherId);
+
+                if (voucher == null)
+                    throw new KeyNotFoundException("Không tìm thấy voucher.");
+
+                _context.VoucherUsages.Add(usage);
+                voucher.UsedQuantity++;
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return true;
+            });
         }
     }
 }

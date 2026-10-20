@@ -1,17 +1,21 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
 
-namespace PaymentAPI.Models
+namespace PaymentAPI.Models;
+
+public partial class VoucherUsage
 {
-    public class VoucherUsage
-    {
-        public int VoucherUsageId { get; set; }
-        public int VoucherId { get; set; }
-        public int OrderId { get; set; }
-        public int UserId { get; set; }
-        public long DiscountAmount { get; set; }
-        public DateTime UsedAt { get; set; } = DateTime.UtcNow;
+    public int VoucherUsageId { get; set; }
 
-        // Navigation
-        public virtual Voucher Voucher { get; set; } = null!;
-    }
+    public int VoucherId { get; set; }
+
+    public int OrderId { get; set; }
+
+    public int UserId { get; set; }
+
+    public long DiscountAmount { get; set; }
+
+    public DateTime UsedAt { get; set; }
+
+    public virtual Voucher Voucher { get; set; } = null!;
 }

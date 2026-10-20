@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using PaymentAPI.API;
 using PaymentAPI.DTOs;
 using PaymentAPI.Models;
 using PaymentAPI.Repositories;
@@ -11,10 +12,14 @@ namespace PaymentAPI.Services
     public class VoucherService : IVoucherService
     {
         private readonly IVoucherRepository _voucherRepository;
+        private readonly ITicketApiClient _ticketApiClient;
+        private readonly IEventApiClient _eventApiClient;
 
-        public VoucherService(IVoucherRepository voucherRepository)
+        public VoucherService(IVoucherRepository voucherRepository, IEventApiClient eventApiClient, ITicketApiClient ticketApiClient)
         {
             _voucherRepository = voucherRepository;
+            _eventApiClient = eventApiClient;
+            _ticketApiClient = ticketApiClient;
         }
 
         public async Task<VoucherResponseDTO> CreateVoucherAsync(CreateVoucherDTO dto, int currentUserId, bool isAdmin, bool isOrganizer)
@@ -552,6 +557,151 @@ namespace PaymentAPI.Services
                 CreatedBy = v.CreatedBy,
                 CreatedAt = v.CreatedAt
             };
+        }
+
+        public async Task<ApplyVoucherResponseDTO> ApplyVoucherAsync(ApplyVoucherRequestDTO request, int userId)
+        {
+            ApplyVoucherResponseDTO Invalid(string message) => new()
+            {
+                IsValid = false,
+                DiscountAmount = 0,
+                FinalAmount = Math.Max(0, request.OrderAmount),
+                Message = message
+            };
+
+            if (string.IsNullOrWhiteSpace(request.Code))
+                return Invalid("Vui lòng nhập mã voucher.");
+
+            if (request.EventId <= 0)
+                return Invalid("Event không hợp lệ.");
+
+            if (request.OrderAmount <= 0)
+                return Invalid("Giá trị đơn hàng không hợp lệ.");
+
+            var voucher = await _voucherRepository.GetByCodeAsync(request.Code);
+
+            if (voucher == null)
+                return Invalid("Không tìm thấy voucher.");
+
+            var now = DateTime.UtcNow;
+
+            if (!voucher.IsActive)
+                return Invalid("Voucher hiện không hoạt động.");
+
+            if (now < voucher.StartsAt || now > voucher.EndsAt)
+                return Invalid("Voucher chưa đến thời gian sử dụng hoặc đã hết hạn.");
+
+            if (voucher.UsedQuantity >= voucher.TotalQuantity)
+                return Invalid("Voucher đã hết lượt sử dụng.");
+
+            if (request.OrderAmount < (voucher.MinOrderAmount ?? 0))
+                return Invalid("Đơn hàng chưa đạt giá trị tối thiểu để sử dụng voucher.");
+
+            if (voucher.Scope == "EVENT" && voucher.EventId != request.EventId)
+                return Invalid("Voucher không áp dụng cho sự kiện này.");
+
+            var eventOrganizerId = await _eventApiClient.GetOrganizerIdByEventIdAsync(request.EventId);
+
+            var isApplicable = voucher.Scope switch
+            {
+                "SYSTEM" => true,
+                "ORGANIZER" => voucher.OrganizerId == eventOrganizerId,
+                "EVENT" => voucher.EventId == request.EventId,
+                _ => false
+            };
+
+            if (!isApplicable)
+                return Invalid("Voucher không áp dụng cho sự kiện này.");
+
+            if (voucher.Scope != "SYSTEM" &&
+                voucher.Scope != "EVENT" &&
+                voucher.Scope != "ORGANIZER")
+            {
+                return Invalid("Phạm vi voucher không hợp lệ.");
+            }
+
+            var userUsageCount = await _voucherRepository.CountUserUsagesAsync(voucher.VoucherId, userId);
+
+            if (userUsageCount >= voucher.MaxUsagePerUser)
+                return Invalid("Bạn đã sử dụng voucher này đủ số lần cho phép.");
+
+            decimal calculatedDiscount;
+
+            if (voucher.DiscountType == "PERCENT")
+            {
+                if (!voucher.DiscountPercent.HasValue)
+                    return Invalid("Cấu hình phần trăm giảm giá của voucher không hợp lệ.");
+
+                calculatedDiscount = request.OrderAmount * voucher.DiscountPercent.Value / 100m;
+
+                if (voucher.MaxDiscountAmount.HasValue)
+                {
+                    calculatedDiscount = Math.Min(calculatedDiscount, voucher.MaxDiscountAmount.Value);
+                }
+            }
+            else if (voucher.DiscountType == "FIXED")
+            {
+                if (!voucher.DiscountAmount.HasValue)
+                    return Invalid("Cấu hình số tiền giảm giá của voucher không hợp lệ.");
+
+                calculatedDiscount = voucher.DiscountAmount.Value;
+            }
+            else
+            {
+                return Invalid("Loại giảm giá của voucher không hợp lệ.");
+            }
+
+            var discountAmount = (long)Math.Round(calculatedDiscount, MidpointRounding.AwayFromZero);
+
+            discountAmount = Math.Clamp(discountAmount, 0L, request.OrderAmount);
+
+            return new ApplyVoucherResponseDTO
+            {
+                IsValid = true,
+                Code = voucher.Code,
+                DiscountAmount = discountAmount,
+                FinalAmount = request.OrderAmount - discountAmount,
+                Message = "Áp dụng voucher thành công.",
+                VoucherId = voucher.VoucherId
+            };
+        }
+
+        public async Task<List<VoucherResponseDTO>> GetAvailableForUserAsync(
+            int eventId,
+            int userId)
+        {
+            if (eventId <= 0)
+                throw new ArgumentException("Event không hợp lệ.");
+
+            var eventOrganizerId =
+                await _eventApiClient.GetOrganizerIdByEventIdAsync(eventId);
+
+            var vouchers = await _voucherRepository.GetAvailableForUserAsync(
+                eventId,
+                eventOrganizerId,
+                userId,
+                DateTime.UtcNow);
+
+            return vouchers
+                .Select(MapToResponseDTO)
+                .ToList();
+        }
+
+        public async Task RecordUsageForOrderAsync(int orderId)
+        {
+            var orderInfo = await _ticketApiClient.GetOrderVoucherInfoAsync(orderId);
+
+            if (orderInfo == null || !orderInfo.VoucherId.HasValue)
+                return;
+
+            await _voucherRepository.RecordUsageAsync(new VoucherUsage
+            {
+                OrderId = orderId,
+                VoucherId = orderInfo.VoucherId.Value,
+                UserId = orderInfo.UserId,
+                DiscountAmount = orderInfo.DiscountAmount,
+                UsedAt = DateTime.UtcNow
+            });
         }
     }
 }

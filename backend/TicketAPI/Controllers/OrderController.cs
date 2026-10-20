@@ -4,6 +4,7 @@ using PaymentAPI.DTOs;
 using System.Security.Claims;
 using TicketAPI.API;
 using TicketAPI.DTOs;
+using TicketAPI.Risk;
 using TicketAPI.Services;
 
 namespace TicketAPI.Controllers
@@ -15,9 +16,11 @@ namespace TicketAPI.Controllers
         private readonly IOrderService _orderService;
         private readonly ILogger<OrdersController> _logger;
         private readonly IPaymentAPIClient _paymentApiClient;
+        private readonly ITicketRiskService _risk;
 
-        public OrdersController(IOrderService orderService, ILogger<OrdersController> logger, IPaymentAPIClient paymentApiClient)
+        public OrdersController(IOrderService orderService, ILogger<OrdersController> logger, IPaymentAPIClient paymentApiClient, ITicketRiskService risk)
         {
+            _risk = risk;
             _orderService = orderService;
             _logger = logger;
             _paymentApiClient = paymentApiClient;
@@ -32,6 +35,10 @@ namespace TicketAPI.Controllers
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
                 return Unauthorized(new { success = false, message = "Token không hợp lệ!" });
+
+            // Risk Engine: kiểm tra block + ghi nhận rule đáng ngờ (fail-open nếu AdminAPI lỗi)
+            var verdict = await _risk.CheckOrderAsync(HttpContext, userId, dto);
+            if (!verdict.Allowed) return verdict.ToActionResult();
 
             TimeZoneInfo vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
 
@@ -48,6 +55,13 @@ namespace TicketAPI.Controllers
                 if (order.FinalAmount <= 0) return BadRequest("Invalid amount");
 
                 CancellationToken cancellationToken = default;
+
+                // Truyền IP/thiết bị thật sang PaymentAPI (trước đây IP bị gán cứng 127.0.0.1)
+                var rc = RiskRequestContext.From(HttpContext);
+                order.UserId = userId;
+                order.ClientIp = rc.Ip ?? "127.0.0.1";
+                order.DeviceFp = rc.DeviceFp;
+                order.SessionId = rc.SessionId;
 
                 var paymentUrl = await _paymentApiClient.CreateVnPayPaymentAsync(order, cancellationToken);
 

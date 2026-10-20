@@ -33,7 +33,7 @@ export const ADMIN_LINKS = [
   ["/admin/support-cases", "Support Cases & Disputes"],
 ];
 
-export default function AdminShell({ children, title = "Admin Panel" }) {
+export default function AdminShell({ children, title = "Failed Transaction Queue" }) {
   // Badge đỏ trên sidebar để admin biết còn việc chờ duyệt.
   const pending = useAdminPending();
   const badges = {
