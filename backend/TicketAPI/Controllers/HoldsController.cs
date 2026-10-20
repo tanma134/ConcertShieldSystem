@@ -12,18 +12,20 @@ namespace TicketAPI.Controllers
     {
         private readonly IHoldService _holdService;
         private readonly TicketAPI.API.EventEligibilityClient _eligibility;
+        private readonly TicketAPI.API.QueueAdmissionClient _queueAdmission;
         private readonly ILogger<HoldsController> _logger;
         private readonly ITicketRiskService _risk;
 
         public HoldsController(
             IHoldService holdService,
             ILogger<HoldsController> logger, TicketAPI.API.EventEligibilityClient eligibility,
-            ITicketRiskService risk)
+            TicketAPI.API.QueueAdmissionClient queueAdmission, ITicketRiskService risk)
         {
             _risk = risk;
             _holdService = holdService;
             _logger = logger;
             _eligibility = eligibility;
+            _queueAdmission = queueAdmission;
         }
 
         [HttpPost("session")]
@@ -43,7 +45,19 @@ namespace TicketAPI.Controllers
 
             try
             {
-                await _eligibility.EnsureSalesAsync(request.EventId);
+                var eligibility = await _eligibility.GetAsync(request.EventId, HttpContext.RequestAborted);
+                if (!eligibility.CanSell)
+                    throw new InvalidOperationException(eligibility.Reason);
+
+                if (eligibility.RequiresVirtualQueue)
+                {
+                    await _queueAdmission.EnsureAdmittedAsync(
+                        request.EventId,
+                        Request.Headers.Authorization,
+                        Request.Headers["X-Queue-Token"],
+                        HttpContext.RequestAborted);
+                }
+
                 var session = await _holdService.CreateHoldSessionAsync(
                     userId.Value,
                     request,
@@ -66,6 +80,23 @@ namespace TicketAPI.Controllers
             catch (InvalidOperationException ex)
             {
                 return Conflict(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (TicketAPI.API.QueueAdmissionRequiredException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (TicketAPI.API.QueueApiUnavailableException ex)
+            {
+                _logger.LogError(ex, "Queue admission validation failed for user {UserId}, event {EventId}", userId.Value, request.EventId);
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new
                 {
                     success = false,
                     message = ex.Message

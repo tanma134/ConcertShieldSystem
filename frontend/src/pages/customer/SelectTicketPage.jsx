@@ -534,7 +534,8 @@ export default function SelectTicketPage() {
     setIsHolding(true);
 
     try {
-      const response = await ticketApi.createHoldSession(payload);
+      const queueToken = localStorage.getItem(`queue-token:${eventId}`);
+      const response = await ticketApi.createHoldSession(payload, queueToken);
 
       const holdId = response.data?.data?.holdId;
 

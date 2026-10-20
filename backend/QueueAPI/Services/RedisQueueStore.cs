@@ -100,7 +100,7 @@ public sealed class RedisQueueStore(IConfiguration configuration) : IRedisQueueS
         var rank = await Db.SortedSetRankAsync(Order(eventId), userId.ToString(CultureInfo.InvariantCulture));
         var total = await Db.SortedSetLengthAsync(Waiting(eventId));
         if (!rank.HasValue && await Db.KeyExistsAsync(Joined(eventId, userId)))
-            return (0, (int)total, "EXPIRED", null);
+            return (0, (int)total, "PREQUEUE", null);
         return rank.HasValue ? ((int)rank.Value + 1, (int)total, "WAITING", null) : (0, (int)total, "REGISTERED", null);
     }
 
