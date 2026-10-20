@@ -109,6 +109,14 @@ export default function MyConcertsPage() {
                   </p>
                 </div>
                 </Link>
+
+                <Link
+                  to={`/organizer/events/${ev.eventId}/orders`}
+                  className="co-button co-button-primary mc-view-orders"
+                >
+                  View Orders
+                </Link>
+
                 {["Draft", "Rejected"].includes(ev.status) && <div className="mc-config-links">
                   <Link to={`/organizer/events/${ev.eventId}/compliance`}>Compliance</Link>
                   <Link to={`/organizer/events/${ev.eventId}/changes`}>Schedule changes</Link>

@@ -219,4 +219,37 @@ namespace PaymentAPI.DTOs
         [JsonPropertyName("has_next_page")]
         public bool HasNextPage => Page < TotalPages;
     }
+
+    public class ApplyVoucherRequestDTO
+    {
+        [JsonPropertyName("code")]
+        public string Code { get; set; } = string.Empty;
+
+        [JsonPropertyName("event_id")]
+        public int EventId { get; set; }
+
+        [JsonPropertyName("order_amount")]
+        public long OrderAmount { get; set; }
+    }
+
+    public class ApplyVoucherResponseDTO
+    {
+        [JsonPropertyName("is_valid")]
+        public bool IsValid { get; set; }
+
+        [JsonPropertyName("code")]
+        public string? Code { get; set; }
+
+        [JsonPropertyName("discount_amount")]
+        public long DiscountAmount { get; set; }
+
+        [JsonPropertyName("final_amount")]
+        public long FinalAmount { get; set; }
+
+        [JsonPropertyName("message")]
+        public string Message { get; set; } = string.Empty;
+
+        [JsonPropertyName("voucher_id")]
+        public int VoucherId { get; set; }
+    }
 }

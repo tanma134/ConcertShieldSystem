@@ -8,8 +8,8 @@ using TicketAPI.API;
 using TicketAPI.Models;
 using TicketAPI.Repositories;
 using TicketAPI.Services;
-using TicketAPI.Services;
 using TicketAPI.Services.TicketAPI.Services;
+using TicketAPI.Risk;
 
 var builder = WebApplication.CreateBuilder(args);
 var connectionString =
@@ -34,8 +34,7 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 
 builder.Services.AddHttpClient<IEventApiClient, EventApiClient>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:EventApiUrl"] ?? "https://localhost:7289/"
-        ?? throw new InvalidOperationException("EventApiUrl is missing.");
+    var baseUrl = builder.Configuration["ApiSettings:EventApiUrl"] ?? "https://localhost:7289/";
 
     var apiKey = builder.Configuration["InternalApiKey"]
         ?? throw new InvalidOperationException("EventAPI internal API key is missing.");
@@ -45,10 +44,9 @@ builder.Services.AddHttpClient<IEventApiClient, EventApiClient>(client =>
 });
 
 builder.Services.AddHttpClient<IPaymentAPIClient, PaymentAPIClient>(client =>
-
 {
-    var eventApiUrl = builder.Configuration["ApiSettings:PaymentApiUrl"] ?? "https://localhost:7084/";
-    client.BaseAddress = new Uri(eventApiUrl);
+    var paymentApiUrl = builder.Configuration["ApiSettings:PaymentApiUrl"] ?? "https://localhost:7084/";
+    client.BaseAddress = new Uri(paymentApiUrl);
     var paymentKey = builder.Configuration["InternalApiKey"];
     if (!string.IsNullOrEmpty(paymentKey)) client.DefaultRequestHeaders.Add("X-Internal-Api-Key", paymentKey);
 });
@@ -78,6 +76,12 @@ builder.Services.AddScoped<ITicketRepository, TicketRepository>();
 builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<ITicketReturnService, TicketReturnService>();
 builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.AddScoped<IStatusHistoryRepository, StatusHistoryRepository>();
+builder.Services.AddScoped<IStatusHistoryService, StatusHistoryService>();
+
+// Risk Engine: gửi tín hiệu gian lận/bot sang AdminAPI
+builder.Services.AddRiskClient(builder.Configuration);
+builder.Services.AddScoped<ITicketRiskService, TicketRiskService>();
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"]!;
@@ -118,6 +122,8 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
@@ -144,10 +150,6 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
-
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 

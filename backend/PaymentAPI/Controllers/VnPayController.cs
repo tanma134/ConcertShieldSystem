@@ -1,12 +1,10 @@
-using System.Transactions;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PaymentAPI.API;
 using PaymentAPI.DTOs;
 using PaymentAPI.Repositories;
 using PaymentAPI.Services;
-using TicketAPI.DTOs;
 
 namespace PaymentAPI.Controllers
 {
@@ -18,14 +16,16 @@ namespace PaymentAPI.Controllers
         private readonly IPaymentTransactionService _paymentTransactionService;
         private readonly ITicketApiClient _ticketApiClient;
         private readonly IPaymentTransactionRepository _transactions;
+        private readonly ILogger<VnPayController> _logger;
 
         public VnPayController(IVnPayService vnPayService, IPaymentTransactionService paymentTransactionService, ITicketApiClient ticketApiClient,
-            IPaymentTransactionRepository transactions)
+            IPaymentTransactionRepository transactions, ILogger<VnPayController> logger)
         {
             _vnPayService = vnPayService;
             _paymentTransactionService = paymentTransactionService;
             _ticketApiClient = ticketApiClient;
             _transactions = transactions;
+            _logger = logger;
         }
 
         // The "Check again" button on the payment result page.
@@ -83,7 +83,11 @@ namespace PaymentAPI.Controllers
 
             await _paymentTransactionService.CreatePaymentTransactionAsync(
                 request.OrderId,
-                request.FinalAmount);
+                request.FinalAmount,
+                request.UserId,
+                clientIp,
+                request.DeviceFp,
+                request.SessionId);
 
             var paymentUrl = _vnPayService.CreatePaymentUrl(
                 request.OrderId,
@@ -210,6 +214,7 @@ namespace PaymentAPI.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "VNPay IPN processing failed");
                 return Ok(new { RspCode = "99", Message = "Processing error" });
             }
         }

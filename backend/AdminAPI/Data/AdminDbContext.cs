@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using AdminAPI.Models;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +25,8 @@ public partial class AdminDbContext : DbContext
     public virtual DbSet<RiskNotification> RiskNotifications { get; set; }
 
     public virtual DbSet<SystemParameter> SystemParameters { get; set; }
+    public virtual DbSet<SupportCase> SupportCases { get; set; }
+    public virtual DbSet<SupportCaseNote> SupportCaseNotes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -28,6 +28,14 @@ const voucherApi = {
   getVoucherUsages: (id) => {
     return axiosClient.get(`/v1/vouchers/${id}/usages`);
   },
+
+  applyVoucher: (data) =>
+    axiosClient.post("/v1/vouchers/apply", data),
+
+  getAvailableVouchers: (eventId) =>
+    axiosClient.get("/v1/vouchers/available", {
+      params: { event_id: eventId },
+    }),
 };
 
 export default voucherApi;

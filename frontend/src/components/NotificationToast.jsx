@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
 import notificationApi from "../api/notificationApi";
 import { useAuth } from "../context/AuthContext";
 import "./NotificationToast.css";
@@ -35,7 +36,11 @@ export default function NotificationToast() {
   };
 
   const addToast = useCallback((toast) => {
-    if (isAdminRef.current || !toast?.title) return; // Never show toasts to Admin
+    if (!toast?.title) return;
+
+    // Filter out marketing / event promos for Admin, but allow operational support & dispute notifications
+    const isSupport = String(toast.category || "").toLowerCase().startsWith("support");
+    if (isAdminRef.current && !isSupport) return;
 
     const dedupeKey = extractKey(toast.title);
     const now = Date.now();
@@ -72,18 +77,18 @@ export default function NotificationToast() {
 
   // ─── Listener: custom window event (same-tab immediate dispatch) ──────────
   useEffect(() => {
-    if (!isAuthenticated || isAdmin) return;
+    if (!isAuthenticated) return;
 
     const onToastEvent = (e) => {
       if (e.detail) addToast(e.detail);
     };
     window.addEventListener("show-notification-toast", onToastEvent);
     return () => window.removeEventListener("show-notification-toast", onToastEvent);
-  }, [isAuthenticated, isAdmin, addToast]);
+  }, [isAuthenticated, addToast]);
 
   // ─── Listener: cross-tab BroadcastChannel & storage ────────────────────────
   useEffect(() => {
-    if (!isAuthenticated || isAdmin) return;
+    if (!isAuthenticated) return;
 
     let bc = null;
     try {
@@ -107,11 +112,53 @@ export default function NotificationToast() {
       window.removeEventListener("storage", onStorage);
       if (bc) bc.close();
     };
-  }, [isAuthenticated, isAdmin, addToast]);
+  }, [isAuthenticated, addToast]);
 
-  // ─── Polling: fetch API every 5s ──────────────────────────────────────────
+  // ─── SignalR: Direct Real-time WebSocket Hub Connection (Report 3 Section 3.19) ───
   useEffect(() => {
-    if (!isAuthenticated || isAdmin) return;
+    if (!isAuthenticated) return;
+
+    const hubUrl = "https://localhost:7197/hubs/notification";
+    let connection = null;
+
+    try {
+      connection = new HubConnectionBuilder()
+        .withUrl(hubUrl, {
+          accessTokenFactory: () => localStorage.getItem("accessToken") || "",
+        })
+        .withAutomaticReconnect([0, 2000, 5000, 10000])
+        .configureLogging(LogLevel.None)
+        .build();
+
+      connection.on("ReceiveNotification", (payload) => {
+        if (payload) {
+          addToast({
+            title: payload.title || payload.Title || "New Notification",
+            message: payload.message || payload.Message || "",
+            category: payload.category || payload.Category || "general",
+            targetUrl: payload.targetUrl || payload.TargetUrl || "/",
+          });
+          window.dispatchEvent(new CustomEvent("notification-updated"));
+        }
+      });
+
+      connection.start().catch(() => {
+        // Fallback to polling 5s if WebSocket is blocked or offline
+      });
+    } catch {
+      // Fallback
+    }
+
+    return () => {
+      if (connection) {
+        connection.stop().catch(() => {});
+      }
+    };
+  }, [isAuthenticated, addToast]);
+
+  // ─── Polling Fallback: fetch API every 5s ──────────────────────────────────
+  useEffect(() => {
+    if (!isAuthenticated) return;
 
     let alive = true;
 

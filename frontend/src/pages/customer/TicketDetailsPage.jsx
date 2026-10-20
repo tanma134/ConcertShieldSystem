@@ -90,12 +90,40 @@ function getSeatDescription(ticket) {
   return description || (ticket.seatId ? `Seat ID ${ticket.seatId}` : null);
 }
 
+function getHistoryActionLabel(item) {
+  const labels = {
+    HoldCreated:
+      item.targetType === "Seat" ? "Seat held" : "Tickets held",
+    HoldReleased: "Hold released",
+    OrderCreated: "Order created",
+    PaymentSucceeded: "Payment successful",
+    InventorySold: "Ticket inventory sold",
+    SeatSold: "Seat sold",
+    TicketIssued: "Ticket issued",
+    TicketCheckedIn: "Ticket checked in",
+    ReturnRequested: "Ticket return requested",
+    ReturnApproved: "Ticket return approved",
+    TicketRevoked: "Ticket revoked",
+    TicketReissued: "Ticket reissued",
+  };
+
+  return (
+    labels[item.action] ||
+    item.action?.replace(/([a-z])([A-Z])/g, "$1 $2") ||
+    "Status updated"
+  );
+}
+
 export default function TicketDetailsPage() {
   const { ticketId } = useParams();
 
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState("");
 
   const [qrOpen, setQrOpen] = useState(false);
   const [qrImage, setQrImage] = useState("");
@@ -134,6 +162,51 @@ export default function TicketDetailsPage() {
     }
 
     loadTicket();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ticketId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTicketHistory() {
+      try {
+        setHistoryLoading(true);
+        setHistoryError("");
+        setHistory([]);
+
+        const response = await ticketApi.getTicketHistory(ticketId);
+        const data = response.data?.data ?? response.data;
+
+        if (!Array.isArray(data)) {
+          throw new Error("The ticket history response is invalid.");
+        }
+
+        if (!cancelled) {
+          setHistory(data);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setHistoryError(
+            err.response?.data?.message ||
+              err.message ||
+              "Could not load ticket history."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setHistoryLoading(false);
+        }
+      }
+    }
+
+    if (ticketId) {
+      loadTicketHistory();
+    } else {
+      setHistoryLoading(false);
+    }
 
     return () => {
       cancelled = true;
@@ -232,6 +305,7 @@ export default function TicketDetailsPage() {
           <div className="ticket-detail-state is-error" role="alert">
             <strong>Could not open this ticket</strong>
             <p>{error || "Ticket not found."}</p>
+            <Link to="/my-tickets">Back to My Tickets</Link>
           </div>
         </main>
         <Footer />
@@ -267,6 +341,9 @@ export default function TicketDetailsPage() {
 
       <main className="ticket-detail-page">
         <div className="ticket-detail-container">
+          <Link to="/my-tickets" className="ticket-detail-back">
+            ← Back to My Tickets
+          </Link>
 
           <section className="ticket-event-card">
             {ticket.posterUrl && (
@@ -386,6 +463,82 @@ export default function TicketDetailsPage() {
                 </button>
               )}
             </div>
+          </section>
+
+          <section
+            className="ticket-history-card"
+            aria-labelledby="ticket-history-title"
+          >
+            <header className="ticket-history-header">
+              <div>
+                <p className="ticket-detail-eyebrow">Ticket activity</p>
+                <h2 id="ticket-history-title">Status history</h2>
+              </div>
+            </header>
+
+            {historyLoading ? (
+              <p className="ticket-history-state">
+                Loading ticket history...
+              </p>
+            ) : historyError ? (
+              <p className="ticket-history-state is-error" role="alert">
+                {historyError}
+              </p>
+            ) : history.length === 0 ? (
+              <p className="ticket-history-state">
+                No status history is available for this ticket yet.
+              </p>
+            ) : (
+              <ol className="ticket-history-list">
+                {history.map((item, index) => (
+                  <li
+                    className="ticket-history-item"
+                    key={
+                      item.statusHistoryId ??
+                      `${item.action}-${item.createdAt}-${index}`
+                    }
+                  >
+                    <span
+                      className="ticket-history-marker"
+                      aria-hidden="true"
+                    />
+
+                    <div className="ticket-history-content">
+                      <div className="ticket-history-main">
+                        <strong>{getHistoryActionLabel(item)}</strong>
+                        <time dateTime={item.createdAt}>
+                          {formatDate(item.createdAt) || "Time unavailable"}
+                        </time>
+                      </div>
+
+                      {(item.oldStatus || item.newStatus) && (
+                        <p className="ticket-history-status">
+                          {item.oldStatus || "—"}
+                          {" → "}
+                          {item.newStatus || "—"}
+                        </p>
+                      )}
+
+                      {item.seatId && (
+                        <p className="ticket-history-meta">
+                          Seat ID {item.seatId}
+                        </p>
+                      )}
+
+                      {item.quantity != null && (
+                        <p className="ticket-history-meta">
+                          Quantity: {item.quantity}
+                        </p>
+                      )}
+
+                      {item.reason && (
+                        <p className="ticket-history-meta">{item.reason}</p>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
           </section>
         </div>
       </main>

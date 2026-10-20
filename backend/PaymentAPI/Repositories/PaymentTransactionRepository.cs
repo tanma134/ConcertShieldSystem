@@ -40,5 +40,20 @@ namespace PaymentAPI.Repositories
                 .OrderByDescending(x => x.RequestedAt)
                 .FirstOrDefaultAsync();
         }
+
+        public async Task<List<PaymentTransaction>> GetAllForReconciliationAsync()
+        {
+            return await _context.PaymentTransactions
+                .AsNoTracking()
+                .OrderByDescending(transaction => transaction.RequestedAt)
+                .ToListAsync();
+        }
+
+        public Task<PaymentTransaction?> GetByIdAsync(int paymentTransactionId)
+        {
+            return _context.PaymentTransactions
+                .FirstOrDefaultAsync(x =>
+                    x.PaymentTransactionId == paymentTransactionId);
+        }
     }
 }

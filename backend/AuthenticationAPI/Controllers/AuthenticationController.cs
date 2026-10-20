@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using AuthenticationAPI.DTOs;
+using AuthenticationAPI.Risk;
 using AuthenticationAPI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,22 +13,30 @@ namespace AuthenticationAPI.Controllers
     {
         private readonly IAuthenticationService _authService;
         private readonly ILogger<AuthenticationController> _logger;
+        private readonly IAuthRiskService _risk;
 
         public AuthenticationController(
             IAuthenticationService authService,
-            ILogger<AuthenticationController> logger)
+            ILogger<AuthenticationController> logger,
+            IAuthRiskService risk)
         {
+            _risk = risk;
             _authService = authService;
             _logger = logger;
         }
 
         // Helper: lấy IP/User-Agent thật của client cho các action cần audit log
-        private string? ClientIp => HttpContext.Connection.RemoteIpAddress?.ToString();
+        // Ưu tiên IP thật từ X-Forwarded-For (do Gateway thêm), nếu không có thì dùng RemoteIpAddress
+        private string? ClientIp => RiskRequestContext.ResolveIp(HttpContext) ?? HttpContext.Connection.RemoteIpAddress?.ToString();
         private string? ClientUserAgent => Request.Headers.UserAgent.ToString();
 
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDTO dto)
         {
+            // Risk Engine: BOT_S02, FRD_A02 + kiểm tra block theo IP/thiết bị
+            var verdict = await _risk.CheckRegisterAsync(HttpContext, dto?.Email);
+            if (!verdict.Allowed) return verdict.ToActionResult();
+
             try
             {
                 await _authService.RegisterAsync(dto);
@@ -74,6 +83,10 @@ namespace AuthenticationAPI.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDTO dto)
         {
+            // Risk Engine: kiểm tra block theo IP/thiết bị/session + rule bot
+            var verdict = await _risk.CheckLoginAsync(HttpContext);
+            if (!verdict.Allowed) return verdict.ToActionResult();
+
             try
             {
                 var result = await _authService.LoginAsync(dto, ClientIp, ClientUserAgent);

@@ -19,6 +19,9 @@ const staffApi = {
 
   // UC_14.4: remove a staff member from the event.
   unassign: (eventId, staffUserId) => axiosClient.delete(`/events/${eventId}/staff/${staffUserId}`),
+
+  // Events & gates assigned to this staff member
+  getMyAssignments: (staffUserId) => axiosClient.get(`/events/staff/${staffUserId}`),
 };
 
 export default staffApi;

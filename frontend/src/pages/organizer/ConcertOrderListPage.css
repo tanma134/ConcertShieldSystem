@@ -1,0 +1,306 @@
+.concert-orders-page {
+  padding: 28px;
+  color: #f5f1fa;
+}
+
+.concert-orders-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+
+.concert-orders-eyebrow {
+  margin: 0 0 7px;
+  color: #bd8cff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.concert-orders-header h1 {
+  margin: 0;
+  font-size: 27px;
+}
+
+.concert-orders-description {
+  margin: 8px 0 0;
+  color: #aaa1b3;
+  font-size: 14px;
+}
+
+.concert-orders-header-actions,
+.co-filter-actions,
+.co-pagination,
+.co-pagination > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.co-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  border: 1px solid #49345f;
+  border-radius: 8px;
+  padding: 8px 13px;
+  color: #f4eff8;
+  background: #21182b;
+  font: inherit;
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.co-button:hover:not(:disabled) {
+  background: #32213f;
+}
+
+.co-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.co-button-primary {
+  border-color: #9148e4;
+  background: #8139d5;
+}
+
+.co-button-primary:hover:not(:disabled) {
+  background: #944de8;
+}
+
+.concert-orders-filters {
+  display: grid;
+  grid-template-columns: minmax(190px, 2fr) repeat(3, minmax(145px, 1fr)) auto;
+  align-items: end;
+  gap: 13px;
+  margin-bottom: 18px;
+  padding: 18px;
+  border: 1px solid #382b45;
+  border-radius: 11px;
+  background: #19151f;
+}
+
+.co-field {
+  display: grid;
+  gap: 7px;
+  color: #c8bfd1;
+  font-size: 13px;
+}
+
+.co-field input,
+.co-field select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border: 1px solid #44374d;
+  border-radius: 7px;
+  padding: 10px 11px;
+  outline: none;
+  color: #f4eff8;
+  background: #100d14;
+  font: inherit;
+}
+
+.co-field input:focus,
+.co-field select:focus {
+  border-color: #a15bfa;
+  box-shadow: 0 0 0 2px rgb(161 91 250 / 18%);
+}
+
+.co-field input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(1);
+}
+
+.co-filter-actions {
+  white-space: nowrap;
+}
+
+.co-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  padding: 12px 15px;
+  font-size: 13px;
+}
+
+.co-alert-error {
+  border: 1px solid #82464d;
+  color: #ffb9c0;
+  background: #381e27;
+}
+
+.co-alert button {
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.concert-orders-card {
+  overflow: hidden;
+  border: 1px solid #382b45;
+  border-radius: 11px;
+  background: #19151f;
+}
+
+.concert-orders-card-heading {
+  padding: 18px 20px;
+  border-bottom: 1px solid #302637;
+}
+
+.concert-orders-card-heading h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.concert-orders-card-heading p {
+  margin: 6px 0 0;
+  color: #a99fb1;
+  font-size: 13px;
+}
+
+.co-table-wrap {
+  overflow-x: auto;
+}
+
+.co-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.co-table th,
+.co-table td {
+  padding: 13px 15px;
+  border-bottom: 1px solid #302637;
+  vertical-align: middle;
+  font-size: 13px;
+}
+
+.co-table th {
+  color: #bdb3c8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.co-table td {
+  color: #eee8f3;
+}
+
+.co-table tbody tr:hover {
+  background: #211a29;
+}
+
+.co-customer-name {
+  font-weight: 600;
+}
+
+.co-customer-email {
+  margin-top: 4px;
+  color: #a99fb1;
+  font-size: 12px;
+}
+
+.co-status {
+  display: inline-flex;
+  border: 1px solid #49345f;
+  border-radius: 999px;
+  padding: 4px 9px;
+  color: #d9c7f0;
+  background: #2a1e36;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.co-status-paid {
+  border-color: #286c51;
+  color: #8be1b6;
+  background: #153b2d;
+}
+
+.co-status-pending {
+  border-color: #78602b;
+  color: #f5d27d;
+  background: #382d16;
+}
+
+.co-status-cancelled,
+.co-status-expired,
+.co-status-refunded {
+  border-color: #82464d;
+  color: #ffb9c0;
+  background: #381e27;
+}
+
+.co-state {
+  padding: 40px 20px;
+  color: #aaa2b7;
+  text-align: center;
+}
+
+.co-pagination {
+  justify-content: space-between;
+  padding: 15px 20px;
+  color: #c8bfd1;
+  font-size: 13px;
+}
+
+@media (max-width: 1050px) {
+  .concert-orders-filters {
+    grid-template-columns: repeat(2, minmax(160px, 1fr));
+  }
+
+  .co-filter-actions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 650px) {
+  .concert-orders-page {
+    padding: 18px 12px;
+  }
+
+  .concert-orders-header {
+    flex-direction: column;
+  }
+
+  .concert-orders-header-actions {
+    width: 100%;
+  }
+
+  .concert-orders-header-actions .co-button {
+    flex: 1;
+  }
+
+  .concert-orders-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .co-filter-actions {
+    grid-column: auto;
+  }
+
+  .co-filter-actions .co-button {
+    flex: 1;
+  }
+
+  .co-table {
+    min-width: 850px;
+  }
+}

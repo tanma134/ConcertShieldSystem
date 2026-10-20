@@ -1,6 +1,7 @@
 ﻿using AuthenticationAPI.Models;
 using AuthenticationAPI.Providers;
 using AuthenticationAPI.Repositories;
+using AuthenticationAPI.Risk;
 using AuthenticationAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
@@ -125,6 +126,9 @@ builder.Services.AddHttpClient<IAuditLogClient, AuditLogClient>(client =>
         ?? "https://localhost:7076");
     client.DefaultRequestHeaders.Add("X-Internal-Api-Key", builder.Configuration["InternalApi:Key"]);
 });
+
+builder.Services.AddRiskClient(builder.Configuration);
+builder.Services.AddScoped<IAuthRiskService, AuthRiskService>();
 
 var app = builder.Build();
 

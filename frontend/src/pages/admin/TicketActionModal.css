@@ -1,0 +1,139 @@
+.ticket-action-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(0 0 0 / 72%);
+}
+
+.ticket-action-modal {
+  position: relative;
+  width: min(100%, 520px);
+  padding: 28px;
+  border: 1px solid #493653;
+  border-radius: 16px;
+  background: #19151f;
+  color: #f4efff;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 45%);
+}
+
+.ticket-action-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  border: 0;
+  background: transparent;
+  color: #c9bbd5;
+  font-size: 28px;
+  cursor: pointer;
+}
+
+.ticket-action-close:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.ticket-action-eyebrow {
+  margin: 0 0 8px;
+  color: #b98cff;
+  font-size: 13px;
+}
+
+.ticket-action-modal h2 {
+  margin: 0 36px 10px 0;
+  font-size: 24px;
+}
+
+.ticket-action-description {
+  margin: 0 0 22px;
+  color: #b9aecb;
+  line-height: 1.6;
+}
+
+.ticket-action-modal form {
+  display: grid;
+  gap: 10px;
+}
+
+.ticket-action-modal label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ticket-action-modal textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 120px;
+  padding: 12px;
+  border: 1px solid #493b55;
+  border-radius: 8px;
+  outline: none;
+  resize: vertical;
+  background: #100d15;
+  color: #f4efff;
+  font: inherit;
+}
+
+.ticket-action-modal textarea:focus {
+  border-color: #a855f7;
+  box-shadow: 0 0 0 3px rgb(168 85 247 / 18%);
+}
+
+.ticket-action-error {
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid #713b46;
+  border-radius: 8px;
+  background: #351e27;
+  color: #ffb4bc;
+}
+
+.ticket-action-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.ticket-action-button {
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 8px;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ticket-action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.ticket-action-cancel {
+  border: 1px solid #51465d;
+  background: #292330;
+}
+
+.ticket-action-confirm-revoke {
+  background: #c43c54;
+}
+
+.ticket-action-confirm-reissue {
+  background: #843de8;
+}
+
+@media (max-width: 520px) {
+  .ticket-action-modal {
+    padding: 22px 18px;
+  }
+
+  .ticket-action-buttons {
+    flex-direction: column-reverse;
+  }
+
+  .ticket-action-button {
+    width: 100%;
+  }
+}
