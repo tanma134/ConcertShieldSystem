@@ -1399,6 +1399,48 @@
       }
     },
     {
+      "Key": "support-cases-root",
+      "DownstreamPathTemplate": "/api/support-cases",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7076
+        }
+      ],
+      "UpstreamPathTemplate": "/api/support-cases",
+      "UpstreamHttpMethod": [
+        "Get",
+        "Post"
+      ],
+      "Priority": 100,
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
+    },
+    {
+      "Key": "support-cases-sub",
+      "DownstreamPathTemplate": "/api/support-cases/{everything}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7076
+        }
+      ],
+      "UpstreamPathTemplate": "/api/support-cases/{everything}",
+      "UpstreamHttpMethod": [
+        "Get",
+        "Post",
+        "Put",
+        "Delete"
+      ],
+      "Priority": 90,
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
+    },
+    {
       "Key": "admin-fraud-alerts-list",
       "DownstreamPathTemplate": "/api/admin/fraud-alerts",
       "DownstreamScheme": "https",
@@ -3434,6 +3476,44 @@
         "Put",
         "Patch",
         "Delete"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
+    },
+    {
+      "Key": "refunds-root",
+      "DownstreamPathTemplate": "/api/refunds",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7227
+        }
+      ],
+      "UpstreamPathTemplate": "/api/refunds",
+      "UpstreamHttpMethod": [
+        "Get",
+        "Post"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
+    },
+    {
+      "Key": "refunds-everything",
+      "DownstreamPathTemplate": "/api/refunds/{everything}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7227
+        }
+      ],
+      "UpstreamPathTemplate": "/api/refunds/{everything}",
+      "UpstreamHttpMethod": [
+        "Get",
+        "Post"
       ],
       "AuthenticationOptions": {
         "AuthenticationProviderKey": "Bearer"

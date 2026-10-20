@@ -130,6 +130,18 @@ namespace PaymentAPI.Data
                 entity.Property(e => e.ErrorMessage).HasMaxLength(500).HasColumnName("error_message");
                 entity.Property(e => e.CreatedAt).HasColumnName("created_at");
                 entity.Property(e => e.CompletedAt).HasColumnName("completed_at");
+                entity.Property(e => e.RefundType).HasMaxLength(20).HasColumnName("refund_type");
+                entity.Property(e => e.Reason).HasMaxLength(255).HasColumnName("reason");
+                entity.Property(e => e.ProcessedByUserId).HasColumnName("processed_by_user_id");
+                entity.Property(e => e.ProcessedByUserName).HasMaxLength(100).HasColumnName("processed_by_user_name");
+                entity.Property(e => e.CustomerName).HasMaxLength(150).HasColumnName("customer_name");
+                entity.Property(e => e.GatewayErrorCode).HasMaxLength(50).HasColumnName("gateway_error_code");
+                entity.Property(e => e.RetryCount).HasColumnName("retry_count");
+                entity.Property(e => e.LastRetryAt).HasColumnName("last_retry_at");
+                entity.Property(e => e.GatewayAmount).HasColumnName("gateway_amount");
+                entity.Property(e => e.ReconciliationStatus).HasMaxLength(30).HasColumnName("reconciliation_status");
+                entity.Property(e => e.EventId).HasColumnName("event_id");
+                entity.Property(e => e.EventName).HasMaxLength(255).HasColumnName("event_name");
             });
         }
     }

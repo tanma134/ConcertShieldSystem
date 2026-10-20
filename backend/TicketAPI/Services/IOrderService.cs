@@ -1,4 +1,4 @@
-﻿using TicketAPI.DTOs;
+using TicketAPI.DTOs;
 using TicketAPI.Models;
 
 namespace TicketAPI.Services
@@ -12,6 +12,8 @@ namespace TicketAPI.Services
         Task<CreateVnPayPaymentRequestDto> GetOrderByOrderIdForPayment(int orderId);
 
         Task<Order?> GetOrderByOrderId(int orderId, int customerId);
+
+        Task<Order?> GetOrderByOrderId(int orderId);
 
         Task ConfirmPaymentAsync(int orderId, long amount, string transactionRef);
 
