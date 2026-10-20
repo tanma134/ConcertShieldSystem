@@ -84,9 +84,18 @@ public sealed class QueueService(QueueDbContext db, IRedisQueueStore redis, IHtt
         var config = await GetConfigAsync(eventId);
         var session = await GetSessionAsync(eventId, userId, token);
         if (QueueTimeZone.Now < config.PreQueueEndTime)
-            return ToResponse(eventId, session.QueueToken, "REGISTERED", null, 0, null, config);
+        {
+            var preQueueResult = await redis.JoinAsync(eventId, userId, session.QueueToken, CancellationToken.None);
+            if (preQueueResult.Status == "TOKEN_INVALID")
+                throw new UnauthorizedAccessException("TOKEN_INVALID");
+
+            return ToResponse(eventId, session.QueueToken, "PREQUEUE", null, preQueueResult.Total, null, config);
+        }
 
         await redis.FinalizeRandomizationAsync(eventId, CycleKey(config), CancellationToken.None);
+        if (config.QueueEnabled)
+            await redis.AdmitNextAsync(eventId, config.AdmissionRate, CancellationToken.None);
+
         var result = await redis.JoinAsync(eventId, userId, session.QueueToken, CancellationToken.None);
         if (result.Status == "TOKEN_INVALID")
             throw new UnauthorizedAccessException("TOKEN_INVALID");
@@ -101,6 +110,14 @@ public sealed class QueueService(QueueDbContext db, IRedisQueueStore redis, IHtt
     public async Task<QueueStatusResponse> GetStatusAsync(int eventId, int userId, string? token)
     {
         var session = await GetSessionAsync(eventId, userId, token);
+        var config = await GetConfigAsync(eventId);
+        if (QueueTimeZone.Now >= config.PreQueueEndTime)
+        {
+            await redis.FinalizeRandomizationAsync(eventId, CycleKey(config), CancellationToken.None);
+            if (config.QueueEnabled)
+                await redis.AdmitNextAsync(eventId, config.AdmissionRate, CancellationToken.None);
+        }
+
         var result = await redis.GetStatusAsync(eventId, userId, session.QueueToken, CancellationToken.None);
         if (result.Status == "TOKEN_INVALID")
             throw new UnauthorizedAccessException("TOKEN_INVALID");
@@ -108,11 +125,11 @@ public sealed class QueueService(QueueDbContext db, IRedisQueueStore redis, IHtt
         var status = result.Status;
         if (session.Status == "ADMITTED" && status != "ADMITTED")
             status = "EXPIRED";
-        session.Status = status;
+        session.Status = status == "PREQUEUE" ? "REGISTERED" : status;
         session.Position = status == "EXPIRED" ? null : result.Position == 0 ? null : result.Position;
         session.UpdatedAt = QueueTimeZone.Now;
         await db.SaveChangesAsync();
-        return ToResponse(eventId, session.QueueToken, status, session.Position, result.Total, result.AdmissionExpiresAt, await GetConfigAsync(eventId));
+        return ToResponse(eventId, session.QueueToken, status, session.Position, result.Total, result.AdmissionExpiresAt, config);
     }
 
     public async Task LeaveAsync(int eventId, int userId, string? token)
@@ -197,7 +214,7 @@ public sealed class QueueService(QueueDbContext db, IRedisQueueStore redis, IHtt
     }
 
     private static QueueStatusResponse ToResponse(int eventId, string token, string status, int? position, int total, DateTimeOffset? expiresAt, QueueConfiguration config) =>
-        new(eventId, token, status, position, total, EstimateWait(position, config.AdmissionRate), expiresAt, QueueTimeZone.NowOffset);
+        new(eventId, token, status, position, total, EstimateWait(position, config.AdmissionRate), expiresAt, QueueTimeZone.NowOffset, QueueTimeZone.AsVietnamOffset(config.PreQueueStartTime), QueueTimeZone.AsVietnamOffset(config.PreQueueEndTime));
 
     private static int? EstimateWait(int? position, int admissionRate)
     {

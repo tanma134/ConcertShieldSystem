@@ -60,6 +60,11 @@ builder.Services.AddHttpClient<EventEligibilityClient>(client =>
     var key = builder.Configuration["Governance:InternalApiKey"];
     if (!string.IsNullOrEmpty(key)) client.DefaultRequestHeaders.Add("X-Internal-Api-Key", key);
 });
+builder.Services.AddHttpClient<QueueAdmissionClient>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["ApiSettings:QueueApiUrl"] ?? "https://localhost:7310/");
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
 builder.Services.AddHostedService<TicketChangeNotificationWorker>();
 builder.Services.AddHttpClient("ChangeNotification", client =>
 {
