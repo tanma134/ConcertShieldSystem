@@ -10,7 +10,7 @@ const POPULAR_SEARCHES = ["Live Music", "EDM Festival", "K-Pop", "Jazz Night", "
 
 export default function Header() {
   const navigate = useNavigate();
-  const { user, logout, isAuthenticated, isAdmin, isOrganizer } = useAuth();
+  const { user, logout, isAuthenticated, isAdmin, isOrganizer, isStaff } = useAuth();
   const [searchParams] = useSearchParams();
   const [keyword, setKeyword] = useState(searchParams.get("q") || "");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -411,6 +411,12 @@ export default function Header() {
             </Link>
           )}
 
+          {isAuthenticated && (isStaff || isAdmin) && (
+            <Link to={isAdmin ? "/admin/incidents" : "/staff/incidents"} className="tb-header-link">
+              Incidents
+            </Link>
+          )}
+
           <div className="tb-account" ref={accountRef}>
             {isAuthenticated ? (
               <>
@@ -441,6 +447,11 @@ export default function Header() {
                     <Link to="/profile" onClick={() => setMenuOpen(false)}>
                       My Profile
                     </Link>
+                    {(isStaff || isAdmin) && (
+                      <Link to={isAdmin ? "/admin/incidents" : "/staff/incidents"} onClick={() => setMenuOpen(false)}>
+                        Incident Command
+                      </Link>
+                    )}
                     {isAdmin && (
                       <Link to="/admin/vouchers" onClick={() => setMenuOpen(false)}>
                         Vouchers Admin

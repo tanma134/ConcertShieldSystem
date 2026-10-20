@@ -15,6 +15,9 @@ namespace EventAPI.Services
         // Event ids where this staff member may review ticket returns (used by TicketAPI).
         Task<List<int>> GetReturnReviewEventIdsAsync(int staffUserId);
 
+        // Events and gates a staff member is assigned to work at.
+        Task<List<StaffEventAssignmentDTO>> GetAssignmentsByStaffAsync(int staffUserId);
+
         Task UnassignAsync(int eventId, int staffUserId, int callerId, bool isAdmin);
     }
 }

@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using AdminAPI.Data;
 using AdminAPI.Services;
 using AdminAPI.Services.Risks;
@@ -13,6 +13,8 @@ builder.Services.AddDbContext<AdminDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+builder.Services.AddScoped<ISupportEmailService, SupportEmailService>();
+builder.Services.AddScoped<ISupportCaseService, SupportCaseService>();
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtSection["Key"]
@@ -44,6 +46,9 @@ builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("CanManageUsers", policy =>
         policy.RequireRole("Admin"));
+
+    options.AddPolicy("CanManageSupportCases", policy =>
+        policy.RequireRole("Admin", "Staff", "SupportStaff", "SecurityStaff"));
 
     // BR-236, BR-111, BR-245, BR-259: chỉ Admin được xem/xử lý fraud-risk (Staff không còn quyền).
     // Bật "Risk:RequirePermissionClaim": true để yêu cầu thêm claim permission = fraud.manage | risk.manage

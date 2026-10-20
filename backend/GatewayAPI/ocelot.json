@@ -4816,6 +4816,49 @@
                 "AuthenticationProviderKey": "Bearer"
             }
         },
+          {
+      "Key": "support-cases-root",
+      "DownstreamPathTemplate": "/api/support-cases",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7076
+        }
+      ],
+      "UpstreamPathTemplate": "/api/support-cases",
+      "UpstreamHttpMethod": [
+        "Get",
+        "Post"
+      ],
+      "Priority": 100,
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
+    },
+    {
+      "Key": "support-cases-sub",
+      "DownstreamPathTemplate": "/api/support-cases/{everything}",
+      "DownstreamScheme": "https",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "localhost",
+          "Port": 7076
+        }
+      ],
+      "UpstreamPathTemplate": "/api/support-cases/{everything}",
+      "UpstreamHttpMethod": [
+        "Get",
+        "Post",
+        "Put",
+        "Delete"
+      ],
+      "Priority": 90,
+      "AuthenticationOptions": {
+        "AuthenticationProviderKey": "Bearer"
+      }
+    },
+
         {
             "Key": "queue-admin-everything",
             "DownstreamPathTemplate": "/api/queue/admin/{everything}",
@@ -4849,4 +4892,5 @@
             "DangerousAcceptAnyServerCertificateValidator": true
         }
     }
+  
 }

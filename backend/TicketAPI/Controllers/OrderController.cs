@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PaymentAPI.DTOs;
 using System.Security.Claims;
@@ -118,7 +118,25 @@ namespace TicketAPI.Controllers
                 });
             }
 
-            var order = await _orderService.GetOrderByOrderId(orderId, userId);
+            var roles = User.FindAll(ClaimTypes.Role)
+                .Concat(User.FindAll("role"))
+                .Select(c => c.Value)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var isPrivileged = roles.Contains("Admin") ||
+                               roles.Contains("Staff") ||
+                               roles.Contains("SupportStaff") ||
+                               roles.Contains("SecurityStaff") ||
+                               roles.Contains("Organizer") ||
+                               User.IsInRole("Admin") ||
+                               User.IsInRole("Staff") ||
+                               User.IsInRole("SupportStaff") ||
+                               User.IsInRole("SecurityStaff") ||
+                               User.IsInRole("Organizer");
+
+            var order = isPrivileged
+                ? await _orderService.GetOrderByOrderId(orderId)
+                : await _orderService.GetOrderByOrderId(orderId, userId);
 
             if (order == null)
             {
@@ -135,6 +153,10 @@ namespace TicketAPI.Controllers
                 data = new
                 {
                     order.OrderId,
+                    order.CustomerId,
+                    order.FullName,
+                    order.Email,
+                    order.Phone,
                     order.EventId,
                     order.EventName,
                     order.PosterUrl,

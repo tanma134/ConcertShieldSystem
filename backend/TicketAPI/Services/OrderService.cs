@@ -286,6 +286,11 @@ namespace TicketAPI.Services
             return order;
         }
 
+        public async Task<Order?> GetOrderByOrderId(int orderId)
+        {
+            return await _orderRepository.GetOrderByOrderId(orderId);
+        }
+
         public async Task ConfirmPaymentAsync(int orderId, long amount, string transactionRef)
         {
             await using var dbTransaction =
