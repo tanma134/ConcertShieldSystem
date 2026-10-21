@@ -19,7 +19,7 @@ function groupRows(v) {
 }
 
 // View Risk Decision Details (Admin) — GET api/risk/decisions/{id}
-// Decisions are immutable records (BR-250): this page never edits scores or rules, it only restores.
+// Decisions are immutable records: this page never edits scores or rules, it only restores.
 export default function RiskDecisionDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();

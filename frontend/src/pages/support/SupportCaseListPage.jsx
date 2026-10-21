@@ -175,6 +175,7 @@ export default function SupportCaseListPage() {
             <option value="">All Statuses</option>
             <option value="Open">Open</option>
             <option value="Assigned">Assigned</option>
+            <option value="InProgress">In Progress</option>
             <option value="Resolved">Resolved</option>
             <option value="Closed">Closed</option>
           </select>

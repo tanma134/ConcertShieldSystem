@@ -60,12 +60,6 @@ import TicketReturnReviewPage from "../pages/admin/TicketReturnReviewPage";
 import RefundReconciliationPage from "../pages/admin/RefundReconciliationPage";
 import EventGovernancePage from "../pages/organizer/EventGovernancePage";
 import ChangeRequestsPage from "../pages/admin/ChangeRequestsPage";
-import TicketStatusHistoryPage from "../pages/admin/TicketStatusHistoryPage";
-import PaymentReconciliationExceptionsPage from "../pages/admin/PaymentReconciliationExceptionsPage";
-import AdminTicketsPage from "../pages/admin/AdminTicketsPage";
-import AdminTicketDetailPage from "../pages/admin/AdminTicketDetailPage";
-import FailedTransactionQueuePage from "../pages/admin/FailedTransactionQueuePage";
-import ConcertOrderListPage from "../pages/organizer/ConcertOrderListPage";
 import VirtualQueuePage from "../pages/VirtualQueuePage";
 import TicketPlaceholderPage from "../pages/TicketPlaceholderPage";
 import QueueManagementPage from "../pages/admin/QueueManagementPage";
@@ -74,6 +68,7 @@ import QueueAbuseAlertDetailPage from "../pages/admin/QueueAbuseAlertDetailPage"
 import IncidentListPage from "../pages/staff/IncidentListPage";
 import IncidentReportPage from "../pages/staff/IncidentReportPage";
 import IncidentDetailPage from "../pages/staff/IncidentDetailPage";
+import CheckinScanTerminalPage from "../pages/staff/CheckinScanTerminalPage";
 import SupportCaseListPage from "../pages/support/SupportCaseListPage";
 import SupportCaseCreatePage from "../pages/support/SupportCaseCreatePage";
 import SupportCaseDetailPage from "../pages/support/SupportCaseDetailPage";
@@ -157,61 +152,15 @@ export default function AppRoutes() {
         }
       />
 
-      <Route
-        path="/admin/ticket-status-history"
-        element={
-          <AdminRoute>
-            <TicketStatusHistoryPage />
-          </AdminRoute>
-        }
-      />
-
-      <Route
-        path="/admin/payment-reconciliation"
-        element={
-          <AdminRoute>
-            <PaymentReconciliationExceptionsPage />
-          </AdminRoute>
-        }
-      />
-
-      <Route
-        path="/admin/tickets"
-        element={
-          <AdminRoute>
-            <AdminTicketsPage />
-          </AdminRoute>
-        }
-      />
-
-      <Route
-        path="/admin/tickets/:ticketId"
-        element={
-          <AdminRoute>
-            <AdminTicketDetailPage />
-          </AdminRoute>
-        }
-      />
-
-      <Route
-        path="/admin/failed-transaction-queue"
-        element={<FailedTransactionQueuePage />}
-      />
-
-      <Route
-        path="/organizer/events/:id/orders"
-        element={
-          <ProtectedRoute organizerOnly>
-            <ConcertOrderListPage />
-          </ProtectedRoute>
-        }
-      />
-
       {/* UC_9 return review (Staff/Admin) */}
       <Route path="/staff/returns" element={<ProtectedRoute><TicketReturnReviewPage /></ProtectedRoute>} />
       <Route path="/admin/returns" element={<ProtectedRoute adminOnly><TicketReturnReviewPage /></ProtectedRoute>} />
       {/* 3.16.22 Refund Reconciliation Report */}
       <Route path="/admin/refund-reconciliation" element={<ProtectedRoute adminOnly><RefundReconciliationPage /></ProtectedRoute>} />
+
+      {/* Gate Check-in & Re-entry Terminal */}
+      <Route path="/staff/checkin" element={<ProtectedRoute><CheckinScanTerminalPage /></ProtectedRoute>} />
+      <Route path="/admin/checkin" element={<AdminRoute><CheckinScanTerminalPage /></AdminRoute>} />
 
       {/* UC_16 On-site Incident Management (UC_16.1 - UC_16.5) */}
       <Route path="/staff/incidents" element={<ProtectedRoute><IncidentListPage /></ProtectedRoute>} />
@@ -235,8 +184,8 @@ export default function AppRoutes() {
       <Route path="/organizer/events/:id/revenue" element={<ProtectedRoute organizerOnly><RevenueDashboardPage /></ProtectedRoute>} />
       <Route path="/organizer/events/:id/checkin" element={<ProtectedRoute organizerOnly><CheckinManagementPage /></ProtectedRoute>} />
       <Route path="/organizer/events/:id/staff" element={<ProtectedRoute organizerOnly><CheckinManagementPage /></ProtectedRoute>} />
-
-      <Route path="/profile/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
+      
+<Route path="/profile/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
       {/* Any logged-in Customer may create and configure a Draft concert. */}
       <Route
         path="/organizer/dashboard"

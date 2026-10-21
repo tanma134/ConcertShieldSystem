@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AuthenticationAPI.Controllers
 {
     // Lets an Organizer (or Admin) find accounts that hold the Staff role,
-    // so they can be assigned to an event (UC_14.3 / UC_14.4).
+    // so they can be assigned to an event ( / ).
     // Only id, name and email are returned; phone numbers and other data stay private.
     [ApiController]
     [Route("api/users/staff")]

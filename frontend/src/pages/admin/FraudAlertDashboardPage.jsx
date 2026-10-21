@@ -54,7 +54,7 @@ function statusPillClass(status) {
   }
 }
 
-// BR-240: High/Critical alerts must be handled within the SLA (risk.alert.sla_hours, default 2 h).
+// High/Critical alerts must be handled within the SLA (risk.alert.sla_hours, default 2 h).
 // Keep this constant in sync with that setting.
 const ALERT_SLA_HOURS = 2;
 const isOverdue = (a) =>

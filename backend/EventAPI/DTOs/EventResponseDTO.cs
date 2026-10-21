@@ -37,6 +37,9 @@ namespace EventAPI.DTOs
         public int? MaxTicketsPerAccount { get; set; }
         public string? MetaTitle { get; set; }
         public string? MetaDescription { get; set; }
+        public int HoldTimeoutMinutes { get; set; } = 10;
+        public string ReEntryPolicy { get; set; } = Common.ReEntryPolicyTypes.NoReEntry;
+        public int? ReEntryDurationMinutes { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public DateTime? PublishedAt { get; set; }

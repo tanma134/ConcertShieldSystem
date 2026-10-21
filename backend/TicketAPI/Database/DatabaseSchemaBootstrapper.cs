@@ -38,6 +38,11 @@ public static class DatabaseSchemaBootstrapper
                 ON public.ticket_return_requests(requester_user_id, created_at DESC);
             CREATE INDEX IF NOT EXISTS ix_ticket_return_requests_event
                 ON public.ticket_return_requests(event_id, status);
+
+            ALTER TABLE public.tickets ADD COLUMN IF NOT EXISTS last_exit_at timestamp with time zone NULL;
+            ALTER TABLE public.tickets ADD COLUMN IF NOT EXISTS checked_in_gate varchar(100) NULL;
+            ALTER TABLE public.tickets ADD COLUMN IF NOT EXISTS is_inside boolean NOT NULL DEFAULT false;
+            ALTER TABLE public.tickets ADD COLUMN IF NOT EXISTS re_entry_count integer NOT NULL DEFAULT 0;
             """);
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -140,32 +140,62 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// Thêm cột cho Risk Engine nếu chưa có (cùng cách AuthenticationAPI đang làm)
-using (var riskSchemaScope = app.Services.CreateScope())
+// Thêm schema cho Risk Engine, Refund và Đối soát nếu chưa có
+using (var schemaScope = app.Services.CreateScope())
 {
-    var riskDb = riskSchemaScope.ServiceProvider.GetRequiredService<PaymentDbContext>();
-    await riskDb.Database.ExecuteSqlRawAsync(@"
+    var paymentDb = schemaScope.ServiceProvider.GetRequiredService<PaymentDbContext>();
+    await paymentDb.Database.ExecuteSqlRawAsync(@"
+        -- Cột Risk Engine
         ALTER TABLE payment_transactions ADD COLUMN IF NOT EXISTS user_id integer;
         ALTER TABLE payment_transactions ADD COLUMN IF NOT EXISTS client_ip varchar(64);
         ALTER TABLE payment_transactions ADD COLUMN IF NOT EXISTS device_fp varchar(128);
         ALTER TABLE payment_transactions ADD COLUMN IF NOT EXISTS session_id varchar(128);
         CREATE INDEX IF NOT EXISTS ix_payment_transactions_user_status ON payment_transactions (user_id, status);
 
+        -- Bảng payment_refunds cơ bản
         CREATE TABLE IF NOT EXISTS payment_refunds (
             payment_refund_id integer GENERATED ALWAYS AS IDENTITY,
-            return_request_id integer NOT NULL,
+            return_request_id integer NULL,
             order_id integer NOT NULL,
             amount bigint NOT NULL,
             gateway varchar(30) NOT NULL DEFAULT 'VNPay',
             gateway_refund_ref varchar(100),
             status varchar(20) NOT NULL DEFAULT 'Pending',
             error_message varchar(500),
-            created_at timestamp without time zone NOT NULL DEFAULT now(),
-            completed_at timestamp without time zone,
+            created_at timestamp with time zone NOT NULL DEFAULT now(),
+            completed_at timestamp with time zone,
             CONSTRAINT payment_refunds_pkey PRIMARY KEY (payment_refund_id)
         );
         CREATE UNIQUE INDEX IF NOT EXISTS uq_payment_refunds_return_request ON payment_refunds (return_request_id);
-        CREATE INDEX IF NOT EXISTS ix_payment_refunds_order_id ON payment_refunds (order_id);");
+        CREATE INDEX IF NOT EXISTS ix_payment_refunds_order_id ON payment_refunds (order_id);
+
+        -- Cột mở rộng cho Payment Refund (Support Case, Retry, Reconciliation)
+        ALTER TABLE payment_refunds ALTER COLUMN return_request_id DROP NOT NULL;
+        ALTER TABLE payment_refunds ADD COLUMN IF NOT EXISTS refund_type varchar(20) DEFAULT 'Full';
+        ALTER TABLE payment_refunds ADD COLUMN IF NOT EXISTS reason varchar(255);
+        ALTER TABLE payment_refunds ADD COLUMN IF NOT EXISTS processed_by_user_id integer;
+        ALTER TABLE payment_refunds ADD COLUMN IF NOT EXISTS processed_by_user_name varchar(100);
+        ALTER TABLE payment_refunds ADD COLUMN IF NOT EXISTS customer_name varchar(150);
+        ALTER TABLE payment_refunds ADD COLUMN IF NOT EXISTS gateway_error_code varchar(50);
+        ALTER TABLE payment_refunds ADD COLUMN IF NOT EXISTS retry_count integer NOT NULL DEFAULT 0;
+        ALTER TABLE payment_refunds ADD COLUMN IF NOT EXISTS last_retry_at timestamp with time zone;
+        ALTER TABLE payment_refunds ADD COLUMN IF NOT EXISTS gateway_amount bigint;
+        ALTER TABLE payment_refunds ADD COLUMN IF NOT EXISTS reconciliation_status varchar(30) DEFAULT 'Matched';
+        ALTER TABLE payment_refunds ADD COLUMN IF NOT EXISTS event_id integer;
+        ALTER TABLE payment_refunds ADD COLUMN IF NOT EXISTS event_name varchar(255);
+
+        -- Bảng payment_reconciliation_resolutions
+        CREATE TABLE IF NOT EXISTS payment_reconciliation_resolutions (
+            payment_reconciliation_resolution_id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+            payment_transaction_id integer NOT NULL,
+            resolution_action varchar(50) NOT NULL,
+            resolution_note text NOT NULL,
+            resolution_status varchar(20) NOT NULL,
+            resolved_by_user_id integer NOT NULL,
+            resolved_at timestamp with time zone NOT NULL DEFAULT now()
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_reconciliation_resolution_transaction 
+            ON payment_reconciliation_resolutions (payment_transaction_id);");
 }
 
 if (app.Environment.IsDevelopment())

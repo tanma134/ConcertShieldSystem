@@ -52,6 +52,16 @@ namespace EventAPI.DTOs
 
         [MaxLength(500)]
         public string? MetaDescription { get; set; }
+
+        /// <summary>Seat hold timeout in minutes (1 to 30, default 10).</summary>
+        public int? HoldTimeoutMinutes { get; set; }
+
+        /// <summary>Re-entry policy (NoReEntry, Unlimited, TimeLimited).</summary>
+        [MaxLength(30)]
+        public string? ReEntryPolicy { get; set; }
+
+        /// <summary>Time-limited re-entry duration in minutes (5 to 120).</summary>
+        public int? ReEntryDurationMinutes { get; set; }
     }
 
     public class UpdateEventDTO
@@ -102,6 +112,16 @@ namespace EventAPI.DTOs
 
         [MaxLength(500)]
         public string? MetaDescription { get; set; }
+
+        /// <summary>Seat hold timeout in minutes (1 to 30).</summary>
+        public int? HoldTimeoutMinutes { get; set; }
+
+        /// <summary>Re-entry policy (NoReEntry, Unlimited, TimeLimited).</summary>
+        [MaxLength(30)]
+        public string? ReEntryPolicy { get; set; }
+
+        /// <summary>Time-limited re-entry duration in minutes (5 to 120).</summary>
+        public int? ReEntryDurationMinutes { get; set; }
     }
 
     public class UpdateEventStatusDTO

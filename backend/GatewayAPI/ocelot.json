@@ -4880,6 +4880,44 @@
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"
             }
+        },
+        {
+            "Key": "refunds-root",
+            "DownstreamPathTemplate": "/api/refunds",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7227
+                }
+            ],
+            "UpstreamPathTemplate": "/api/refunds",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "refunds-everything",
+            "DownstreamPathTemplate": "/api/refunds/{everything}",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7227
+                }
+            ],
+            "UpstreamPathTemplate": "/api/refunds/{everything}",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
         }
     ],
     "GlobalConfiguration": {

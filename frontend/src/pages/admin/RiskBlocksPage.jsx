@@ -10,7 +10,7 @@ const NEW_BLOCK = { scope: "ACCOUNT", userId: "", ticketId: "", durationHours: 2
 const MIN_REASON = 10;
 const MAX_REASON = 500;
 
-// Risk blocks: list, manual Block (account or ticket) and Restore. Admin only (BR-111, BR-245).
+// Risk blocks: list, manual Block (account or ticket) and Restore. Admin only.
 // Automatic blocks (SESSION / DEVICE / IP) are created by the risk engine and can only be restored here.
 export default function RiskBlocksPage() {
   const [filters, setFilters] = useState(EMPTY);

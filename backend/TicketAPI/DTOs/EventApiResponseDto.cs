@@ -1,4 +1,4 @@
-﻿namespace BookingAPI.DTOS
+namespace BookingAPI.DTOS
 {
     public class EventApiResponseDto
     {
@@ -9,6 +9,9 @@
         public DateTime StartsAt { get; set; }
         public DateTime EndsAt { get; set; }
         public string Status { get; set; } = null!;
+        public int HoldTimeoutMinutes { get; set; } = 10;
+        public string ReEntryPolicy { get; set; } = "NoReEntry";
+        public int? ReEntryDurationMinutes { get; set; }
         public List<TicketTypeApiResponseDto> TicketTypes { get; set; } = new();
     }
 }

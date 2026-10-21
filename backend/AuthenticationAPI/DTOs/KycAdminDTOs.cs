@@ -1,4 +1,4 @@
-﻿namespace AuthenticationAPI.DTOs
+namespace AuthenticationAPI.DTOs
 {
     // ---------- Chung ----------
     public class KycPagedResult<T>
@@ -16,7 +16,7 @@
         public string Content { get; set; } = "";
     }
 
-    /// <summary>Trả cho app/web ở GET api/kyc/consent (giữ đúng shape cũ).</summary>
+    /// <summary>Tr? cho app/web ? GET api/kyc/consent (gi? ��ng shape c?).</summary>
     public class KycConsentPublicDto
     {
         public string Version { get; set; } = "";
@@ -35,7 +35,7 @@
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public int? CreatedBy { get; set; }
-        /// <summary>Số hồ sơ eKYC đã đồng ý theo phiên bản này.</summary>
+        /// <summary>S? h? s� eKYC �? �?ng ? theo phi�n b?n n�y.</summary>
         public int ConsentCount { get; set; }
     }
 
@@ -45,19 +45,19 @@
         public string Title { get; set; } = "";
         public List<ConsentItemDto> Items { get; set; } = new();
         public string CheckboxText { get; set; } = "";
-        /// <summary>true = kích hoạt ngay sau khi tạo.</summary>
+        /// <summary>true = k�ch ho?t ngay sau khi t?o.</summary>
         public bool Activate { get; set; }
     }
 
     // ---------- 3.5 Retention ----------
     public class KycSettingDto
     {
-        /// <summary>Phải nằm trong [MinRetentionDays, MaxRetentionDays]; không còn giá trị 0.</summary>
+        /// <summary>Ph?i n?m trong [MinRetentionDays, MaxRetentionDays]; kh�ng c?n gi� tr? 0.</summary>
         public int RetentionDays { get; set; }
         public bool KeepDocumentHashAfterDeletion { get; set; }
-        /// <summary>BR-217: shortest retention allowed (legal minimum).</summary>
+        /// <summary> shortest retention allowed (legal minimum).</summary>
         public int MinRetentionDays { get; set; }
-        /// <summary>BR-217: longest retention allowed (not longer than necessary).</summary>
+        /// <summary> longest retention allowed (not longer than necessary).</summary>
         public int MaxRetentionDays { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public int? UpdatedBy { get; set; }
@@ -80,19 +80,19 @@
         public int? ProcessedBy { get; set; }
         public string? ReasonCode { get; set; }
         public string? Note { get; set; }
-        /// <summary>BR-56: deadline = RequestedAt + 72h.</summary>
+        /// <summary> deadline = RequestedAt + 72h.</summary>
         public DateTime DueAt { get; set; }
         public bool IsOverdue { get; set; }
     }
 
     public class RejectKycDeletionDto
     {
-        /// <summary>BR-228: LegalRetention | LegalHold | AuthorityRequest.</summary>
+        /// <summary> LegalRetention | LegalHold | AuthorityRequest.</summary>
         public string ReasonCode { get; set; } = "";
         public string Note { get; set; } = "";
     }
 
-    // ---------- eKYC manual review (BR-50, BR-55, BR-109) ----------
+    // ---------- eKYC manual review  ----------
     public class KycReviewItemDto
     {
         public int EkycId { get; set; }
@@ -128,7 +128,7 @@
         public DateTime CreatedAt { get; set; }
     }
 
-    /// <summary>BR-235: what a data subject sees about access to their own eKYC data (no admin id, no IP).</summary>
+    /// <summary> what a data subject sees about access to their own eKYC data (no admin id, no IP).</summary>
     public class KycMyAccessLogDto
     {
         public long Id { get; set; }

@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using AuthenticationAPI.DTOs;
 using AuthenticationAPI.Models;
 using Microsoft.EntityFrameworkCore;
@@ -90,7 +90,7 @@ namespace AuthenticationAPI.Services
             if (dto.Items.Any(i => string.IsNullOrWhiteSpace(i.Heading) || string.IsNullOrWhiteSpace(i.Content)))
                 throw new InvalidOperationException("Every section needs both a heading and content");
 
-            // BR-213: purpose, data collected, retention period and data subject rights must all be stated
+            // purpose, data collected, retention period and data subject rights must all be stated
             if (dto.Items.Count < 4)
                 throw new InvalidOperationException("Consent content needs at least 4 sections: purpose of use, data collected, retention period and data subject rights");
             if (!dto.Items.Any(i => (i.Content ?? "").Contains("{retentionDays}", StringComparison.Ordinal)))
@@ -132,7 +132,7 @@ namespace AuthenticationAPI.Services
                 return;
 
             await using var tx = await _db.Database.BeginTransactionAsync();
-            // Tắt bản cũ trước, rồi bật bản mới (index unique một-bản-active ở DB không bị vi phạm)
+            // T?t b?n c? tr�?c, r?i b?t b?n m?i (index unique m?t-b?n-active ? DB kh�ng b? vi ph?m)
             await _db.KycConsentVersions.Where(x => x.IsActive)
                 .ExecuteUpdateAsync(s => s.SetProperty(x => x.IsActive, false));
             entity.IsActive = true;

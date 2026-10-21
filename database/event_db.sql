@@ -152,6 +152,9 @@ ALTER TABLE public.events ADD COLUMN IF NOT EXISTS approved_at timestamp with ti
 ALTER TABLE public.events ADD COLUMN IF NOT EXISTS rejected_at timestamp with time zone;
 ALTER TABLE public.events ADD COLUMN IF NOT EXISTS reviewed_by integer;
 ALTER TABLE public.events ADD COLUMN IF NOT EXISTS seating_mode character varying(30) NOT NULL DEFAULT 'ReservedSeating';
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS hold_timeout_minutes integer NOT NULL DEFAULT 10;
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS re_entry_policy character varying(30) NOT NULL DEFAULT 'NoReEntry';
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS re_entry_duration_minutes integer;
 
 DO $$
 BEGIN
