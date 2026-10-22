@@ -1,4 +1,4 @@
-﻿
+
 using AuthenticationAPI.DTOs;
 using AuthenticationAPI.Models;
 using Microsoft.EntityFrameworkCore;
@@ -137,7 +137,7 @@ namespace AuthenticationAPI.Services
             };
         }
 
-        /// <summary>Details are written as "purpose=xxx; key=value; ..." (BR-232).</summary>
+        /// <summary>Details are written as "purpose=xxx; key=value; ..." .</summary>
         private static string? ExtractPurpose(string? details)
         {
             if (string.IsNullOrWhiteSpace(details)) return null;

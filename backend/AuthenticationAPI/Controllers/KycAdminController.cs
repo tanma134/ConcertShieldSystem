@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using AuthenticationAPI.DTOs;
 using AuthenticationAPI.Repositories;
 using AuthenticationAPI.Services;
@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace AuthenticationAPI.Controllers
 {
     /// <summary>
-    /// Admin side of eKYC: review requests waiting for manual review (BR-109) and view their images (BR-55).
+    /// Admin side of eKYC: review requests waiting for manual review  and view their images .
     /// Every image view is logged (table kyc_access_logs).
     /// </summary>
     [ApiController]
@@ -106,7 +106,7 @@ namespace AuthenticationAPI.Controllers
             if (record is null)
                 return NotFound();
 
-            // BR-55: images may be viewed only to review a request that is waiting for review
+            // images may be viewed only to review a request that is waiting for review
             if (record.Status != "ManualReview")
                 return StatusCode(403, new { message = "Images can only be viewed while the request is waiting for review" });
 
@@ -128,10 +128,10 @@ namespace AuthenticationAPI.Controllers
             var adminId = GetCurrentUserId();
             var ip = GetClientIp();
 
-            // Ghi log TRƯỚC khi trả ảnh: không ghi được log thì không cho xem
+            // Ghi log TR�?C khi tr? ?nh: kh�ng ghi ��?c log th? kh�ng cho xem
             await _accessLog.LogAsync(record.UserId, record.EkycId, adminId, KycActorTypes.Admin,
                 KycAccessActions.ViewImage, ip, $"purpose=manual_review; kind={normalizedKind}");
-            _logger.LogWarning("KYC image access: admin {AdminId} xem {Kind} của ekyc {EkycId} (user {UserId})",
+            _logger.LogWarning("KYC image access: admin {AdminId} xem {Kind} c?a ekyc {EkycId} (user {UserId})",
                 adminId, normalizedKind, ekycId, record.UserId);
 
             Response.Headers["Cache-Control"] = "no-store";

@@ -91,7 +91,7 @@ public sealed class TicketRiskService : ITicketRiskService
                 try
                 {
                     var hold = await _holds.GetHoldDetailsAsync(dto.HoldId, userId);
-                    var heldAt = hold.ExpiresAtUtc.AddSeconds(-HoldDurationSeconds);
+                    var heldAt = hold.CreatedAtUtc != default ? hold.CreatedAtUtc : hold.ExpiresAtUtc.AddSeconds(-HoldDurationSeconds);
                     var elapsed = (now - heldAt).TotalSeconds;
                     if (elapsed >= 0 && elapsed < MinSelectToSubmitSeconds)
                         evt.BotRules.Add(new RuleHit("BOT_V02", 1, $"{elapsed:0.0}s from hold to submit"));

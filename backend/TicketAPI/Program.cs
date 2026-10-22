@@ -19,6 +19,7 @@ builder.Services.AddDbContext<TicketDbContext>(options =>
     options.UseNpgsql(connectionString));
 
 builder.Services.AddControllers();
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 {
@@ -34,7 +35,8 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 
 builder.Services.AddHttpClient<IEventApiClient, EventApiClient>(client =>
 {
-    var baseUrl = builder.Configuration["ApiSettings:EventApiUrl"] ?? "https://localhost:7289/";
+    var baseUrl = builder.Configuration["ApiSettings:EventApiUrl"] ?? "https://localhost:7289/"
+        ?? throw new InvalidOperationException("EventApiUrl is missing.");
 
     var apiKey = builder.Configuration["InternalApiKey"]
         ?? throw new InvalidOperationException("EventAPI internal API key is missing.");
@@ -44,9 +46,10 @@ builder.Services.AddHttpClient<IEventApiClient, EventApiClient>(client =>
 });
 
 builder.Services.AddHttpClient<IPaymentAPIClient, PaymentAPIClient>(client =>
+
 {
-    var paymentApiUrl = builder.Configuration["ApiSettings:PaymentApiUrl"] ?? "https://localhost:7084/";
-    client.BaseAddress = new Uri(paymentApiUrl);
+    var eventApiUrl = builder.Configuration["ApiSettings:PaymentApiUrl"] ?? "https://localhost:7084/";
+    client.BaseAddress = new Uri(eventApiUrl);
     var paymentKey = builder.Configuration["InternalApiKey"];
     if (!string.IsNullOrEmpty(paymentKey)) client.DefaultRequestHeaders.Add("X-Internal-Api-Key", paymentKey);
 });
@@ -81,10 +84,11 @@ builder.Services.AddScoped<ITicketRepository, TicketRepository>();
 builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<ITicketReturnService, TicketReturnService>();
 builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.AddScoped<ICheckinService, CheckinService>();
 builder.Services.AddScoped<IStatusHistoryRepository, StatusHistoryRepository>();
 builder.Services.AddScoped<IStatusHistoryService, StatusHistoryService>();
 
-// Risk Engine: gửi tín hiệu gian lận/bot sang AdminAPI
+// Risk Engine: gui tin hieu gian lan/bot sang AdminAPI
 builder.Services.AddRiskClient(builder.Configuration);
 builder.Services.AddScoped<ITicketRiskService, TicketRiskService>();
 
@@ -125,10 +129,11 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RequireStaff", policy => policy.RequireRole("Staff", "Organizer", "Admin"));
+});
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
@@ -155,6 +160,10 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
+
+// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 

@@ -42,7 +42,7 @@ public static class GovernanceRules
     public static bool IsComplete(int version, IEnumerable<string> required, IEnumerable<string> present)
         => version > 0 && !required.Except(present).Any();
 
-    // Report 3 (UC-87 Approve Event Change Request): note is required only when rejecting (10-1000 chars);
+    // note is required only when rejecting (10-1000 chars);
     // it is optional (max 1000) when approving. Returns the trimmed note, which may be empty for an approval.
     public static string ValidateChangeReview(string decision, string? notes)
     {

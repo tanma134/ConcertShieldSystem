@@ -95,6 +95,9 @@ namespace EventAPI.Data
                 entity.Property(e => e.MaxTicketsPerAccount).HasColumnName("max_tickets_per_account");
                 entity.Property(e => e.MetaTitle).HasColumnName("meta_title").HasMaxLength(200);
                 entity.Property(e => e.MetaDescription).HasColumnName("meta_description").HasMaxLength(500);
+                entity.Property(e => e.HoldTimeoutMinutes).HasColumnName("hold_timeout_minutes").HasDefaultValue(10);
+                entity.Property(e => e.ReEntryPolicy).HasColumnName("re_entry_policy").HasMaxLength(30).HasDefaultValue("NoReEntry");
+                entity.Property(e => e.ReEntryDurationMinutes).HasColumnName("re_entry_duration_minutes");
                 entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
                 entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("now()");
                 entity.Property(e => e.PublishedAt).HasColumnName("published_at");

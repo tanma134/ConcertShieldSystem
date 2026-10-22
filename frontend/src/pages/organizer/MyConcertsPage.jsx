@@ -124,6 +124,16 @@ export default function MyConcertsPage() {
                   <Link to={`/organizer/events/${ev.eventId}/pricing`}>Pricing</Link>
                   <Link to={`/organizer/events/${ev.eventId}/refunds`}>Refund policies</Link>
                 </div>}
+
+                {ev.status === "Published" && (
+                  <div className="mc-config-links">
+                    <Link to={`/organizer/events/${ev.eventId}/checkin`}>Check-in &amp; Staff</Link>
+                    <Link to={`/organizer/events/${ev.eventId}/revenue`}>Revenue</Link>
+                    <Link to={`/organizer/events/${ev.eventId}/seating`}>Seating</Link>
+                    <Link to={`/organizer/events/${ev.eventId}/pricing`}>Pricing</Link>
+                    <Link to={`/organizer/events/${ev.eventId}/refunds`}>Refunds</Link>
+                  </div>
+                )}
                 {["Draft", "Rejected"].includes(ev.status) && (
                   <button
                     type="button"

@@ -27,6 +27,9 @@ const emptyForm = {
   endsAt: "",
   minTicketsPerAccount: "",
   maxTicketsPerAccount: "",
+  holdTimeoutMinutes: 10,
+  reEntryPolicy: "NoReEntry",
+  reEntryDurationMinutes: 30,
   metaTitle: "",
   metaDescription: "",
 };
@@ -61,6 +64,9 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
       endsAt: toLocalInput(event.endsAt),
       minTicketsPerAccount: event.minTicketsPerAccount ?? "",
       maxTicketsPerAccount: event.maxTicketsPerAccount ?? "",
+      holdTimeoutMinutes: event.holdTimeoutMinutes ?? 10,
+      reEntryPolicy: event.reEntryPolicy || "NoReEntry",
+      reEntryDurationMinutes: event.reEntryDurationMinutes ?? 30,
       metaTitle: event.metaTitle || "",
       metaDescription: event.metaDescription || "",
     });
@@ -170,6 +176,13 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
         form.minTicketsPerAccount === "" ? null : Number(form.minTicketsPerAccount),
       maxTicketsPerAccount:
         form.maxTicketsPerAccount === "" ? null : Number(form.maxTicketsPerAccount),
+      holdTimeoutMinutes:
+        form.holdTimeoutMinutes === "" ? 10 : Number(form.holdTimeoutMinutes),
+      reEntryPolicy: form.reEntryPolicy || "NoReEntry",
+      reEntryDurationMinutes:
+        form.reEntryPolicy === "TimeLimited" && form.reEntryDurationMinutes !== ""
+          ? Number(form.reEntryDurationMinutes)
+          : null,
       metaTitle: form.metaTitle.trim() || null,
       metaDescription: form.metaDescription.trim() || null,
     };
@@ -426,6 +439,50 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
             />
             {fieldErrors.maxTicketsPerAccount && <span className="ow-field-error">{fieldErrors.maxTicketsPerAccount}</span>}
           </label>
+
+          <label className="ow-field">
+            <span>Seat hold & checkout timeout (minutes)</span>
+            <input
+              type="number"
+              min={1}
+              max={30}
+              name="holdTimeoutMinutes"
+              value={form.holdTimeoutMinutes}
+              onChange={handleChange}
+              placeholder="10 (1-30 minutes)"
+            />
+            <span className="ow-hint">Default is 10 minutes (1-30 mins). Determines how long seats are held for attendees to complete checkout before being released.</span>
+          </label>
+
+          <label className="ow-field">
+            <span>Re-entry policy</span>
+            <select
+              name="reEntryPolicy"
+              value={form.reEntryPolicy}
+              onChange={handleChange}
+            >
+              <option value="NoReEntry">No Re-entry (Default)</option>
+              <option value="Unlimited">Unlimited</option>
+              <option value="TimeLimited">Time-limited</option>
+            </select>
+            <span className="ow-hint">Ticket scan rules when attendees exit and return.</span>
+          </label>
+
+          {form.reEntryPolicy === "TimeLimited" && (
+            <label className="ow-field">
+              <span>Re-entry duration limit (minutes)</span>
+              <input
+                type="number"
+                min={5}
+                max={120}
+                name="reEntryDurationMinutes"
+                value={form.reEntryDurationMinutes}
+                onChange={handleChange}
+                placeholder="30 (5-120 minutes)"
+              />
+              <span className="ow-hint">Allowed between 5 and 120 minutes. Re-entry will be rejected once expired.</span>
+            </label>
+          )}
         </div>
 
         <button

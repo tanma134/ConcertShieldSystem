@@ -33,6 +33,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TicketAPI.UnitTests", "Tick
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IncidentAPI", "IncidentAPI\IncidentAPI.csproj", "{700A809E-0F8D-4694-8883-32DE2E4B2E3D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PaymentAPI.Tests", "PaymentAPI.Tests\PaymentAPI.Tests.csproj", "{C839B23E-002D-4B03-B692-003E5DB779FC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -223,6 +225,18 @@ Global
 		{700A809E-0F8D-4694-8883-32DE2E4B2E3D}.Release|x64.Build.0 = Release|Any CPU
 		{700A809E-0F8D-4694-8883-32DE2E4B2E3D}.Release|x86.ActiveCfg = Release|Any CPU
 		{700A809E-0F8D-4694-8883-32DE2E4B2E3D}.Release|x86.Build.0 = Release|Any CPU
+		{C839B23E-002D-4B03-B692-003E5DB779FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C839B23E-002D-4B03-B692-003E5DB779FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C839B23E-002D-4B03-B692-003E5DB779FC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C839B23E-002D-4B03-B692-003E5DB779FC}.Debug|x64.Build.0 = Debug|Any CPU
+		{C839B23E-002D-4B03-B692-003E5DB779FC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C839B23E-002D-4B03-B692-003E5DB779FC}.Debug|x86.Build.0 = Debug|Any CPU
+		{C839B23E-002D-4B03-B692-003E5DB779FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C839B23E-002D-4B03-B692-003E5DB779FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C839B23E-002D-4B03-B692-003E5DB779FC}.Release|x64.ActiveCfg = Release|Any CPU
+		{C839B23E-002D-4B03-B692-003E5DB779FC}.Release|x64.Build.0 = Release|Any CPU
+		{C839B23E-002D-4B03-B692-003E5DB779FC}.Release|x86.ActiveCfg = Release|Any CPU
+		{C839B23E-002D-4B03-B692-003E5DB779FC}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

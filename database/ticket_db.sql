@@ -378,3 +378,10 @@ ALTER TABLE public.ticket_return_requests DROP CONSTRAINT IF EXISTS ck_ticket_re
 ALTER TABLE public.ticket_return_requests
     ADD CONSTRAINT ck_ticket_return_requests_status
     CHECK (status IN ('Pending', 'Approved', 'Rejected', 'Cancelled', 'Refunded', 'RefundFailed'));
+
+-- ---------- 012 check-in / re-entry (ticket) ----------
+ALTER TABLE public.tickets ADD COLUMN IF NOT EXISTS last_exit_at timestamp with time zone NULL;
+ALTER TABLE public.tickets ADD COLUMN IF NOT EXISTS checked_in_gate character varying(100) NULL;
+ALTER TABLE public.tickets ADD COLUMN IF NOT EXISTS is_inside boolean NOT NULL DEFAULT false;
+ALTER TABLE public.tickets ADD COLUMN IF NOT EXISTS re_entry_count integer NOT NULL DEFAULT 0;
+

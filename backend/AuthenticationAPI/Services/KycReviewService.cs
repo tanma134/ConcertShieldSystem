@@ -1,4 +1,4 @@
-﻿using AuthenticationAPI.DTOs;
+using AuthenticationAPI.DTOs;
 using AuthenticationAPI.Models;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -6,8 +6,8 @@ using Npgsql;
 namespace AuthenticationAPI.Services
 {
     /// <summary>
-    /// Manual review of eKYC requests whose face match score is in the uncertain range (BR-109),
-    /// plus legal hold management (BR-220, BR-222).
+    /// Manual review of eKYC requests whose face match score is in the uncertain range ,
+    /// plus legal hold management .
     /// </summary>
     public class KycReviewService : IKycReviewService
     {
@@ -50,7 +50,7 @@ namespace AuthenticationAPI.Services
         {
             var record = await GetForReviewAsync(ekycId);
 
-            // BR-01: one CCCD can verify only one account
+            // one CCCD can verify only one account
             if (!string.IsNullOrEmpty(record.CccdNumberHash)
                 && await _db.EkycVerifications.AnyAsync(e => e.CccdNumberHash == record.CccdNumberHash
                                                              && e.UserId != record.UserId

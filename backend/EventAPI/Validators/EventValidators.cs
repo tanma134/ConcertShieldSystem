@@ -51,6 +51,23 @@ namespace EventAPI.Validators
                 .Must(x => !x.MinTicketsPerAccount.HasValue || !x.MaxTicketsPerAccount.HasValue ||
                            x.MinTicketsPerAccount.Value <= x.MaxTicketsPerAccount.Value)
                 .WithMessage("MinTicketsPerAccount must be <= MaxTicketsPerAccount");
+
+            RuleFor(x => x.HoldTimeoutMinutes)
+                .InclusiveBetween(1, 30).When(x => x.HoldTimeoutMinutes.HasValue)
+                .WithMessage("Seat hold timeout must be between 1 and 30 minutes.");
+
+            RuleFor(x => x.ReEntryPolicy)
+                .Must(p => Common.ReEntryPolicyTypes.IsValid(p)).When(x => !string.IsNullOrEmpty(x.ReEntryPolicy))
+                .WithMessage("Re-entry policy must be NoReEntry, Unlimited, or TimeLimited.");
+
+            RuleFor(x => x.ReEntryDurationMinutes)
+                .InclusiveBetween(5, 120).When(x => x.ReEntryDurationMinutes.HasValue)
+                .WithMessage("Time-limited re-entry duration must be between 5 and 120 minutes.");
+
+            RuleFor(x => x)
+                .Must(x => x.ReEntryDurationMinutes.HasValue && x.ReEntryDurationMinutes.Value >= 5 && x.ReEntryDurationMinutes.Value <= 120)
+                .When(x => x.ReEntryPolicy?.Equals(Common.ReEntryPolicyTypes.TimeLimited, StringComparison.OrdinalIgnoreCase) == true)
+                .WithMessage("Time-limited re-entry policy requires a duration between 5 and 120 minutes.");
         }
     }
 
@@ -87,6 +104,23 @@ namespace EventAPI.Validators
                 .GreaterThan(x => x.StartsAt!.Value)
                 .When(x => x.StartsAt.HasValue && x.EndsAt.HasValue)
                 .WithMessage("End date must be after start date");
+
+            RuleFor(x => x.HoldTimeoutMinutes)
+                .InclusiveBetween(1, 30).When(x => x.HoldTimeoutMinutes.HasValue)
+                .WithMessage("Seat hold timeout must be between 1 and 30 minutes.");
+
+            RuleFor(x => x.ReEntryPolicy)
+                .Must(p => Common.ReEntryPolicyTypes.IsValid(p)).When(x => !string.IsNullOrEmpty(x.ReEntryPolicy))
+                .WithMessage("Re-entry policy must be NoReEntry, Unlimited, or TimeLimited.");
+
+            RuleFor(x => x.ReEntryDurationMinutes)
+                .InclusiveBetween(5, 120).When(x => x.ReEntryDurationMinutes.HasValue)
+                .WithMessage("Time-limited re-entry duration must be between 5 and 120 minutes.");
+
+            RuleFor(x => x)
+                .Must(x => x.ReEntryDurationMinutes.HasValue && x.ReEntryDurationMinutes.Value >= 5 && x.ReEntryDurationMinutes.Value <= 120)
+                .When(x => x.ReEntryPolicy?.Equals(Common.ReEntryPolicyTypes.TimeLimited, StringComparison.OrdinalIgnoreCase) == true)
+                .WithMessage("Time-limited re-entry policy requires a duration between 5 and 120 minutes.");
         }
     }
 }

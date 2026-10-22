@@ -23,6 +23,8 @@
         public string HoldId { get; set; } = "";
         public int UserId { get; set; }
         public int EventId { get; set; }
+        public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+        public int DurationSeconds { get; set; } = 600;
         public DateTime ExpiresAtUtc { get; set; }
 
         public List<TicketHoldItem> Tickets { get; set; } = new();
@@ -35,6 +37,8 @@
     {
         public string HoldId { get; set; } = "";
         public int EventId { get; set; }
+        public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+        public int DurationSeconds { get; set; } = 600;
         public DateTime ExpiresAtUtc { get; set; }
         public int RemainingSeconds { get; set; }
         public long TotalAmount { get; set; }

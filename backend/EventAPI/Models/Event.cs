@@ -60,6 +60,16 @@ namespace EventAPI.Models
         public int? MaxTicketsPerAccount { get; set; }
         public string? MetaTitle { get; set; }
         public string? MetaDescription { get; set; }
+
+        // Seat hold timeout in minutes (default 10, range 1-30).
+        public int HoldTimeoutMinutes { get; set; } = 10;
+
+        // Re-entry policy (NoReEntry, Unlimited, TimeLimited). Default is NoReEntry.
+        public string ReEntryPolicy { get; set; } = Common.ReEntryPolicyTypes.NoReEntry;
+
+        // Duration in minutes when ReEntryPolicy is TimeLimited (range 5-120).
+        public int? ReEntryDurationMinutes { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? PublishedAt { get; set; }

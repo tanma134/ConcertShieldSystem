@@ -229,11 +229,14 @@ function seatPositionsForPoints(seats, points) {
       }
       rowSeats.forEach((seat, i) => result.push({ seat, x: colX[chosen[i]], y }));
     } else {
-      // Đoạn quá hẹp so với lưới chung (hình vẽ quá thắt lại) — không đủ cột để
-      // xếp thẳng hàng, đành trải đều riêng trong đoạn này để không tràn ra ngoài.
+      // Safeguard for narrow spans: enforce a minimum pitch so seats never collapse/overlap
+      const minPitch = Math.max(pitch * 0.7, 2.0);
+      const spanW = b - a;
+      const neededW = n * minPitch;
+      const startX = spanW >= neededW ? a : (a + b) / 2 - neededW / 2;
+      const effPitch = spanW >= neededW ? spanW / n : minPitch;
       rowSeats.forEach((seat, i) => {
-        const fraction = (i + 0.5) / n;
-        result.push({ seat, x: a + fraction * (b - a), y });
+        result.push({ seat, x: startX + (i + 0.5) * effPitch, y });
       });
     }
   });
@@ -295,7 +298,14 @@ export default function ZoneMapCanvas({ zones, ticketTypes, readOnly, onZoneMove
   }, []);
 
   const ticketTypeById = (id) => ticketTypes.find((t) => t.ticketTypeId === id);
-  const shapeFor = (zone, index) => liveShapes[zone.seatZoneId] || parseZoneShape(zone.shapeJson) || autoRectangle(index, zones.length);
+  const shapeFor = (zone, index) => {
+    const raw = liveShapes[zone.seatZoneId] || parseZoneShape(zone.shapeJson) || autoRectangle(index, zones.length);
+    // Seated zones are strictly rectangular blocks so seat rows and columns never deform
+    if (zone.zoneType === "Seated" && raw.type === "polygon") {
+      return polygonToRectangle(raw);
+    }
+    return raw;
+  };
   const shapes = useMemo(() => zones.map((zone, index) => ({ zone, shape: shapeFor(zone, index) })), [zones, liveShapes]);
   const selected = shapes.find(({ zone }) => zone.seatZoneId === selectedId);
 
@@ -307,7 +317,7 @@ export default function ZoneMapCanvas({ zones, ticketTypes, readOnly, onZoneMove
   };
 
   const convertSelected = (targetType) => {
-    if (!selected || readOnly) return;
+    if (!selected || readOnly || selected.zone.zoneType === "Seated") return;
     // Chuyển polygon -> rectangle chỉ lấy bounding box, các đỉnh đã kéo chỉnh sẽ mất;
     // nếu đổi lại thành polygon sau đó, hình L sẽ được sinh lại từ đầu chứ không phục hồi được.
     if (targetType === "rectangle" && selected.shape.type === "polygon") {
@@ -319,10 +329,9 @@ export default function ZoneMapCanvas({ zones, ticketTypes, readOnly, onZoneMove
     commitShape(selected.zone.seatZoneId, next);
   };
 
-  // Bắt đầu vẽ tự do cho zone đang chọn — như Ticketbox/Eventbrite: mỗi click đặt 1 đỉnh,
-  // click lại gần đỉnh đầu (hoặc Enter) để đóng hình, Esc để huỷ, Backspace để xoá đỉnh vừa đặt.
+  // Bắt đầu vẽ tự do cho zone đang chọn (chỉ áp dụng cho Standing zone)
   const startDrawing = () => {
-    if (!selected || readOnly) return;
+    if (!selected || readOnly || selected.zone.zoneType === "Seated") return;
     if (selected.shape.type === "polygon" && !window.confirm("Drawing a new shape will replace this zone's current custom polygon. Continue?")) return;
     setDraw({ seatZoneId: selected.zone.seatZoneId, points: [] });
     setCursorPos(null);
@@ -404,15 +413,37 @@ export default function ZoneMapCanvas({ zones, ticketTypes, readOnly, onZoneMove
       {!readOnly && selected && !draw && (
         <div className="ow-zonemap-shape-tools">
           <span className="ow-hint">Zone shape:</span>
-          <button type="button" className={"ow-shape-pill" + (selected.shape.type === "rectangle" ? " active" : "")} onClick={() => convertSelected("rectangle")}>▭ Rectangle</button>
-          <button type="button" className="ow-shape-pill" onClick={startDrawing}>✏️ Draw custom shape</button>
-          {selected.shape.type === "polygon" && <span className="ow-hint">Drag a point to move it • Double-click an edge to add a point • Right-click a point to remove it</span>}
+          {selected.zone.zoneType === "Seated" ? (
+            <span className="ow-hint" style={{ color: "#38bdf8", fontWeight: 500 }}>
+              ▭ Seated zone: Fixed rectangular block (drag to position, use corners to resize or rotate).
+            </span>
+          ) : (
+            <>
+              <button
+                type="button"
+                className={"ow-shape-pill" + (selected.shape.type === "rectangle" ? " active" : "")}
+                onClick={() => convertSelected("rectangle")}
+              >
+                ▭ Rectangle
+              </button>
+              <button
+                type="button"
+                className={"ow-shape-pill" + (selected.shape.type === "polygon" ? " active" : "")}
+                onClick={startDrawing}
+              >
+                ✏️ Draw custom shape
+              </button>
+              {selected.shape.type === "polygon" && (
+                <span className="ow-hint">Drag a point to move it • Double-click an edge to add a point • Right-click a point to remove it</span>
+              )}
+            </>
+          )}
         </div>
       )}
 
       {draw && (
         <div className="ow-zonemap-shape-tools ow-zonemap-drawing-bar">
-          <span className="ow-hint">✏️ Drawing mode — click to place points, click the first point (or press Enter) to close the shape. Seats preview live inside the shape as you add points.</span>
+          <span className="ow-hint">✏️ Drawing mode — click to place points, click the first point (or press Enter) to close the shape.</span>
           <button type="button" className="ow-shape-pill" disabled={draw.points.length < 3} onClick={finishDrawing}>✓ Done</button>
           <button type="button" className="ow-shape-pill" onClick={cancelDrawing}>✕ Cancel</button>
         </div>
@@ -439,7 +470,7 @@ export default function ZoneMapCanvas({ zones, ticketTypes, readOnly, onZoneMove
                 shadowColor="#000" shadowBlur={14} shadowOpacity={0.5} shadowOffset={{ x: 0, y: 4 }}
                 listening={false}
               />
-              <Text text="S Â N   K H Ấ U" x={stageWidth * 0.3} y={stageHeight * 0.04} width={stageWidth * 0.4} height={stageHeight * 0.14} align="center" verticalAlign="middle" fontSize={11} fontStyle="bold" fill="#e4e4e7" listening={false} />
+              <Text text="S T A G E" x={stageWidth * 0.3} y={stageHeight * 0.04} width={stageWidth * 0.4} height={stageHeight * 0.14} align="center" verticalAlign="middle" fontSize={11} fontStyle="bold" fill="#e4e4e7" listening={false} />
 
               {shapes.filter(({ zone }) => !(draw && draw.seatZoneId === zone.seatZoneId)).map(({ zone, shape }) => shape.type === "polygon" ? (
                 <PolygonZoneShape key={zone.seatZoneId} zone={zone} shape={shape} stageWidth={stageWidth} stageHeight={stageHeight} color={colorForTicketType(zone.ticketTypeId)} ticketType={ticketTypeById(zone.ticketTypeId)} readOnly={readOnly || !!draw} selected={selectedId === zone.seatZoneId} onSelect={() => setSelectedId(zone.seatZoneId)} onChange={(next) => commitShape(zone.seatZoneId, next)} />

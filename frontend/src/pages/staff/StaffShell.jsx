@@ -2,7 +2,8 @@ import PanelShell from "../../components/PanelShell";
 
 // Sidebar links dedicated to on-site event staff
 export const STAFF_LINKS = [
-  ["/staff/incidents", "On-site Incidents", true],
+  ["/staff/checkin", "Gate Check-in", true],
+  ["/staff/incidents", "On-site Incidents"],
   ["/staff/support-cases", "Support Cases"],
   ["/staff/returns", "Ticket Returns"],
   ["/", "← Back to site"],
