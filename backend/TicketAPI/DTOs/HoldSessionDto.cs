@@ -1,4 +1,4 @@
-﻿namespace TicketAPI.DTOs
+namespace TicketAPI.DTOs
 {
     public class CreateHoldSessionRequest
     {
@@ -37,7 +37,7 @@
     {
         public string HoldId { get; set; } = "";
         public int EventId { get; set; }
-        public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+        public DateTime? CreatedAtUtc { get; set; }
         public int DurationSeconds { get; set; } = 600;
         public DateTime ExpiresAtUtc { get; set; }
         public int RemainingSeconds { get; set; }

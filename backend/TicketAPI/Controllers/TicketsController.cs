@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -65,36 +65,43 @@ namespace TicketAPI.Controllers
         [HttpGet("{ticketId}/history")]
         public async Task<IActionResult> GetMyTicketHistory(int ticketId)
         {
-            var claim = User.FindFirst(ClaimTypes.NameIdentifier)
-                        ?? User.FindFirst("sub");
-
-            if (claim == null || !int.TryParse(claim.Value, out var userId))
+            try
             {
-                return Unauthorized(new
+                var claim = User.FindFirst(ClaimTypes.NameIdentifier)
+                            ?? User.FindFirst("sub");
+
+                if (claim == null || !int.TryParse(claim.Value, out var userId))
                 {
-                    success = false,
-                    message = "Token không hợp lệ."
+                    return Unauthorized(new
+                    {
+                        success = false,
+                        message = "Token không hợp lệ."
+                    });
+                }
+
+                var history = await _statusHistoryService.GetMyTicketHistoryAsync(
+                    ticketId,
+                    userId);
+
+                if (history == null)
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = "Ticket not found."
+                    });
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    data = history
                 });
             }
-
-            var history = await _statusHistoryService.GetMyTicketHistoryAsync(
-                ticketId,
-                userId);
-
-            if (history == null)
+            catch (Exception ex)
             {
-                return NotFound(new
-                {
-                    success = false,
-                    message = "Ticket not found."
-                });
+                return Fail(ex);
             }
-
-            return Ok(new
-            {
-                success = true,
-                data = history
-            });
         }
     }
 }

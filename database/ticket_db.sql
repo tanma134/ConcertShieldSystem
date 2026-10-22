@@ -385,3 +385,35 @@ ALTER TABLE public.tickets ADD COLUMN IF NOT EXISTS checked_in_gate character va
 ALTER TABLE public.tickets ADD COLUMN IF NOT EXISTS is_inside boolean NOT NULL DEFAULT false;
 ALTER TABLE public.tickets ADD COLUMN IF NOT EXISTS re_entry_count integer NOT NULL DEFAULT 0;
 
+-- ---------- status_histories ----------
+CREATE TABLE IF NOT EXISTS public.status_histories (
+    status_history_id integer NOT NULL GENERATED ALWAYS AS IDENTITY,
+    target_type character varying(30) NOT NULL,
+    target_id integer NOT NULL,
+    event_id integer NOT NULL,
+    order_id integer NULL,
+    ticket_id integer NULL,
+    ticket_type_id integer NULL,
+    seat_id integer NULL,
+    hold_id character varying(255) NULL,
+    customer_id integer NULL,
+    action character varying(50) NOT NULL,
+    old_status character varying(30) NULL,
+    new_status character varying(30) NULL,
+    quantity integer NULL,
+    actor_user_id integer NULL,
+    actor_role character varying(30) NULL,
+    reason text NULL,
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    CONSTRAINT status_histories_pkey PRIMARY KEY (status_history_id),
+    CONSTRAINT fk_status_histories_orders FOREIGN KEY (order_id) REFERENCES public.orders (order_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_status_histories_tickets FOREIGN KEY (ticket_id) REFERENCES public.tickets (ticket_id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS ix_status_histories_customer_created ON public.status_histories (customer_id, created_at);
+CREATE INDEX IF NOT EXISTS ix_status_histories_event_created ON public.status_histories (event_id, created_at);
+CREATE INDEX IF NOT EXISTS ix_status_histories_target_created ON public.status_histories (target_type, target_id, created_at);
+CREATE INDEX IF NOT EXISTS ix_status_histories_order_created ON public.status_histories (order_id, created_at);
+CREATE INDEX IF NOT EXISTS ix_status_histories_ticket_created ON public.status_histories (ticket_id, created_at);
+
