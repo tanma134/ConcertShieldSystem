@@ -1,7 +1,10 @@
 import axiosClient from "./axiosClient";
 
 const ticketApi = {
-  createHoldSession: (dto) => axiosClient.post("/Holds/session", dto),
+  createHoldSession: (dto, queueToken) =>
+    axiosClient.post("/Holds/session", dto, {
+      headers: queueToken ? { "X-Queue-Token": queueToken } : {},
+    }),
   getHoldDetails: (holdId) => axiosClient.get(`/Holds/session/${holdId}`),
   createOrder: (dto) => axiosClient.post("/Orders/create", dto),
   getBookedSeatIds: (eventId) =>

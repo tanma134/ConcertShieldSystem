@@ -192,7 +192,7 @@ public class GovernanceService(EventDbContext db, IComplianceAssetStore assets, 
     {
         var ev = await db.Events.AsNoTracking().SingleOrDefaultAsync(x => x.EventId == id && !x.IsDeleted, ct) ?? throw new KeyNotFoundException("Concert not found.");
         var canSell = ev.Status == EventStatus.Published && !ev.SalesFrozen && GovernanceRules.ComplianceApproved(ev) && ev.StartsAt > DateTime.UtcNow;
-        return new(canSell, canSell ? "" : "Sales are unavailable: check event status, schedule and compliance approval.", ev.Status, ev.StartsAt, ev.EndsAt, ev.ScheduleVersion);
+        return new(canSell, canSell ? "" : "Sales are unavailable: check event status, schedule and compliance approval.", ev.Status, ev.StartsAt, ev.EndsAt, ev.ScheduleVersion, ev.RequiresVirtualQueue);
     }
 }
 public class GovernanceConflictException(string message) : Exception(message) { }

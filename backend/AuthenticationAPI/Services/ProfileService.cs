@@ -63,25 +63,28 @@ namespace AuthenticationAPI.Services
             // ==========================================
             // CHECK EMAIL
             // ==========================================
-            if (!string.IsNullOrWhiteSpace(dto.Email) &&
-                !dto.Email.Equals(
+            if (!string.IsNullOrWhiteSpace(dto.Email))
+            {
+                var normalizedEmail = dto.Email.Trim().ToLowerInvariant();
+                if (!normalizedEmail.Equals(
                     user.Email,
                     StringComparison.OrdinalIgnoreCase))
-            {
-                var existingEmail =
-                    await _userRepository.GetByEmailAsync(dto.Email);
-
-                if (existingEmail != null &&
-                    existingEmail.UserId != user.UserId)
                 {
-                    return (
-                        false,
-                        "Email already exists.",
-                        null
-                    );
-                }
+                    var existingEmail =
+                        await _userRepository.GetByEmailAsync(normalizedEmail);
 
-                user.Email = dto.Email.ToLower();
+                    if (existingEmail != null &&
+                        existingEmail.UserId != user.UserId)
+                    {
+                        return (
+                            false,
+                            "Email already exists.",
+                            null
+                        );
+                    }
+
+                    user.Email = normalizedEmail;
+                }
             }
 
             // ==========================================
@@ -140,23 +143,22 @@ namespace AuthenticationAPI.Services
             string? userId)
         {
             // ------------------------------------------
-            // Find by email
-            // ------------------------------------------
-            if (!string.IsNullOrWhiteSpace(email))
+            // User ID is immutable; email may have changed since the JWT was issued.
+            if (int.TryParse(userId, out var id))
             {
-                var user =
-                    await _userRepository.GetByEmailAsync(email);
-
+                var user = await _userRepository.GetByIdAsync(id);
                 if (user != null)
                     return user;
             }
 
+            // Fall back to email for tokens that do not contain a user ID.
             // ------------------------------------------
-            // Find by user ID
-            // ------------------------------------------
-            if (int.TryParse(userId, out var id))
+            if (!string.IsNullOrWhiteSpace(email))
             {
-                return await _userRepository.GetByIdAsync(id);
+                var user = await _userRepository.GetByEmailAsync(email);
+
+                if (user != null)
+                    return user;
             }
 
             return null;
@@ -181,6 +183,8 @@ namespace AuthenticationAPI.Services
                 AvatarUrl = user.AvatarUrl,
 
                 IsVerified = user.IsVerified,
+
+                IsActive = user.IsActive,
 
                 EkycStatus = user.EkycStatus,
 

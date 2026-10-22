@@ -18,6 +18,8 @@
 
         public bool IsVerified { get; set; }
 
+        public bool IsActive { get; set; }
+
         public string? EkycStatus { get; set; }
 
         public DateTime CreatedAt { get; set; }

@@ -951,6 +951,24 @@
             }
         },
         {
+            "Key": "identity-me-avatar",
+            "DownstreamPathTemplate": "/api/auth/me/avatar",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7058
+                }
+            ],
+            "UpstreamPathTemplate": "/api/auth/me/avatar",
+            "UpstreamHttpMethod": [
+                "Post"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
             "Key": "identity-users-me",
             "DownstreamPathTemplate": "/api/users/me",
             "DownstreamScheme": "https",
@@ -2686,7 +2704,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7289
+                    "Port": 7290
                 }
             ],
             "UpstreamPathTemplate": "/api/reviews/admin",
@@ -2704,7 +2722,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7289
+                    "Port": 7290
                 }
             ],
             "UpstreamPathTemplate": "/api/reviews/admin/{reviewId}",
@@ -2722,7 +2740,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7289
+                    "Port": 7290
                 }
             ],
             "UpstreamPathTemplate": "/api/reviews/event/{eventId}",
@@ -2737,7 +2755,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7289
+                    "Port": 7290
                 }
             ],
             "UpstreamPathTemplate": "/api/reviews",
@@ -2755,7 +2773,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7289
+                    "Port": 7290
                 }
             ],
             "UpstreamPathTemplate": "/api/reviews/{reviewId}",
