@@ -9,6 +9,9 @@ export const ADMIN_LINKS = [
   ["/admin/events", "Event Approvals"],
   ["/admin/events/all", "All Events"],
   ["/admin/organizer-requests", "Organizer Requests"],
+  ["/admin/organizer-verifications", "Organizer Verifications"],
+  ["/admin/policies", "System Policies"],
+  ["/admin/ticket-governance", "Ticket Governance"],
   ["/admin/reviews", "Review Management"],
   ["/admin/wishlists", "Wishlist Management"],
   ["/admin/seating-templates", "Seating Templates"],
@@ -37,7 +40,7 @@ export const ADMIN_LINKS = [
   ["/admin/payment-reconciliation", "Payment Reconciliation Exceptions"],
 ];
 
-export default function AdminShell({ children, title = "Failed Transaction Queue" }) {
+export default function AdminShell({ children, title = "Admin Panel" }) {
   // Badge đỏ trên sidebar để admin biết còn việc chờ duyệt.
   const pending = useAdminPending();
   const badges = {

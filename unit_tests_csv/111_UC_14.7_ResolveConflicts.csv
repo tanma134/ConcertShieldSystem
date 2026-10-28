@@ -1,0 +1,47 @@
+Function Code,,UC_14.7_ResolveOfflineConflicts,,,Function Name,,,,,,ResolveOfflineConflictAsync
+Created By,,Developer Name,,,Executed By,,,,,,QA Tester
+Lines  of code,,160.0,,,Lack of test cases,,,,,,0.0
+Test requirement,,"Admin or Organizer inspects conflicting scan records and applies resolution (ACCEPT_OFFLINE, KEEP_ONLINE, MANUAL_OVERRIDE)."
+Passed,,Failed,,Untested,,,,,,N/A/B,,,,Total Test Cases
+9.0,,0.0,,0.0,,,,,,"3,4,2",3.0,4.0,2.0,9.0
+
+,,,,,UTCID01,UTCID02,UTCID03,UTCID04,UTCID05,UTCID06,UTCID07,UTCID08,UTCID09
+Condition,Precondition
+,,,Database has conflict record in UNRESOLVED status,,O,O,O,O,O,,O,O,O
+,,,Conflict record does not exist in DB,,,,,,,O,,,
+,,,Caller has Admin or Organizer role,,O,O,O,O,O,O,O,O,
+,,,Caller has Staff role (without resolution rights),,,,,,,,,,O
+,conflictId
+,,,"""CONF-101"" (Valid Conflict ID)",,O,O,O,O,O,,O,O,O
+,,,"""CONF-999"" (Non-existent ID)",,,,,,,O,,,
+,request.Resolution
+,,,"""ACCEPT_OFFLINE""",,O,,,,,,,,
+,,,"""KEEP_ONLINE""",,,O,,,,,,,
+,,,"""MANUAL_OVERRIDE""",,,,O,O,O,,,,
+,,,"""INVALID_ACTION""",,,,,,,,O,,
+,,,"""KEEP_ONLINE""",,,,,,,,,O,O
+,request.Reason
+,,,"""Offline scan occurred earlier than online duplicate""",,O,,,,,,,,
+,,,"""Online entry verified with live biometric match""",,,O,,,,,,,
+,,,"""Supervisor authorized entry at Gate A""",,,,O,,,,,,
+,,,500 chars note (Boundary: max length),,,,,O,,,,,
+,,,10 chars note (Boundary: min length),,,,,,O,,,,
+,,,""""" (Abnormal: empty reason)",,,,,,,,,O,
+Confirm,Return
+,,,"OfflineSyncConflictDTO with Status=""RESOLVED"", Resolution=""ACCEPT_OFFLINE""",,O,,,,,,,,
+,,,"OfflineSyncConflictDTO with Status=""RESOLVED"", Resolution=""KEEP_ONLINE""",,,O,,,,,,,
+,,,"OfflineSyncConflictDTO with Status=""RESOLVED"", Resolution=""MANUAL_OVERRIDE""",,,,O,O,O,,,,
+,Exception
+,,,"KeyNotFoundException (404 ""Conflict record not found"")",,,,,,,O,,,
+,,,"ValidationException (400 ""Invalid resolution action"")",,,,,,,,O,,
+,,,"ValidationException (400 ""Resolution reason is required"")",,,,,,,,,O,
+,,,"ForbiddenException (403 ""Admin or Organizer role required to resolve conflicts"")",,,,,,,,,,O
+,Log message
+,,,"""Conflict {ConflictId} resolved with action {Resolution} by user {UserId}""",,O,O,O,O,O,,,,
+,,,"""Conflict {ConflictId} not found""",,,,,,,O,,,
+,,,"""Validation failed: {Error}""",,,,,,,,O,O,
+,,,"""Access denied: {UserId} lacks conflict resolution permission""",,,,,,,,,,O
+Result,"Type(N : Normal, A : Abnormal, B : Boundary)",,,,N,N,N,B,B,A,A,A,A
+,Passed/Failed,,,,P,P,P,P,P,P,P,P,P
+,Executed Date,,,,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026
+,Defect ID,,,,,,,,,,,,

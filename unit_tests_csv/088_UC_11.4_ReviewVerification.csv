@@ -1,0 +1,39 @@
+Function Code,,UC_11.4_ReviewOrganizerVerification,,,Function Name,,,,,,GetVerificationRequests
+Created By,,Developer Name,,,Executed By,,,,,,QA Tester
+Lines  of code,,140.0,,,Lack of test cases,,,,,,0.0
+Test requirement,,Admin queries pending and historical organizer verification requests with document links and business details.
+Passed,,Failed,,Untested,,,,,,N/A/B,,,,Total Test Cases
+9.0,,0.0,,0.0,,,,,,"3,3,3",3.0,3.0,3.0,9.0
+
+,,,,,UTCID01,UTCID02,UTCID03,UTCID04,UTCID05,UTCID06,UTCID07,UTCID08,UTCID09
+Condition,Precondition
+,,,Database has verification requests,,O,O,O,O,O,,O,O,
+,,,Database has 0 pending requests,,,,,,,O,,,
+,,,Caller has Admin role,,O,O,O,O,O,O,O,O,
+,,,Caller has Organizer role,,,,,,,,,,O
+,status
+,,,null (all requests),,O,,,O,O,,O,O,O
+,,,"""PENDING""",,,O,,,,O,,,
+,,,"""APPROVED""",,,,O,,,,,,
+,page
+,,,1 (Normal),,O,O,O,O,O,O,,,O
+,,,0 (Boundary: invalid),,,,,,,,O,,
+,,,-1 (Abnormal),,,,,,,,,O,
+,limit
+,,,10 (Normal),,O,O,O,,,O,O,O,O
+,,,1 (Boundary min),,,,,O,,,,,
+,,,100 (Boundary max),,,,,,O,,,,
+Confirm,Return
+,,,List<VerificationRequestResponseDTO> with Count > 0,,O,O,O,O,O,,,,
+,,,List<VerificationRequestResponseDTO> with Count == 0,,,,,,,O,,,
+,Exception
+,,,"ArgumentException (400 ""Page must be >= 1"")",,,,,,,,O,O,
+,,,"ForbiddenException (403 ""Admin access required"")",,,,,,,,,,O
+,Log message
+,,,"""Retrieved {Count} verification requests for review""",,O,O,O,O,O,O,,,
+,,,"""Invalid query parameters: page={Page}, limit={Limit}""",,,,,,,,O,O,
+,,,"""Forbidden access by user {UserId}""",,,,,,,,,,O
+Result,"Type(N : Normal, A : Abnormal, B : Boundary)",,,,N,N,N,B,B,B,A,A,A
+,Passed/Failed,,,,P,P,P,P,P,P,P,P,P
+,Executed Date,,,,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026
+,Defect ID,,,,,,,,,,,,

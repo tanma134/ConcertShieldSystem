@@ -1,0 +1,47 @@
+Function Code,,UC_11.5_ApproveRejectVerification,,,Function Name,,,,,,ReviewVerification
+Created By,,Developer Name,,,Executed By,,,,,,QA Tester
+Lines  of code,,150.0,,,Lack of test cases,,,,,,0.0
+Test requirement,,"Admin approves or rejects organizer verification, updating account status and notifying the organizer."
+Passed,,Failed,,Untested,,,,,,N/A/B,,,,Total Test Cases
+9.0,,0.0,,0.0,,,,,,"2,5,2",2.0,5.0,2.0,9.0
+
+,,,,,UTCID01,UTCID02,UTCID03,UTCID04,UTCID05,UTCID06,UTCID07,UTCID08,UTCID09
+Condition,Precondition
+,,,Database has target verification request in PENDING status,,O,O,O,O,,,O,O,O
+,,,Target request does not exist in DB,,,,,,O,,,,
+,,,Target request is already APPROVED / REJECTED,,,,,,,O,,,
+,,,Caller has Admin role,,O,O,O,O,O,O,O,O,
+,,,Caller has Organizer role,,,,,,,,,,O
+,id
+,,,501 (Valid Request ID),,O,O,O,O,,,O,O,O
+,,,99999 (Non-existent ID),,,,,,O,,,,
+,,,502 (Already resolved ID),,,,,,,O,,,
+,dto.Decision
+,,,"""APPROVE""",,O,,O,,O,O,,,O
+,,,"""REJECT""",,,O,,O,,,O,,
+,,,"""INVALID_ACTION""",,,,,,,,,O,
+,dto.RejectionReason
+,,,"null or """" (Allowed for APPROVE)",,O,,O,,O,O,,O,O
+,,,"""Business registration certificate expired""",,,O,,,,,,,
+,,,500 characters string (Boundary: max length),,,,,O,,,,,
+,,,"null or """" (Abnormal: empty for REJECT)",,,,,,,,O,,
+Confirm,Return
+,,,"VerificationRequestResponseDTO with Status=""APPROVED""",,O,,O,,,,,,
+,,,"VerificationRequestResponseDTO with Status=""REJECTED""",,,O,,O,,,,,
+,Exception
+,,,"KeyNotFoundException (404 ""Verification request not found"")",,,,,,O,,,,
+,,,"InvalidOperationException (400 ""Request has already been processed"")",,,,,,,O,,,
+,,,"ValidationException (400 ""RejectionReason is required when rejecting"")",,,,,,,,O,,
+,,,"ValidationException (400 ""Invalid decision value"")",,,,,,,,,O,
+,,,"ForbiddenException (403 ""Admin privilege required"")",,,,,,,,,,O
+,Log message
+,,,"""Verification request {Id} approved successfully""",,O,,O,,,,,,
+,,,"""Verification request {Id} rejected: {Reason}""",,,O,,O,,,,,
+,,,"""Verification request {Id} not found""",,,,,,O,,,,
+,,,"""Cannot process request {Id}: already finalized""",,,,,,,O,,,
+,,,"""Validation failed for KYC decision: {Error}""",,,,,,,,O,O,
+,,,"""Forbidden access by user {UserId}""",,,,,,,,,,O
+Result,"Type(N : Normal, A : Abnormal, B : Boundary)",,,,N,N,B,B,A,A,A,A,A
+,Passed/Failed,,,,P,P,P,P,P,P,P,P,P
+,Executed Date,,,,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026
+,Defect ID,,,,,,,,,,,,

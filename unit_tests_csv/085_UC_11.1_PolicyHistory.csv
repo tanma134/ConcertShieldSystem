@@ -1,0 +1,43 @@
+Function Code,,UC_11.1_ViewPolicyVersionHistory,,,Function Name,,,,,,GetPolicyVersions
+Created By,,Developer Name,,,Executed By,,,,,,QA Tester
+Lines  of code,,125.0,,,Lack of test cases,,,,,,0.0
+Test requirement,,Admin views historical versions and active configurations of platform governance policies.
+Passed,,Failed,,Untested,,,,,,N/A/B,,,,Total Test Cases
+9.0,,0.0,,0.0,,,,,,"3,4,2",3.0,4.0,2.0,9.0
+
+,,,,,UTCID01,UTCID02,UTCID03,UTCID04,UTCID05,UTCID06,UTCID07,UTCID08,UTCID09
+Condition,Precondition
+,,,Database is accessible and seeded with policy versions,,O,O,O,O,O,O,O,O,
+,,,Caller is authenticated Admin,,O,O,O,O,O,O,O,O,
+,,,Caller is Customer role,,,,,,,,,,O
+,category
+,,,null (all policy categories),,O,,,O,O,,O,O,O
+,,,"""REFUND""",,,O,,,,,,,
+,,,"""RISK""",,,,O,,,,,,
+,,,"""INVALID_CAT""",,,,,,,O,,,
+,status
+,,,null (all statuses),,O,,O,O,O,O,O,O,O
+,,,"""ACTIVE""",,,O,,,,,,,
+,page
+,,,1 (Normal),,O,O,O,O,O,O,,,O
+,,,0 (Boundary: invalid),,,,,,,,O,,
+,,,-1 (Abnormal),,,,,,,,,O,
+,pageSize
+,,,10 (Normal),,O,O,O,,,O,O,O,O
+,,,1 (Boundary min),,,,,O,,,,,
+,,,50 (Boundary max),,,,,,O,,,,
+Confirm,Return
+,,,PagedResult<PolicyVersionDTO> with Items.Count > 0,,O,O,O,O,O,,,,
+,Exception
+,,,"ValidationException (400 ""Invalid policy category"")",,,,,,,O,,,
+,,,"ArgumentException (400 ""Page must be >= 1"")",,,,,,,,O,O,
+,,,"ForbiddenException (403 ""Admin access required"")",,,,,,,,,,O
+,Log message
+,,,"""Fetched {Count} policy versions for category={Category}""",,O,O,O,O,O,,,,
+,,,"""Validation error: category {Category} is not recognized""",,,,,,,O,,,
+,,,"""Invalid pagination request""",,,,,,,,O,O,
+,,,"""Access denied for user {UserId}""",,,,,,,,,,O
+Result,"Type(N : Normal, A : Abnormal, B : Boundary)",,,,N,N,N,B,B,A,A,A,A
+,Passed/Failed,,,,P,P,P,P,P,P,P,P,P
+,Executed Date,,,,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026
+,Defect ID,,,,,,,,,,,,

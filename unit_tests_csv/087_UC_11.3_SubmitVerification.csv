@@ -1,0 +1,46 @@
+Function Code,,UC_11.3_SubmitOrganizerVerification,,,Function Name,,,,,,SubmitVerification
+Created By,,Developer Name,,,Executed By,,,,,,QA Tester
+Lines  of code,,165.0,,,Lack of test cases,,,,,,0.0
+Test requirement,,"Organizer submits business credentials (business name, tax code, document file URLs, contact info) for KYC review."
+Passed,,Failed,,Untested,,,,,,N/A/B,,,,Total Test Cases
+9.0,,0.0,,0.0,,,,,,"2,5,2",2.0,5.0,2.0,9.0
+
+,,,,,UTCID01,UTCID02,UTCID03,UTCID04,UTCID05,UTCID06,UTCID07,UTCID08,UTCID09
+Condition,Precondition
+,,,Database is accessible,,O,O,O,O,O,O,O,O,O
+,,,Organizer does not have an active PENDING request,,O,O,O,O,,O,O,O,O
+,,,Organizer already has a PENDING request awaiting review,,,,,,O,,,,
+,,,Caller is authenticated Organizer,,O,O,O,O,O,O,O,O,
+,,,Caller is Customer without organizer profile,,,,,,,,,,O
+,dto.BusinessName
+,,,"""Saigon Sound LLC""",,O,,O,O,O,O,O,O,O
+,,,"""Hanoi Live Events Co.""",,,O,,,,,,,
+,dto.TaxCode
+,,,"""0102030405"" (10-digit valid tax code)",,O,,O,O,O,O,,O,O
+,,,"""0102030405-001"" (13-digit valid tax code)",,,O,,,,,,,
+,,,"""INVALID_TAX"" (Invalid alphanumeric/format)",,,,,,,,O,,
+,dto.DocumentUrls
+,,,"[""https://s3.bucket/doc1.pdf"", ""https://s3.bucket/doc2.pdf""]",,O,O,,,O,,O,O,O
+,,,"[""https://s3.bucket/doc1.pdf""] (Boundary: min 1 doc)",,,,O,,,,,,
+,,,5 document URLs (Boundary: max 5 docs),,,,,O,,,,,
+,,,null or [] (Abnormal: empty list),,,,,,,O,,,
+,dto.ContactEmail
+,,,"""contact@saigonsound.com""",,O,O,O,O,O,O,O,,O
+,,,"""invalid-email-format""",,,,,,,,,O,
+Confirm,Return
+,,,"VerificationRequestResponseDTO with Status=""PENDING"" and RequestId > 0",,O,O,O,O,,,,,
+,Exception
+,,,"ConflictException (409 ""You already have a pending verification request"")",,,,,,O,,,,
+,,,"ValidationException (400 ""At least one document URL is required"")",,,,,,,O,,,
+,,,"ValidationException (400 ""Invalid tax code format"")",,,,,,,,O,,
+,,,"ValidationException (400 ""Invalid contact email address"")",,,,,,,,,O,
+,,,"ForbiddenException (403 ""Organizer role required to submit KYC"")",,,,,,,,,,O
+,Log message
+,,,"""Verification request submitted by organizer {UserId} successfully""",,O,O,O,O,,,,,
+,,,"""Duplicate pending verification request for organizer {UserId}""",,,,,,O,,,,
+,,,"""Validation failed for verification submission: {Error}""",,,,,,,O,O,O,
+,,,"""Non-organizer user {UserId} attempted verification submission""",,,,,,,,,,O
+Result,"Type(N : Normal, A : Abnormal, B : Boundary)",,,,N,N,B,B,A,A,A,A,A
+,Passed/Failed,,,,P,P,P,P,P,P,P,P,P
+,Executed Date,,,,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026
+,Defect ID,,,,,,,,,,,,

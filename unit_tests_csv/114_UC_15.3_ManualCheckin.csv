@@ -1,0 +1,45 @@
+Function Code,,UC_15.3_ManualCheckin,,,Function Name,,,,,,ManualCheckinAsync
+Created By,,Developer Name,,,Executed By,,,,,,QA Tester
+Lines  of code,,170.0,,,Lack of test cases,,,,,,0.0
+Test requirement,,Staff manually checks in attendee upon phone battery failure or damaged screen using ticket code and ID document.
+Passed,,Failed,,Untested,,,,,,N/A/B,,,,Total Test Cases
+9.0,,0.0,,0.0,,,,,,"2,5,2",2.0,5.0,2.0,9.0
+
+,,,,,UTCID01,UTCID02,UTCID03,UTCID04,UTCID05,UTCID06,UTCID07,UTCID08,UTCID09
+Condition,Precondition
+,,,"Database has valid, un-scanned ticket for event",,O,O,O,O,,,O,O,O
+,,,Ticket does not exist in DB,,,,,,O,,,,
+,,,Ticket was already checked in,,,,,,,O,,,
+,,,Caller is authorized Staff,,O,O,O,O,O,O,O,O,
+,,,Caller is Customer role,,,,,,,,,,O
+,request.TicketCode
+,,,"""TK-LIVE-1001""",,O,,O,O,,O,O,O,O
+,,,"""TK-LIVE-1002""",,,O,,,,,,,
+,,,"""TK-INVALID-9999""",,,,,,O,,,,
+,request.IdDocumentNumber
+,,,"""079099012345"" (Citizen ID card)",,O,O,O,,O,O,,O,O
+,,,"""B1234567"" (Passport number)",,,,,O,,,,,
+,,,""""" (Abnormal: empty ID document)",,,,,,,,O,,
+,request.Reason
+,,,"""Attendee phone battery died; identity verified via National ID""",,O,O,,,O,O,O,,O
+,,,10 chars string (Boundary: min length),,,,O,,,,,,
+,,,250 chars string (Boundary: max length),,,,,O,,,,,
+,,,""""" (Abnormal: empty reason)",,,,,,,,,O,
+Confirm,Return
+,,,"ScanResultResponseDTO with Result=""SUCCESS"", CheckinType=""MANUAL""",,O,O,O,O,,,,,
+,Exception
+,,,"KeyNotFoundException (404 ""Ticket code not found"")",,,,,,O,,,,
+,,,"InvalidOperationException (409 ""Ticket is already checked in"")",,,,,,,O,,,
+,,,"ValidationException (400 ""ID document number is required"")",,,,,,,,O,,
+,,,"ValidationException (400 ""Manual check-in reason is required"")",,,,,,,,,O,
+,,,"ForbiddenException (403 ""Staff privilege required"")",,,,,,,,,,O
+,Log message
+,,,"""Manual check-in completed for ticket {TicketCode} by staff {UserId}""",,O,O,O,O,,,,,
+,,,"""Ticket code {TicketCode} not found for manual check-in""",,,,,,O,,,,
+,,,"""Duplicate manual check-in attempt for ticket {TicketCode}""",,,,,,,O,,,
+,,,"""Manual check-in validation error: {Error}""",,,,,,,,O,O,
+,,,"""Unauthorized manual check-in attempt by user {UserId}""",,,,,,,,,,O
+Result,"Type(N : Normal, A : Abnormal, B : Boundary)",,,,N,N,B,B,A,A,A,A,A
+,Passed/Failed,,,,P,P,P,P,P,P,P,P,P
+,Executed Date,,,,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026
+,Defect ID,,,,,,,,,,,,

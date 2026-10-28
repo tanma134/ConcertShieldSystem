@@ -1,0 +1,174 @@
+<mxGraphModel dx="1277" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3230" pageHeight="1600" math="0" shadow="0">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+    <mxCell id="cell_19" value="Customer" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;" parent="1" vertex="1">
+      <mxGeometry x="85" y="170" width="30" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_20" value="" style="endArrow=none;dashed=1;html=1;rounded=0;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="100" y="230" as="sourcePoint" />
+        <mxPoint x="100" y="1186" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_21" value="NotificationCenterPage" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" parent="1" vertex="1">
+      <mxGeometry x="390" y="240" width="140" height="946" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_22" value="GatewayAPI" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" parent="1" vertex="1">
+      <mxGeometry x="750" y="240" width="140" height="946" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_23" value=":NotificationsRoute" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" parent="1" vertex="1">
+      <mxGeometry x="1110" y="240" width="140" height="946" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_24" value=":NotificationsController" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" parent="1" vertex="1">
+      <mxGeometry x="1470" y="240" width="140" height="946" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_25" value=":NotificationService" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" parent="1" vertex="1">
+      <mxGeometry x="1830" y="240" width="140" height="946" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_26" value=":NotificationRepository" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" parent="1" vertex="1">
+      <mxGeometry x="2190" y="240" width="140" height="946" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_27" value="NotificationDB" style="shape=mxgraph.flowchart.database;whiteSpace=wrap;strokeWidth=2;fontSize=11;" parent="1" vertex="1">
+      <mxGeometry x="2585" y="180" width="70" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_28" value="" style="endArrow=none;dashed=1;html=1;rounded=0;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="2620" y="240" as="sourcePoint" />
+        <mxPoint x="2620" y="1186" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_29" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=13;" parent="1" vertex="1">
+      <mxGeometry x="95" y="340" width="10" height="714" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_30" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=13;" parent="cell_21" vertex="1">
+      <mxGeometry x="65" y="100" width="10" height="714" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_31" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=13;" parent="cell_22" vertex="1">
+      <mxGeometry x="65" y="142" width="10" height="630" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_32" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=13;" parent="cell_23" vertex="1">
+      <mxGeometry x="65" y="184" width="10" height="546" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_33" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=13;" parent="cell_24" vertex="1">
+      <mxGeometry x="65" y="226" width="10" height="462" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_34" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=13;" parent="cell_25" vertex="1">
+      <mxGeometry x="65" y="268" width="10" height="378" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_35" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=13;" parent="cell_26" vertex="1">
+      <mxGeometry x="65" y="310" width="10" height="294" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_36" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=13;" parent="1" vertex="1">
+      <mxGeometry x="2615" y="592" width="10" height="210" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_1" value="1. Click Notification Bell" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="105" y="340" as="sourcePoint" />
+        <mxPoint x="455" y="340" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_2" value="2. GET /api/notifications" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="465" y="382" as="sourcePoint" />
+        <mxPoint x="815" y="382" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_3" value="3. Forward GET /api/notifications" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="825" y="424" as="sourcePoint" />
+        <mxPoint x="1175" y="424" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_4" value="4. GetNotifications()" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1185" y="466" as="sourcePoint" />
+        <mxPoint x="1535" y="466" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_5" value="5. GetUserNotificationsAsync(userId)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1545" y="508" as="sourcePoint" />
+        <mxPoint x="1895" y="508" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_6" value="6. GetUserNotificationsAsync(userId)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1905" y="550" as="sourcePoint" />
+        <mxPoint x="2255" y="550" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_7" value="7. Query active notifications" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="2265" y="592" as="sourcePoint" />
+        <mxPoint x="2615" y="592" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_8" value="8. Return notifications" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="2615" y="634" as="sourcePoint" />
+        <mxPoint x="2265" y="634" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_9" value="9. Return notifications list" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="2255" y="676" as="sourcePoint" />
+        <mxPoint x="1905" y="676" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_10" value="10. GetUnreadCountAsync(userId)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1905" y="718" as="sourcePoint" />
+        <mxPoint x="2255" y="718" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_11" value="11. Query unread notification count" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="2265" y="760" as="sourcePoint" />
+        <mxPoint x="2615" y="760" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_12" value="12. Return unread count" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="2615" y="802" as="sourcePoint" />
+        <mxPoint x="2265" y="802" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_13" value="13. Return unreadCount" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="2255" y="844" as="sourcePoint" />
+        <mxPoint x="1905" y="844" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_14" value="14. Return NotificationListDTO" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1895" y="886" as="sourcePoint" />
+        <mxPoint x="1545" y="886" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_15" value="15. Return 200 OK (data)" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1535" y="928" as="sourcePoint" />
+        <mxPoint x="1185" y="928" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_16" value="16. Forward 200 OK" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1175" y="970" as="sourcePoint" />
+        <mxPoint x="825" y="970" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_17" value="17. Return 200 OK" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="815" y="1012" as="sourcePoint" />
+        <mxPoint x="465" y="1012" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_18" value="18. Render notification list &amp; badge" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="455" y="1054" as="sourcePoint" />
+        <mxPoint x="105" y="1054" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+  </root>
+</mxGraphModel>

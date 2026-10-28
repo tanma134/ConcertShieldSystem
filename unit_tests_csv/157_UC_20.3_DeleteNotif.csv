@@ -1,0 +1,45 @@
+Function Code,,UC_20.3_DeleteNotification,,,Function Name,,,,,,DeleteNotificationAsync
+Created By,,Developer Name,,,Executed By,,,,,,QA Tester
+Lines  of code,,90.0,,,Lack of test cases,,,,,,0.0
+Test requirement,,Recipient deletes a notification from their inbox (soft-delete or permanent removal).
+Passed,,Failed,,Untested,,,,,,N/A/B,,,,Total Test Cases
+8.0,,0.0,,0.0,,,,,,"2,4,2",2.0,4.0,2.0,8.0
+
+,,,,,UTCID01,UTCID02,UTCID03,UTCID04,UTCID05,UTCID06,UTCID07,UTCID08
+Condition,Precondition
+,,,Database has notification belonging to caller,,O,O,O,O,,,,
+,,,Notification does not exist in DB,,,,,,O,,,
+,,,Notification belongs to another user,,,,,,,O,,
+,,,Caller is authenticated,,O,O,O,O,O,O,O,
+,,,Caller is unauthenticated,,,,,,,,,O
+,id
+,,,1001 (Read notification ID),,O,,,,,,,
+,,,1002 (Unread notification ID),,,O,,,,,,
+,,,1 (Boundary: min ID),,,,O,,,,,
+,,,999999 (Boundary: high ID),,,,,O,,,,
+,,,88888 (Non-existent ID),,,,,,O,,,
+,,,3001 (Owned by User 99),,,,,,,O,,
+,,,0 or -1 (Abnormal invalid ID),,,,,,,,O,
+,,,1001 (Unauthenticated call),,,,,,,,,O
+,userId
+,,,101 (Owner user ID),,O,O,O,O,O,,,
+,,,101 (Non-owner),,,,,,,O,,
+,,,101,,,,,,,,O,
+,,,0 (Anonymous),,,,,,,,,O
+Confirm,Return
+,,,"Object { success: true, message: ""Notification deleted successfully"" }",,O,O,O,O,,,,
+,Exception
+,,,"KeyNotFoundException (404 ""Notification not found"")",,,,,,O,,,
+,,,"ForbiddenException (403 ""You do not have access to this notification"")",,,,,,,O,,
+,,,"ArgumentException (400 ""Notification ID must be positive"")",,,,,,,,O,
+,,,"UnauthorizedAccessException (401 ""Authentication required"")",,,,,,,,,O
+,Log message
+,,,"""Notification {Id} deleted by user {UserId}""",,O,O,O,O,,,,
+,,,"""Notification {Id} not found for deletion""",,,,,,O,,,
+,,,"""Unauthorized delete attempt on notification {Id} by user {UserId}""",,,,,,,O,,
+,,,"""Invalid notification ID: {Id}""",,,,,,,,O,
+,,,"""Unauthenticated delete request""",,,,,,,,,O
+Result,"Type(N : Normal, A : Abnormal, B : Boundary)",,,,N,N,B,B,A,A,A,A
+,Passed/Failed,,,,P,P,P,P,P,P,P,P
+,Executed Date,,,,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026
+,Defect ID,,,,,,,,,,,

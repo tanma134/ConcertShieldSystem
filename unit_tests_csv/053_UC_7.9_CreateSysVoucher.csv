@@ -1,0 +1,49 @@
+Function Code,,UC_7.9_CreateSystemVoucher,,,Function Name,,,,,,CreateVoucherAsync
+Created By,,Developer Name,,,Executed By,,,,,,QA Tester
+Lines  of code,,150.0,,,Lack of test cases,,,,,,0.0
+Test requirement,,Admin creates platform-wide discount voucher applicable across all events.
+Passed,,Failed,,Untested,,,,,,N/A/B,,,,Total Test Cases
+9.0,,0.0,,0.0,,,,,,"2,5,2",2.0,5.0,2.0,9.0
+
+,,,,,UTCID01,UTCID02,UTCID03,UTCID04,UTCID05,UTCID06,UTCID07,UTCID08,UTCID09
+Condition,Precondition
+,,,Database is accessible,,O,O,O,O,O,O,O,O,O
+,,,Caller has Admin role,,O,O,O,O,O,O,O,O,
+,,,Caller has Customer role,,,,,,,,,,O
+,dto.Scope
+,,,"""SYSTEM""",,O,O,O,O,O,O,O,O,O
+,dto.Code
+,,,"""PLATFORM10""",,O,,,,,,,,
+,,,"""SYS_FIXED100K""",,,O,O,O,,,,,
+,,,"""DUPLICATE_SYS""",,,,,,O,,,,
+,,,""""" (empty code)",,,,,,,O,,,
+,,,"""VALID_CODE""",,,,,,,,O,O,O
+,dto.DiscountPercent
+,,,10.0,,O,,,,,,,,
+,,,100.0 (Boundary: max),,,,O,,,,,,
+,,,0.0 (Abnormal: zero),,,,,,,,O,,
+,dto.DiscountAmount
+,,,100000,,,O,,O,O,O,,O,O
+,dto.TotalQuantity
+,,,1000,,O,O,O,,O,O,O,O,O
+,,,1 (Boundary: min),,,,,O,,,,,
+,dto.EndsAt
+,,,DateTime.UtcNow.AddMonths(1) (Future),,O,O,O,O,O,O,O,,O
+,,,DateTime.UtcNow.AddDays(-1) (Past),,,,,,,,,O,
+Confirm,Return
+,,,"VoucherResponseDTO with Scope=""SYSTEM"", Status=""Active""",,O,O,O,O,,,,,
+,Exception
+,,,"ConflictException (409 ""System voucher code already exists"")",,,,,,O,,,,
+,,,"ValidationException (400 ""Code is required"")",,,,,,,O,,,
+,,,"ValidationException (400 ""Discount percent must be > 0"")",,,,,,,,O,,
+,,,"ValidationException (400 ""End date must be in the future"")",,,,,,,,,O,
+,,,"ForbiddenException (403 ""Admin role required"")",,,,,,,,,,O
+,Log message
+,,,"""Created system voucher {Code} with Id {Id}""",,O,O,O,O,,,,,
+,,,"""System voucher code duplicate: {Code}""",,,,,,O,,,,
+,,,"""Validation failed: {Error}""",,,,,,,O,O,O,
+,,,"""Access denied: {UserId} is not Admin""",,,,,,,,,,O
+Result,"Type(N : Normal, A : Abnormal, B : Boundary)",,,,N,N,B,B,A,A,A,A,A
+,Passed/Failed,,,,P,P,P,P,P,P,P,P,P
+,Executed Date,,,,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026
+,Defect ID,,,,,,,,,,,,

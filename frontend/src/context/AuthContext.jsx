@@ -50,12 +50,13 @@ export function AuthProvider({ children }) {
   //   roles
   // }
   // =========================
-  const login = ({
-    user,
-    accessToken,
-    refreshToken,
-    roles: newRoles = [],
-  }) => {
+  const login = (loginData) => {
+    if (!loginData) return;
+    const accessToken = loginData.accessToken || loginData.AccessToken;
+    const refreshToken = loginData.refreshToken || loginData.RefreshToken;
+    const user = loginData.user || loginData.User;
+    const newRoles = loginData.roles || loginData.Roles || [];
+
     // Access Token
     if (accessToken) {
       localStorage.setItem("accessToken", accessToken);
@@ -172,7 +173,12 @@ export function AuthProvider({ children }) {
 
   const isOrganizer = normalizedRoles.includes("organizer");
 
-  const isStaff = normalizedRoles.includes("staff");
+  const isStaff = normalizedRoles.some(
+    (role) =>
+      role.includes("staff") ||
+      role.includes("validator") ||
+      role.includes("checkin")
+  );
 
   // =========================
   // PROVIDER

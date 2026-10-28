@@ -1,0 +1,200 @@
+<mxGraphModel dx="1277" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2870" pageHeight="1800" math="0" shadow="0">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+    <mxCell id="cell_26" value="Admin" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;" parent="1" vertex="1">
+      <mxGeometry x="85" y="170" width="30" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_27" value="" style="endArrow=none;dashed=1;html=1;rounded=0;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="100" y="230" as="sourcePoint" />
+        <mxPoint x="100" y="1416" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_28" value="TicketGovernancePage" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" parent="1" vertex="1">
+      <mxGeometry x="390" y="240" width="140" height="1176" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_29" value="GatewayAPI" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" parent="1" vertex="1">
+      <mxGeometry x="750" y="240" width="140" height="1176" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_30" value=":TicketGovernanceRoute" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" parent="1" vertex="1">
+      <mxGeometry x="1110" y="240" width="140" height="1176" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_31" value=":TicketGovernanceController" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" parent="1" vertex="1">
+      <mxGeometry x="1470" y="240" width="140" height="1176" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_32" value=":TicketGovernanceService" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" parent="1" vertex="1">
+      <mxGeometry x="1830" y="240" width="140" height="1176" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_33" value="TicketDB" style="shape=mxgraph.flowchart.database;whiteSpace=wrap;strokeWidth=2;fontSize=11;" parent="1" vertex="1">
+      <mxGeometry x="2225" y="180" width="70" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_34" value="" style="endArrow=none;dashed=1;html=1;rounded=0;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="2260" y="240" as="sourcePoint" />
+        <mxPoint x="2260" y="1416" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_35" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=13;" parent="1" vertex="1">
+      <mxGeometry x="95" y="340" width="10" height="944" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_36" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=13;" parent="cell_28" vertex="1">
+      <mxGeometry x="65" y="100" width="10" height="944" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_37" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=13;" parent="cell_29" vertex="1">
+      <mxGeometry x="65" y="142" width="10" height="860" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_38" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=13;" parent="cell_30" vertex="1">
+      <mxGeometry x="65" y="404" width="10" height="556" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_39" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=13;" parent="cell_31" vertex="1">
+      <mxGeometry x="65" y="708" width="10" height="210" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_40" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=13;" parent="cell_32" vertex="1">
+      <mxGeometry x="65" y="750" width="10" height="126" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_41" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=13;" parent="1" vertex="1">
+      <mxGeometry x="2255" y="1032" width="10" height="42" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_4" value="" style="html=1;perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;strokeColor=#000000;" parent="cell_29" vertex="1">
+      <mxGeometry x="70" y="198" width="10" height="28" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_11" value="" style="html=1;perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;strokeColor=#000000;" parent="cell_30" vertex="1">
+      <mxGeometry x="70" y="460" width="10" height="28" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_5" value="opt" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;width=70;height=20;fontSize=13;fillColor=none;" parent="1" vertex="1">
+      <mxGeometry x="20" y="494" width="880" height="115" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_6" value="[token invalid]" style="text;align=center;fontStyle=1;verticalAlign=middle;strokeColor=none;html=1;fontSize=13;" parent="1" vertex="1">
+      <mxGeometry x="105" y="494" width="250" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_12" value="opt" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;width=70;height=20;fontSize=13;fillColor=none;" parent="1" vertex="1">
+      <mxGeometry x="20" y="756" width="1240" height="157" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_13" value="[role is not Admin]" style="text;align=center;fontStyle=1;verticalAlign=middle;strokeColor=none;html=1;fontSize=13;" parent="1" vertex="1">
+      <mxGeometry x="105" y="756" width="250" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_3" value="3. Validate JWT Token" style="html=1;verticalAlign=bottom;align=left;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="855" y="424" />
+          <mxPoint x="855" y="448" />
+        </Array>
+        <mxPoint x="825" y="424" as="sourcePoint" />
+        <mxPoint x="830" y="448" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_10" value="6. Check policy (Admin)" style="html=1;verticalAlign=bottom;align=left;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="1215" y="686" />
+          <mxPoint x="1215" y="710" />
+        </Array>
+        <mxPoint x="1185" y="686" as="sourcePoint" />
+        <mxPoint x="1190" y="710" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_1" value="1. Select &apos;Reissue History&apos; tab" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="105" y="340" as="sourcePoint" />
+        <mxPoint x="455" y="340" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_2" value="2. GET /api/checkin/governance/reissue-history (query)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="465" y="382" as="sourcePoint" />
+        <mxPoint x="815" y="382" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_7" value="4.1. Return 401 Unauthorized" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="815" y="539" as="sourcePoint" />
+        <mxPoint x="465" y="539" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_8" value="4.2. Display error message" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="455" y="581" as="sourcePoint" />
+        <mxPoint x="105" y="581" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_9" value="5. Forward GET /api/checkin/governance/reissue-history" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="825" y="644" as="sourcePoint" />
+        <mxPoint x="1175" y="644" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_14" value="7.1. Return 403 Forbidden" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1175" y="801" as="sourcePoint" />
+        <mxPoint x="825" y="801" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_15" value="7.2. Return 403 Forbidden" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="815" y="843" as="sourcePoint" />
+        <mxPoint x="465" y="843" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_16" value="7.3. Display error message" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="455" y="885" as="sourcePoint" />
+        <mxPoint x="105" y="885" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_17" value="8. GetReissueHistory(query, paging)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1185" y="948" as="sourcePoint" />
+        <mxPoint x="1535" y="948" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_18" value="9. GetReissueHistoryAsync(query, paging)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1545" y="990" as="sourcePoint" />
+        <mxPoint x="1895" y="990" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_19" value="10. Query reissue audit records" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1905" y="1032" as="sourcePoint" />
+        <mxPoint x="2255" y="1032" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_20" value="11. Return reissue rows and total count" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="2255" y="1074" as="sourcePoint" />
+        <mxPoint x="1905" y="1074" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_21" value="12. Return ReissueHistoryResponseDTO" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1895" y="1116" as="sourcePoint" />
+        <mxPoint x="1545" y="1116" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_22" value="13. Return 200 OK (data)" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1535" y="1158" as="sourcePoint" />
+        <mxPoint x="1185" y="1158" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_23" value="14. Forward 200 OK" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1175" y="1200" as="sourcePoint" />
+        <mxPoint x="825" y="1200" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_24" value="15. Return 200 OK" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="815" y="1242" as="sourcePoint" />
+        <mxPoint x="465" y="1242" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_25" value="16. Render reissue history table" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="455" y="1284" as="sourcePoint" />
+        <mxPoint x="105" y="1284" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+  </root>
+</mxGraphModel>

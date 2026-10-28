@@ -229,12 +229,12 @@
             ],
             "UpstreamPathTemplate": "/api/events/{eventId}/governance/compliance",
             "UpstreamHttpMethod": [
-                "GET"
+                "Get"
             ],
-            "Priority": 100,
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"
-            }
+            },
+            "Priority": 100
         },
         {
             "Key": "event-governance-1",
@@ -248,12 +248,12 @@
             ],
             "UpstreamPathTemplate": "/api/events/{eventId}/governance/compliance/documents",
             "UpstreamHttpMethod": [
-                "POST"
+                "Post"
             ],
-            "Priority": 100,
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"
             },
+            "Priority": 100,
             "Timeout": 150
         },
         {
@@ -268,12 +268,12 @@
             ],
             "UpstreamPathTemplate": "/api/events/{eventId}/governance/compliance/documents/{documentId}/download",
             "UpstreamHttpMethod": [
-                "GET"
+                "Get"
             ],
-            "Priority": 100,
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"
-            }
+            },
+            "Priority": 100
         },
         {
             "Key": "event-governance-3",
@@ -287,12 +287,12 @@
             ],
             "UpstreamPathTemplate": "/api/events/{eventId}/governance/compliance/reviews",
             "UpstreamHttpMethod": [
-                "POST"
+                "Post"
             ],
-            "Priority": 100,
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"
-            }
+            },
+            "Priority": 100
         },
         {
             "Key": "event-governance-4",
@@ -306,13 +306,13 @@
             ],
             "UpstreamPathTemplate": "/api/events/{eventId}/governance/changes",
             "UpstreamHttpMethod": [
-                "GET",
-                "POST"
+                "Get",
+                "Post"
             ],
-            "Priority": 100,
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"
-            }
+            },
+            "Priority": 100
         },
         {
             "Key": "event-governance-5",
@@ -326,12 +326,12 @@
             ],
             "UpstreamPathTemplate": "/api/events/{eventId}/governance/changes/preview",
             "UpstreamHttpMethod": [
-                "POST"
+                "Post"
             ],
-            "Priority": 100,
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"
-            }
+            },
+            "Priority": 100
         },
         {
             "Key": "event-governance-6",
@@ -345,12 +345,12 @@
             ],
             "UpstreamPathTemplate": "/api/events/{eventId}/governance/changes/{requestId}/review",
             "UpstreamHttpMethod": [
-                "POST"
+                "Post"
             ],
-            "Priority": 100,
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"
-            }
+            },
+            "Priority": 100
         },
         {
             "Key": "event-governance-7",
@@ -364,12 +364,12 @@
             ],
             "UpstreamPathTemplate": "/api/events/{eventId}/governance/changes/{requestId}/affected",
             "UpstreamHttpMethod": [
-                "GET"
+                "Get"
             ],
-            "Priority": 100,
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"
-            }
+            },
+            "Priority": 100
         },
         {
             "Key": "event-staff-manage",
@@ -736,24 +736,6 @@
             "UpstreamPathTemplate": "/api/Orders/tickets/{ticketId}/qr/rotate",
             "UpstreamHttpMethod": [
                 "Post"
-            ],
-            "AuthenticationOptions": {
-                "AuthenticationProviderKey": "Bearer"
-            }
-        },
-        {
-            "Key": "ticket-orders-detail",
-            "DownstreamPathTemplate": "/api/Orders/{orderId}",
-            "DownstreamScheme": "https",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "localhost",
-                    "Port": 7268
-                }
-            ],
-            "UpstreamPathTemplate": "/api/Orders/{orderId}",
-            "UpstreamHttpMethod": [
-                "GET"
             ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"
@@ -1215,10 +1197,6 @@
             }
         },
         {
-            "UpstreamPathTemplate": "/api/kyc/consent",
-            "UpstreamHttpMethod": [
-                "GET"
-            ],
             "DownstreamPathTemplate": "/api/kyc/consent",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
@@ -1227,16 +1205,16 @@
                     "Port": 7058
                 }
             ],
+            "UpstreamPathTemplate": "/api/kyc/consent",
+            "UpstreamHttpMethod": [
+                "Get"
+            ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer",
                 "AllowedScopes": []
             }
         },
         {
-            "UpstreamPathTemplate": "/api/kyc/submit",
-            "UpstreamHttpMethod": [
-                "POST"
-            ],
             "DownstreamPathTemplate": "/api/kyc/submit",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
@@ -1245,16 +1223,16 @@
                     "Port": 7058
                 }
             ],
+            "UpstreamPathTemplate": "/api/kyc/submit",
+            "UpstreamHttpMethod": [
+                "Post"
+            ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer",
                 "AllowedScopes": []
             }
         },
         {
-            "UpstreamPathTemplate": "/api/kyc/status/{ekycId}",
-            "UpstreamHttpMethod": [
-                "GET"
-            ],
             "DownstreamPathTemplate": "/api/kyc/status/{ekycId}",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
@@ -1263,16 +1241,16 @@
                     "Port": 7058
                 }
             ],
+            "UpstreamPathTemplate": "/api/kyc/status/{ekycId}",
+            "UpstreamHttpMethod": [
+                "Get"
+            ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer",
                 "AllowedScopes": []
             }
         },
         {
-            "UpstreamPathTemplate": "/api/kyc/deletion-requests",
-            "UpstreamHttpMethod": [
-                "POST"
-            ],
             "DownstreamPathTemplate": "/api/kyc/deletion-requests",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
@@ -1281,16 +1259,16 @@
                     "Port": 7058
                 }
             ],
+            "UpstreamPathTemplate": "/api/kyc/deletion-requests",
+            "UpstreamHttpMethod": [
+                "Post"
+            ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer",
                 "AllowedScopes": []
             }
         },
         {
-            "UpstreamPathTemplate": "/api/kyc/deletion-requests/me",
-            "UpstreamHttpMethod": [
-                "GET"
-            ],
             "DownstreamPathTemplate": "/api/kyc/deletion-requests/me",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
@@ -1299,16 +1277,16 @@
                     "Port": 7058
                 }
             ],
+            "UpstreamPathTemplate": "/api/kyc/deletion-requests/me",
+            "UpstreamHttpMethod": [
+                "Get"
+            ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer",
                 "AllowedScopes": []
             }
         },
         {
-            "UpstreamPathTemplate": "/api/admin/kyc/deletion-requests",
-            "UpstreamHttpMethod": [
-                "GET"
-            ],
             "DownstreamPathTemplate": "/api/admin/kyc/deletion-requests",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
@@ -1317,16 +1295,16 @@
                     "Port": 7058
                 }
             ],
+            "UpstreamPathTemplate": "/api/admin/kyc/deletion-requests",
+            "UpstreamHttpMethod": [
+                "Get"
+            ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer",
                 "AllowedScopes": []
             }
         },
         {
-            "UpstreamPathTemplate": "/api/admin/kyc/deletion-requests/{id}/approve",
-            "UpstreamHttpMethod": [
-                "POST"
-            ],
             "DownstreamPathTemplate": "/api/admin/kyc/deletion-requests/{id}/approve",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
@@ -1335,16 +1313,16 @@
                     "Port": 7058
                 }
             ],
+            "UpstreamPathTemplate": "/api/admin/kyc/deletion-requests/{id}/approve",
+            "UpstreamHttpMethod": [
+                "Post"
+            ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer",
                 "AllowedScopes": []
             }
         },
         {
-            "UpstreamPathTemplate": "/api/admin/kyc/deletion-requests/{id}/reject",
-            "UpstreamHttpMethod": [
-                "POST"
-            ],
             "DownstreamPathTemplate": "/api/admin/kyc/deletion-requests/{id}/reject",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
@@ -1353,16 +1331,16 @@
                     "Port": 7058
                 }
             ],
+            "UpstreamPathTemplate": "/api/admin/kyc/deletion-requests/{id}/reject",
+            "UpstreamHttpMethod": [
+                "Post"
+            ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer",
                 "AllowedScopes": []
             }
         },
         {
-            "UpstreamPathTemplate": "/api/admin/kyc/access-logs",
-            "UpstreamHttpMethod": [
-                "GET"
-            ],
             "DownstreamPathTemplate": "/api/admin/kyc/access-logs",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
@@ -1371,16 +1349,16 @@
                     "Port": 7058
                 }
             ],
+            "UpstreamPathTemplate": "/api/admin/kyc/access-logs",
+            "UpstreamHttpMethod": [
+                "Get"
+            ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer",
                 "AllowedScopes": []
             }
         },
         {
-            "UpstreamPathTemplate": "/api/admin/kyc/{ekycId}/images/{kind}",
-            "UpstreamHttpMethod": [
-                "GET"
-            ],
             "DownstreamPathTemplate": "/api/admin/kyc/{ekycId}/images/{kind}",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
@@ -1389,17 +1367,16 @@
                     "Port": 7058
                 }
             ],
+            "UpstreamPathTemplate": "/api/admin/kyc/{ekycId}/images/{kind}",
+            "UpstreamHttpMethod": [
+                "Get"
+            ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer",
                 "AllowedScopes": []
             }
         },
         {
-            "UpstreamPathTemplate": "/api/admin/kyc/consent-versions",
-            "UpstreamHttpMethod": [
-                "GET",
-                "POST"
-            ],
             "DownstreamPathTemplate": "/api/admin/kyc/consent-versions",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
@@ -1408,17 +1385,17 @@
                     "Port": 7058
                 }
             ],
+            "UpstreamPathTemplate": "/api/admin/kyc/consent-versions",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post"
+            ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer",
                 "AllowedScopes": []
             }
         },
         {
-            "UpstreamPathTemplate": "/api/admin/kyc/consent-versions/{id}",
-            "UpstreamHttpMethod": [
-                "GET",
-                "DELETE"
-            ],
             "DownstreamPathTemplate": "/api/admin/kyc/consent-versions/{id}",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
@@ -1427,16 +1404,17 @@
                     "Port": 7058
                 }
             ],
+            "UpstreamPathTemplate": "/api/admin/kyc/consent-versions/{id}",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Delete"
+            ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer",
                 "AllowedScopes": []
             }
         },
         {
-            "UpstreamPathTemplate": "/api/admin/kyc/consent-versions/{id}/activate",
-            "UpstreamHttpMethod": [
-                "POST"
-            ],
             "DownstreamPathTemplate": "/api/admin/kyc/consent-versions/{id}/activate",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
@@ -1445,17 +1423,16 @@
                     "Port": 7058
                 }
             ],
+            "UpstreamPathTemplate": "/api/admin/kyc/consent-versions/{id}/activate",
+            "UpstreamHttpMethod": [
+                "Post"
+            ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer",
                 "AllowedScopes": []
             }
         },
         {
-            "UpstreamPathTemplate": "/api/admin/kyc/settings",
-            "UpstreamHttpMethod": [
-                "GET",
-                "PUT"
-            ],
             "DownstreamPathTemplate": "/api/admin/kyc/settings",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
@@ -1463,6 +1440,11 @@
                     "Host": "localhost",
                     "Port": 7058
                 }
+            ],
+            "UpstreamPathTemplate": "/api/admin/kyc/settings",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Put"
             ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer",
@@ -1611,10 +1593,10 @@
             "UpstreamHttpMethod": [
                 "Get"
             ],
-            "Priority": 10,
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"
-            }
+            },
+            "Priority": 10
         },
         {
             "Key": "admin-fraud-alerts-list",
@@ -1849,17 +1831,12 @@
             "UpstreamHttpMethod": [
                 "Get"
             ],
-            "Priority": 10,
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"
-            }
+            },
+            "Priority": 10
         },
         {
-            "UpstreamPathTemplate": "/api/admin/risk/policy",
-            "UpstreamHttpMethod": [
-                "GET",
-                "PUT"
-            ],
             "DownstreamPathTemplate": "/api/admin/risk/policy",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
@@ -1868,15 +1845,16 @@
                     "Port": 7076
                 }
             ],
+            "UpstreamPathTemplate": "/api/admin/risk/policy",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Put"
+            ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"
             }
         },
         {
-            "UpstreamPathTemplate": "/api/admin/fraud-cases/{everything}",
-            "UpstreamHttpMethod": [
-                "POST"
-            ],
             "DownstreamPathTemplate": "/api/admin/fraud-cases/{everything}",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
@@ -1885,15 +1863,15 @@
                     "Port": 7076
                 }
             ],
+            "UpstreamPathTemplate": "/api/admin/fraud-cases/{everything}",
+            "UpstreamHttpMethod": [
+                "Post"
+            ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"
             }
         },
         {
-            "UpstreamPathTemplate": "/api/admin/fraud-cases",
-            "UpstreamHttpMethod": [
-                "GET"
-            ],
             "DownstreamPathTemplate": "/api/admin/fraud-cases",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
@@ -1901,6 +1879,10 @@
                     "Host": "localhost",
                     "Port": 7076
                 }
+            ],
+            "UpstreamPathTemplate": "/api/admin/fraud-cases",
+            "UpstreamHttpMethod": [
+                "Get"
             ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"
@@ -2680,24 +2662,6 @@
             }
         },
         {
-            "Key": "event-orders-list",
-            "DownstreamPathTemplate": "/api/organizer/events/{id}/orders",
-            "DownstreamScheme": "https",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "localhost",
-                    "Port": 7289
-                }
-            ],
-            "UpstreamPathTemplate": "/api/organizer/events/{id}/orders",
-            "UpstreamHttpMethod": [
-                "Get"
-            ],
-            "AuthenticationOptions": {
-                "AuthenticationProviderKey": "Bearer"
-            }
-        },
-        {
             "Key": "review-admin-list",
             "DownstreamPathTemplate": "/api/Reviews/admin",
             "DownstreamScheme": "https",
@@ -2962,10 +2926,10 @@
             "UpstreamHttpMethod": [
                 "Get"
             ],
-            "Priority": 10,
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"
-            }
+            },
+            "Priority": 10
         },
         {
             "Key": "event-admin-detail",
@@ -3295,10 +3259,10 @@
             "UpstreamHttpMethod": [
                 "Post"
             ],
-            "Priority": 10,
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"
-            }
+            },
+            "Priority": 10
         },
         {
             "Key": "seating-templates-detail",
@@ -3334,10 +3298,10 @@
             "UpstreamHttpMethod": [
                 "Post"
             ],
-            "Priority": 10,
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"
-            }
+            },
+            "Priority": 10
         },
         {
             "Key": "pricing-rules-by-ticket-type",
@@ -3906,7 +3870,7 @@
         },
         {
             "Key": "checkinops-gate-assignment",
-            "DownstreamPathTemplate": "/api/staff/gate-assignment",
+            "DownstreamPathTemplate": "/api/checkin/gate-assignment",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
                 {
@@ -3914,9 +3878,10 @@
                     "Port": 7330
                 }
             ],
-            "UpstreamPathTemplate": "/api/staff/gate-assignment",
+            "UpstreamPathTemplate": "/api/checkin/gate-assignment",
             "UpstreamHttpMethod": [
-                "Get"
+                "Get",
+                "Options"
             ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"
@@ -4834,49 +4799,48 @@
                 "AuthenticationProviderKey": "Bearer"
             }
         },
-          {
-      "Key": "support-cases-root",
-      "DownstreamPathTemplate": "/api/support-cases",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
         {
-          "Host": "localhost",
-          "Port": 7076
-        }
-      ],
-      "UpstreamPathTemplate": "/api/support-cases",
-      "UpstreamHttpMethod": [
-        "Get",
-        "Post"
-      ],
-      "Priority": 100,
-      "AuthenticationOptions": {
-        "AuthenticationProviderKey": "Bearer"
-      }
-    },
-    {
-      "Key": "support-cases-sub",
-      "DownstreamPathTemplate": "/api/support-cases/{everything}",
-      "DownstreamScheme": "https",
-      "DownstreamHostAndPorts": [
+            "Key": "support-cases-root",
+            "DownstreamPathTemplate": "/api/support-cases",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7076
+                }
+            ],
+            "UpstreamPathTemplate": "/api/support-cases",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            },
+            "Priority": 100
+        },
         {
-          "Host": "localhost",
-          "Port": 7076
-        }
-      ],
-      "UpstreamPathTemplate": "/api/support-cases/{everything}",
-      "UpstreamHttpMethod": [
-        "Get",
-        "Post",
-        "Put",
-        "Delete"
-      ],
-      "Priority": 90,
-      "AuthenticationOptions": {
-        "AuthenticationProviderKey": "Bearer"
-      }
-    },
-
+            "Key": "support-cases-sub",
+            "DownstreamPathTemplate": "/api/support-cases/{everything}",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7076
+                }
+            ],
+            "UpstreamPathTemplate": "/api/support-cases/{everything}",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            },
+            "Priority": 90
+        },
         {
             "Key": "queue-admin-everything",
             "DownstreamPathTemplate": "/api/queue/admin/{everything}",
@@ -4894,6 +4858,259 @@
                 "Put",
                 "Patch",
                 "Delete"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "admin-policies-all",
+            "DownstreamPathTemplate": "/api/admin/policies/{everything}",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7076
+                }
+            ],
+            "UpstreamPathTemplate": "/api/admin/policies/{everything}",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete",
+                "Options"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "admin-policies-root",
+            "DownstreamPathTemplate": "/api/admin/policies",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7076
+                }
+            ],
+            "UpstreamPathTemplate": "/api/admin/policies",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete",
+                "Options"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "organizer-verification-all",
+            "DownstreamPathTemplate": "/api/organizer/verification/{everything}",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7058
+                }
+            ],
+            "UpstreamPathTemplate": "/api/organizer/verification/{everything}",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete",
+                "Options"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "organizer-verification-root",
+            "DownstreamPathTemplate": "/api/organizer/verification",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7058
+                }
+            ],
+            "UpstreamPathTemplate": "/api/organizer/verification",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete",
+                "Options"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "admin-verification-all",
+            "DownstreamPathTemplate": "/api/admin/verification/{everything}",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7058
+                }
+            ],
+            "UpstreamPathTemplate": "/api/admin/verification/{everything}",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete",
+                "Options"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "admin-verification-root",
+            "DownstreamPathTemplate": "/api/admin/verification",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7058
+                }
+            ],
+            "UpstreamPathTemplate": "/api/admin/verification",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete",
+                "Options"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "checkinops-scan-qr",
+            "DownstreamPathTemplate": "/api/checkin/scan-qr",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7330
+                }
+            ],
+            "UpstreamPathTemplate": "/api/checkin/scan-qr",
+            "UpstreamHttpMethod": [
+                "Post",
+                "Options"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "checkinops-offline-package",
+            "DownstreamPathTemplate": "/api/checkin/offline-package",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7330
+                }
+            ],
+            "UpstreamPathTemplate": "/api/checkin/offline-package",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Options"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "checkinops-offline-sync",
+            "DownstreamPathTemplate": "/api/checkin/offline-sync",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7330
+                }
+            ],
+            "UpstreamPathTemplate": "/api/checkin/offline-sync",
+            "UpstreamHttpMethod": [
+                "Post",
+                "Options"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "checkinops-conflicts-all",
+            "DownstreamPathTemplate": "/api/checkin/conflicts/{everything}",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7330
+                }
+            ],
+            "UpstreamPathTemplate": "/api/checkin/conflicts/{everything}",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete",
+                "Options"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "checkinops-conflicts-root",
+            "DownstreamPathTemplate": "/api/checkin/conflicts",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7330
+                }
+            ],
+            "UpstreamPathTemplate": "/api/checkin/conflicts",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Options"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "checkinops-governance-all",
+            "DownstreamPathTemplate": "/api/checkin/governance/{everything}",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7330
+                }
+            ],
+            "UpstreamPathTemplate": "/api/checkin/governance/{everything}",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete",
+                "Options"
             ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"
@@ -4948,5 +5165,4 @@
             "DangerousAcceptAnyServerCertificateValidator": true
         }
     }
-  
 }

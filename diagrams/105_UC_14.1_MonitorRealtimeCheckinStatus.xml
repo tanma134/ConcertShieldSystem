@@ -1,0 +1,260 @@
+<mxGraphModel dx="1277" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3230" pageHeight="2000" math="0" shadow="0">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+    <mxCell id="cell_34" value="Organizer" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;" parent="1" vertex="1">
+      <mxGeometry x="85" y="170" width="30" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_35" value="" style="endArrow=none;dashed=1;html=1;rounded=0;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="100" y="230" as="sourcePoint" />
+        <mxPoint x="100" y="1752" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_36" value="CheckinMonitorPage" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" parent="1" vertex="1">
+      <mxGeometry x="390" y="240" width="140" height="1512" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_37" value="GatewayAPI" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" parent="1" vertex="1">
+      <mxGeometry x="750" y="240" width="140" height="1512" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_38" value=":CheckinMonitorRoute" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" parent="1" vertex="1">
+      <mxGeometry x="1110" y="240" width="140" height="1512" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_39" value=":CheckinMonitorController" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" parent="1" vertex="1">
+      <mxGeometry x="1470" y="240" width="140" height="1512" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_40" value=":CheckinMonitorService" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};" parent="1" vertex="1">
+      <mxGeometry x="1830" y="240" width="140" height="1512" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_41" value="EventDB" style="shape=mxgraph.flowchart.database;whiteSpace=wrap;strokeWidth=2;fontSize=11;" parent="1" vertex="1">
+      <mxGeometry x="2225" y="180" width="70" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_42" value="" style="endArrow=none;dashed=1;html=1;rounded=0;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="2260" y="240" as="sourcePoint" />
+        <mxPoint x="2260" y="1752" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_43" value="TicketDB" style="shape=mxgraph.flowchart.database;whiteSpace=wrap;strokeWidth=2;fontSize=11;" parent="1" vertex="1">
+      <mxGeometry x="2585" y="180" width="70" height="60" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_44" value="" style="endArrow=none;dashed=1;html=1;rounded=0;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="2620" y="240" as="sourcePoint" />
+        <mxPoint x="2620" y="1752" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_45" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=13;" parent="1" vertex="1">
+      <mxGeometry x="95" y="340" width="10" height="1280" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_46" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=13;" parent="cell_36" vertex="1">
+      <mxGeometry x="65" y="100" width="10" height="1280" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_47" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=13;" parent="cell_37" vertex="1">
+      <mxGeometry x="65" y="142" width="10" height="1196" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_48" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=13;" parent="cell_38" vertex="1">
+      <mxGeometry x="65" y="404" width="10" height="892" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_49" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=13;" parent="cell_39" vertex="1">
+      <mxGeometry x="65" y="446" width="10" height="808" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_50" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=13;" parent="cell_40" vertex="1">
+      <mxGeometry x="65" y="488" width="10" height="724" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_51" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=13;" parent="1" vertex="1">
+      <mxGeometry x="2255" y="770" width="10" height="42" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_52" value="" style="html=1;points=[[0,0,0,0,5],[0,1,0,0,-5],[1,0,0,0,5],[1,1,0,0,-5]];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;curved&quot;:0,&quot;rounded&quot;:0};fontSize=13;" parent="1" vertex="1">
+      <mxGeometry x="2615" y="1200" width="10" height="210" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_4" value="" style="html=1;perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;strokeColor=#000000;" parent="cell_37" vertex="1">
+      <mxGeometry x="70" y="198" width="10" height="28" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_15" value="" style="html=1;perimeter=orthogonalPerimeter;outlineConnect=0;fillColor=#ffffff;strokeColor=#000000;" parent="cell_40" vertex="1">
+      <mxGeometry x="70" y="628" width="10" height="28" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_5" value="opt" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;width=70;height=20;fontSize=13;fillColor=none;" parent="1" vertex="1">
+      <mxGeometry x="20" y="494" width="880" height="115" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_6" value="[token invalid]" style="text;align=center;fontStyle=1;verticalAlign=middle;strokeColor=none;html=1;fontSize=13;" parent="1" vertex="1">
+      <mxGeometry x="105" y="494" width="250" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_16" value="opt" style="shape=umlFrame;whiteSpace=wrap;html=1;pointerEvents=0;width=70;height=20;fontSize=13;fillColor=none;" parent="1" vertex="1">
+      <mxGeometry x="20" y="924" width="1960" height="241" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_17" value="[user is not event owner]" style="text;align=center;fontStyle=1;verticalAlign=middle;strokeColor=none;html=1;fontSize=13;" parent="1" vertex="1">
+      <mxGeometry x="105" y="924" width="250" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="cell_3" value="3. Validate JWT Token" style="html=1;verticalAlign=bottom;align=left;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="855" y="424" />
+          <mxPoint x="855" y="448" />
+        </Array>
+        <mxPoint x="825" y="424" as="sourcePoint" />
+        <mxPoint x="830" y="448" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_14" value="10. Check event existence &amp; ownership" style="html=1;verticalAlign=bottom;align=left;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <Array as="points">
+          <mxPoint x="1935" y="854" />
+          <mxPoint x="1935" y="878" />
+        </Array>
+        <mxPoint x="1905" y="854" as="sourcePoint" />
+        <mxPoint x="1910" y="878" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_1" value="1. Open Real-time Check-in Dashboard for event" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="105" y="340" as="sourcePoint" />
+        <mxPoint x="455" y="340" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_2" value="2. GET /api/checkin/monitor?eventId={id}" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="465" y="382" as="sourcePoint" />
+        <mxPoint x="815" y="382" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_7" value="4.1. Return 401 Unauthorized" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="815" y="539" as="sourcePoint" />
+        <mxPoint x="465" y="539" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_8" value="4.2. Display error message" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="455" y="581" as="sourcePoint" />
+        <mxPoint x="105" y="581" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_9" value="5. Forward GET /api/checkin/monitor" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="825" y="644" as="sourcePoint" />
+        <mxPoint x="1175" y="644" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_10" value="6. GetMonitorStatus(eventId, gateId, zone)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1185" y="686" as="sourcePoint" />
+        <mxPoint x="1535" y="686" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_11" value="7. GetMonitorStatusAsync(eventId, filter)" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1545" y="728" as="sourcePoint" />
+        <mxPoint x="1895" y="728" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_12" value="8. Query event details" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1905" y="770" as="sourcePoint" />
+        <mxPoint x="2255" y="770" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_13" value="9. Return event row (or null)" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="2255" y="812" as="sourcePoint" />
+        <mxPoint x="1905" y="812" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_18" value="11.1. Return error (UnauthorizedAccessException)" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1895" y="969" as="sourcePoint" />
+        <mxPoint x="1545" y="969" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_19" value="11.2. Return 403 Forbidden" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1535" y="1011" as="sourcePoint" />
+        <mxPoint x="1185" y="1011" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_20" value="11.3. Return 403 Forbidden" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1175" y="1053" as="sourcePoint" />
+        <mxPoint x="825" y="1053" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_21" value="11.4. Return 403 Forbidden" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="815" y="1095" as="sourcePoint" />
+        <mxPoint x="465" y="1095" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_22" value="11.5. Display error message" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="455" y="1137" as="sourcePoint" />
+        <mxPoint x="105" y="1137" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_23" value="12. Query ticket counts" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1905" y="1200" as="sourcePoint" />
+        <mxPoint x="2615" y="1200" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_24" value="13. Return counts" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="2615" y="1242" as="sourcePoint" />
+        <mxPoint x="1905" y="1242" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_25" value="14. Query zone metrics" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1905" y="1284" as="sourcePoint" />
+        <mxPoint x="2615" y="1284" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_26" value="15. Return zone metrics" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="2615" y="1326" as="sourcePoint" />
+        <mxPoint x="1905" y="1326" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_27" value="16. Query recent 10 scan logs" style="html=1;verticalAlign=bottom;endArrow=block;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1905" y="1368" as="sourcePoint" />
+        <mxPoint x="2615" y="1368" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_28" value="17. Return recent scans" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="2615" y="1410" as="sourcePoint" />
+        <mxPoint x="1905" y="1410" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_29" value="18. Return CheckinMonitorResponseDTO" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1895" y="1452" as="sourcePoint" />
+        <mxPoint x="1545" y="1452" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_30" value="19. Return 200 OK (data)" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1535" y="1494" as="sourcePoint" />
+        <mxPoint x="1185" y="1494" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_31" value="20. Forward 200 OK" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="1175" y="1536" as="sourcePoint" />
+        <mxPoint x="825" y="1536" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_32" value="21. Return 200 OK" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="815" y="1578" as="sourcePoint" />
+        <mxPoint x="465" y="1578" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="cell_33" value="22. Render metrics &amp; recent scans" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;endSize=8;curved=0;rounded=0;fontSize=12;labelBackgroundColor=#ffffff;" parent="1" edge="1">
+      <mxGeometry relative="1" as="geometry">
+        <mxPoint x="455" y="1620" as="sourcePoint" />
+        <mxPoint x="105" y="1620" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+  </root>
+</mxGraphModel>

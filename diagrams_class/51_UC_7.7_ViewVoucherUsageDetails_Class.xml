@@ -1,0 +1,141 @@
+<mxGraphModel dx="1277" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="1500" math="0" shadow="0">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+    <mxCell id="cb" value="&lt;b&gt;ControllerBase&lt;/b&gt;" style="swimlane;fontStyle=0;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+      <mxGeometry x="580" y="30" width="180" height="72" as="geometry" />
+    </mxCell>
+    <mxCell id="c_1" value="" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;spacingRight=6;spacingTop=4;spacingBottom=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="cb">
+      <mxGeometry y="28" width="180" height="18" as="geometry" />
+    </mxCell>
+    <mxCell id="c_2" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="cb">
+      <mxGeometry y="46" width="180" height="8" as="geometry" />
+    </mxCell>
+    <mxCell id="c_3" value="" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;spacingRight=6;spacingTop=4;spacingBottom=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="cb">
+      <mxGeometry y="54" width="180" height="18" as="geometry" />
+    </mxCell>
+    <mxCell id="usage_dto" value="&lt;b&gt;VoucherUsageDTO&lt;/b&gt;" style="swimlane;fontStyle=0;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+      <mxGeometry x="40" y="200" width="260" height="172" as="geometry" />
+    </mxCell>
+    <mxCell id="c_4" value="+VoucherUsageId: int&lt;br/&gt;+VoucherId: int&lt;br/&gt;+OrderId: int&lt;br/&gt;+UserId: int&lt;br/&gt;+DiscountAmount: long&lt;br/&gt;+UsedAt: DateTime" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;spacingRight=6;spacingTop=4;spacingBottom=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="usage_dto">
+      <mxGeometry y="28" width="260" height="118" as="geometry" />
+    </mxCell>
+    <mxCell id="c_5" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="usage_dto">
+      <mxGeometry y="146" width="260" height="8" as="geometry" />
+    </mxCell>
+    <mxCell id="c_6" value="" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;spacingRight=6;spacingTop=4;spacingBottom=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="usage_dto">
+      <mxGeometry y="154" width="260" height="18" as="geometry" />
+    </mxCell>
+    <mxCell id="ctrl" value="&lt;b&gt;VouchersController&lt;/b&gt;" style="swimlane;fontStyle=0;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+      <mxGeometry x="420" y="160" width="540" height="94" as="geometry" />
+    </mxCell>
+    <mxCell id="c_7" value="-IVoucherService _voucherService" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;spacingRight=6;spacingTop=4;spacingBottom=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="ctrl">
+      <mxGeometry y="28" width="540" height="28" as="geometry" />
+    </mxCell>
+    <mxCell id="c_8" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="ctrl">
+      <mxGeometry y="56" width="540" height="8" as="geometry" />
+    </mxCell>
+    <mxCell id="c_9" value="+GetVoucherUsages(id: int): Task&amp;lt;IActionResult&amp;gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;spacingRight=6;spacingTop=4;spacingBottom=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="ctrl">
+      <mxGeometry y="64" width="540" height="30" as="geometry" />
+    </mxCell>
+    <mxCell id="isvc" value="&amp;laquo;interface&amp;raquo;&lt;br/&gt;&lt;b&gt;IVoucherService&lt;/b&gt;" style="swimlane;fontStyle=0;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=38;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+      <mxGeometry x="380" y="300" width="620" height="114" as="geometry" />
+    </mxCell>
+    <mxCell id="c_10" value="" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;spacingRight=6;spacingTop=4;spacingBottom=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="isvc">
+      <mxGeometry y="38" width="620" height="18" as="geometry" />
+    </mxCell>
+    <mxCell id="c_11" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="isvc">
+      <mxGeometry y="56" width="620" height="8" as="geometry" />
+    </mxCell>
+    <mxCell id="c_12" value="+GetVoucherUsagesAsync(voucherId: int, currentUserId: int, isAdmin: bool, isOrganizer: bool): Task&amp;lt;List&amp;lt;VoucherUsageDTO&amp;gt;&amp;gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;spacingRight=6;spacingTop=4;spacingBottom=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="isvc">
+      <mxGeometry y="64" width="620" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="svc" value="&lt;b&gt;VoucherService&lt;/b&gt;" style="swimlane;fontStyle=0;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+      <mxGeometry x="380" y="470" width="620" height="150" as="geometry" />
+    </mxCell>
+    <mxCell id="c_13" value="-IVoucherRepository _voucherRepository&lt;br/&gt;-ITicketApiClient _ticketApiClient&lt;br/&gt;-IEventApiClient _eventApiClient" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;spacingRight=6;spacingTop=4;spacingBottom=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="svc">
+      <mxGeometry y="28" width="620" height="64" as="geometry" />
+    </mxCell>
+    <mxCell id="c_14" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="svc">
+      <mxGeometry y="92" width="620" height="8" as="geometry" />
+    </mxCell>
+    <mxCell id="c_15" value="+GetVoucherUsagesAsync(voucherId: int, currentUserId: int, isAdmin: bool, isOrganizer: bool): Task&amp;lt;List&amp;lt;VoucherUsageDTO&amp;gt;&amp;gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;spacingRight=6;spacingTop=4;spacingBottom=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="svc">
+      <mxGeometry y="100" width="620" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="irepo" value="&amp;laquo;interface&amp;raquo;&lt;br/&gt;&lt;b&gt;IVoucherRepository&lt;/b&gt;" style="swimlane;fontStyle=0;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=38;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+      <mxGeometry x="400" y="690" width="580" height="134" as="geometry" />
+    </mxCell>
+    <mxCell id="c_16" value="" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;spacingRight=6;spacingTop=4;spacingBottom=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="irepo">
+      <mxGeometry y="38" width="580" height="18" as="geometry" />
+    </mxCell>
+    <mxCell id="c_17" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="irepo">
+      <mxGeometry y="56" width="580" height="8" as="geometry" />
+    </mxCell>
+    <mxCell id="c_18" value="+GetByIdAsync(id: int, includeDeleted: bool): Task&amp;lt;Voucher?&amp;gt;&lt;br/&gt;+GetUsagesByVoucherIdAsync(voucherId: int): Task&amp;lt;List&amp;lt;VoucherUsage&amp;gt;&amp;gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;spacingRight=6;spacingTop=4;spacingBottom=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="irepo">
+      <mxGeometry y="64" width="580" height="70" as="geometry" />
+    </mxCell>
+    <mxCell id="repo" value="&lt;b&gt;VoucherRepository&lt;/b&gt;" style="swimlane;fontStyle=0;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+      <mxGeometry x="400" y="860" width="580" height="134" as="geometry" />
+    </mxCell>
+    <mxCell id="c_19" value="-PaymentDbContext _context" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;spacingRight=6;spacingTop=4;spacingBottom=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="repo">
+      <mxGeometry y="28" width="580" height="28" as="geometry" />
+    </mxCell>
+    <mxCell id="c_20" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="repo">
+      <mxGeometry y="56" width="580" height="8" as="geometry" />
+    </mxCell>
+    <mxCell id="c_21" value="+GetByIdAsync(id: int, includeDeleted: bool): Task&amp;lt;Voucher?&amp;gt;&lt;br/&gt;+GetUsagesByVoucherIdAsync(voucherId: int): Task&amp;lt;List&amp;lt;VoucherUsage&amp;gt;&amp;gt;" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;spacingRight=6;spacingTop=4;spacingBottom=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="repo">
+      <mxGeometry y="64" width="580" height="70" as="geometry" />
+    </mxCell>
+    <mxCell id="voucher" value="&lt;b&gt;Voucher&lt;/b&gt;" style="swimlane;fontStyle=0;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+      <mxGeometry x="300" y="1060" width="260" height="262" as="geometry" />
+    </mxCell>
+    <mxCell id="c_22" value="+VoucherId: int&lt;br/&gt;+Code: string&lt;br/&gt;+Scope: string&lt;br/&gt;+OrganizerId: int?&lt;br/&gt;+DiscountType: string&lt;br/&gt;+DiscountAmount: long?&lt;br/&gt;+TotalQuantity: int&lt;br/&gt;+UsedQuantity: int&lt;br/&gt;+StartsAt: DateTime&lt;br/&gt;+EndsAt: DateTime&lt;br/&gt;+IsActive: bool" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;spacingRight=6;spacingTop=4;spacingBottom=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="voucher">
+      <mxGeometry y="28" width="260" height="208" as="geometry" />
+    </mxCell>
+    <mxCell id="c_23" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="voucher">
+      <mxGeometry y="236" width="260" height="8" as="geometry" />
+    </mxCell>
+    <mxCell id="c_24" value="" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;spacingRight=6;spacingTop=4;spacingBottom=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="voucher">
+      <mxGeometry y="244" width="260" height="18" as="geometry" />
+    </mxCell>
+    <mxCell id="usage" value="&lt;b&gt;VoucherUsage&lt;/b&gt;" style="swimlane;fontStyle=0;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=28;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+      <mxGeometry x="720" y="1090" width="260" height="172" as="geometry" />
+    </mxCell>
+    <mxCell id="c_25" value="+VoucherUsageId: int&lt;br/&gt;+VoucherId: int&lt;br/&gt;+OrderId: int&lt;br/&gt;+UserId: int&lt;br/&gt;+DiscountAmount: long&lt;br/&gt;+UsedAt: DateTime" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;spacingRight=6;spacingTop=4;spacingBottom=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="usage">
+      <mxGeometry y="28" width="260" height="118" as="geometry" />
+    </mxCell>
+    <mxCell id="c_26" value="" style="line;strokeWidth=1;fillColor=none;align=left;verticalAlign=middle;spacingTop=-1;spacingLeft=3;spacingRight=3;rotatable=0;labelPosition=right;points=[];portConstraint=eastwest;strokeColor=inherit;" vertex="1" parent="usage">
+      <mxGeometry y="146" width="260" height="8" as="geometry" />
+    </mxCell>
+    <mxCell id="c_27" value="" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=8;spacingRight=6;spacingTop=4;spacingBottom=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;whiteSpace=wrap;html=1;fontSize=11;" vertex="1" parent="usage">
+      <mxGeometry y="154" width="260" height="18" as="geometry" />
+    </mxCell>
+    <mxCell id="c_28" value="Inheritance" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;endSize=12;strokeColor=#000000;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="ctrl" target="cb">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="c_29" value="Dependency" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;endArrow=open;endSize=8;strokeColor=#000000;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="ctrl" target="usage_dto">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="c_30" value="Dependency" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;endArrow=open;endSize=8;strokeColor=#000000;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="ctrl" target="isvc">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="c_31" value="Implements" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;endArrow=block;endFill=0;endSize=12;strokeColor=#000000;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="svc" target="isvc">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="c_32" value="Dependency" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;endArrow=open;endSize=8;strokeColor=#000000;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="svc" target="irepo">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="c_33" value="Implements" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;endArrow=block;endFill=0;endSize=12;strokeColor=#000000;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="repo" target="irepo">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="c_34" value="Dependency" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;endArrow=open;endSize=8;strokeColor=#000000;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="repo" target="voucher">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="c_35" value="Dependency" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;endArrow=open;endSize=8;strokeColor=#000000;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="repo" target="usage">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="c_36" value="Association" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=open;endSize=8;strokeColor=#000000;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="voucher" target="usage">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+  </root>
+</mxGraphModel>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import authApi from "../api/authApi";
+import PlatformPolicyModal from "../components/PlatformPolicyModal";
 import "../styles/auth.css";
 
 export default function RegisterPage() {
@@ -11,6 +12,8 @@ export default function RegisterPage() {
     fullName: "",
     phoneNumber: "",
   });
+  const [agreedPolicies, setAgreedPolicies] = useState(false);
+  const [showPolicyModal, setShowPolicyModal] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -21,6 +24,13 @@ export default function RegisterPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    // UC 11.1 & 11.2: Check policy agreement
+    if (!agreedPolicies) {
+      setError("Vui lòng đọc và tích chọn đồng ý với Điều khoản Dịch vụ & Chính sách nền tảng để tiếp tục.");
+      return;
+    }
+
     setLoading(true);
     try {
       await authApi.register(form);
@@ -91,7 +101,39 @@ export default function RegisterPage() {
               />
             </div>
 
-            <button className="auth-button" type="submit" disabled={loading}>
+            {/* UC 11.1 & UC 11.2: Policy Agreement Checkbox */}
+            <div className="auth-policy-group">
+              <input
+                type="checkbox"
+                id="policyAgreement"
+                className="auth-policy-checkbox"
+                checked={agreedPolicies}
+                onChange={(e) => setAgreedPolicies(e.target.checked)}
+              />
+              <label htmlFor="policyAgreement" className="auth-policy-label">
+                I agree to the{" "}
+                <button
+                  type="button"
+                  className="auth-policy-link"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setShowPolicyModal(true);
+                  }}
+                >
+                  Platform Policies & Terms of Service
+                </button>
+              </label>
+            </div>
+
+            <button
+              className="auth-button"
+              type="submit"
+              disabled={loading || !agreedPolicies}
+              style={{
+                opacity: agreedPolicies ? 1 : 0.6,
+                cursor: agreedPolicies ? "pointer" : "not-allowed",
+              }}
+            >
               {loading ? "Processing..." : "Sign Up"}
             </button>
           </form>
@@ -101,6 +143,13 @@ export default function RegisterPage() {
           </div>
         </div>
       </div>
+
+      {/* UC 11.1 & 11.2: Platform Policy Modal */}
+      <PlatformPolicyModal
+        isOpen={showPolicyModal}
+        onClose={() => setShowPolicyModal(false)}
+        onAgree={() => setAgreedPolicies(true)}
+      />
     </div>
   );
 }

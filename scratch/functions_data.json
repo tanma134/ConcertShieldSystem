@@ -1,0 +1,6781 @@
+[
+  {
+    "stt": 49,
+    "uc_id": "UC_7.5",
+    "code": "UC_7.5_GetOrganizerVouchers",
+    "name": "GetVouchersAsync",
+    "req_name": "View Organizer Vouchers",
+    "class_name": "VouchersController / VoucherService",
+    "sheet_name": "UC_7.5_ViewOrgVouchers",
+    "loc": 145.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Retrieve paginated vouchers filtered by scope=ORGANIZER, active status, search keyword with caller ownership enforcement.",
+    "num_tc": 10,
+    "tc_types": [
+      "N",
+      "N",
+      "N",
+      "N",
+      "B",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database is accessible and seeded with vouchers",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ]
+      ],
+      [
+        "User is authenticated with Organizer role",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      ],
+      [
+        "User is authenticated with Customer role (unauthorized)",
+        [
+          10
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "page",
+        [
+          [
+            "1 (Normal first page)",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              10
+            ]
+          ],
+          [
+            "0 (Boundary: invalid)",
+            [
+              8
+            ]
+          ],
+          [
+            "-1 (Abnormal: negative)",
+            [
+              9
+            ]
+          ],
+          [
+            "9999 (Boundary: out of range)",
+            [
+              7
+            ]
+          ]
+        ]
+      ],
+      [
+        "limit",
+        [
+          [
+            "10 (Normal page size)",
+            [
+              1,
+              2,
+              3,
+              4,
+              7,
+              8,
+              9,
+              10
+            ]
+          ],
+          [
+            "1 (Boundary: min limit)",
+            [
+              5
+            ]
+          ],
+          [
+            "100 (Boundary: max limit)",
+            [
+              6
+            ]
+          ]
+        ]
+      ],
+      [
+        "isActive",
+        [
+          [
+            "null (all vouchers)",
+            [
+              1,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ]
+          ],
+          [
+            "true (active only)",
+            [
+              2
+            ]
+          ],
+          [
+            "false (inactive only)",
+            [
+              3
+            ]
+          ]
+        ]
+      ],
+      [
+        "searchCode",
+        [
+          [
+            "null (no search)",
+            [
+              1,
+              2,
+              3,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ]
+          ],
+          [
+            "\"VIP2026\" (matches vouchers)",
+            [
+              4
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "PagedResultDTO with Items.Count > 0 and TotalCount >= Items.Count",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      ],
+      [
+        "PagedResultDTO with Items.Count == 0 and TotalCount >= 0",
+        [
+          7
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "ArgumentException (\"Page must be >= 1\")",
+        [
+          8,
+          9
+        ]
+      ],
+      [
+        "ForbiddenException (403 Forbidden)",
+        [
+          10
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Retrieved {Count} organizer vouchers successfully\"",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      ],
+      [
+        "\"Invalid pagination parameters page={page}\"",
+        [
+          8,
+          9
+        ]
+      ],
+      [
+        "\"User {UserId} unauthorized to view organizer vouchers\"",
+        [
+          10
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 50,
+    "uc_id": "UC_7.6",
+    "code": "UC_7.6_CreateOrganizerVoucher",
+    "name": "CreateVoucherAsync",
+    "req_name": "Create Organizer Voucher",
+    "class_name": "VouchersController / VoucherService",
+    "sheet_name": "UC_7.6_CreateOrgVoucher",
+    "loc": 160.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Validate and create a new organizer voucher with discount rules, quantity, and valid date range.",
+    "num_tc": 10,
+    "tc_types": [
+      "N",
+      "N",
+      "B",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database is accessible",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ]
+      ],
+      [
+        "Caller is authenticated Organizer",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      ],
+      [
+        "Caller is Customer role",
+        [
+          10
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "dto.Code",
+        [
+          [
+            "\"SUMMER20\"",
+            [
+              1
+            ]
+          ],
+          [
+            "\"FIXED50K\"",
+            [
+              2,
+              4,
+              5
+            ]
+          ],
+          [
+            "\"MINPERCENT\"",
+            [
+              3
+            ]
+          ],
+          [
+            "Existing code \"EXISTING_CODE\"",
+            [
+              6
+            ]
+          ],
+          [
+            "\"\" or null",
+            [
+              7
+            ]
+          ]
+        ]
+      ],
+      [
+        "dto.DiscountType",
+        [
+          [
+            "\"PERCENT\"",
+            [
+              1,
+              3
+            ]
+          ],
+          [
+            "\"FIXED_AMOUNT\"",
+            [
+              2,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ]
+          ]
+        ]
+      ],
+      [
+        "dto.DiscountPercent",
+        [
+          [
+            "20.0 (Normal percent)",
+            [
+              1
+            ]
+          ],
+          [
+            "1.0 (Boundary: min percent)",
+            [
+              3
+            ]
+          ],
+          [
+            "100.0 (Boundary: max percent)",
+            [
+              4
+            ]
+          ],
+          [
+            "105.0 (Abnormal: > 100%)",
+            [
+              8
+            ]
+          ]
+        ]
+      ],
+      [
+        "dto.DiscountAmount",
+        [
+          [
+            "50000 (Normal amount)",
+            [
+              2,
+              6,
+              7,
+              10
+            ]
+          ],
+          [
+            "0 or -1000 (Abnormal amount)",
+            [
+              9
+            ]
+          ]
+        ]
+      ],
+      [
+        "dto.TotalQuantity",
+        [
+          [
+            "100 (Normal quantity)",
+            [
+              1,
+              2,
+              3,
+              4,
+              6,
+              7,
+              8,
+              9,
+              10
+            ]
+          ],
+          [
+            "1 (Boundary: min quantity)",
+            [
+              5
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "VoucherResponseDTO with VoucherId > 0, Status=\"Active\"",
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "ConflictException (409 \"Voucher code already exists\")",
+        [
+          6
+        ]
+      ],
+      [
+        "ValidationException (400 \"Code is required\")",
+        [
+          7
+        ]
+      ],
+      [
+        "ValidationException (400 \"Discount percent must be between 1 and 100\")",
+        [
+          8
+        ]
+      ],
+      [
+        "ValidationException (400 \"Discount amount must be positive\")",
+        [
+          9
+        ]
+      ],
+      [
+        "ForbiddenException (403 Forbidden)",
+        [
+          10
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Voucher {Code} created successfully with Id {Id}\"",
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      ],
+      [
+        "\"Duplicate voucher code detected: {Code}\"",
+        [
+          6
+        ]
+      ],
+      [
+        "\"Voucher validation failed: {Error}\"",
+        [
+          7,
+          8,
+          9
+        ]
+      ],
+      [
+        "\"Access denied for user {UserId}\"",
+        [
+          10
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 51,
+    "uc_id": "UC_7.7",
+    "code": "UC_7.7_ViewVoucherUsageDetails",
+    "name": "GetVoucherUsagesAsync",
+    "req_name": "View Voucher Usage Details",
+    "class_name": "VouchersController / VoucherService",
+    "sheet_name": "UC_7.7_VoucherUsages",
+    "loc": 110.0,
+    "lack_of_tc": 0.0,
+    "test_req": "View usage history list (orderId, userId, discountAmount, usedAt) for a specified voucher.",
+    "num_tc": 8,
+    "tc_types": [
+      "N",
+      "N",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database is accessible",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      ],
+      [
+        "Target voucher exists and belongs to caller Organizer",
+        [
+          1,
+          2,
+          3,
+          4
+        ]
+      ],
+      [
+        "Target voucher belongs to another Organizer",
+        [
+          6
+        ]
+      ],
+      [
+        "Target voucher does not exist in DB",
+        [
+          5
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "voucherId",
+        [
+          [
+            "101 (Voucher with 5 usages)",
+            [
+              1
+            ]
+          ],
+          [
+            "102 (Voucher with 0 usages)",
+            [
+              2
+            ]
+          ],
+          [
+            "1 (Boundary: min ID)",
+            [
+              3
+            ]
+          ],
+          [
+            "999999 (Boundary: high valid ID)",
+            [
+              4
+            ]
+          ],
+          [
+            "88888 (Non-existent ID)",
+            [
+              5
+            ]
+          ],
+          [
+            "205 (Other organizer voucher)",
+            [
+              6
+            ]
+          ],
+          [
+            "0 (Boundary: invalid ID)",
+            [
+              7
+            ]
+          ],
+          [
+            "-5 (Abnormal: negative ID)",
+            [
+              8
+            ]
+          ]
+        ]
+      ],
+      [
+        "isAdmin",
+        [
+          [
+            "false",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "List<VoucherUsageDTO> with Count == 5",
+        [
+          1,
+          3,
+          4
+        ]
+      ],
+      [
+        "List<VoucherUsageDTO> with Count == 0",
+        [
+          2
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "KeyNotFoundException (404 \"Voucher not found\")",
+        [
+          5
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"You do not have access to this voucher\")",
+        [
+          6
+        ]
+      ],
+      [
+        "ArgumentException (400 \"Voucher ID must be positive\")",
+        [
+          7,
+          8
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Retrieved {Count} usage records for voucher {VoucherId}\"",
+        [
+          1,
+          2,
+          3,
+          4
+        ]
+      ],
+      [
+        "\"Voucher {VoucherId} not found\"",
+        [
+          5
+        ]
+      ],
+      [
+        "\"Unauthorized access attempt for voucher {VoucherId}\"",
+        [
+          6
+        ]
+      ],
+      [
+        "\"Invalid voucher ID: {VoucherId}\"",
+        [
+          7,
+          8
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 52,
+    "uc_id": "UC_7.8",
+    "code": "UC_7.8_ViewSystemVouchers",
+    "name": "GetVouchersAsync",
+    "req_name": "View System Vouchers",
+    "class_name": "VouchersController / VoucherService",
+    "sheet_name": "UC_7.8_ViewSysVouchers",
+    "loc": 130.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Admin views system-wide vouchers with pagination and active/inactive status filters.",
+    "num_tc": 9,
+    "tc_types": [
+      "N",
+      "N",
+      "N",
+      "B",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database is accessible with SYSTEM vouchers",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      ],
+      [
+        "Caller is authenticated Admin",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      ],
+      [
+        "Caller is Organizer (not Admin)",
+        [
+          9
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "scope",
+        [
+          [
+            "\"SYSTEM\"",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ]
+          ]
+        ]
+      ],
+      [
+        "page",
+        [
+          [
+            "1 (Normal page)",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              9
+            ]
+          ],
+          [
+            "0 (Boundary: invalid)",
+            [
+              7
+            ]
+          ],
+          [
+            "-1 (Abnormal: negative)",
+            [
+              8
+            ]
+          ],
+          [
+            "500 (Boundary: page beyond total)",
+            [
+              6
+            ]
+          ]
+        ]
+      ],
+      [
+        "limit",
+        [
+          [
+            "10 (Normal)",
+            [
+              1,
+              2,
+              3,
+              6,
+              7,
+              8,
+              9
+            ]
+          ],
+          [
+            "1 (Boundary: min limit)",
+            [
+              4
+            ]
+          ],
+          [
+            "100 (Boundary: max limit)",
+            [
+              5
+            ]
+          ]
+        ]
+      ],
+      [
+        "isActive",
+        [
+          [
+            "null (all system vouchers)",
+            [
+              1,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ]
+          ],
+          [
+            "true (active system vouchers)",
+            [
+              2
+            ]
+          ],
+          [
+            "false (inactive system vouchers)",
+            [
+              3
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "PagedResultDTO with Items.Count > 0 and Scope=\"SYSTEM\"",
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      ],
+      [
+        "PagedResultDTO with Items.Count == 0",
+        [
+          6
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "ArgumentException (400 \"Page must be >= 1\")",
+        [
+          7,
+          8
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"Admin access required\")",
+        [
+          9
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Retrieved {Count} system vouchers\"",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      ],
+      [
+        "\"Invalid page parameter: {page}\"",
+        [
+          7,
+          8
+        ]
+      ],
+      [
+        "\"Non-admin caller attempted to view system vouchers\"",
+        [
+          9
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 53,
+    "uc_id": "UC_7.9",
+    "code": "UC_7.9_CreateSystemVoucher",
+    "name": "CreateVoucherAsync",
+    "req_name": "Create System Voucher",
+    "class_name": "VouchersController / VoucherService",
+    "sheet_name": "UC_7.9_CreateSysVoucher",
+    "loc": 150.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Admin creates platform-wide discount voucher applicable across all events.",
+    "num_tc": 9,
+    "tc_types": [
+      "N",
+      "N",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database is accessible",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      ],
+      [
+        "Caller has Admin role",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      ],
+      [
+        "Caller has Customer role",
+        [
+          9
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "dto.Scope",
+        [
+          [
+            "\"SYSTEM\"",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ]
+          ]
+        ]
+      ],
+      [
+        "dto.Code",
+        [
+          [
+            "\"PLATFORM10\"",
+            [
+              1
+            ]
+          ],
+          [
+            "\"SYS_FIXED100K\"",
+            [
+              2,
+              3,
+              4
+            ]
+          ],
+          [
+            "\"DUPLICATE_SYS\"",
+            [
+              5
+            ]
+          ],
+          [
+            "\"\" (empty code)",
+            [
+              6
+            ]
+          ],
+          [
+            "\"VALID_CODE\"",
+            [
+              7,
+              8,
+              9
+            ]
+          ]
+        ]
+      ],
+      [
+        "dto.DiscountPercent",
+        [
+          [
+            "10.0",
+            [
+              1
+            ]
+          ],
+          [
+            "100.0 (Boundary: max)",
+            [
+              3
+            ]
+          ],
+          [
+            "0.0 (Abnormal: zero)",
+            [
+              7
+            ]
+          ]
+        ]
+      ],
+      [
+        "dto.DiscountAmount",
+        [
+          [
+            "100000",
+            [
+              2,
+              4,
+              5,
+              6,
+              8,
+              9
+            ]
+          ]
+        ]
+      ],
+      [
+        "dto.TotalQuantity",
+        [
+          [
+            "1000",
+            [
+              1,
+              2,
+              3,
+              5,
+              6,
+              7,
+              8,
+              9
+            ]
+          ],
+          [
+            "1 (Boundary: min)",
+            [
+              4
+            ]
+          ]
+        ]
+      ],
+      [
+        "dto.EndsAt",
+        [
+          [
+            "DateTime.UtcNow.AddMonths(1) (Future)",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              9
+            ]
+          ],
+          [
+            "DateTime.UtcNow.AddDays(-1) (Past)",
+            [
+              8
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "VoucherResponseDTO with Scope=\"SYSTEM\", Status=\"Active\"",
+        [
+          1,
+          2,
+          3,
+          4
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "ConflictException (409 \"System voucher code already exists\")",
+        [
+          5
+        ]
+      ],
+      [
+        "ValidationException (400 \"Code is required\")",
+        [
+          6
+        ]
+      ],
+      [
+        "ValidationException (400 \"Discount percent must be > 0\")",
+        [
+          7
+        ]
+      ],
+      [
+        "ValidationException (400 \"End date must be in the future\")",
+        [
+          8
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"Admin role required\")",
+        [
+          9
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Created system voucher {Code} with Id {Id}\"",
+        [
+          1,
+          2,
+          3,
+          4
+        ]
+      ],
+      [
+        "\"System voucher code duplicate: {Code}\"",
+        [
+          5
+        ]
+      ],
+      [
+        "\"Validation failed: {Error}\"",
+        [
+          6,
+          7,
+          8
+        ]
+      ],
+      [
+        "\"Access denied: {UserId} is not Admin\"",
+        [
+          9
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 54,
+    "uc_id": "UC_7.10",
+    "code": "UC_7.10_UpdateSystemVoucher",
+    "name": "UpdateVoucherAsync",
+    "req_name": "Update System Voucher",
+    "class_name": "VouchersController / VoucherService",
+    "sheet_name": "UC_7.10_UpdateSysVoucher",
+    "loc": 140.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Admin modifies system voucher properties including validity dates, active toggle, and quantity.",
+    "num_tc": 9,
+    "tc_types": [
+      "N",
+      "N",
+      "N",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database is accessible and target SYSTEM voucher exists",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          8,
+          9
+        ]
+      ],
+      [
+        "Target voucher does not exist in DB",
+        [
+          6
+        ]
+      ],
+      [
+        "Caller has Admin role",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      ],
+      [
+        "Caller has Organizer role",
+        [
+          9
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "id",
+        [
+          [
+            "10 (Valid System Voucher ID)",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              7,
+              8,
+              9
+            ]
+          ],
+          [
+            "99999 (Non-existent ID)",
+            [
+              6
+            ]
+          ]
+        ]
+      ],
+      [
+        "dto.IsActive",
+        [
+          [
+            "false (Deactivate)",
+            [
+              1
+            ]
+          ],
+          [
+            "true (Reactivate)",
+            [
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ]
+          ]
+        ]
+      ],
+      [
+        "dto.TotalQuantity",
+        [
+          [
+            "500 (Increase quantity from 200 to 500)",
+            [
+              2
+            ]
+          ],
+          [
+            "200 (Keep unchanged)",
+            [
+              1,
+              3
+            ]
+          ],
+          [
+            "50 (Boundary: equal to UsedQuantity=50)",
+            [
+              4
+            ]
+          ],
+          [
+            "30 (Abnormal: less than UsedQuantity=50)",
+            [
+              7
+            ]
+          ]
+        ]
+      ],
+      [
+        "dto.EndsAt",
+        [
+          [
+            "DateTime.UtcNow.AddMonths(3) (Extend)",
+            [
+              3
+            ]
+          ],
+          [
+            "DateTime.UtcNow (Boundary: immediate expire)",
+            [
+              5
+            ]
+          ],
+          [
+            "DateTime.UtcNow.AddDays(-10) (Abnormal: past)",
+            [
+              8
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "VoucherResponseDTO with updated fields and Status=\"OK\"",
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "KeyNotFoundException (404 \"System voucher not found\")",
+        [
+          6
+        ]
+      ],
+      [
+        "ValidationException (400 \"TotalQuantity cannot be less than UsedQuantity\")",
+        [
+          7
+        ]
+      ],
+      [
+        "ValidationException (400 \"EndsAt cannot be in the past\")",
+        [
+          8
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"Admin privilege required\")",
+        [
+          9
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Updated system voucher {VoucherId} successfully\"",
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      ],
+      [
+        "\"Voucher {VoucherId} not found for update\"",
+        [
+          6
+        ]
+      ],
+      [
+        "\"Validation error updating voucher: {Error}\"",
+        [
+          7,
+          8
+        ]
+      ],
+      [
+        "\"Forbidden access attempt on system voucher update\"",
+        [
+          9
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 55,
+    "uc_id": "UC_7.11",
+    "code": "UC_7.11_DeleteSystemVoucher",
+    "name": "SoftDeleteVoucherAsync",
+    "req_name": "Delete System Voucher",
+    "class_name": "VouchersController / VoucherService",
+    "sheet_name": "UC_7.11_DeleteSysVoucher",
+    "loc": 115.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Admin marks system voucher as soft-deleted (IsDeleted=true) preserving historical audit integrity.",
+    "num_tc": 8,
+    "tc_types": [
+      "N",
+      "N",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database is accessible and target SYSTEM voucher exists",
+        [
+          1,
+          2,
+          3,
+          4,
+          7,
+          8
+        ]
+      ],
+      [
+        "Target voucher is already soft-deleted (IsDeleted=true)",
+        [
+          6
+        ]
+      ],
+      [
+        "Target voucher does not exist in DB",
+        [
+          5
+        ]
+      ],
+      [
+        "Caller has Admin role",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      ],
+      [
+        "Caller has Organizer role",
+        [
+          8
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "id",
+        [
+          [
+            "15 (Unused System Voucher ID)",
+            [
+              1
+            ]
+          ],
+          [
+            "16 (Partially used System Voucher ID)",
+            [
+              2
+            ]
+          ],
+          [
+            "1 (Boundary: min ID)",
+            [
+              3
+            ]
+          ],
+          [
+            "20 (Boundary: inactive voucher)",
+            [
+              4
+            ]
+          ],
+          [
+            "99999 (Non-existent ID)",
+            [
+              5
+            ]
+          ],
+          [
+            "30 (Already deleted ID)",
+            [
+              6
+            ]
+          ],
+          [
+            "0 or -1 (Abnormal invalid ID)",
+            [
+              7
+            ]
+          ],
+          [
+            "15 (Valid ID called by non-admin)",
+            [
+              8
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "true (Boolean indicating soft-delete successful)",
+        [
+          1,
+          2,
+          3,
+          4
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "KeyNotFoundException (404 \"Voucher not found\")",
+        [
+          5
+        ]
+      ],
+      [
+        "InvalidOperationException (400 \"Voucher is already deleted\")",
+        [
+          6
+        ]
+      ],
+      [
+        "ArgumentException (400 \"Voucher ID must be positive\")",
+        [
+          7
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"Admin access required\")",
+        [
+          8
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Soft-deleted system voucher {VoucherId}\"",
+        [
+          1,
+          2,
+          3,
+          4
+        ]
+      ],
+      [
+        "\"Voucher {VoucherId} not found\"",
+        [
+          5
+        ]
+      ],
+      [
+        "\"Voucher {VoucherId} already deleted\"",
+        [
+          6
+        ]
+      ],
+      [
+        "\"Invalid voucher ID: {VoucherId}\"",
+        [
+          7
+        ]
+      ],
+      [
+        "\"Permission denied for user {UserId}\"",
+        [
+          8
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 66,
+    "uc_id": "UC_8.7",
+    "code": "UC_8.7_BulkRevokeTickets",
+    "name": "BulkRevokeTicketsAsync",
+    "req_name": "Bulk Revoke Tickets (event change)",
+    "class_name": "TicketGovernanceController / TicketGovernanceService",
+    "sheet_name": "UC_8.7_BulkRevokeTickets",
+    "loc": 185.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Admin bulk revokes tickets due to event cancellation or schedule changes, invalidating QR tokens and generating audit logs.",
+    "num_tc": 10,
+    "tc_types": [
+      "N",
+      "N",
+      "N",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database is accessible and tickets exist in VALID status",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          8,
+          9,
+          10
+        ]
+      ],
+      [
+        "Event does not exist in DB",
+        [
+          6
+        ]
+      ],
+      [
+        "Tickets already in REVOKED status",
+        [
+          8
+        ]
+      ],
+      [
+        "Caller has Admin role",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      ],
+      [
+        "Caller has Staff role (non-admin)",
+        [
+          10
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "request.EventId",
+        [
+          [
+            "1001 (Valid Event ID)",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              7,
+              8,
+              9,
+              10
+            ]
+          ],
+          [
+            "99999 (Non-existent Event ID)",
+            [
+              6
+            ]
+          ]
+        ]
+      ],
+      [
+        "request.TicketIds",
+        [
+          [
+            "[201, 202, 203] (Normal 3 tickets)",
+            [
+              1
+            ]
+          ],
+          [
+            "[301, 302] (With SendNotification=true)",
+            [
+              2
+            ]
+          ],
+          [
+            "[401, 402] (Reason=\"SCHEDULE_CHANGE\")",
+            [
+              3
+            ]
+          ],
+          [
+            "[501] (Boundary: single ticket)",
+            [
+              4
+            ]
+          ],
+          [
+            "List of 500 ticket IDs (Boundary: max batch size)",
+            [
+              5
+            ]
+          ],
+          [
+            "null or [] (Empty list)",
+            [
+              7
+            ]
+          ],
+          [
+            "[601, 602] (Already revoked tickets)",
+            [
+              8
+            ]
+          ],
+          [
+            "[701, 702] (With empty reason)",
+            [
+              9
+            ]
+          ],
+          [
+            "[801, 802] (Called by Staff)",
+            [
+              10
+            ]
+          ]
+        ]
+      ],
+      [
+        "request.ReasonType",
+        [
+          [
+            "\"EVENT_CANCELLED\"",
+            [
+              1,
+              2,
+              4,
+              5,
+              6,
+              8,
+              10
+            ]
+          ],
+          [
+            "\"SCHEDULE_CHANGE\"",
+            [
+              3
+            ]
+          ],
+          [
+            "\"FORCE_MAJEURE\"",
+            [
+              7,
+              9
+            ]
+          ]
+        ]
+      ],
+      [
+        "request.SendNotification",
+        [
+          [
+            "false",
+            [
+              1,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ]
+          ],
+          [
+            "true (trigger notification dispatch)",
+            [
+              2
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "BulkRevokeResponseDTO with RevokedCount == TicketIds.Count",
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "KeyNotFoundException (404 \"Event not found\")",
+        [
+          6
+        ]
+      ],
+      [
+        "ValidationException (400 \"TicketIds list cannot be empty\")",
+        [
+          7
+        ]
+      ],
+      [
+        "InvalidOperationException (400 \"Tickets are already revoked\")",
+        [
+          8
+        ]
+      ],
+      [
+        "ValidationException (400 \"Revocation reason is required\")",
+        [
+          9
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"Admin privilege required\")",
+        [
+          10
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Bulk revoked {Count} tickets for event {EventId} successfully\"",
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      ],
+      [
+        "\"Event {EventId} not found for bulk revocation\"",
+        [
+          6
+        ]
+      ],
+      [
+        "\"Validation error: {Message}\"",
+        [
+          7,
+          9
+        ]
+      ],
+      [
+        "\"Conflict: tickets already revoked for event {EventId}\"",
+        [
+          8
+        ]
+      ],
+      [
+        "\"Unauthorized bulk revoke attempt by user {UserId}\"",
+        [
+          10
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 67,
+    "uc_id": "UC_8.8",
+    "code": "UC_8.8_ViewRevocationHistory",
+    "name": "GetRevocationHistoryAsync",
+    "req_name": "View Ticket Revocation History",
+    "class_name": "TicketGovernanceController / TicketGovernanceService",
+    "sheet_name": "UC_8.8_RevocationHistory",
+    "loc": 135.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Admin views audit logs of revoked tickets with filters for event, reason type, search keyword, and pagination.",
+    "num_tc": 9,
+    "tc_types": [
+      "N",
+      "N",
+      "N",
+      "B",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database has revocation audit records for EventId",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          8,
+          9
+        ]
+      ],
+      [
+        "Event has 0 revocation records",
+        [
+          6
+        ]
+      ],
+      [
+        "Caller has Admin role",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      ],
+      [
+        "Caller has Customer role",
+        [
+          9
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "eventId",
+        [
+          [
+            "1001 (Valid Event ID)",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              9
+            ]
+          ],
+          [
+            "1002 (Event with zero revocations)",
+            [
+              6
+            ]
+          ],
+          [
+            "0 (Boundary: invalid)",
+            [
+              7
+            ]
+          ],
+          [
+            "-1 (Abnormal: negative)",
+            [
+              8
+            ]
+          ]
+        ]
+      ],
+      [
+        "reasonType",
+        [
+          [
+            "null (all reasons)",
+            [
+              1,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ]
+          ],
+          [
+            "\"EVENT_CANCELLED\"",
+            [
+              2
+            ]
+          ],
+          [
+            "\"FRAUD\"",
+            [
+              3
+            ]
+          ]
+        ]
+      ],
+      [
+        "page",
+        [
+          [
+            "1 (First page)",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              9
+            ]
+          ],
+          [
+            "0 (Boundary invalid)",
+            [
+              7
+            ]
+          ],
+          [
+            "-1 (Abnormal negative)",
+            [
+              8
+            ]
+          ]
+        ]
+      ],
+      [
+        "pageSize",
+        [
+          [
+            "10 (Normal)",
+            [
+              1,
+              2,
+              3,
+              6,
+              7,
+              8,
+              9
+            ]
+          ],
+          [
+            "1 (Boundary min)",
+            [
+              4
+            ]
+          ],
+          [
+            "100 (Boundary max)",
+            [
+              5
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "RevocationHistoryResponseDTO with Items.Count > 0 and TotalCount >= Items.Count",
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      ],
+      [
+        "RevocationHistoryResponseDTO with Items.Count == 0 and TotalCount == 0",
+        [
+          6
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "ArgumentException (400 \"EventId must be positive\")",
+        [
+          7,
+          8
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"Admin access required\")",
+        [
+          9
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Retrieved {Count} revocation history records for event {EventId}\"",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      ],
+      [
+        "\"Invalid input parameters eventId={EventId}, page={Page}\"",
+        [
+          7,
+          8
+        ]
+      ],
+      [
+        "\"Forbidden access by user {UserId}\"",
+        [
+          9
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 69,
+    "uc_id": "UC_8.10",
+    "code": "UC_8.10_ViewReissueHistory",
+    "name": "GetReissueHistoryAsync",
+    "req_name": "View Reissue History",
+    "class_name": "TicketGovernanceController / TicketGovernanceService",
+    "sheet_name": "UC_8.10_ReissueHistory",
+    "loc": 130.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Admin queries audit trail of reissued tickets (old ticket code, new ticket code, reissue reason, timestamp).",
+    "num_tc": 9,
+    "tc_types": [
+      "N",
+      "N",
+      "N",
+      "B",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database contains reissue logs for event",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          8,
+          9
+        ]
+      ],
+      [
+        "Event has no reissued tickets",
+        [
+          6
+        ]
+      ],
+      [
+        "Caller has Admin role",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      ],
+      [
+        "Caller has Customer role",
+        [
+          9
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "eventId",
+        [
+          [
+            "1001 (Valid Event ID)",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              9
+            ]
+          ],
+          [
+            "1003 (Event with no reissues)",
+            [
+              6
+            ]
+          ],
+          [
+            "0 (Boundary: invalid)",
+            [
+              7
+            ]
+          ],
+          [
+            "-5 (Abnormal: negative)",
+            [
+              8
+            ]
+          ]
+        ]
+      ],
+      [
+        "search",
+        [
+          [
+            "null (all reissues)",
+            [
+              1,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ]
+          ],
+          [
+            "\"TK-OLD-999\" (Search by old ticket code)",
+            [
+              2
+            ]
+          ],
+          [
+            "\"TK-NEW-888\" (Search by new ticket code)",
+            [
+              3
+            ]
+          ]
+        ]
+      ],
+      [
+        "page",
+        [
+          [
+            "1 (Normal)",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              9
+            ]
+          ],
+          [
+            "0 (Boundary invalid)",
+            [
+              7
+            ]
+          ],
+          [
+            "-1 (Abnormal)",
+            [
+              8
+            ]
+          ]
+        ]
+      ],
+      [
+        "pageSize",
+        [
+          [
+            "10 (Normal)",
+            [
+              1,
+              2,
+              3,
+              6,
+              7,
+              8,
+              9
+            ]
+          ],
+          [
+            "1 (Boundary min)",
+            [
+              4
+            ]
+          ],
+          [
+            "100 (Boundary max)",
+            [
+              5
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "ReissueHistoryResponseDTO with Items.Count > 0 and TotalCount >= Items.Count",
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      ],
+      [
+        "ReissueHistoryResponseDTO with Items.Count == 0 and TotalCount == 0",
+        [
+          6
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "ArgumentException (400 \"EventId must be positive\")",
+        [
+          7,
+          8
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"Admin access required\")",
+        [
+          9
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Retrieved {Count} reissue history items for event {EventId}\"",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      ],
+      [
+        "\"Invalid query parameters: eventId={EventId}, page={Page}\"",
+        [
+          7,
+          8
+        ]
+      ],
+      [
+        "\"Unauthorized attempt to access reissue history\"",
+        [
+          9
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 85,
+    "uc_id": "UC_11.1",
+    "code": "UC_11.1_ViewPolicyVersionHistory",
+    "name": "GetPolicyVersions",
+    "req_name": "View Policy Version History (Price/Refund/Queue/Risk)",
+    "class_name": "SystemPoliciesController",
+    "sheet_name": "UC_11.1_PolicyHistory",
+    "loc": 125.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Admin views historical versions and active configurations of platform governance policies.",
+    "num_tc": 9,
+    "tc_types": [
+      "N",
+      "N",
+      "N",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database is accessible and seeded with policy versions",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      ],
+      [
+        "Caller is authenticated Admin",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      ],
+      [
+        "Caller is Customer role",
+        [
+          9
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "category",
+        [
+          [
+            "null (all policy categories)",
+            [
+              1,
+              4,
+              5,
+              7,
+              8,
+              9
+            ]
+          ],
+          [
+            "\"REFUND\"",
+            [
+              2
+            ]
+          ],
+          [
+            "\"RISK\"",
+            [
+              3
+            ]
+          ],
+          [
+            "\"INVALID_CAT\"",
+            [
+              6
+            ]
+          ]
+        ]
+      ],
+      [
+        "status",
+        [
+          [
+            "null (all statuses)",
+            [
+              1,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ]
+          ],
+          [
+            "\"ACTIVE\"",
+            [
+              2
+            ]
+          ]
+        ]
+      ],
+      [
+        "page",
+        [
+          [
+            "1 (Normal)",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              9
+            ]
+          ],
+          [
+            "0 (Boundary: invalid)",
+            [
+              7
+            ]
+          ],
+          [
+            "-1 (Abnormal)",
+            [
+              8
+            ]
+          ]
+        ]
+      ],
+      [
+        "pageSize",
+        [
+          [
+            "10 (Normal)",
+            [
+              1,
+              2,
+              3,
+              6,
+              7,
+              8,
+              9
+            ]
+          ],
+          [
+            "1 (Boundary min)",
+            [
+              4
+            ]
+          ],
+          [
+            "50 (Boundary max)",
+            [
+              5
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "PagedResult<PolicyVersionDTO> with Items.Count > 0",
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "ValidationException (400 \"Invalid policy category\")",
+        [
+          6
+        ]
+      ],
+      [
+        "ArgumentException (400 \"Page must be >= 1\")",
+        [
+          7,
+          8
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"Admin access required\")",
+        [
+          9
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Fetched {Count} policy versions for category={Category}\"",
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      ],
+      [
+        "\"Validation error: category {Category} is not recognized\"",
+        [
+          6
+        ]
+      ],
+      [
+        "\"Invalid pagination request\"",
+        [
+          7,
+          8
+        ]
+      ],
+      [
+        "\"Access denied for user {UserId}\"",
+        [
+          9
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 86,
+    "uc_id": "UC_11.2",
+    "code": "UC_11.2_CreatePolicyVersion",
+    "name": "CreatePolicyVersion",
+    "req_name": "Create New Policy Version",
+    "class_name": "SystemPoliciesController",
+    "sheet_name": "UC_11.2_CreatePolicyVersion",
+    "loc": 155.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Admin creates and deploys a new version of system policy rules (e.g. Refund deadline, Risk threshold).",
+    "num_tc": 9,
+    "tc_types": [
+      "N",
+      "N",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database is accessible",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      ],
+      [
+        "Policy version number does not exist for category",
+        [
+          1,
+          2,
+          3,
+          4,
+          6,
+          7,
+          8,
+          9
+        ]
+      ],
+      [
+        "Policy version number already exists (duplicate)",
+        [
+          5
+        ]
+      ],
+      [
+        "Caller has Admin role",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      ],
+      [
+        "Caller has Organizer role",
+        [
+          9
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "dto.Category",
+        [
+          [
+            "\"REFUND\"",
+            [
+              1,
+              3,
+              5,
+              6,
+              7,
+              8,
+              9
+            ]
+          ],
+          [
+            "\"RISK\"",
+            [
+              2,
+              4
+            ]
+          ]
+        ]
+      ],
+      [
+        "dto.VersionNumber",
+        [
+          [
+            "\"2.1.0\"",
+            [
+              1
+            ]
+          ],
+          [
+            "\"1.5.0\"",
+            [
+              2
+            ]
+          ],
+          [
+            "\"3.0.0\"",
+            [
+              3,
+              4
+            ]
+          ],
+          [
+            "\"2.0.0\" (Existing duplicate version)",
+            [
+              5
+            ]
+          ],
+          [
+            "\"\" (Empty version)",
+            [
+              6
+            ]
+          ],
+          [
+            "\"2.2.0\"",
+            [
+              7,
+              8,
+              9
+            ]
+          ]
+        ]
+      ],
+      [
+        "dto.RulesJson",
+        [
+          [
+            "Valid JSON string '{\"feePercent\": 5, \"cutoffHours\": 24}'",
+            [
+              1,
+              2,
+              3,
+              5,
+              8,
+              9
+            ]
+          ],
+          [
+            "Minimal valid JSON '{\"k\":1}'",
+            [
+              4
+            ]
+          ],
+          [
+            "Invalid JSON syntax '{feePercent: 5}'",
+            [
+              7
+            ]
+          ]
+        ]
+      ],
+      [
+        "dto.EffectiveDate",
+        [
+          [
+            "DateTime.UtcNow.AddDays(7) (Future)",
+            [
+              1,
+              2,
+              4,
+              5,
+              6,
+              7,
+              9
+            ]
+          ],
+          [
+            "DateTime.UtcNow (Boundary: immediate effect)",
+            [
+              3
+            ]
+          ],
+          [
+            "DateTime.UtcNow.AddDays(-5) (Abnormal: past)",
+            [
+              8
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "PolicyVersionDTO with Id > 0 and Status=\"DRAFT\" or \"ACTIVE\"",
+        [
+          1,
+          2,
+          3,
+          4
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "ConflictException (409 \"Policy version already exists\")",
+        [
+          5
+        ]
+      ],
+      [
+        "ValidationException (400 \"Version number is required\")",
+        [
+          6
+        ]
+      ],
+      [
+        "ValidationException (400 \"RulesJson must be valid JSON\")",
+        [
+          7
+        ]
+      ],
+      [
+        "ValidationException (400 \"EffectiveDate cannot be in the past\")",
+        [
+          8
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"Admin role required\")",
+        [
+          9
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Created policy version {Category} v{Version} successfully\"",
+        [
+          1,
+          2,
+          3,
+          4
+        ]
+      ],
+      [
+        "\"Duplicate policy version {Category} v{Version}\"",
+        [
+          5
+        ]
+      ],
+      [
+        "\"Policy validation error: {Error}\"",
+        [
+          6,
+          7,
+          8
+        ]
+      ],
+      [
+        "\"Unauthorized attempt to create policy by user {UserId}\"",
+        [
+          9
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 87,
+    "uc_id": "UC_11.3",
+    "code": "UC_11.3_SubmitOrganizerVerification",
+    "name": "SubmitVerification",
+    "req_name": "Submit Organizer Verification Documents",
+    "class_name": "OrganizerVerificationController",
+    "sheet_name": "UC_11.3_SubmitVerification",
+    "loc": 165.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Organizer submits business credentials (business name, tax code, document file URLs, contact info) for KYC review.",
+    "num_tc": 9,
+    "tc_types": [
+      "N",
+      "N",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database is accessible",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      ],
+      [
+        "Organizer does not have an active PENDING request",
+        [
+          1,
+          2,
+          3,
+          4,
+          6,
+          7,
+          8,
+          9
+        ]
+      ],
+      [
+        "Organizer already has a PENDING request awaiting review",
+        [
+          5
+        ]
+      ],
+      [
+        "Caller is authenticated Organizer",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      ],
+      [
+        "Caller is Customer without organizer profile",
+        [
+          9
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "dto.BusinessName",
+        [
+          [
+            "\"Saigon Sound LLC\"",
+            [
+              1,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ]
+          ],
+          [
+            "\"Hanoi Live Events Co.\"",
+            [
+              2
+            ]
+          ]
+        ]
+      ],
+      [
+        "dto.TaxCode",
+        [
+          [
+            "\"0102030405\" (10-digit valid tax code)",
+            [
+              1,
+              3,
+              4,
+              5,
+              6,
+              8,
+              9
+            ]
+          ],
+          [
+            "\"0102030405-001\" (13-digit valid tax code)",
+            [
+              2
+            ]
+          ],
+          [
+            "\"INVALID_TAX\" (Invalid alphanumeric/format)",
+            [
+              7
+            ]
+          ]
+        ]
+      ],
+      [
+        "dto.DocumentUrls",
+        [
+          [
+            "[\"https://s3.bucket/doc1.pdf\", \"https://s3.bucket/doc2.pdf\"]",
+            [
+              1,
+              2,
+              5,
+              7,
+              8,
+              9
+            ]
+          ],
+          [
+            "[\"https://s3.bucket/doc1.pdf\"] (Boundary: min 1 doc)",
+            [
+              3
+            ]
+          ],
+          [
+            "5 document URLs (Boundary: max 5 docs)",
+            [
+              4
+            ]
+          ],
+          [
+            "null or [] (Abnormal: empty list)",
+            [
+              6
+            ]
+          ]
+        ]
+      ],
+      [
+        "dto.ContactEmail",
+        [
+          [
+            "\"contact@saigonsound.com\"",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              9
+            ]
+          ],
+          [
+            "\"invalid-email-format\"",
+            [
+              8
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "VerificationRequestResponseDTO with Status=\"PENDING\" and RequestId > 0",
+        [
+          1,
+          2,
+          3,
+          4
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "ConflictException (409 \"You already have a pending verification request\")",
+        [
+          5
+        ]
+      ],
+      [
+        "ValidationException (400 \"At least one document URL is required\")",
+        [
+          6
+        ]
+      ],
+      [
+        "ValidationException (400 \"Invalid tax code format\")",
+        [
+          7
+        ]
+      ],
+      [
+        "ValidationException (400 \"Invalid contact email address\")",
+        [
+          8
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"Organizer role required to submit KYC\")",
+        [
+          9
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Verification request submitted by organizer {UserId} successfully\"",
+        [
+          1,
+          2,
+          3,
+          4
+        ]
+      ],
+      [
+        "\"Duplicate pending verification request for organizer {UserId}\"",
+        [
+          5
+        ]
+      ],
+      [
+        "\"Validation failed for verification submission: {Error}\"",
+        [
+          6,
+          7,
+          8
+        ]
+      ],
+      [
+        "\"Non-organizer user {UserId} attempted verification submission\"",
+        [
+          9
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 88,
+    "uc_id": "UC_11.4",
+    "code": "UC_11.4_ReviewOrganizerVerification",
+    "name": "GetVerificationRequests",
+    "req_name": "Review Organizer Verification Documents",
+    "class_name": "OrganizerVerificationController",
+    "sheet_name": "UC_11.4_ReviewVerification",
+    "loc": 140.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Admin queries pending and historical organizer verification requests with document links and business details.",
+    "num_tc": 9,
+    "tc_types": [
+      "N",
+      "N",
+      "N",
+      "B",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database has verification requests",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          8
+        ]
+      ],
+      [
+        "Database has 0 pending requests",
+        [
+          6
+        ]
+      ],
+      [
+        "Caller has Admin role",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      ],
+      [
+        "Caller has Organizer role",
+        [
+          9
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "status",
+        [
+          [
+            "null (all requests)",
+            [
+              1,
+              4,
+              5,
+              7,
+              8,
+              9
+            ]
+          ],
+          [
+            "\"PENDING\"",
+            [
+              2,
+              6
+            ]
+          ],
+          [
+            "\"APPROVED\"",
+            [
+              3
+            ]
+          ]
+        ]
+      ],
+      [
+        "page",
+        [
+          [
+            "1 (Normal)",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              9
+            ]
+          ],
+          [
+            "0 (Boundary: invalid)",
+            [
+              7
+            ]
+          ],
+          [
+            "-1 (Abnormal)",
+            [
+              8
+            ]
+          ]
+        ]
+      ],
+      [
+        "limit",
+        [
+          [
+            "10 (Normal)",
+            [
+              1,
+              2,
+              3,
+              6,
+              7,
+              8,
+              9
+            ]
+          ],
+          [
+            "1 (Boundary min)",
+            [
+              4
+            ]
+          ],
+          [
+            "100 (Boundary max)",
+            [
+              5
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "List<VerificationRequestResponseDTO> with Count > 0",
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      ],
+      [
+        "List<VerificationRequestResponseDTO> with Count == 0",
+        [
+          6
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "ArgumentException (400 \"Page must be >= 1\")",
+        [
+          7,
+          8
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"Admin access required\")",
+        [
+          9
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Retrieved {Count} verification requests for review\"",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      ],
+      [
+        "\"Invalid query parameters: page={Page}, limit={Limit}\"",
+        [
+          7,
+          8
+        ]
+      ],
+      [
+        "\"Forbidden access by user {UserId}\"",
+        [
+          9
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 89,
+    "uc_id": "UC_11.5",
+    "code": "UC_11.5_ApproveRejectVerification",
+    "name": "ReviewVerification",
+    "req_name": "Approve/Reject Organizer Verification",
+    "class_name": "OrganizerVerificationController",
+    "sheet_name": "UC_11.5_ApproveRejectKYC",
+    "loc": 150.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Admin approves or rejects organizer verification, updating account status and notifying the organizer.",
+    "num_tc": 9,
+    "tc_types": [
+      "N",
+      "N",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database has target verification request in PENDING status",
+        [
+          1,
+          2,
+          3,
+          4,
+          7,
+          8,
+          9
+        ]
+      ],
+      [
+        "Target request does not exist in DB",
+        [
+          5
+        ]
+      ],
+      [
+        "Target request is already APPROVED / REJECTED",
+        [
+          6
+        ]
+      ],
+      [
+        "Caller has Admin role",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      ],
+      [
+        "Caller has Organizer role",
+        [
+          9
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "id",
+        [
+          [
+            "501 (Valid Request ID)",
+            [
+              1,
+              2,
+              3,
+              4,
+              7,
+              8,
+              9
+            ]
+          ],
+          [
+            "99999 (Non-existent ID)",
+            [
+              5
+            ]
+          ],
+          [
+            "502 (Already resolved ID)",
+            [
+              6
+            ]
+          ]
+        ]
+      ],
+      [
+        "dto.Decision",
+        [
+          [
+            "\"APPROVE\"",
+            [
+              1,
+              3,
+              5,
+              6,
+              9
+            ]
+          ],
+          [
+            "\"REJECT\"",
+            [
+              2,
+              4,
+              7
+            ]
+          ],
+          [
+            "\"INVALID_ACTION\"",
+            [
+              8
+            ]
+          ]
+        ]
+      ],
+      [
+        "dto.RejectionReason",
+        [
+          [
+            "null or \"\" (Allowed for APPROVE)",
+            [
+              1,
+              3,
+              5,
+              6,
+              8,
+              9
+            ]
+          ],
+          [
+            "\"Business registration certificate expired\"",
+            [
+              2
+            ]
+          ],
+          [
+            "500 characters string (Boundary: max length)",
+            [
+              4
+            ]
+          ],
+          [
+            "null or \"\" (Abnormal: empty for REJECT)",
+            [
+              7
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "VerificationRequestResponseDTO with Status=\"APPROVED\"",
+        [
+          1,
+          3
+        ]
+      ],
+      [
+        "VerificationRequestResponseDTO with Status=\"REJECTED\"",
+        [
+          2,
+          4
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "KeyNotFoundException (404 \"Verification request not found\")",
+        [
+          5
+        ]
+      ],
+      [
+        "InvalidOperationException (400 \"Request has already been processed\")",
+        [
+          6
+        ]
+      ],
+      [
+        "ValidationException (400 \"RejectionReason is required when rejecting\")",
+        [
+          7
+        ]
+      ],
+      [
+        "ValidationException (400 \"Invalid decision value\")",
+        [
+          8
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"Admin privilege required\")",
+        [
+          9
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Verification request {Id} approved successfully\"",
+        [
+          1,
+          3
+        ]
+      ],
+      [
+        "\"Verification request {Id} rejected: {Reason}\"",
+        [
+          2,
+          4
+        ]
+      ],
+      [
+        "\"Verification request {Id} not found\"",
+        [
+          5
+        ]
+      ],
+      [
+        "\"Cannot process request {Id}: already finalized\"",
+        [
+          6
+        ]
+      ],
+      [
+        "\"Validation failed for KYC decision: {Error}\"",
+        [
+          7,
+          8
+        ]
+      ],
+      [
+        "\"Forbidden access by user {UserId}\"",
+        [
+          9
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 105,
+    "uc_id": "UC_14.1",
+    "code": "UC_14.1_MonitorCheckinStatus",
+    "name": "GetMonitorStatusAsync",
+    "req_name": "Monitor Real-time Check-in Status",
+    "class_name": "CheckinMonitorController / CheckinMonitorService",
+    "sheet_name": "UC_14.1_MonitorCheckin",
+    "loc": 165.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Organizer and Admin query live aggregate check-in throughput, capacity percentages, and per-gate traffic stats.",
+    "num_tc": 9,
+    "tc_types": [
+      "N",
+      "N",
+      "N",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database has active event with check-in records",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          8,
+          9
+        ]
+      ],
+      [
+        "Event has 0 check-ins scanned so far",
+        [
+          4
+        ]
+      ],
+      [
+        "Event does not exist in DB",
+        [
+          6
+        ]
+      ],
+      [
+        "Caller is authorized Organizer or Admin",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      ],
+      [
+        "Caller is Customer role",
+        [
+          9
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "eventId",
+        [
+          [
+            "2001 (Active Concert Event)",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              8,
+              9
+            ]
+          ],
+          [
+            "99999 (Non-existent Event ID)",
+            [
+              6
+            ]
+          ],
+          [
+            "0 or -1 (Abnormal invalid Event ID)",
+            [
+              7
+            ]
+          ]
+        ]
+      ],
+      [
+        "gateId",
+        [
+          [
+            "null (all gates summary)",
+            [
+              1,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ]
+          ],
+          [
+            "\"GATE_A\" (Filter Gate A)",
+            [
+              2
+            ]
+          ]
+        ]
+      ],
+      [
+        "zone",
+        [
+          [
+            "null (all zones)",
+            [
+              1,
+              2,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ]
+          ],
+          [
+            "\"VIP\" (Filter VIP zone)",
+            [
+              3
+            ]
+          ]
+        ]
+      ],
+      [
+        "currentUserId",
+        [
+          [
+            "10 (Organizer owner ID)",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ]
+          ],
+          [
+            "99 (Non-owner organizer)",
+            [
+              8
+            ]
+          ],
+          [
+            "500 (Customer ID)",
+            [
+              9
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "CheckinMonitorResponseDTO with ScannedTickets > 0, CheckinRate > 0%",
+        [
+          1,
+          2,
+          3,
+          5
+        ]
+      ],
+      [
+        "CheckinMonitorResponseDTO with ScannedTickets == 0, CheckinRate == 0.0%",
+        [
+          4
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "KeyNotFoundException (404 \"Event not found\")",
+        [
+          6
+        ]
+      ],
+      [
+        "ArgumentException (400 \"Event ID must be positive\")",
+        [
+          7
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"You are not authorized to view this event\")",
+        [
+          8,
+          9
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Generated checkin monitor dashboard for event {EventId}\"",
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      ],
+      [
+        "\"Event {EventId} not found\"",
+        [
+          6
+        ]
+      ],
+      [
+        "\"Invalid eventId: {EventId}\"",
+        [
+          7
+        ]
+      ],
+      [
+        "\"Access denied to monitoring dashboard for user {UserId}\"",
+        [
+          8,
+          9
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 109,
+    "uc_id": "UC_14.5",
+    "code": "UC_14.5_EnableOfflineMode",
+    "name": "GetOfflinePackageAsync",
+    "req_name": "Enable Offline Check-in Mode",
+    "class_name": "TicketGovernanceController / TicketGovernanceService",
+    "sheet_name": "UC_14.5_EnableOffline",
+    "loc": 175.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Staff downloads signed & encrypted offline ticket manifest package to allow gate scanning during internet outage.",
+    "num_tc": 9,
+    "tc_types": [
+      "N",
+      "N",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database has published event with active tickets",
+        [
+          1,
+          2,
+          3,
+          4,
+          7,
+          8,
+          9
+        ]
+      ],
+      [
+        "Event has 1 ticket (Boundary)",
+        [
+          3
+        ]
+      ],
+      [
+        "Event is in DRAFT status (not published)",
+        [
+          6
+        ]
+      ],
+      [
+        "Event does not exist in DB",
+        [
+          5
+        ]
+      ],
+      [
+        "Caller is assigned Staff / Organizer / Admin",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      ],
+      [
+        "Caller is Customer role",
+        [
+          9
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "eventId",
+        [
+          [
+            "2001 (Valid Event ID)",
+            [
+              1,
+              2,
+              4,
+              8,
+              9
+            ]
+          ],
+          [
+            "2002 (Small Event with 1 ticket)",
+            [
+              3
+            ]
+          ],
+          [
+            "99999 (Non-existent ID)",
+            [
+              5
+            ]
+          ],
+          [
+            "3001 (Draft event)",
+            [
+              6
+            ]
+          ],
+          [
+            "0 or -1 (Abnormal)",
+            [
+              7
+            ]
+          ]
+        ]
+      ],
+      [
+        "staffUserId",
+        [
+          [
+            "50 (Assigned Gate Staff)",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ]
+          ],
+          [
+            "88 (Unassigned Staff)",
+            [
+              8
+            ]
+          ],
+          [
+            "200 (Customer)",
+            [
+              9
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "OfflinePackageResponseDTO with PackageHash, TicketCount > 1, SignedPayload",
+        [
+          1,
+          2,
+          4
+        ]
+      ],
+      [
+        "OfflinePackageResponseDTO with TicketCount == 1",
+        [
+          3
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "KeyNotFoundException (404 \"Event not found\")",
+        [
+          5
+        ]
+      ],
+      [
+        "InvalidOperationException (400 \"Cannot generate offline package for unpublished event\")",
+        [
+          6
+        ]
+      ],
+      [
+        "ArgumentException (400 \"EventId must be positive\")",
+        [
+          7
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"Staff member is not assigned to this event\")",
+        [
+          8
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"Staff or Organizer permission required\")",
+        [
+          9
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Generated encrypted offline package for event {EventId}, version={Version}\"",
+        [
+          1,
+          2,
+          3,
+          4
+        ]
+      ],
+      [
+        "\"Event {EventId} not found\"",
+        [
+          5
+        ]
+      ],
+      [
+        "\"Invalid event status for offline export: {Status}\"",
+        [
+          6
+        ]
+      ],
+      [
+        "\"Invalid eventId: {EventId}\"",
+        [
+          7
+        ]
+      ],
+      [
+        "\"Unauthorized offline package download attempt by user {UserId}\"",
+        [
+          8,
+          9
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 110,
+    "uc_id": "UC_14.6",
+    "code": "UC_14.6_SyncOfflineRecords",
+    "name": "SyncOfflineScansAsync",
+    "req_name": "Sync Offline Check-in Records",
+    "class_name": "TicketGovernanceController / TicketGovernanceService",
+    "sheet_name": "UC_14.6_SyncOffline",
+    "loc": 190.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Staff uploads offline scan batch upon network recovery, reconciling tickets and flagging duplicates as conflicts.",
+    "num_tc": 10,
+    "tc_types": [
+      "N",
+      "N",
+      "N",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database is accessible and event exists",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          8,
+          9,
+          10
+        ]
+      ],
+      [
+        "Event does not exist in DB",
+        [
+          6
+        ]
+      ],
+      [
+        "Caller has Staff role",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      ],
+      [
+        "Caller has Customer role",
+        [
+          10
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "request.EventId",
+        [
+          [
+            "2001 (Valid Event ID)",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              7,
+              8,
+              9,
+              10
+            ]
+          ],
+          [
+            "99999 (Non-existent Event ID)",
+            [
+              6
+            ]
+          ]
+        ]
+      ],
+      [
+        "request.Scans",
+        [
+          [
+            "50 clean scans (no conflicts)",
+            [
+              1
+            ]
+          ],
+          [
+            "30 scans containing 2 duplicate tickets",
+            [
+              2
+            ]
+          ],
+          [
+            "20 scans across Gates A and B",
+            [
+              3
+            ]
+          ],
+          [
+            "1 scan (Boundary: min batch)",
+            [
+              4
+            ]
+          ],
+          [
+            "500 scans (Boundary: max batch size)",
+            [
+              5
+            ]
+          ],
+          [
+            "null or [] (Abnormal: empty scans)",
+            [
+              7
+            ]
+          ],
+          [
+            "Scans with tampered/invalid offline signature",
+            [
+              8
+            ]
+          ],
+          [
+            "Scans with future timestamp (+2 days)",
+            [
+              9
+            ]
+          ],
+          [
+            "50 scans by Customer",
+            [
+              10
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "OfflineSyncResponseDTO with SyncedCount=50, ConflictCount=0",
+        [
+          1
+        ]
+      ],
+      [
+        "OfflineSyncResponseDTO with SyncedCount=28, ConflictCount=2",
+        [
+          2
+        ]
+      ],
+      [
+        "OfflineSyncResponseDTO with SyncedCount=20, ConflictCount=0",
+        [
+          3
+        ]
+      ],
+      [
+        "OfflineSyncResponseDTO with SyncedCount=1, ConflictCount=0",
+        [
+          4
+        ]
+      ],
+      [
+        "OfflineSyncResponseDTO with SyncedCount=500, ConflictCount=0",
+        [
+          5
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "KeyNotFoundException (404 \"Event not found\")",
+        [
+          6
+        ]
+      ],
+      [
+        "ValidationException (400 \"Scans list cannot be empty\")",
+        [
+          7
+        ]
+      ],
+      [
+        "SecurityException (400 \"Invalid scan payload digital signature\")",
+        [
+          8
+        ]
+      ],
+      [
+        "ValidationException (400 \"Scan timestamp cannot be in the future\")",
+        [
+          9
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"Staff permission required to sync offline records\")",
+        [
+          10
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Processed offline sync batch: {Synced} synced, {Conflicts} conflicts\"",
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      ],
+      [
+        "\"Event {EventId} not found\"",
+        [
+          6
+        ]
+      ],
+      [
+        "\"Validation failed: {Error}\"",
+        [
+          7,
+          9
+        ]
+      ],
+      [
+        "\"Security alert: tampered offline scan signature detected from device {DeviceId}\"",
+        [
+          8
+        ]
+      ],
+      [
+        "\"Forbidden access by user {UserId}\"",
+        [
+          10
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 111,
+    "uc_id": "UC_14.7",
+    "code": "UC_14.7_ResolveOfflineConflicts",
+    "name": "ResolveOfflineConflictAsync",
+    "req_name": "Resolve Offline Sync Conflicts",
+    "class_name": "TicketGovernanceController / TicketGovernanceService",
+    "sheet_name": "UC_14.7_ResolveConflicts",
+    "loc": 160.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Admin or Organizer inspects conflicting scan records and applies resolution (ACCEPT_OFFLINE, KEEP_ONLINE, MANUAL_OVERRIDE).",
+    "num_tc": 9,
+    "tc_types": [
+      "N",
+      "N",
+      "N",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database has conflict record in UNRESOLVED status",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          8,
+          9
+        ]
+      ],
+      [
+        "Conflict record does not exist in DB",
+        [
+          6
+        ]
+      ],
+      [
+        "Caller has Admin or Organizer role",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      ],
+      [
+        "Caller has Staff role (without resolution rights)",
+        [
+          9
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "conflictId",
+        [
+          [
+            "\"CONF-101\" (Valid Conflict ID)",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              7,
+              8,
+              9
+            ]
+          ],
+          [
+            "\"CONF-999\" (Non-existent ID)",
+            [
+              6
+            ]
+          ]
+        ]
+      ],
+      [
+        "request.Resolution",
+        [
+          [
+            "\"ACCEPT_OFFLINE\"",
+            [
+              1
+            ]
+          ],
+          [
+            "\"KEEP_ONLINE\"",
+            [
+              2
+            ]
+          ],
+          [
+            "\"MANUAL_OVERRIDE\"",
+            [
+              3,
+              4,
+              5
+            ]
+          ],
+          [
+            "\"INVALID_ACTION\"",
+            [
+              7
+            ]
+          ],
+          [
+            "\"KEEP_ONLINE\"",
+            [
+              8,
+              9
+            ]
+          ]
+        ]
+      ],
+      [
+        "request.Reason",
+        [
+          [
+            "\"Offline scan occurred earlier than online duplicate\"",
+            [
+              1
+            ]
+          ],
+          [
+            "\"Online entry verified with live biometric match\"",
+            [
+              2
+            ]
+          ],
+          [
+            "\"Supervisor authorized entry at Gate A\"",
+            [
+              3
+            ]
+          ],
+          [
+            "500 chars note (Boundary: max length)",
+            [
+              4
+            ]
+          ],
+          [
+            "10 chars note (Boundary: min length)",
+            [
+              5
+            ]
+          ],
+          [
+            "\"\" (Abnormal: empty reason)",
+            [
+              8
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "OfflineSyncConflictDTO with Status=\"RESOLVED\", Resolution=\"ACCEPT_OFFLINE\"",
+        [
+          1
+        ]
+      ],
+      [
+        "OfflineSyncConflictDTO with Status=\"RESOLVED\", Resolution=\"KEEP_ONLINE\"",
+        [
+          2
+        ]
+      ],
+      [
+        "OfflineSyncConflictDTO with Status=\"RESOLVED\", Resolution=\"MANUAL_OVERRIDE\"",
+        [
+          3,
+          4,
+          5
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "KeyNotFoundException (404 \"Conflict record not found\")",
+        [
+          6
+        ]
+      ],
+      [
+        "ValidationException (400 \"Invalid resolution action\")",
+        [
+          7
+        ]
+      ],
+      [
+        "ValidationException (400 \"Resolution reason is required\")",
+        [
+          8
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"Admin or Organizer role required to resolve conflicts\")",
+        [
+          9
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Conflict {ConflictId} resolved with action {Resolution} by user {UserId}\"",
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      ],
+      [
+        "\"Conflict {ConflictId} not found\"",
+        [
+          6
+        ]
+      ],
+      [
+        "\"Validation failed: {Error}\"",
+        [
+          7,
+          8
+        ]
+      ],
+      [
+        "\"Access denied: {UserId} lacks conflict resolution permission\"",
+        [
+          9
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 112,
+    "uc_id": "UC_15.1",
+    "code": "UC_15.1_ViewGateAssignment",
+    "name": "GetGateAssignmentAsync",
+    "req_name": "View Gate Assignment",
+    "class_name": "CheckinMonitorController / CheckinMonitorService",
+    "sheet_name": "UC_15.1_GateAssignment",
+    "loc": 125.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Staff member views their assigned gate, entrance zone constraints, and event metadata for active shift.",
+    "num_tc": 8,
+    "tc_types": [
+      "N",
+      "N",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database has active event with gate assignment for staff",
+        [
+          1,
+          2,
+          3,
+          4
+        ]
+      ],
+      [
+        "Staff member has no gate assigned for this event",
+        [
+          5
+        ]
+      ],
+      [
+        "Event does not exist in DB",
+        [
+          6
+        ]
+      ],
+      [
+        "Caller is authenticated Staff member",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      ],
+      [
+        "Caller is Customer role",
+        [
+          8
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "eventId",
+        [
+          [
+            "3001 (Active Event ID)",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              8
+            ]
+          ],
+          [
+            "99999 (Non-existent ID)",
+            [
+              6
+            ]
+          ],
+          [
+            "0 or -1 (Abnormal)",
+            [
+              7
+            ]
+          ]
+        ]
+      ],
+      [
+        "staffUserId",
+        [
+          [
+            "101 (Assigned to Gate A)",
+            [
+              1
+            ]
+          ],
+          [
+            "102 (Supervisor assigned to ALL gates)",
+            [
+              2
+            ]
+          ],
+          [
+            "1 (Boundary: min ID)",
+            [
+              3
+            ]
+          ],
+          [
+            "999999 (Boundary: max ID)",
+            [
+              4
+            ]
+          ],
+          [
+            "103 (Staff without assignment)",
+            [
+              5
+            ]
+          ],
+          [
+            "101",
+            [
+              6,
+              7
+            ]
+          ],
+          [
+            "501 (Customer ID)",
+            [
+              8
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "GateAssignmentResponseDTO with GateId=\"GATE_A\", Zones=[\"VIP\", \"STANDARD\"]",
+        [
+          1,
+          3,
+          4
+        ]
+      ],
+      [
+        "GateAssignmentResponseDTO with GateId=\"ALL\", IsSupervisor=true",
+        [
+          2
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "KeyNotFoundException (404 \"No gate assignment found for this event\")",
+        [
+          5
+        ]
+      ],
+      [
+        "KeyNotFoundException (404 \"Event not found\")",
+        [
+          6
+        ]
+      ],
+      [
+        "ArgumentException (400 \"Event ID must be positive\")",
+        [
+          7
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"Staff permission required\")",
+        [
+          8
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Fetched gate assignment for staff {UserId} at event {EventId}\"",
+        [
+          1,
+          2,
+          3,
+          4
+        ]
+      ],
+      [
+        "\"No gate assignment for staff {UserId}\"",
+        [
+          5
+        ]
+      ],
+      [
+        "\"Event {EventId} not found\"",
+        [
+          6
+        ]
+      ],
+      [
+        "\"Invalid eventId: {EventId}\"",
+        [
+          7
+        ]
+      ],
+      [
+        "\"Forbidden access by user {UserId}\"",
+        [
+          8
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 113,
+    "uc_id": "UC_15.2",
+    "code": "UC_15.2_ScanDynamicQRTicket",
+    "name": "ScanDynamicQrTicketAsync",
+    "req_name": "Scan Dynamic QR Ticket",
+    "class_name": "CheckinMonitorController / CheckinMonitorService",
+    "sheet_name": "UC_15.2_ScanDynamicQR",
+    "loc": 210.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Staff scans encrypted rotating TOTP dynamic QR code, verifies cryptographic signature, checks replay, and records entry.",
+    "num_tc": 11,
+    "tc_types": [
+      "N",
+      "N",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A",
+      "A",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database has valid, un-scanned ticket for event",
+        [
+          1,
+          2,
+          3,
+          4
+        ]
+      ],
+      [
+        "Ticket was already scanned (USED)",
+        [
+          6
+        ]
+      ],
+      [
+        "Ticket is in REVOKED status",
+        [
+          7
+        ]
+      ],
+      [
+        "Ticket belongs to different event",
+        [
+          8
+        ]
+      ],
+      [
+        "Ticket is designated for Gate B (not Gate A)",
+        [
+          9
+        ]
+      ],
+      [
+        "Caller is authorized Staff",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10
+        ]
+      ],
+      [
+        "Caller is Customer role",
+        [
+          11
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "request.EventId",
+        [
+          [
+            "3001 (Valid Event ID)",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ]
+          ]
+        ]
+      ],
+      [
+        "request.GateId",
+        [
+          [
+            "\"GATE_A\"",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ]
+          ]
+        ]
+      ],
+      [
+        "request.QrToken & TotpCode",
+        [
+          [
+            "Valid Dynamic QR Token with valid TOTP code",
+            [
+              1,
+              2
+            ]
+          ],
+          [
+            "TOTP code at second 29 of 30s window (Boundary)",
+            [
+              3
+            ]
+          ],
+          [
+            "Scan right at gate opening timestamp (Boundary)",
+            [
+              4
+            ]
+          ],
+          [
+            "Expired TOTP code (timestamp drifted > 30s)",
+            [
+              5
+            ]
+          ],
+          [
+            "Valid token for already-used ticket",
+            [
+              6
+            ]
+          ],
+          [
+            "Valid token for revoked ticket",
+            [
+              7
+            ]
+          ],
+          [
+            "Valid token for Event 4001 (wrong event)",
+            [
+              8
+            ]
+          ],
+          [
+            "Valid token for Gate B (wrong gate)",
+            [
+              9
+            ]
+          ],
+          [
+            "Malformed/tampered QR ciphertext string",
+            [
+              10
+            ]
+          ],
+          [
+            "Valid dynamic QR called by Customer",
+            [
+              11
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "ScanResultResponseDTO with Result=\"SUCCESS\", AttendeeName, SeatCode, Zone=\"VIP\"",
+        [
+          1,
+          2,
+          3,
+          4
+        ]
+      ],
+      [
+        "ScanResultResponseDTO with Result=\"EXPIRED_QR\", Message=\"QR code expired\"",
+        [
+          5
+        ]
+      ],
+      [
+        "ScanResultResponseDTO with Result=\"ALREADY_USED\", ScannedAt=\"18:30:00\"",
+        [
+          6
+        ]
+      ],
+      [
+        "ScanResultResponseDTO with Result=\"INVALID_STATUS\", Status=\"REVOKED\"",
+        [
+          7
+        ]
+      ],
+      [
+        "ScanResultResponseDTO with Result=\"WRONG_EVENT\", Message=\"Ticket belongs to another event\"",
+        [
+          8
+        ]
+      ],
+      [
+        "ScanResultResponseDTO with Result=\"WRONG_GATE\", Message=\"Ticket assigned to Gate B\"",
+        [
+          9
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "SecurityException (400 \"Invalid QR ciphertext payload\")",
+        [
+          10
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"Staff permission required\")",
+        [
+          11
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Ticket {TicketId} checked in successfully at gate {GateId}\"",
+        [
+          1,
+          2,
+          3,
+          4
+        ]
+      ],
+      [
+        "\"Check-in scan rejected: {Result} for ticket {TicketId}\"",
+        [
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      ],
+      [
+        "\"Tampered or corrupted QR token received\"",
+        [
+          10
+        ]
+      ],
+      [
+        "\"Forbidden check-in scan attempt by user {UserId}\"",
+        [
+          11
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 114,
+    "uc_id": "UC_15.3",
+    "code": "UC_15.3_ManualCheckin",
+    "name": "ManualCheckinAsync",
+    "req_name": "Manual Check-in",
+    "class_name": "CheckinMonitorController / CheckinMonitorService",
+    "sheet_name": "UC_15.3_ManualCheckin",
+    "loc": 170.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Staff manually checks in attendee upon phone battery failure or damaged screen using ticket code and ID document.",
+    "num_tc": 9,
+    "tc_types": [
+      "N",
+      "N",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database has valid, un-scanned ticket for event",
+        [
+          1,
+          2,
+          3,
+          4,
+          7,
+          8,
+          9
+        ]
+      ],
+      [
+        "Ticket does not exist in DB",
+        [
+          5
+        ]
+      ],
+      [
+        "Ticket was already checked in",
+        [
+          6
+        ]
+      ],
+      [
+        "Caller is authorized Staff",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      ],
+      [
+        "Caller is Customer role",
+        [
+          9
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "request.TicketCode",
+        [
+          [
+            "\"TK-LIVE-1001\"",
+            [
+              1,
+              3,
+              4,
+              6,
+              7,
+              8,
+              9
+            ]
+          ],
+          [
+            "\"TK-LIVE-1002\"",
+            [
+              2
+            ]
+          ],
+          [
+            "\"TK-INVALID-9999\"",
+            [
+              5
+            ]
+          ]
+        ]
+      ],
+      [
+        "request.IdDocumentNumber",
+        [
+          [
+            "\"079099012345\" (Citizen ID card)",
+            [
+              1,
+              2,
+              3,
+              5,
+              6,
+              8,
+              9
+            ]
+          ],
+          [
+            "\"B1234567\" (Passport number)",
+            [
+              4
+            ]
+          ],
+          [
+            "\"\" (Abnormal: empty ID document)",
+            [
+              7
+            ]
+          ]
+        ]
+      ],
+      [
+        "request.Reason",
+        [
+          [
+            "\"Attendee phone battery died; identity verified via National ID\"",
+            [
+              1,
+              2,
+              5,
+              6,
+              7,
+              9
+            ]
+          ],
+          [
+            "10 chars string (Boundary: min length)",
+            [
+              3
+            ]
+          ],
+          [
+            "250 chars string (Boundary: max length)",
+            [
+              4
+            ]
+          ],
+          [
+            "\"\" (Abnormal: empty reason)",
+            [
+              8
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "ScanResultResponseDTO with Result=\"SUCCESS\", CheckinType=\"MANUAL\"",
+        [
+          1,
+          2,
+          3,
+          4
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "KeyNotFoundException (404 \"Ticket code not found\")",
+        [
+          5
+        ]
+      ],
+      [
+        "InvalidOperationException (409 \"Ticket is already checked in\")",
+        [
+          6
+        ]
+      ],
+      [
+        "ValidationException (400 \"ID document number is required\")",
+        [
+          7
+        ]
+      ],
+      [
+        "ValidationException (400 \"Manual check-in reason is required\")",
+        [
+          8
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"Staff privilege required\")",
+        [
+          9
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Manual check-in completed for ticket {TicketCode} by staff {UserId}\"",
+        [
+          1,
+          2,
+          3,
+          4
+        ]
+      ],
+      [
+        "\"Ticket code {TicketCode} not found for manual check-in\"",
+        [
+          5
+        ]
+      ],
+      [
+        "\"Duplicate manual check-in attempt for ticket {TicketCode}\"",
+        [
+          6
+        ]
+      ],
+      [
+        "\"Manual check-in validation error: {Error}\"",
+        [
+          7,
+          8
+        ]
+      ],
+      [
+        "\"Unauthorized manual check-in attempt by user {UserId}\"",
+        [
+          9
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 115,
+    "uc_id": "UC_15.4",
+    "code": "UC_15.4_LookupTicket",
+    "name": "LookupTicketsAsync",
+    "req_name": "Lookup Ticket",
+    "class_name": "CheckinMonitorController / CheckinMonitorService",
+    "sheet_name": "UC_15.4_LookupTicket",
+    "loc": 140.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Staff searches for attendee tickets by customer email, phone number, attendee name, or order code at helpdesk.",
+    "num_tc": 9,
+    "tc_types": [
+      "N",
+      "N",
+      "N",
+      "B",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database has attendee tickets for event",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          8,
+          9
+        ]
+      ],
+      [
+        "No tickets match search keyword",
+        [
+          6
+        ]
+      ],
+      [
+        "Caller is authorized Staff",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      ],
+      [
+        "Caller is Customer role",
+        [
+          9
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "request.EventId",
+        [
+          [
+            "3001 (Valid Event ID)",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              8,
+              9
+            ]
+          ],
+          [
+            "0 or -1 (Abnormal invalid Event ID)",
+            [
+              7
+            ]
+          ]
+        ]
+      ],
+      [
+        "request.SearchKeyword",
+        [
+          [
+            "\"0901234567\" (Search by Phone number)",
+            [
+              1
+            ]
+          ],
+          [
+            "\"customer@example.com\" (Search by Email)",
+            [
+              2
+            ]
+          ],
+          [
+            "\"Nguyen Van A\" (Search by Customer Name)",
+            [
+              3
+            ]
+          ],
+          [
+            "\"ORD\" (Boundary: 3 chars minimum search length)",
+            [
+              4
+            ]
+          ],
+          [
+            "\"ORD-2026-LONG-SEARCH-STRING-50-CHARS\"",
+            [
+              5
+            ]
+          ],
+          [
+            "\"NON_EXISTENT_KEYWORD\"",
+            [
+              6
+            ]
+          ],
+          [
+            "\"0901234567\"",
+            [
+              7
+            ]
+          ],
+          [
+            "\"AB\" (Abnormal: length < 3 chars)",
+            [
+              8
+            ]
+          ],
+          [
+            "\"0901234567\"",
+            [
+              9
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "LookupTicketResponseDTO with Matches.Count > 0",
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      ],
+      [
+        "LookupTicketResponseDTO with Matches.Count == 0",
+        [
+          6
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "ArgumentException (400 \"Event ID must be positive\")",
+        [
+          7
+        ]
+      ],
+      [
+        "ValidationException (400 \"Search keyword must have at least 3 characters\")",
+        [
+          8
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"Staff permission required\")",
+        [
+          9
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Found {Count} tickets matching keyword {Keyword} for event {EventId}\"",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      ],
+      [
+        "\"Invalid lookup parameters: {Error}\"",
+        [
+          7,
+          8
+        ]
+      ],
+      [
+        "\"Unauthorized ticket lookup by user {UserId}\"",
+        [
+          9
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 116,
+    "uc_id": "UC_15.5",
+    "code": "UC_15.5_ViewCheckinScanHistory",
+    "name": "GetScanHistoryAsync",
+    "req_name": "View Check-in Scan History",
+    "class_name": "CheckinMonitorController / CheckinMonitorService",
+    "sheet_name": "UC_15.5_ScanHistory",
+    "loc": 130.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Staff queries their personal recent scan history (status, ticket code, timestamp, gate) at scanner terminal.",
+    "num_tc": 9,
+    "tc_types": [
+      "N",
+      "N",
+      "N",
+      "B",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database contains scan logs for staff member",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          8,
+          9
+        ]
+      ],
+      [
+        "Staff member has 0 scans performed today",
+        [
+          6
+        ]
+      ],
+      [
+        "Caller has Staff role",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      ],
+      [
+        "Caller has Customer role",
+        [
+          9
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "eventId",
+        [
+          [
+            "3001 (Valid Event ID)",
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              8,
+              9
+            ]
+          ],
+          [
+            "0 or -1 (Abnormal)",
+            [
+              7
+            ]
+          ]
+        ]
+      ],
+      [
+        "statusFilter",
+        [
+          [
+            "null (all scans)",
+            [
+              1,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9
+            ]
+          ],
+          [
+            "\"SUCCESS\"",
+            [
+              2
+            ]
+          ],
+          [
+            "\"FAILED\"",
+            [
+              3
+            ]
+          ]
+        ]
+      ],
+      [
+        "gateId",
+        [
+          [
+            "null (all gates)",
+            [
+              1,
+              2,
+              3,
+              5,
+              6,
+              7,
+              8,
+              9
+            ]
+          ],
+          [
+            "\"GATE_A\"",
+            [
+              4
+            ]
+          ]
+        ]
+      ],
+      [
+        "limit",
+        [
+          [
+            "20 (Normal)",
+            [
+              1,
+              2,
+              3,
+              4,
+              6,
+              7,
+              8,
+              9
+            ]
+          ],
+          [
+            "50 (Boundary: max limit)",
+            [
+              5
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "ScanHistoryResponseDTO with Items.Count > 0 and TotalScans >= Items.Count",
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      ],
+      [
+        "ScanHistoryResponseDTO with Items.Count == 0 and TotalScans == 0",
+        [
+          6
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "ArgumentException (400 \"Event ID must be positive\")",
+        [
+          7
+        ]
+      ],
+      [
+        "ValidationException (400 \"Invalid status filter value\")",
+        [
+          8
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"Staff permission required\")",
+        [
+          9
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Fetched {Count} scan history records for staff {StaffId} at event {EventId}\"",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      ],
+      [
+        "\"Invalid scan history parameters: {Error}\"",
+        [
+          7,
+          8
+        ]
+      ],
+      [
+        "\"Forbidden access by user {UserId}\"",
+        [
+          9
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 155,
+    "uc_id": "UC_20.1",
+    "code": "UC_20.1_ViewNotifications",
+    "name": "GetUserNotificationsAsync",
+    "req_name": "View Notifications",
+    "class_name": "NotificationsController / NotificationService",
+    "sheet_name": "UC_20.1_ViewNotifs",
+    "loc": 120.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Customer and Organizer retrieve notifications inbox with unread counts, timestamps, and deep-link payload.",
+    "num_tc": 8,
+    "tc_types": [
+      "N",
+      "N",
+      "B",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database has notifications for user",
+        [
+          1,
+          2,
+          4,
+          5
+        ]
+      ],
+      [
+        "User has 0 notifications (new account)",
+        [
+          3
+        ]
+      ],
+      [
+        "User is authenticated (Customer or Organizer)",
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      ],
+      [
+        "User account does not exist / deleted",
+        [
+          6
+        ]
+      ],
+      [
+        "User is unauthenticated (anonymous)",
+        [
+          7,
+          8
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "userId",
+        [
+          [
+            "101 (Customer with 5 unread, 10 total)",
+            [
+              1
+            ]
+          ],
+          [
+            "201 (Organizer with notifications)",
+            [
+              2
+            ]
+          ],
+          [
+            "301 (User with zero notifications)",
+            [
+              3
+            ]
+          ],
+          [
+            "1 (Boundary: min ID)",
+            [
+              4
+            ]
+          ],
+          [
+            "999999 (Boundary: high ID)",
+            [
+              5
+            ]
+          ],
+          [
+            "88888 (Deleted user ID)",
+            [
+              6
+            ]
+          ],
+          [
+            "0 (Boundary: invalid)",
+            [
+              7
+            ]
+          ],
+          [
+            "-1 (Abnormal: negative)",
+            [
+              8
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "NotificationListResponseDTO with UnreadCount=5, Notifications.Count=10",
+        [
+          1
+        ]
+      ],
+      [
+        "NotificationListResponseDTO with UnreadCount > 0, Count > 0",
+        [
+          2,
+          4,
+          5
+        ]
+      ],
+      [
+        "NotificationListResponseDTO with UnreadCount=0, Notifications.Count=0",
+        [
+          3
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "KeyNotFoundException (404 \"User account not found\")",
+        [
+          6
+        ]
+      ],
+      [
+        "UnauthorizedAccessException (401 \"User authentication required\")",
+        [
+          7,
+          8
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Retrieved notifications for user {UserId}: {Unread} unread out of {Total}\"",
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      ],
+      [
+        "\"User {UserId} not found\"",
+        [
+          6
+        ]
+      ],
+      [
+        "\"Anonymous request to notification inbox rejected\"",
+        [
+          7,
+          8
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 156,
+    "uc_id": "UC_20.2",
+    "code": "UC_20.2_MarkNotificationAsRead",
+    "name": "MarkAsReadAsync",
+    "req_name": "Mark Notification as Read",
+    "class_name": "NotificationsController / NotificationService",
+    "sheet_name": "UC_20.2_MarkRead",
+    "loc": 95.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Recipient marks a specific notification as read, updating IsRead=true and setting ReadAt timestamp.",
+    "num_tc": 8,
+    "tc_types": [
+      "N",
+      "N",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database has unread notification belonging to caller",
+        [
+          1,
+          3,
+          4
+        ]
+      ],
+      [
+        "Notification is already marked as read (IsRead=true)",
+        [
+          2
+        ]
+      ],
+      [
+        "Notification does not exist in DB",
+        [
+          5
+        ]
+      ],
+      [
+        "Notification belongs to another user",
+        [
+          6
+        ]
+      ],
+      [
+        "Caller is authenticated",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      ],
+      [
+        "Caller is unauthenticated",
+        [
+          8
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "id",
+        [
+          [
+            "1001 (Unread notification ID)",
+            [
+              1
+            ]
+          ],
+          [
+            "1002 (Already read notification ID)",
+            [
+              2
+            ]
+          ],
+          [
+            "1 (Boundary: min ID)",
+            [
+              3
+            ]
+          ],
+          [
+            "999999 (Boundary: high ID)",
+            [
+              4
+            ]
+          ],
+          [
+            "88888 (Non-existent ID)",
+            [
+              5
+            ]
+          ],
+          [
+            "2001 (Notification owned by User 99)",
+            [
+              6
+            ]
+          ],
+          [
+            "0 or -1 (Abnormal invalid ID)",
+            [
+              7
+            ]
+          ],
+          [
+            "1001 (Called without token)",
+            [
+              8
+            ]
+          ]
+        ]
+      ],
+      [
+        "userId",
+        [
+          [
+            "101 (Owner user ID)",
+            [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          ],
+          [
+            "101 (Non-owner user ID)",
+            [
+              6
+            ]
+          ],
+          [
+            "101",
+            [
+              7
+            ]
+          ],
+          [
+            "0 (Unauthenticated)",
+            [
+              8
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "Object { success: true, isRead: true }",
+        [
+          1,
+          2,
+          3,
+          4
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "KeyNotFoundException (404 \"Notification not found\")",
+        [
+          5
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"You do not have access to this notification\")",
+        [
+          6
+        ]
+      ],
+      [
+        "ArgumentException (400 \"Notification ID must be positive\")",
+        [
+          7
+        ]
+      ],
+      [
+        "UnauthorizedAccessException (401 \"Authentication required\")",
+        [
+          8
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Notification {Id} marked as read by user {UserId}\"",
+        [
+          1,
+          2,
+          3,
+          4
+        ]
+      ],
+      [
+        "\"Notification {Id} not found\"",
+        [
+          5
+        ]
+      ],
+      [
+        "\"Access denied: notification {Id} does not belong to user {UserId}\"",
+        [
+          6
+        ]
+      ],
+      [
+        "\"Invalid notification ID: {Id}\"",
+        [
+          7
+        ]
+      ],
+      [
+        "\"Unauthenticated mark-as-read attempt\"",
+        [
+          8
+        ]
+      ]
+    ]
+  },
+  {
+    "stt": 157,
+    "uc_id": "UC_20.3",
+    "code": "UC_20.3_DeleteNotification",
+    "name": "DeleteNotificationAsync",
+    "req_name": "Delete Notification",
+    "class_name": "NotificationsController / NotificationService",
+    "sheet_name": "UC_20.3_DeleteNotif",
+    "loc": 90.0,
+    "lack_of_tc": 0.0,
+    "test_req": "Recipient deletes a notification from their inbox (soft-delete or permanent removal).",
+    "num_tc": 8,
+    "tc_types": [
+      "N",
+      "N",
+      "B",
+      "B",
+      "A",
+      "A",
+      "A",
+      "A"
+    ],
+    "tc_status": [
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P",
+      "P"
+    ],
+    "preconditions": [
+      [
+        "Database has notification belonging to caller",
+        [
+          1,
+          2,
+          3,
+          4
+        ]
+      ],
+      [
+        "Notification does not exist in DB",
+        [
+          5
+        ]
+      ],
+      [
+        "Notification belongs to another user",
+        [
+          6
+        ]
+      ],
+      [
+        "Caller is authenticated",
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      ],
+      [
+        "Caller is unauthenticated",
+        [
+          8
+        ]
+      ]
+    ],
+    "inputs": [
+      [
+        "id",
+        [
+          [
+            "1001 (Read notification ID)",
+            [
+              1
+            ]
+          ],
+          [
+            "1002 (Unread notification ID)",
+            [
+              2
+            ]
+          ],
+          [
+            "1 (Boundary: min ID)",
+            [
+              3
+            ]
+          ],
+          [
+            "999999 (Boundary: high ID)",
+            [
+              4
+            ]
+          ],
+          [
+            "88888 (Non-existent ID)",
+            [
+              5
+            ]
+          ],
+          [
+            "3001 (Owned by User 99)",
+            [
+              6
+            ]
+          ],
+          [
+            "0 or -1 (Abnormal invalid ID)",
+            [
+              7
+            ]
+          ],
+          [
+            "1001 (Unauthenticated call)",
+            [
+              8
+            ]
+          ]
+        ]
+      ],
+      [
+        "userId",
+        [
+          [
+            "101 (Owner user ID)",
+            [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          ],
+          [
+            "101 (Non-owner)",
+            [
+              6
+            ]
+          ],
+          [
+            "101",
+            [
+              7
+            ]
+          ],
+          [
+            "0 (Anonymous)",
+            [
+              8
+            ]
+          ]
+        ]
+      ]
+    ],
+    "returns": [
+      [
+        "Object { success: true, message: \"Notification deleted successfully\" }",
+        [
+          1,
+          2,
+          3,
+          4
+        ]
+      ]
+    ],
+    "exceptions": [
+      [
+        "KeyNotFoundException (404 \"Notification not found\")",
+        [
+          5
+        ]
+      ],
+      [
+        "ForbiddenException (403 \"You do not have access to this notification\")",
+        [
+          6
+        ]
+      ],
+      [
+        "ArgumentException (400 \"Notification ID must be positive\")",
+        [
+          7
+        ]
+      ],
+      [
+        "UnauthorizedAccessException (401 \"Authentication required\")",
+        [
+          8
+        ]
+      ]
+    ],
+    "logs": [
+      [
+        "\"Notification {Id} deleted by user {UserId}\"",
+        [
+          1,
+          2,
+          3,
+          4
+        ]
+      ],
+      [
+        "\"Notification {Id} not found for deletion\"",
+        [
+          5
+        ]
+      ],
+      [
+        "\"Unauthorized delete attempt on notification {Id} by user {UserId}\"",
+        [
+          6
+        ]
+      ],
+      [
+        "\"Invalid notification ID: {Id}\"",
+        [
+          7
+        ]
+      ],
+      [
+        "\"Unauthenticated delete request\"",
+        [
+          8
+        ]
+      ]
+    ]
+  }
+]

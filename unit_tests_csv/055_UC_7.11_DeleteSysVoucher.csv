@@ -1,0 +1,40 @@
+Function Code,,UC_7.11_DeleteSystemVoucher,,,Function Name,,,,,,SoftDeleteVoucherAsync
+Created By,,Developer Name,,,Executed By,,,,,,QA Tester
+Lines  of code,,115.0,,,Lack of test cases,,,,,,0.0
+Test requirement,,Admin marks system voucher as soft-deleted (IsDeleted=true) preserving historical audit integrity.
+Passed,,Failed,,Untested,,,,,,N/A/B,,,,Total Test Cases
+8.0,,0.0,,0.0,,,,,,"2,4,2",2.0,4.0,2.0,8.0
+
+,,,,,UTCID01,UTCID02,UTCID03,UTCID04,UTCID05,UTCID06,UTCID07,UTCID08
+Condition,Precondition
+,,,Database is accessible and target SYSTEM voucher exists,,O,O,O,O,,,O,O
+,,,Target voucher is already soft-deleted (IsDeleted=true),,,,,,,O,,
+,,,Target voucher does not exist in DB,,,,,,O,,,
+,,,Caller has Admin role,,O,O,O,O,O,O,O,
+,,,Caller has Organizer role,,,,,,,,,O
+,id
+,,,15 (Unused System Voucher ID),,O,,,,,,,
+,,,16 (Partially used System Voucher ID),,,O,,,,,,
+,,,1 (Boundary: min ID),,,,O,,,,,
+,,,20 (Boundary: inactive voucher),,,,,O,,,,
+,,,99999 (Non-existent ID),,,,,,O,,,
+,,,30 (Already deleted ID),,,,,,,O,,
+,,,0 or -1 (Abnormal invalid ID),,,,,,,,O,
+,,,15 (Valid ID called by non-admin),,,,,,,,,O
+Confirm,Return
+,,,true (Boolean indicating soft-delete successful),,O,O,O,O,,,,
+,Exception
+,,,"KeyNotFoundException (404 ""Voucher not found"")",,,,,,O,,,
+,,,"InvalidOperationException (400 ""Voucher is already deleted"")",,,,,,,O,,
+,,,"ArgumentException (400 ""Voucher ID must be positive"")",,,,,,,,O,
+,,,"ForbiddenException (403 ""Admin access required"")",,,,,,,,,O
+,Log message
+,,,"""Soft-deleted system voucher {VoucherId}""",,O,O,O,O,,,,
+,,,"""Voucher {VoucherId} not found""",,,,,,O,,,
+,,,"""Voucher {VoucherId} already deleted""",,,,,,,O,,
+,,,"""Invalid voucher ID: {VoucherId}""",,,,,,,,O,
+,,,"""Permission denied for user {UserId}""",,,,,,,,,O
+Result,"Type(N : Normal, A : Abnormal, B : Boundary)",,,,N,N,B,B,A,A,A,A
+,Passed/Failed,,,,P,P,P,P,P,P,P,P
+,Executed Date,,,,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026
+,Defect ID,,,,,,,,,,,

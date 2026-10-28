@@ -48,10 +48,13 @@ export default function Header() {
     logout();
     setMenuOpen(false);
     setNotifOpen(false);
+    setNotifications([]);
+    setUnreadCount(0);
     navigate("/");
   };
 
   const fetchHeaderNotifications = () => {
+    // Guests and admins have no bell
     if (!isAuthenticated || isAdmin) return;
     notificationApi
       .getNotifications()
@@ -62,7 +65,7 @@ export default function Header() {
           rawItems.map((n) => ({
             notificationId: n.notificationId ?? n.NotificationId ?? n.id ?? 0,
             title: n.title || n.Title || "",
-            message: n.message || n.Message || "",
+            message: n.message || n.Message || n.content || "",
             category: n.category || n.Category || "event_new",
             targetUrl: n.targetUrl || n.TargetUrl || "",
             isRead: n.isRead ?? n.IsRead ?? false,
@@ -108,6 +111,7 @@ export default function Header() {
       window.removeEventListener("storage", handleStorage);
       if (channel) channel.close();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isAdmin]);
 
   // Live suggestions as the user types (debounced).
@@ -163,6 +167,8 @@ export default function Header() {
       document.removeEventListener("keydown", handleEsc);
     };
   }, [menuOpen, searchOpen, notifOpen]);
+
+  const closeMenu = () => setMenuOpen(false);
 
   return (
     <header className="tb-header">
@@ -316,12 +322,14 @@ export default function Header() {
             </>
           )}
 
-          {/* Notification Bell Dropdown (Customer and Organizer only) */}
+          {/* Notification Bell Dropdown (logged-in Customer and Organizer only) */}
           {isAuthenticated && !isAdmin && (
             <div className="tb-notif-wrap" ref={notifRef}>
               <button
                 type="button"
                 className="tb-header-link tb-notif-btn"
+                aria-haspopup="true"
+                aria-expanded={notifOpen}
                 onClick={() => {
                   const next = !notifOpen;
                   setNotifOpen(next);
@@ -382,8 +390,30 @@ export default function Header() {
                             }
                           }}
                         >
-                          <div className="tb-notif-item-title">{notif.title}</div>
-                          <div className="tb-notif-item-msg">{notif.message}</div>
+                          <div className="tb-notif-item-content">
+                            <div className="tb-notif-item-title">{notif.title}</div>
+                            <div className="tb-notif-item-msg">{notif.message}</div>
+                          </div>
+                          <button
+                            type="button"
+                            className="tb-notif-item-delete"
+                            title="Xóa thông báo"
+                            aria-label="Xóa thông báo"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              const targetId = notif.notificationId;
+                              setNotifications((prev) => prev.filter((n) => n.notificationId !== targetId));
+                              if (!notif.isRead) {
+                                setUnreadCount((prev) => Math.max(0, prev - 1));
+                              }
+                              try {
+                                await notificationApi.deleteNotification(targetId);
+                              } catch (err) {}
+                              window.dispatchEvent(new Event("notification-updated"));
+                            }}
+                          >
+                            ✕
+                          </button>
                         </div>
                       ))
                     )}
@@ -405,6 +435,12 @@ export default function Header() {
             </Link>
           )}
 
+          {isStaff && (
+            <Link to="/staff/gate-assignment" className="tb-header-link" style={{ color: "#34d399", fontWeight: 600 }}>
+              Staff Portal
+            </Link>
+          )}
+
           {isAdmin && (
             <Link to="/admin" className="tb-header-link">
               Admin
@@ -423,6 +459,8 @@ export default function Header() {
                 <button
                   type="button"
                   className="tb-header-link tb-account-toggle"
+                  aria-haspopup="true"
+                  aria-expanded={menuOpen}
                   onClick={() => setMenuOpen((v) => !v)}
                 >
                   {user?.fullName || user?.email || "Account"}
@@ -444,24 +482,48 @@ export default function Header() {
                 </button>
                 {menuOpen && (
                   <div className="tb-account-menu">
-                    <Link to="/profile" onClick={() => setMenuOpen(false)}>
+                    <Link to="/profile" onClick={closeMenu}>
                       My Profile
                     </Link>
+
+                    {isStaff && (
+                      <>
+                        <Link to="/staff/gate-assignment" onClick={closeMenu}>
+                          Gate Assignment
+                        </Link>
+                        <Link to="/staff/checkin/1" onClick={closeMenu}>
+                          Check-in Scanner Terminal
+                        </Link>
+                      </>
+                    )}
+
+                    {isOrganizer && (
+                      <>
+                        <Link to="/organizer/dashboard" onClick={closeMenu}>
+                          Organizer Dashboard
+                        </Link>
+                        <Link to="/organizer/verification" onClick={closeMenu}>
+                          Business Verification
+                        </Link>
+                      </>
+                    )}
+
                     {(isStaff || isAdmin) && (
-                      <Link to={isAdmin ? "/admin/incidents" : "/staff/incidents"} onClick={() => setMenuOpen(false)}>
+                      <Link to={isAdmin ? "/admin/incidents" : "/staff/incidents"} onClick={closeMenu}>
                         Incident Command
                       </Link>
                     )}
+
                     {isAdmin && (
-                      <Link to="/admin/vouchers" onClick={() => setMenuOpen(false)}>
+                      <Link to="/admin/vouchers" onClick={closeMenu}>
                         Vouchers Admin
                       </Link>
                     )}
 
-                    <Link to="/my-orders" className="tb-dropdown-link">
+                    <Link to="/my-orders" onClick={closeMenu}>
                       Order History
                     </Link>
-                    
+
                     <button type="button" onClick={handleLogout}>
                       Log Out
                     </button>

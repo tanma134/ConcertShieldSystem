@@ -1,0 +1,42 @@
+Function Code,,UC_7.5_GetOrganizerVouchers,,,Function Name,,,,,,GetVouchersAsync
+Created By,,Developer Name,,,Executed By,,,,,,QA Tester
+Lines  of code,,145.0,,,Lack of test cases,,,,,,0.0
+Test requirement,,"Retrieve paginated vouchers filtered by scope=ORGANIZER, active status, search keyword with caller ownership enforcement."
+Passed,,Failed,,Untested,,,,,,N/A/B,,,,Total Test Cases
+10.0,,0.0,,0.0,,,,,,"4,3,3",4.0,3.0,3.0,10.0
+
+,,,,,UTCID01,UTCID02,UTCID03,UTCID04,UTCID05,UTCID06,UTCID07,UTCID08,UTCID09,UTCID10
+Condition,Precondition
+,,,Database is accessible and seeded with vouchers,,O,O,O,O,O,O,O,O,O,O
+,,,User is authenticated with Organizer role,,O,O,O,O,O,O,O,O,O,
+,,,User is authenticated with Customer role (unauthorized),,,,,,,,,,,O
+,page
+,,,1 (Normal first page),,O,O,O,O,O,O,,,,O
+,,,0 (Boundary: invalid),,,,,,,,,O,,
+,,,-1 (Abnormal: negative),,,,,,,,,,O,
+,,,9999 (Boundary: out of range),,,,,,,,O,,,
+,limit
+,,,10 (Normal page size),,O,O,O,O,,,O,O,O,O
+,,,1 (Boundary: min limit),,,,,,O,,,,,
+,,,100 (Boundary: max limit),,,,,,,O,,,,
+,isActive
+,,,null (all vouchers),,O,,,,O,O,O,O,O,O
+,,,true (active only),,,O,,,,,,,,
+,,,false (inactive only),,,,O,,,,,,,
+,searchCode
+,,,null (no search),,O,O,O,,O,O,O,O,O,O
+,,,"""VIP2026"" (matches vouchers)",,,,,O,,,,,,
+Confirm,Return
+,,,PagedResultDTO with Items.Count > 0 and TotalCount >= Items.Count,,O,O,O,O,O,O,,,,
+,,,PagedResultDTO with Items.Count == 0 and TotalCount >= 0,,,,,,,,O,,,
+,Exception
+,,,"ArgumentException (""Page must be >= 1"")",,,,,,,,,O,O,
+,,,ForbiddenException (403 Forbidden),,,,,,,,,,,O
+,Log message
+,,,"""Retrieved {Count} organizer vouchers successfully""",,O,O,O,O,O,O,O,,,
+,,,"""Invalid pagination parameters page={page}""",,,,,,,,,O,O,
+,,,"""User {UserId} unauthorized to view organizer vouchers""",,,,,,,,,,,O
+Result,"Type(N : Normal, A : Abnormal, B : Boundary)",,,,N,N,N,N,B,B,B,A,A,A
+,Passed/Failed,,,,P,P,P,P,P,P,P,P,P,P
+,Executed Date,,,,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026
+,Defect ID,,,,,,,,,,,,,

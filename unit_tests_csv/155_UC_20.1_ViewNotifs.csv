@@ -1,0 +1,38 @@
+Function Code,,UC_20.1_ViewNotifications,,,Function Name,,,,,,GetUserNotificationsAsync
+Created By,,Developer Name,,,Executed By,,,,,,QA Tester
+Lines  of code,,120.0,,,Lack of test cases,,,,,,0.0
+Test requirement,,"Customer and Organizer retrieve notifications inbox with unread counts, timestamps, and deep-link payload."
+Passed,,Failed,,Untested,,,,,,N/A/B,,,,Total Test Cases
+8.0,,0.0,,0.0,,,,,,"2,3,3",2.0,3.0,3.0,8.0
+
+,,,,,UTCID01,UTCID02,UTCID03,UTCID04,UTCID05,UTCID06,UTCID07,UTCID08
+Condition,Precondition
+,,,Database has notifications for user,,O,O,,O,O,,,
+,,,User has 0 notifications (new account),,,,O,,,,,
+,,,User is authenticated (Customer or Organizer),,O,O,O,O,O,,,
+,,,User account does not exist / deleted,,,,,,,O,,
+,,,User is unauthenticated (anonymous),,,,,,,,O,O
+,userId
+,,,"101 (Customer with 5 unread, 10 total)",,O,,,,,,,
+,,,201 (Organizer with notifications),,,O,,,,,,
+,,,301 (User with zero notifications),,,,O,,,,,
+,,,1 (Boundary: min ID),,,,,O,,,,
+,,,999999 (Boundary: high ID),,,,,,O,,,
+,,,88888 (Deleted user ID),,,,,,,O,,
+,,,0 (Boundary: invalid),,,,,,,,O,
+,,,-1 (Abnormal: negative),,,,,,,,,O
+Confirm,Return
+,,,"NotificationListResponseDTO with UnreadCount=5, Notifications.Count=10",,O,,,,,,,
+,,,"NotificationListResponseDTO with UnreadCount > 0, Count > 0",,,O,,O,O,,,
+,,,"NotificationListResponseDTO with UnreadCount=0, Notifications.Count=0",,,,O,,,,,
+,Exception
+,,,"KeyNotFoundException (404 ""User account not found"")",,,,,,,O,,
+,,,"UnauthorizedAccessException (401 ""User authentication required"")",,,,,,,,O,O
+,Log message
+,,,"""Retrieved notifications for user {UserId}: {Unread} unread out of {Total}""",,O,O,O,O,O,,,
+,,,"""User {UserId} not found""",,,,,,,O,,
+,,,"""Anonymous request to notification inbox rejected""",,,,,,,,O,O
+Result,"Type(N : Normal, A : Abnormal, B : Boundary)",,,,N,N,B,B,B,A,A,A
+,Passed/Failed,,,,P,P,P,P,P,P,P,P
+,Executed Date,,,,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026
+,Defect ID,,,,,,,,,,,

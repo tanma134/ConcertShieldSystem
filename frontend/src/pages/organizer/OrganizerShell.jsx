@@ -6,6 +6,8 @@ export const ORGANIZER_LINKS = [
   ["/organizer/dashboard", "Dashboard", true],
   ["/organizer/events", "My Concerts", true],
   ["/organizer/events/new", "Create Concert", true],
+  ["/organizer/verification", "Business Verification"],
+  ["/organizer/realtime-checkin", "Check-in Live Monitor"],
   ["/organizer/vouchers", "Vouchers"],
   ["/notifications", "Notifications"],
   ["/", "← Back to site", true],

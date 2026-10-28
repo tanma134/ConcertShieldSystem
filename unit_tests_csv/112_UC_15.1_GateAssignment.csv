@@ -1,0 +1,44 @@
+Function Code,,UC_15.1_ViewGateAssignment,,,Function Name,,,,,,GetGateAssignmentAsync
+Created By,,Developer Name,,,Executed By,,,,,,QA Tester
+Lines  of code,,125.0,,,Lack of test cases,,,,,,0.0
+Test requirement,,"Staff member views their assigned gate, entrance zone constraints, and event metadata for active shift."
+Passed,,Failed,,Untested,,,,,,N/A/B,,,,Total Test Cases
+8.0,,0.0,,0.0,,,,,,"2,4,2",2.0,4.0,2.0,8.0
+
+,,,,,UTCID01,UTCID02,UTCID03,UTCID04,UTCID05,UTCID06,UTCID07,UTCID08
+Condition,Precondition
+,,,Database has active event with gate assignment for staff,,O,O,O,O,,,,
+,,,Staff member has no gate assigned for this event,,,,,,O,,,
+,,,Event does not exist in DB,,,,,,,O,,
+,,,Caller is authenticated Staff member,,O,O,O,O,O,O,O,
+,,,Caller is Customer role,,,,,,,,,O
+,eventId
+,,,3001 (Active Event ID),,O,O,O,O,O,,,O
+,,,99999 (Non-existent ID),,,,,,,O,,
+,,,0 or -1 (Abnormal),,,,,,,,O,
+,staffUserId
+,,,101 (Assigned to Gate A),,O,,,,,,,
+,,,102 (Supervisor assigned to ALL gates),,,O,,,,,,
+,,,1 (Boundary: min ID),,,,O,,,,,
+,,,999999 (Boundary: max ID),,,,,O,,,,
+,,,103 (Staff without assignment),,,,,,O,,,
+,,,101,,,,,,,O,O,
+,,,501 (Customer ID),,,,,,,,,O
+Confirm,Return
+,,,"GateAssignmentResponseDTO with GateId=""GATE_A"", Zones=[""VIP"", ""STANDARD""]",,O,,O,O,,,,
+,,,"GateAssignmentResponseDTO with GateId=""ALL"", IsSupervisor=true",,,O,,,,,,
+,Exception
+,,,"KeyNotFoundException (404 ""No gate assignment found for this event"")",,,,,,O,,,
+,,,"KeyNotFoundException (404 ""Event not found"")",,,,,,,O,,
+,,,"ArgumentException (400 ""Event ID must be positive"")",,,,,,,,O,
+,,,"ForbiddenException (403 ""Staff permission required"")",,,,,,,,,O
+,Log message
+,,,"""Fetched gate assignment for staff {UserId} at event {EventId}""",,O,O,O,O,,,,
+,,,"""No gate assignment for staff {UserId}""",,,,,,O,,,
+,,,"""Event {EventId} not found""",,,,,,,O,,
+,,,"""Invalid eventId: {EventId}""",,,,,,,,O,
+,,,"""Forbidden access by user {UserId}""",,,,,,,,,O
+Result,"Type(N : Normal, A : Abnormal, B : Boundary)",,,,N,N,B,B,A,A,A,A
+,Passed/Failed,,,,P,P,P,P,P,P,P,P
+,Executed Date,,,,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026
+,Defect ID,,,,,,,,,,,

@@ -1,0 +1,44 @@
+Function Code,,UC_14.5_EnableOfflineMode,,,Function Name,,,,,,GetOfflinePackageAsync
+Created By,,Developer Name,,,Executed By,,,,,,QA Tester
+Lines  of code,,175.0,,,Lack of test cases,,,,,,0.0
+Test requirement,,Staff downloads signed & encrypted offline ticket manifest package to allow gate scanning during internet outage.
+Passed,,Failed,,Untested,,,,,,N/A/B,,,,Total Test Cases
+9.0,,0.0,,0.0,,,,,,"2,5,2",2.0,5.0,2.0,9.0
+
+,,,,,UTCID01,UTCID02,UTCID03,UTCID04,UTCID05,UTCID06,UTCID07,UTCID08,UTCID09
+Condition,Precondition
+,,,Database has published event with active tickets,,O,O,O,O,,,O,O,O
+,,,Event has 1 ticket (Boundary),,,,O,,,,,,
+,,,Event is in DRAFT status (not published),,,,,,,O,,,
+,,,Event does not exist in DB,,,,,,O,,,,
+,,,Caller is assigned Staff / Organizer / Admin,,O,O,O,O,O,O,O,O,
+,,,Caller is Customer role,,,,,,,,,,O
+,eventId
+,,,2001 (Valid Event ID),,O,O,,O,,,,O,O
+,,,2002 (Small Event with 1 ticket),,,,O,,,,,,
+,,,99999 (Non-existent ID),,,,,,O,,,,
+,,,3001 (Draft event),,,,,,,O,,,
+,,,0 or -1 (Abnormal),,,,,,,,O,,
+,staffUserId
+,,,50 (Assigned Gate Staff),,O,O,O,O,O,O,O,,
+,,,88 (Unassigned Staff),,,,,,,,,O,
+,,,200 (Customer),,,,,,,,,,O
+Confirm,Return
+,,,"OfflinePackageResponseDTO with PackageHash, TicketCount > 1, SignedPayload",,O,O,,O,,,,,
+,,,OfflinePackageResponseDTO with TicketCount == 1,,,,O,,,,,,
+,Exception
+,,,"KeyNotFoundException (404 ""Event not found"")",,,,,,O,,,,
+,,,"InvalidOperationException (400 ""Cannot generate offline package for unpublished event"")",,,,,,,O,,,
+,,,"ArgumentException (400 ""EventId must be positive"")",,,,,,,,O,,
+,,,"ForbiddenException (403 ""Staff member is not assigned to this event"")",,,,,,,,,O,
+,,,"ForbiddenException (403 ""Staff or Organizer permission required"")",,,,,,,,,,O
+,Log message
+,,,"""Generated encrypted offline package for event {EventId}, version={Version}""",,O,O,O,O,,,,,
+,,,"""Event {EventId} not found""",,,,,,O,,,,
+,,,"""Invalid event status for offline export: {Status}""",,,,,,,O,,,
+,,,"""Invalid eventId: {EventId}""",,,,,,,,O,,
+,,,"""Unauthorized offline package download attempt by user {UserId}""",,,,,,,,,O,O
+Result,"Type(N : Normal, A : Abnormal, B : Boundary)",,,,N,N,B,B,A,A,A,A,A
+,Passed/Failed,,,,P,P,P,P,P,P,P,P,P
+,Executed Date,,,,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026
+,Defect ID,,,,,,,,,,,,

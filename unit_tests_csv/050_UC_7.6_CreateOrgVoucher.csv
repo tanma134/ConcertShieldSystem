@@ -1,0 +1,49 @@
+Function Code,,UC_7.6_CreateOrganizerVoucher,,,Function Name,,,,,,CreateVoucherAsync
+Created By,,Developer Name,,,Executed By,,,,,,QA Tester
+Lines  of code,,160.0,,,Lack of test cases,,,,,,0.0
+Test requirement,,"Validate and create a new organizer voucher with discount rules, quantity, and valid date range."
+Passed,,Failed,,Untested,,,,,,N/A/B,,,,Total Test Cases
+10.0,,0.0,,0.0,,,,,,"2,5,3",2.0,5.0,3.0,10.0
+
+,,,,,UTCID01,UTCID02,UTCID03,UTCID04,UTCID05,UTCID06,UTCID07,UTCID08,UTCID09,UTCID10
+Condition,Precondition
+,,,Database is accessible,,O,O,O,O,O,O,O,O,O,O
+,,,Caller is authenticated Organizer,,O,O,O,O,O,O,O,O,O,
+,,,Caller is Customer role,,,,,,,,,,,O
+,dto.Code
+,,,"""SUMMER20""",,O,,,,,,,,,
+,,,"""FIXED50K""",,,O,,O,O,,,,,
+,,,"""MINPERCENT""",,,,O,,,,,,,
+,,,"Existing code ""EXISTING_CODE""",,,,,,,O,,,,
+,,,""""" or null",,,,,,,,O,,,
+,dto.DiscountType
+,,,"""PERCENT""",,O,,O,,,,,,,
+,,,"""FIXED_AMOUNT""",,,O,,O,O,O,O,O,O,O
+,dto.DiscountPercent
+,,,20.0 (Normal percent),,O,,,,,,,,,
+,,,1.0 (Boundary: min percent),,,,O,,,,,,,
+,,,100.0 (Boundary: max percent),,,,,O,,,,,,
+,,,105.0 (Abnormal: > 100%),,,,,,,,,O,,
+,dto.DiscountAmount
+,,,50000 (Normal amount),,,O,,,,O,O,,,O
+,,,0 or -1000 (Abnormal amount),,,,,,,,,,O,
+,dto.TotalQuantity
+,,,100 (Normal quantity),,O,O,O,O,,O,O,O,O,O
+,,,1 (Boundary: min quantity),,,,,,O,,,,,
+Confirm,Return
+,,,"VoucherResponseDTO with VoucherId > 0, Status=""Active""",,O,O,O,O,O,,,,,
+,Exception
+,,,"ConflictException (409 ""Voucher code already exists"")",,,,,,,O,,,,
+,,,"ValidationException (400 ""Code is required"")",,,,,,,,O,,,
+,,,"ValidationException (400 ""Discount percent must be between 1 and 100"")",,,,,,,,,O,,
+,,,"ValidationException (400 ""Discount amount must be positive"")",,,,,,,,,,O,
+,,,ForbiddenException (403 Forbidden),,,,,,,,,,,O
+,Log message
+,,,"""Voucher {Code} created successfully with Id {Id}""",,O,O,O,O,O,,,,,
+,,,"""Duplicate voucher code detected: {Code}""",,,,,,,O,,,,
+,,,"""Voucher validation failed: {Error}""",,,,,,,,O,O,O,
+,,,"""Access denied for user {UserId}""",,,,,,,,,,,O
+Result,"Type(N : Normal, A : Abnormal, B : Boundary)",,,,N,N,B,B,B,A,A,A,A,A
+,Passed/Failed,,,,P,P,P,P,P,P,P,P,P,P
+,Executed Date,,,,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026
+,Defect ID,,,,,,,,,,,,,

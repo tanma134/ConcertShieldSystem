@@ -1,0 +1,288 @@
+.submit-verification-container {
+  max-width: 1100px;
+  margin: 1.5rem auto;
+  padding: 1rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #ffffff;
+}
+
+.verification-header {
+  background: #15151c;
+  border: 1px solid #232332;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.badge-organizer {
+  background: #ff2d75;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.verification-header h1 {
+  margin: 0.25rem 0;
+  font-size: 1.5rem;
+  color: #ffffff;
+}
+
+/* Status Tracker Card */
+.status-tracker-card {
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #2e2e40;
+}
+
+.status-tracker-card.pending {
+  background: #fefce8;
+  border-color: #fde047;
+  color: #854d0e;
+}
+
+.status-tracker-card.approved {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.status-tracker-card.rejected {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.tracker-top {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.tracker-icon {
+  font-size: 2rem;
+}
+
+.tracker-top h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.tracker-sub {
+  margin: 0.2rem 0 0 0;
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.reason-text {
+  background: rgba(255, 255, 255, 0.6);
+  border-left: 4px solid #ef4444;
+  padding: 0.6rem;
+  border-radius: 4px;
+  margin: 0.5rem 0;
+  font-weight: 600;
+}
+
+.re-submit-hint {
+  font-size: 0.82rem;
+  margin-top: 0.4rem;
+}
+
+/* Form Card */
+.form-card {
+  background: #15151c;
+  border: 1px solid #232332;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.form-card h3 {
+  margin: 0 0 1.25rem 0;
+  font-size: 1.15rem;
+  color: #ffffff;
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.form-group {
+  margin-bottom: 1.1rem;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin-bottom: 0.35rem;
+  color: #334155;
+}
+
+/* High Contrast Form Input Fields */
+.custom-form-input {
+  width: 100%;
+  padding: 0.75rem 0.9rem !important;
+  border: 1px solid #94a3b8 !important;
+  border-radius: 8px !important;
+  font-size: 0.95rem !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  box-sizing: border-box !important;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05) !important;
+}
+
+.custom-form-input:focus {
+  outline: none !important;
+  border-color: #ff2d75 !important;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.2) !important;
+}
+
+.custom-form-input::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Upload Documents Section */
+.upload-documents-section {
+  background: #191924;
+  border: 1px dashed #94a3b8;
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin: 1.25rem 0;
+}
+
+.upload-documents-section h4 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1rem;
+  color: #ffffff;
+}
+
+.upload-hint {
+  margin: 0 0 1rem 0;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.upload-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.upload-box {
+  background: #15151c;
+  border: 1px solid #2e2e40;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.box-title {
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin-bottom: 0.6rem;
+  color: #1e293b;
+}
+
+.custom-file-input {
+  font-size: 0.85rem;
+  color: #334155;
+}
+
+/* Image Preview Thumbnail Card */
+.file-preview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.thumb-preview-box {
+  width: 100%;
+  height: 140px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #1e1e2e;
+  border: 1px solid #232332;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.doc-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.pdf-preview-badge {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #e02467;
+  padding: 0.75rem;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.file-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.file-name-text {
+  color: #15803d;
+  font-weight: 700;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-remove-file {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+  border-radius: 4px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-remove-file:hover {
+  background: #dc2626;
+  color: white;
+}
+
+.form-actions {
+  text-align: right;
+  margin-top: 1.5rem;
+}
+
+.btn-submit-verification {
+  background: #ff2d75;
+  color: white;
+  border: none;
+  padding: 0.85rem 1.75rem;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+  transition: all 0.2s;
+}
+
+.btn-submit-verification:hover {
+  background: #0f766e;
+  transform: translateY(-1px);
+}

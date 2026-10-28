@@ -1,0 +1,41 @@
+Function Code,,UC_7.8_ViewSystemVouchers,,,Function Name,,,,,,GetVouchersAsync
+Created By,,Developer Name,,,Executed By,,,,,,QA Tester
+Lines  of code,,130.0,,,Lack of test cases,,,,,,0.0
+Test requirement,,Admin views system-wide vouchers with pagination and active/inactive status filters.
+Passed,,Failed,,Untested,,,,,,N/A/B,,,,Total Test Cases
+9.0,,0.0,,0.0,,,,,,"3,3,3",3.0,3.0,3.0,9.0
+
+,,,,,UTCID01,UTCID02,UTCID03,UTCID04,UTCID05,UTCID06,UTCID07,UTCID08,UTCID09
+Condition,Precondition
+,,,Database is accessible with SYSTEM vouchers,,O,O,O,O,O,O,O,O,O
+,,,Caller is authenticated Admin,,O,O,O,O,O,O,O,O,
+,,,Caller is Organizer (not Admin),,,,,,,,,,O
+,scope
+,,,"""SYSTEM""",,O,O,O,O,O,O,O,O,O
+,page
+,,,1 (Normal page),,O,O,O,O,O,,,,O
+,,,0 (Boundary: invalid),,,,,,,,O,,
+,,,-1 (Abnormal: negative),,,,,,,,,O,
+,,,500 (Boundary: page beyond total),,,,,,,O,,,
+,limit
+,,,10 (Normal),,O,O,O,,,O,O,O,O
+,,,1 (Boundary: min limit),,,,,O,,,,,
+,,,100 (Boundary: max limit),,,,,,O,,,,
+,isActive
+,,,null (all system vouchers),,O,,,O,O,O,O,O,O
+,,,true (active system vouchers),,,O,,,,,,,
+,,,false (inactive system vouchers),,,,O,,,,,,
+Confirm,Return
+,,,"PagedResultDTO with Items.Count > 0 and Scope=""SYSTEM""",,O,O,O,O,O,,,,
+,,,PagedResultDTO with Items.Count == 0,,,,,,,O,,,
+,Exception
+,,,"ArgumentException (400 ""Page must be >= 1"")",,,,,,,,O,O,
+,,,"ForbiddenException (403 ""Admin access required"")",,,,,,,,,,O
+,Log message
+,,,"""Retrieved {Count} system vouchers""",,O,O,O,O,O,O,,,
+,,,"""Invalid page parameter: {page}""",,,,,,,,O,O,
+,,,"""Non-admin caller attempted to view system vouchers""",,,,,,,,,,O
+Result,"Type(N : Normal, A : Abnormal, B : Boundary)",,,,N,N,N,B,B,B,A,A,A
+,Passed/Failed,,,,P,P,P,P,P,P,P,P,P
+,Executed Date,,,,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026
+,Defect ID,,,,,,,,,,,,

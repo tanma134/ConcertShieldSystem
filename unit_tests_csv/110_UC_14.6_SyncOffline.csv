@@ -1,0 +1,48 @@
+Function Code,,UC_14.6_SyncOfflineRecords,,,Function Name,,,,,,SyncOfflineScansAsync
+Created By,,Developer Name,,,Executed By,,,,,,QA Tester
+Lines  of code,,190.0,,,Lack of test cases,,,,,,0.0
+Test requirement,,"Staff uploads offline scan batch upon network recovery, reconciling tickets and flagging duplicates as conflicts."
+Passed,,Failed,,Untested,,,,,,N/A/B,,,,Total Test Cases
+10.0,,0.0,,0.0,,,,,,"3,5,2",3.0,5.0,2.0,10.0
+
+,,,,,UTCID01,UTCID02,UTCID03,UTCID04,UTCID05,UTCID06,UTCID07,UTCID08,UTCID09,UTCID10
+Condition,Precondition
+,,,Database is accessible and event exists,,O,O,O,O,O,,O,O,O,O
+,,,Event does not exist in DB,,,,,,,O,,,,
+,,,Caller has Staff role,,O,O,O,O,O,O,O,O,O,
+,,,Caller has Customer role,,,,,,,,,,,O
+,request.EventId
+,,,2001 (Valid Event ID),,O,O,O,O,O,,O,O,O,O
+,,,99999 (Non-existent Event ID),,,,,,,O,,,,
+,request.Scans
+,,,50 clean scans (no conflicts),,O,,,,,,,,,
+,,,30 scans containing 2 duplicate tickets,,,O,,,,,,,,
+,,,20 scans across Gates A and B,,,,O,,,,,,,
+,,,1 scan (Boundary: min batch),,,,,O,,,,,,
+,,,500 scans (Boundary: max batch size),,,,,,O,,,,,
+,,,null or [] (Abnormal: empty scans),,,,,,,,O,,,
+,,,Scans with tampered/invalid offline signature,,,,,,,,,O,,
+,,,Scans with future timestamp (+2 days),,,,,,,,,,O,
+,,,50 scans by Customer,,,,,,,,,,,O
+Confirm,Return
+,,,"OfflineSyncResponseDTO with SyncedCount=50, ConflictCount=0",,O,,,,,,,,,
+,,,"OfflineSyncResponseDTO with SyncedCount=28, ConflictCount=2",,,O,,,,,,,,
+,,,"OfflineSyncResponseDTO with SyncedCount=20, ConflictCount=0",,,,O,,,,,,,
+,,,"OfflineSyncResponseDTO with SyncedCount=1, ConflictCount=0",,,,,O,,,,,,
+,,,"OfflineSyncResponseDTO with SyncedCount=500, ConflictCount=0",,,,,,O,,,,,
+,Exception
+,,,"KeyNotFoundException (404 ""Event not found"")",,,,,,,O,,,,
+,,,"ValidationException (400 ""Scans list cannot be empty"")",,,,,,,,O,,,
+,,,"SecurityException (400 ""Invalid scan payload digital signature"")",,,,,,,,,O,,
+,,,"ValidationException (400 ""Scan timestamp cannot be in the future"")",,,,,,,,,,O,
+,,,"ForbiddenException (403 ""Staff permission required to sync offline records"")",,,,,,,,,,,O
+,Log message
+,,,"""Processed offline sync batch: {Synced} synced, {Conflicts} conflicts""",,O,O,O,O,O,,,,,
+,,,"""Event {EventId} not found""",,,,,,,O,,,,
+,,,"""Validation failed: {Error}""",,,,,,,,O,,O,
+,,,"""Security alert: tampered offline scan signature detected from device {DeviceId}""",,,,,,,,,O,,
+,,,"""Forbidden access by user {UserId}""",,,,,,,,,,,O
+Result,"Type(N : Normal, A : Abnormal, B : Boundary)",,,,N,N,N,B,B,A,A,A,A,A
+,Passed/Failed,,,,P,P,P,P,P,P,P,P,P,P
+,Executed Date,,,,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026
+,Defect ID,,,,,,,,,,,,,

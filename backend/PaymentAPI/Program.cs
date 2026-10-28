@@ -145,9 +145,11 @@ builder.Services.AddSwaggerGen(c =>
 var app = builder.Build();
 
 // Thêm schema cho Risk Engine, Refund và Đối soát nếu chưa có
-using (var schemaScope = app.Services.CreateScope())
+try
 {
+    using var schemaScope = app.Services.CreateScope();
     var paymentDb = schemaScope.ServiceProvider.GetRequiredService<PaymentDbContext>();
+    paymentDb.Database.SetCommandTimeout(30);
     await paymentDb.Database.ExecuteSqlRawAsync(@"
         -- Cột Risk Engine
         ALTER TABLE payment_transactions ADD COLUMN IF NOT EXISTS user_id integer;
@@ -201,6 +203,10 @@ using (var schemaScope = app.Services.CreateScope())
         CREATE UNIQUE INDEX IF NOT EXISTS uq_reconciliation_resolution_transaction 
             ON payment_reconciliation_resolutions (payment_transaction_id);");
 }
+catch (Exception ex)
+{
+    Console.WriteLine($"[PaymentAPI Schema Sync Warning] {ex.Message}");
+}
 
 if (app.Environment.IsDevelopment())
 {
@@ -218,4 +224,4 @@ app.UseAuthorization();
 
 app.MapControllers();
 
- app.Run();
+app.Run();
