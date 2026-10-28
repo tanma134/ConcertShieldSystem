@@ -72,6 +72,11 @@ import CheckinScanTerminalPage from "../pages/staff/CheckinScanTerminalPage";
 import SupportCaseListPage from "../pages/support/SupportCaseListPage";
 import SupportCaseCreatePage from "../pages/support/SupportCaseCreatePage";
 import SupportCaseDetailPage from "../pages/support/SupportCaseDetailPage";
+import PaymentReconciliationExceptionsPage from "../pages/admin/PaymentReconciliationExceptionsPage";
+import TicketStatusHistoryPage from "../pages/admin/TicketStatusHistoryPage";
+import AdminTicketsPage from "../pages/admin/AdminTicketsPage";
+import AdminTicketDetailPage from "../pages/admin/AdminTicketDetailPage";
+import FailedTransactionQueuePage from "../pages/admin/FailedTransactionQueuePage";
 
 export default function AppRoutes() {
   return (
@@ -148,6 +153,33 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute>
             <OrderDetailsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/payment-reconciliation"
+        element={
+          <ProtectedRoute adminOnly>
+            <PaymentReconciliationExceptionsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/ticket-status-history"
+        element={
+          <ProtectedRoute adminOnly>
+            <TicketStatusHistoryPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/failed-transaction-queue"
+        element={
+          <ProtectedRoute adminOnly>
+            <FailedTransactionQueuePage />
           </ProtectedRoute>
         }
       />
@@ -245,6 +277,24 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute adminOnly>
             <AdminEventDetailPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/tickets"
+        element={
+          <ProtectedRoute adminOnly>
+            <AdminTicketsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/tickets/:ticketId"
+        element={
+          <ProtectedRoute adminOnly>
+            <AdminTicketDetailPage />
           </ProtectedRoute>
         }
       />

@@ -89,3 +89,8 @@
     grid-template-columns: 1fr;
   }
 }
+
+.tb-header a,
+.tb-footer a {
+  text-decoration: none;
+}

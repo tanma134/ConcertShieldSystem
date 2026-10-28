@@ -26,6 +26,36 @@ const ticketApi = {
       `/Holds/session/${encodeURIComponent(holdId)}/cancel`
     ),
   scanTicket: (dto) => axiosClient.post("/checkin/scan", dto),
+  getTicketHistory: (ticketId) =>
+  axiosClient.get(`/Tickets/${ticketId}/history`),
+  
+  changeHoldSeats: (holdId, seatIds) =>
+    axiosClient.put(`/Holds/session/${encodeURIComponent(holdId)}/seats`, {
+      seatIds,
+    }),
+
+  getAdminTickets: (params) =>
+    axiosClient.get("/admin/tickets", { params }),
+
+  getAdminStatusHistories: (params) =>
+    axiosClient.get("/admin/status-histories", { params }),
+
+  getAdminTicketDetails: (ticketId) =>
+    axiosClient.get(
+      `/admin/tickets/${encodeURIComponent(ticketId)}`
+    ),
+
+  revokeTicket: (ticketId, reason) =>
+    axiosClient.post(
+      `/admin/tickets/${encodeURIComponent(ticketId)}/revoke`,
+      { reason }
+    ),
+
+  reissueTicket: (ticketId, reason) =>
+    axiosClient.post(
+      `/admin/tickets/${encodeURIComponent(ticketId)}/reissue`,
+      { reason }
+    ),
 };
 
 export default ticketApi;

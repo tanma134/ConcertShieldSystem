@@ -29,4 +29,9 @@ public interface IHoldService
     Task CancelHoldSessionAsync(string holdId, int userId);
 
     Task<HoldSessionResponse?> GetActiveHoldSessionAsync(int userId);
+
+    Task<HoldSessionResponse> ChangeSeatsAsync(
+    string holdId,
+    int userId,
+    List<int> seatIds);
 }
