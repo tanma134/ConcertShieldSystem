@@ -1,0 +1,171 @@
+.nc-container {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+.nc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.nc-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--tb-text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nc-unread-badge {
+  font-size: 13px;
+  background: var(--tb-primary-light);
+  color: var(--tb-primary-2);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.nc-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.nc-filter-tabs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--tb-border);
+  padding-bottom: 12px;
+}
+
+.nc-tab {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: var(--tb-text-muted);
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.nc-tab.active {
+  background: var(--tb-surface-2);
+  color: var(--tb-text);
+  font-weight: 600;
+}
+
+.nc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nc-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: var(--tb-surface);
+  border: 1px solid var(--tb-border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.nc-card:hover {
+  border-color: var(--tb-primary-2);
+  transform: translateY(-1px);
+}
+
+.nc-card.unread {
+  background: rgba(192, 38, 211, 0.05);
+  border-color: rgba(192, 38, 211, 0.3);
+}
+
+.nc-card.unread::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tb-pink);
+}
+
+.nc-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--tb-surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.nc-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.nc-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--tb-text);
+  margin-bottom: 4px;
+}
+
+.nc-card-msg {
+  font-size: 13.5px;
+  color: var(--tb-text-muted);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.nc-card-time {
+  font-size: 12px;
+  color: var(--tb-text-muted);
+  opacity: 0.8;
+}
+
+.nc-card-delete {
+  background: none;
+  border: none;
+  color: var(--tb-text-muted);
+  font-size: 20px;
+  padding: 4px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+.nc-card-delete:hover {
+  color: #ef4444;
+  opacity: 1;
+}
+
+.nc-empty {
+  text-align: center;
+  padding: 60px 20px;
+  background: var(--tb-surface);
+  border: 1px solid var(--tb-border);
+  border-radius: 14px;
+  color: var(--tb-text-muted);
+}
+
+.nc-empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.nc-empty-text {
+  font-size: 16px;
+  font-weight: 600;
+}

@@ -1,0 +1,177 @@
+.admin-ticket-detail-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px;
+  color: #f4efff;
+}
+
+.admin-ticket-back {
+  display: inline-block;
+  margin-bottom: 24px;
+  color: #c9a6ff;
+  text-decoration: none;
+}
+
+.admin-ticket-back:hover {
+  color: #e0c9ff;
+}
+
+.admin-ticket-detail-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  margin-bottom: 22px;
+}
+
+.admin-ticket-detail-eyebrow {
+  margin: 0 0 8px;
+  color: #bd8cff;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.admin-ticket-detail-heading h1 {
+  margin: 0 0 12px;
+  font-size: 28px;
+}
+
+.admin-ticket-detail-status {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #302738;
+  font-size: 13px;
+}
+
+.admin-ticket-detail-status.status-active {
+  background: #173b2b;
+  color: #8ce2ae;
+}
+
+.admin-ticket-detail-status.status-revoked,
+.admin-ticket-detail-status.status-returned {
+  background: #3b2027;
+  color: #ffabb5;
+}
+
+.admin-ticket-detail-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.admin-ticket-detail-button {
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-ticket-detail-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.admin-ticket-detail-button.revoke {
+  background: #b83950;
+}
+
+.admin-ticket-detail-button.reissue {
+  background: #7040c4;
+}
+
+.admin-ticket-detail-card {
+  margin-bottom: 18px;
+  padding: 22px;
+  border: 1px solid #453453;
+  border-radius: 14px;
+  background: #19151f;
+}
+
+.admin-ticket-detail-card h2 {
+  margin: 0 0 18px;
+  font-size: 18px;
+}
+
+.admin-ticket-detail-card dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 28px;
+  margin: 0;
+}
+
+.admin-ticket-detail-card dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 13px 0;
+  border-bottom: 1px solid #302738;
+}
+
+.admin-ticket-detail-card dt {
+  color: #b9aecb;
+}
+
+.admin-ticket-detail-card dd {
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.admin-ticket-detail-warning,
+.admin-ticket-detail-notice,
+.admin-ticket-detail-error {
+  margin-bottom: 18px;
+  padding: 13px 15px;
+  border-radius: 8px;
+}
+
+.admin-ticket-detail-warning {
+  border: 1px solid #735a28;
+  background: #322a1b;
+  color: #f3d48c;
+}
+
+.admin-ticket-detail-notice {
+  border: 1px solid #286548;
+  background: #173328;
+  color: #9be2b7;
+}
+
+.admin-ticket-detail-error {
+  border: 1px solid #713b46;
+  background: #351e27;
+  color: #ffb4bc;
+}
+
+.admin-ticket-detail-state {
+  padding: 50px 20px;
+  color: #b9aecb;
+  text-align: center;
+}
+
+@media (max-width: 700px) {
+  .admin-ticket-detail-page {
+    padding: 20px 14px;
+  }
+
+  .admin-ticket-detail-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-ticket-detail-card dl {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-ticket-detail-actions {
+    width: 100%;
+  }
+
+  .admin-ticket-detail-button {
+    flex: 1;
+  }
+}

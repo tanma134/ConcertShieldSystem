@@ -1,0 +1,272 @@
+﻿using System.Security.Claims;
+using AuthenticationAPI.DTOs;
+using AuthenticationAPI.Risk;
+using AuthenticationAPI.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace AuthenticationAPI.Controllers
+{
+    [ApiController]
+    [Route("api/auth")]
+    public class AuthenticationController : ControllerBase
+    {
+        private readonly IAuthenticationService _authService;
+        private readonly ILogger<AuthenticationController> _logger;
+        private readonly IAuthRiskService _risk;
+
+        public AuthenticationController(
+            IAuthenticationService authService,
+            ILogger<AuthenticationController> logger,
+            IAuthRiskService risk)
+        {
+            _risk = risk;
+            _authService = authService;
+            _logger = logger;
+        }
+
+        // Helper: lấy IP/User-Agent thật của client cho các action cần audit log
+        // Ưu tiên IP thật từ X-Forwarded-For (do Gateway thêm), nếu không có thì dùng RemoteIpAddress
+        private string? ClientIp => RiskRequestContext.ResolveIp(HttpContext) ?? HttpContext.Connection.RemoteIpAddress?.ToString();
+        private string? ClientUserAgent => Request.Headers.UserAgent.ToString();
+
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] RegisterDTO dto)
+        {
+            // Risk Engine: BOT_S02, FRD_A02 + kiểm tra block theo IP/thiết bị
+            var verdict = await _risk.CheckRegisterAsync(HttpContext, dto?.Email);
+            if (!verdict.Allowed) return verdict.ToActionResult();
+
+            try
+            {
+                await _authService.RegisterAsync(dto);
+                return Ok(new { message = "Registration successful. Please check your email for the verification OTP code." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error during registration for email {Email}", dto?.Email);
+                return StatusCode(500, new { message = "An unexpected error occurred while processing your registration. Please try again later." });
+            }
+        }
+
+        [HttpPost("verify-email")]
+        public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDTO dto)
+        {
+            try
+            {
+                await _authService.VerifyEmailAsync(dto);
+                return Ok(new { message = "Email verified successfully. Your account has been activated." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error during email verification for email {Email}", dto?.Email);
+                return StatusCode(500, new { message = "An unexpected error occurred while verifying your email. Please try again later." });
+            }
+        }
+
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromBody] LoginDTO dto)
+        {
+            // Risk Engine: kiểm tra block theo IP/thiết bị/session + rule bot
+            var verdict = await _risk.CheckLoginAsync(HttpContext);
+            if (!verdict.Allowed) return verdict.ToActionResult();
+
+            try
+            {
+                var result = await _authService.LoginAsync(dto, ClientIp, ClientUserAgent);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error during login for email {Email}", dto?.Email);
+                return StatusCode(500, new { message = "An unexpected error occurred while logging in. Please try again later." });
+            }
+        }
+
+        [HttpPost("refresh")]
+        public async Task<IActionResult> Refresh([FromBody] RefreshTokenDTO dto)
+        {
+            try
+            {
+                var result = await _authService.RefreshTokenAsync(dto, ClientIp, ClientUserAgent);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error during token refresh");
+                return StatusCode(500, new { message = "An unexpected error occurred while refreshing your session. Please try again later." });
+            }
+        }
+
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout([FromBody] LogoutDTO dto)
+        {
+            try
+            {
+                await _authService.LogoutAsync(dto);
+                return Ok(new { message = "Logged out successfully." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error during logout");
+                return StatusCode(500, new { message = "An unexpected error occurred while logging out. Please try again later." });
+            }
+        }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDTO dto)
+        {
+            try
+            {
+                await _authService.ForgotPasswordAsync(dto);
+                return Ok(new { message = "If this email is registered, you will receive an OTP code to reset your password." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error during forgot-password request for email {Email}", dto?.Email);
+                return StatusCode(500, new { message = "An unexpected error occurred while processing your request. Please try again later." });
+            }
+        }
+
+        [HttpPost("verify-reset-otp")]
+        public async Task<IActionResult> VerifyResetOtp([FromBody] VerifyResetOtpDTO dto)
+        {
+            try
+            {
+                var result = await _authService.VerifyResetOtpAsync(dto);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error during reset-OTP verification for email {Email}", dto?.Email);
+                return StatusCode(500, new { message = "An unexpected error occurred while verifying the OTP. Please try again later." });
+            }
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDTO dto)
+        {
+            try
+            {
+                await _authService.ResetPasswordAsync(dto, ClientIp, ClientUserAgent);
+                return Ok(new { message = "Password reset successfully. You can now log in with your new password." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error during password reset for email {Email}", dto?.Email);
+                return StatusCode(500, new { message = "An unexpected error occurred while resetting your password. Please try again later." });
+            }
+        }
+
+        [HttpPost("google")]
+        public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginDTO dto)
+        {
+            try
+            {
+                var result = await _authService.GoogleLoginAsync(dto, ClientIp, ClientUserAgent);
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error during Google login");
+                return StatusCode(500, new { message = "An unexpected error occurred while logging in with Google. Please try again later." });
+            }
+        }
+
+        [HttpPost("change-password")]
+        [Authorize]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDTO dto)
+        {
+            var userIdText = (User.FindFirst("userId") ?? User.FindFirst(ClaimTypes.NameIdentifier))?.Value;
+            if (!int.TryParse(userIdText, out var userId))
+                return Unauthorized(new { message = "Invalid token" });
+
+            try
+            {
+                await _authService.ChangePasswordAsync(userId, dto, ClientIp, ClientUserAgent);
+                return Ok(new { message = "Password changed successfully." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error while changing password for user {UserId}", userId);
+                return StatusCode(500, new { message = "An unexpected error occurred while changing your password. Please try again later." });
+            }
+        }
+    }
+}

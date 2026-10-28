@@ -1,0 +1,115 @@
+/* Theme "đen tím hồng" dùng cho toàn bộ site ConcertShield */
+/*
+ * Biến --tb-* được khai báo ở :root để MỌI khu vực (kể cả admin, vốn không
+ * bọc trong .tb-app) đều đọc được — trước đây các trang admin dùng
+ * var(--tb-*) nhưng không có .tb-app cha nên biến rỗng, nút mất màu/mất viền.
+ */
+:root {
+  --tb-bg: #0a0812;
+  --tb-bg-alt: #120e1c;
+  --tb-surface: #171223;
+  --tb-surface-2: #1e1830;
+  --tb-border: #2a2340;
+  --tb-text: #f5f3fb;
+  --tb-text-muted: #a89db8;
+  --tb-primary: #c026d3;
+  --tb-primary-2: #a855f7;
+  --tb-primary-dark: #7c3aed;
+  --tb-pink: #ec4899;
+  --tb-primary-light: rgba(192, 38, 211, 0.14);
+  --tb-gradient: linear-gradient(135deg, #7c3aed 0%, #c026d3 55%, #ec4899 100%);
+  --tb-price: #fbbf24;
+}
+
+.tb-app {
+  width: 100%;
+  min-height: 100vh;
+  background:
+    radial-gradient(1200px 500px at 10% -10%, rgba(124, 58, 237, 0.18), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(236, 72, 153, 0.12), transparent 55%),
+    var(--tb-bg);
+  color: var(--tb-text);
+  text-align: left;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+.tb-app a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.tb-app button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.tb-container {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0 24px;
+  width: 100%;
+}
+
+.tb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 10px;
+  border: none;
+  padding: 11px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: filter 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.tb-btn:active {
+  transform: translateY(1px);
+}
+
+.tb-btn-primary {
+  background: var(--tb-gradient);
+  color: #fff;
+  box-shadow: 0 10px 24px -10px rgba(192, 38, 211, 0.65);
+}
+
+.tb-btn-primary:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 12px 28px -10px rgba(192, 38, 211, 0.8);
+}
+
+.tb-btn-outline {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1.5px solid var(--tb-border);
+  color: var(--tb-text);
+}
+
+.tb-btn-outline:hover {
+  border-color: var(--tb-primary-2);
+  color: var(--tb-primary-2);
+}
+
+.tb-loading,
+.tb-empty,
+.tb-error {
+  padding: 60px 24px;
+  text-align: center;
+  color: var(--tb-text-muted);
+}
+
+.tb-error {
+  color: #f87171;
+}
+
+.tb-section-link {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--tb-pink);
+  white-space: nowrap;
+}
+
+.tb-section-link:hover {
+  color: var(--tb-primary-2);
+}

@@ -1,0 +1,12 @@
+/* Chặn màu heading mặc định của index.css trên nền tối của cả hai role. */
+.admin-shell :is(h1,h2,h3,h4,h5,h6) { color: #f8f4ff; }
+.admin-shell .ow-wrap { color: #f4effa; }
+.admin-shell .ow-wrap > h1 { margin: 0 0 12px; font-size: clamp(24px, 3vw, 32px); line-height: 1.25; }
+.admin-shell .ow-wrap > a { display: inline-flex; color: #d8b4fe; margin-bottom: 4px; text-underline-offset: 4px; }
+.admin-shell .ow-field > span:first-child { color: #d9cee6; }
+.admin-shell .ow-field input::placeholder, .admin-shell .ow-field textarea::placeholder { color: #b6a9c4; opacity: 1; }
+.admin-shell .ow-field-error { color: #ffb4c0; font-size: 13px; line-height: 1.5; }
+.admin-shell .ow-panel { border-color: #493957; }
+.admin-shell .ow-table th { color: #e9ddf7; background: #30223f; }
+.admin-shell :is(input,select,textarea) { color-scheme: dark; }
+.admin-shell :is(input,select,textarea):focus-visible { outline: 2px solid #c4b5fd; outline-offset: 2px; }

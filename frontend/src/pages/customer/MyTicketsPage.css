@@ -1,0 +1,386 @@
+.mt-page {
+  min-height: 68vh;
+  padding: 44px 24px 72px;
+  color: #f4f4f5;
+  background: #09090b;
+}
+
+.mt-container {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+}
+
+.mt-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.mt-eyebrow {
+  margin: 0 0 8px;
+  color: #e879f9;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.mt-heading h1 {
+  margin: 0;
+  color: #fafafa;
+  font-size: clamp(32px, 4vw, 42px);
+}
+
+.mt-heading p:last-child {
+  margin: 9px 0 0;
+  color: #a1a1aa;
+}
+
+.mt-total {
+  padding: 9px 14px;
+  border: 1px solid #3f3f46;
+  border-radius: 999px;
+  color: #d4d4d8;
+  white-space: nowrap;
+}
+
+.mt-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin-bottom: 22px;
+  border-bottom: 1px solid #27272a;
+}
+
+.mt-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 13px 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: #a1a1aa;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mt-tabs button:hover {
+  color: #f4f4f5;
+}
+
+.mt-tabs button.is-active {
+  border-bottom-color: #d946ef;
+  color: #fafafa;
+}
+
+.mt-tabs button span {
+  min-width: 22px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: #d4d4d8;
+  background: #27272a;
+  font-size: 12px;
+  text-align: center;
+}
+
+.mt-orders {
+  display: grid;
+  gap: 20px;
+}
+
+.mt-order {
+  overflow: hidden;
+  border: 1px solid #27272a;
+  border-radius: 16px;
+  background: #111113;
+}
+
+.mt-order-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #27272a;
+}
+
+.mt-order-label {
+  margin: 0 0 5px;
+  color: #a1a1aa;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.mt-order-header h2 {
+  margin: 0;
+  color: #fafafa;
+  font-size: 18px;
+}
+
+.mt-order-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 7px 0 0;
+  color: #a1a1aa;
+  font-size: 13px;
+}
+
+.mt-order-count {
+  flex: 0 0 auto;
+  color: #d4d4d8;
+  font-size: 13px;
+}
+
+.mt-order-tickets {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.mt-ticket {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr) auto;
+  grid-template-rows: 1fr;
+  align-items: center;
+  gap: 18px;
+  padding: 14px;
+  border: 1px solid #27272a;
+  border-radius: 12px;
+  background: #18181b;
+}
+
+.mt-ticket-poster {
+  grid-column: 1;
+  grid-row: 1;
+  display: grid;
+  width: 100px;
+  aspect-ratio: 1;
+  overflow: hidden;
+  place-items: center;
+  border-radius: 9px;
+  color: #e879f9;
+  background: linear-gradient(145deg, #272033, #101014);
+  text-align: center;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.mt-ticket-poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mt-ticket-content {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+}
+
+.mt-ticket-content h3 {
+  margin: 0;
+  color: #f4f4f5;
+  font-size: 16px;
+}
+
+.mt-ticket-event {
+  overflow: hidden;
+  margin: 5px 0 0;
+  color: #a1a1aa;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mt-ticket-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-top: 14px;
+  color: #a1a1aa;
+  font-size: 12px;
+}
+
+.mt-ticket-info strong {
+  color: #f4f4f5;
+  white-space: nowrap;
+}
+
+.mt-ticket-actions {
+  grid-column: 3;
+  grid-row: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.mt-status {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.mt-status.success {
+  color: #86efac;
+  background: #14532d55;
+}
+
+.mt-status.processing {
+  color: #fcd34d;
+  background: #713f1255;
+}
+
+.mt-status.cancelled {
+  color: #fca5a5;
+  background: #7f1d1d55;
+}
+
+.mt-status.other {
+  color: #d4d4d8;
+  background: #3f3f4655;
+}
+
+.mt-details-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 8px 11px;
+  border: 1px solid #3f3f46;
+  border-radius: 8px;
+  color: #f0abfc;
+  background: #18181b;
+  font-size: 12px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.mt-details-link:hover {
+  border-color: #d946ef;
+  background: #d946ef12;
+}
+
+.mt-details-link:focus-visible,
+.mt-tabs button:focus-visible {
+  outline: 2px solid #e879f9;
+  outline-offset: 3px;
+}
+
+.mt-state {
+  padding: 56px 20px;
+  border: 1px dashed #3f3f46;
+  border-radius: 14px;
+  color: #a1a1aa;
+  text-align: center;
+}
+
+.mt-state strong {
+  display: block;
+  color: #e4e4e7;
+  font-size: 18px;
+}
+
+.mt-state p {
+  margin-bottom: 0;
+}
+
+.mt-state.is-error {
+  border-color: #7f1d1d;
+  color: #fca5a5;
+}
+
+@media (max-width: 900px) {
+  .mt-ticket {
+    grid-template-columns: 84px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    gap: 12px 15px;
+  }
+
+  .mt-ticket-poster {
+    grid-column: 1;
+    grid-row: 1;
+    width: 84px;
+  }
+
+  .mt-ticket-content {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .mt-ticket-actions {
+    grid-column: 2;
+    grid-row: 2;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 600px) {
+  .mt-page {
+    padding: 34px 16px 54px;
+  }
+
+  .mt-heading {
+    align-items: flex-start;
+  }
+
+  .mt-order-header {
+    align-items: flex-start;
+  }
+
+  .mt-order-header h2 {
+    font-size: 16px;
+  }
+
+  .mt-ticket {
+    grid-template-columns: 68px minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .mt-ticket-poster {
+    width: 68px;
+  }
+
+  .mt-ticket-info {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .mt-ticket-actions {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 420px) {
+  .mt-heading {
+    flex-direction: column;
+  }
+
+  .mt-order-header {
+    flex-direction: column;
+  }
+
+  .mt-order-dates {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .mt-order-dates > span[aria-hidden="true"] {
+    display: none;
+  }
+}

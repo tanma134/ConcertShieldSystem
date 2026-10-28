@@ -1,0 +1,221 @@
+/* Loại bỏ dải sáng phía trên (margin mặc định của body lộ nền) */
+body {
+  margin: 0;
+  background: #0a0812;
+}
+
+/* ===== Hero ===== */
+.tb-hero {
+  position: relative;
+  isolation: isolate;
+  padding: 72px 0 64px;
+  overflow: hidden;
+  /* Đẩy tâm quầng sáng xuống giữa hero, tránh sát mép dưới header */
+  background:
+    radial-gradient(650px 400px at 20% 55%, rgba(124, 58, 237, 0.30), transparent 60%),
+    radial-gradient(550px 380px at 85% 80%, rgba(236, 72, 153, 0.22), transparent 60%);
+  border-bottom: 1px solid var(--tb-border);
+}
+
+/* Giữ nguyên độ rộng container để thẳng hàng với header,
+   chỉ giới hạn độ rộng của phần chữ bên trong */
+.tb-hero-inner {
+  max-width: none;
+}
+
+.tb-hero-inner > * {
+  max-width: 780px;
+}
+
+.tb-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 999px;
+  background: var(--tb-primary-light);
+  border: 1px solid rgba(192, 38, 211, 0.35);
+  color: #e9a8f3;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  margin-bottom: 22px;
+}
+
+.tb-hero-title {
+  font-size: 46px;
+  line-height: 1.18;
+  font-weight: 800;
+  color: var(--tb-text);
+  margin: 0 0 18px;
+  letter-spacing: -0.5px;
+}
+
+.tb-hero-title span {
+  background: var(--tb-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.tb-hero-sub {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--tb-text-muted);
+  margin: 0 0 32px;
+}
+
+.tb-hero-actions {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.tb-hero-actions .tb-btn {
+  padding: 13px 26px;
+  font-size: 14.5px;
+}
+
+/* ===== Danh sách ===== */
+.tb-list-section {
+  padding: 40px 24px 20px;
+  scroll-margin-top: 90px;
+}
+
+.tb-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+
+.tb-list-header h2 {
+  font-size: 21px;
+  margin: 0;
+  color: var(--tb-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tb-city-filter {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tb-city-filter button {
+  border: 1px solid var(--tb-border);
+  background: var(--tb-surface);
+  color: var(--tb-text-muted);
+  font-size: 13px;
+  padding: 7px 14px;
+  border-radius: 999px;
+}
+
+.tb-city-filter button.active {
+  background: var(--tb-primary-light);
+  border-color: var(--tb-primary-2);
+  color: var(--tb-primary-2);
+}
+
+.tb-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.tb-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 1100px) {
+  .tb-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .tb-grid,
+  .tb-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .tb-hero {
+    padding: 52px 0 44px;
+  }
+  .tb-hero-title {
+    font-size: 32px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tb-grid,
+  .tb-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Live Announcement & Promotion Bar on Home */
+.tb-home-notice-bar {
+  background: linear-gradient(90deg, rgba(124, 58, 237, 0.16), rgba(236, 72, 153, 0.12));
+  border-bottom: 1px solid rgba(124, 58, 237, 0.3);
+  padding: 11px 0;
+  backdrop-filter: blur(8px);
+}
+
+.tb-home-notice-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13.5px;
+}
+
+.tb-home-notice-pill {
+  background: linear-gradient(135deg, #7c3aed, #ec4899);
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.4);
+}
+
+.tb-home-notice-body {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--tb-text, #f5f3fb);
+}
+
+.tb-home-notice-body strong {
+  color: #ec4899;
+  margin-right: 6px;
+}
+
+.tb-home-notice-counter {
+  font-size: 11px;
+  color: var(--tb-text-muted, #a89db8);
+  flex-shrink: 0;
+}
+
+.tb-home-notice-link {
+  color: #c084fc;
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 12.5px;
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+
+.tb-home-notice-link:hover {
+  color: #f472b6;
+  text-decoration: underline;
+}

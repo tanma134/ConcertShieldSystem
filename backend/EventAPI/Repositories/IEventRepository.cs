@@ -1,0 +1,32 @@
+using EventAPI.DTOs;
+using EventAPI.Models;
+using static EventAPI.DTOs.ConfirmEventSaleDTO;
+
+namespace EventAPI.Repositories
+{
+    public interface IEventRepository
+    {
+        Task<Event?> GetByIdAsync(int id, bool includeChildren = false);
+        Task<Event?> GetBySlugAsync(string slug, bool includeChildren = false);
+
+        /// <summary>Counts non-deleted ticket types for an event (cheap pre-submit check).</summary>
+        Task<int> CountTicketTypesAsync(int eventId);
+
+        /// <summary>Counts active refund policies for an event.</summary>
+        Task<int> CountRefundPoliciesAsync(int eventId);
+        Task<(List<Event> Items, int TotalCount)> GetFilteredAsync(EventFilterDTO filter);
+        Task<List<Event>> GetFeaturedAsync(int count = 10);
+        Task<List<Event>> GetByOrganizerIdAsync(int organizerId);
+        Task<(List<Event> Items, int TotalCount)> GetDeletedAsync(int page = 1, int pageSize = 12);
+        Task<(List<Event> Items, int TotalCount)> GetModerationQueueAsync(int page = 1, int pageSize = 12);
+        Task<Event> CreateAsync(Event entity);
+        Task UpdateAsync(Event entity);
+        Task SoftDeleteAsync(int id, int deletedBy);
+        Task HardDeleteAsync(int id);
+        Task RestoreAsync(int id);
+        Task IncrementViewCountAsync(int id);
+
+        Task<bool> ConfirmPaidOrderSaleAsync(int eventId, int orderId, IReadOnlyCollection<ConfirmEventSaleItemDTO> items);
+        Task<bool> ReleaseReturnedTicketAsync(int eventId, int ticketTypeId, int quantity);
+    }
+}

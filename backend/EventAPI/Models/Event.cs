@@ -1,0 +1,89 @@
+using System;
+using System.Collections.Generic;
+
+namespace EventAPI.Models
+{
+    public class Event
+    {
+        public int EventId { get; set; }
+        public uint RowVersion { get; set; }
+        public string ComplianceStatus { get; set; } = "NotSubmitted";
+        public int ComplianceVersion { get; set; }
+        public int? ComplianceReviewedVersion { get; set; }
+        public int ScheduleVersion { get; set; }
+        public bool SalesFrozen { get; set; }
+        public int OrganizerId { get; set; }
+        public int CategoryId { get; set; } = 1; // Always 1 = Music
+        public string Title { get; set; } = null!;
+        public string Slug { get; set; } = null!;
+        public string? ShortDescription { get; set; }
+        public string? Description { get; set; }
+        public string? PosterUrl { get; set; }
+        public string? PosterPublicId { get; set; }
+        public string? BannerUrl { get; set; }
+        public string? BannerPublicId { get; set; }
+        public string? LocationName { get; set; }
+        public string? Address { get; set; }
+        public string? City { get; set; }
+        public decimal? Longitude { get; set; }
+        public decimal? Latitude { get; set; }
+        public DateTime StartsAt { get; set; }
+        public DateTime EndsAt { get; set; }
+        public string Timezone { get; set; } = "SE Asia Standard Time";
+        public bool HasSeatingChart { get; set; } = false;
+        // GeneralAdmission | StandingZones | ReservedSeating (see SeatingMode).
+        public string SeatingMode { get; set; } = Common.SeatingMode.ReservedSeating;
+        public bool RequiresVirtualQueue { get; set; } = false;
+        // Draft | Pending | Published | Rejected | Cancelled (see EventStatus).
+        public string Status { get; set; } = "Draft";
+
+        // Reason supplied by the Admin when rejecting. Cleared on resubmit.
+        public string? RejectedReason { get; set; }
+
+        // ---- Lifecycle audit timestamps ----
+        // Set when the owner submits Draft/Rejected -> Pending.
+        public DateTime? SubmittedAt { get; set; }
+
+        // Set when an Admin approves Pending -> Published.
+        public DateTime? ApprovedAt { get; set; }
+
+        // Set when an Admin rejects Pending -> Rejected.
+        public DateTime? RejectedAt { get; set; }
+
+        // Admin user id that approved/rejected this concert.
+        public int? ReviewedBy { get; set; }
+        public bool IsFeatured { get; set; } = false;
+        public int ViewCount { get; set; } = 0;
+        public int TotalTickets { get; set; } = 0;
+        public int SoldTickets { get; set; } = 0;
+        public int? MinTicketsPerAccount { get; set; }
+        public int? MaxTicketsPerAccount { get; set; }
+        public string? MetaTitle { get; set; }
+        public string? MetaDescription { get; set; }
+
+        // Seat hold timeout in minutes (default 10, range 1-30).
+        public int HoldTimeoutMinutes { get; set; } = 10;
+
+        // Re-entry policy (NoReEntry, Unlimited, TimeLimited). Default is NoReEntry.
+        public string ReEntryPolicy { get; set; } = Common.ReEntryPolicyTypes.NoReEntry;
+
+        // Duration in minutes when ReEntryPolicy is TimeLimited (range 5-120).
+        public int? ReEntryDurationMinutes { get; set; }
+
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? PublishedAt { get; set; }
+        public int? CreatedBy { get; set; }
+        public int? UpdatedBy { get; set; }
+        public bool IsDeleted { get; set; } = false;
+        public DateTime? DeletedAt { get; set; }
+        public int? DeletedBy { get; set; }
+
+        public virtual ICollection<EventImage> EventImages { get; set; } = new List<EventImage>();
+        public virtual ICollection<TicketType> TicketTypes { get; set; } = new List<TicketType>();
+        public virtual ICollection<RefundPolicy> RefundPolicies { get; set; } = new List<RefundPolicy>();
+        public virtual ICollection<SeatMap> SeatMaps { get; set; } = new List<SeatMap>();
+        public virtual ICollection<Wishlist> Wishlists { get; set; } = new List<Wishlist>();
+        public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
+    }
+}
