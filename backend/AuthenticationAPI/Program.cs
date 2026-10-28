@@ -1,4 +1,4 @@
-﻿using AuthenticationAPI.Models;
+using AuthenticationAPI.Models;
 using AuthenticationAPI.Providers;
 using AuthenticationAPI.Repositories;
 using AuthenticationAPI.Risk;

@@ -1,0 +1,374 @@
+/* Real-time Check-in Monitoring Dashboard Styles (UC_29) */
+
+.rcm-container {
+  min-height: 100vh;
+  background-color: #0c0c10;
+  color: #f8fafc;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  padding-bottom: 60px;
+}
+
+.rcm-header-bar {
+  background: #15151c;
+  border-bottom: 1px solid #232332;
+  padding: 16px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.rcm-header-title h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rcm-header-subtitle {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.rcm-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.rcm-pulse-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #10b981;
+  border-radius: 50%;
+  animation: rcm-pulse 1.8s infinite;
+}
+
+@keyframes rcm-pulse {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.rcm-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rcm-btn {
+  background: #232332;
+  color: #f8fafc;
+  border: 1px solid #2e2e42;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.rcm-btn:hover {
+  background: #2e2e42;
+  color: #ffffff;
+}
+
+.rcm-btn-primary {
+  background: linear-gradient(135deg, #ff2d75, #ec4899);
+  border: none;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.rcm-btn-primary:hover {
+  box-shadow: 0 6px 18px rgba(124, 58, 237, 0.5);
+  transform: translateY(-1px);
+}
+
+/* Content Layout */
+.rcm-content {
+  max-width: 1380px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* 4 Core Real-time Metrics (BR-395) */
+.rcm-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.rcm-metric-card {
+  background: #15151c;
+  border: 1px solid #232332;
+  border-radius: 16px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rcm-metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+}
+
+.rcm-metric-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rcm-metric-value {
+  font-size: 32px;
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1.1;
+  margin-bottom: 10px;
+}
+
+.rcm-metric-icon {
+  font-size: 24px;
+  opacity: 0.8;
+}
+
+.rcm-progress-bar-bg {
+  width: 100%;
+  height: 8px;
+  background: #232332;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.rcm-progress-bar-fill {
+  height: 100%;
+  border-radius: 10px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fill-purple { background: linear-gradient(90deg, #7c3aed, #a855f7); }
+.fill-emerald { background: linear-gradient(90deg, #10b981, #34d399); }
+.fill-amber { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.fill-pink { background: linear-gradient(90deg, #ec4899, #f472b6); }
+
+/* Velocity Telemetry Banner */
+.rcm-telemetry-banner {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
+  border: 1px solid #232332;
+  border-radius: 14px;
+  padding: 16px 24px;
+  margin-bottom: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.rcm-telemetry-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rcm-telemetry-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(124, 58, 237, 0.2);
+  color: #c084fc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.rcm-telemetry-text div:first-child {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.rcm-telemetry-text div:last-child {
+  font-size: 18px;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+/* Sections Grid for Gate & Zone Breakdown (BR-396) */
+.rcm-breakdown-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 1024px) {
+  .rcm-breakdown-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rcm-card {
+  background: #15151c;
+  border: 1px solid #232332;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.rcm-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.rcm-card-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Gate Item Rows */
+.rcm-gate-item {
+  background: #0c0c10;
+  border: 1px solid #232332;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.rcm-gate-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.rcm-gate-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.rcm-gate-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+}
+
+.status-normal { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+.status-busy { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.status-congested { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+
+.rcm-gate-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+/* Zone Item Rows */
+.rcm-zone-item {
+  background: #0c0c10;
+  border: 1px solid #232332;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+/* Recent Scan History Stream */
+.rcm-table-wrap {
+  overflow-x: auto;
+}
+
+.rcm-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.rcm-table th {
+  background: #0c0c10;
+  color: #94a3b8;
+  font-weight: 700;
+  padding: 12px 14px;
+  border-bottom: 1px solid #232332;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+
+.rcm-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #232332;
+  color: #e2e8f0;
+}
+
+.rcm-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.rcm-status-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tag-success { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+.tag-failed { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+
+/* Filter Controls */
+.rcm-filter-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.rcm-select {
+  background: #0c0c10;
+  color: #f8fafc;
+  border: 1px solid #232332;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}

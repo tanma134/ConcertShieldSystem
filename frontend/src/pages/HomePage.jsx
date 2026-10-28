@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import EventCard from "../components/EventCard";
 import eventApi from "../api/eventApi";
-import notificationApi from "../api/notificationApi";
 import "../styles/theme-dark.css";
 import "./HomePage.css";
 
@@ -17,6 +16,7 @@ const CITIES = [
 
 export default function HomePage() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const q = searchParams.get("q") || "";
 
   const hotRef = useRef(null);
@@ -29,45 +29,6 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [city, setCity] = useState("");
-  const [announcements, setAnnouncements] = useState([]);
-  const [activeNotifIndex, setActiveNotifIndex] = useState(0);
-
-  const fetchAnnouncements = () => {
-    notificationApi
-      .getNotifications()
-      .then((res) => {
-        const rawItems = res.data?.items || res.data?.Items || res.data?.data?.items || res.data?.data?.Items || [];
-        setAnnouncements(
-          rawItems.map((n) => ({
-            notificationId: n.notificationId ?? n.NotificationId ?? n.id ?? 0,
-            title: n.title || n.Title || "",
-            message: n.message || n.Message || "",
-            category: n.category || n.Category || "event_new",
-            targetUrl: n.targetUrl || n.TargetUrl || "",
-          }))
-        );
-      })
-      .catch(() => {});
-  };
-
-  useEffect(() => {
-    fetchAnnouncements();
-    const interval = setInterval(fetchAnnouncements, 12000);
-    const handleUpdate = () => fetchAnnouncements();
-    window.addEventListener("notification-updated", handleUpdate);
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("notification-updated", handleUpdate);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (announcements.length <= 1) return;
-    const rotate = setInterval(() => {
-      setActiveNotifIndex((prev) => (prev + 1) % announcements.length);
-    }, 5000);
-    return () => clearInterval(rotate);
-  }, [announcements.length]);
 
   // "Trending Concerts" - lấy sự kiện nổi bật
   useEffect(() => {
@@ -86,8 +47,6 @@ export default function HomePage() {
 
     const filter = {
       page: 1,
-      // The home page is the public catalogue, so a newly approved concert
-      // must not disappear merely because it falls after the first six rows.
       pageSize: 100,
       sortBy: "StartsAt",
       sortOrder: "asc",
@@ -116,30 +75,6 @@ export default function HomePage() {
   return (
     <div className="tb-app">
       <Header />
-
-      {/* Home Live Announcement & Promotion Bar */}
-      {announcements.length > 0 && (
-        <div className="tb-home-notice-bar">
-          <div className="tb-container tb-home-notice-inner">
-            <span className="tb-home-notice-pill">🔔 Notice</span>
-            <div className="tb-home-notice-body">
-              <strong>{announcements[activeNotifIndex]?.title}:</strong>{" "}
-              <span>{announcements[activeNotifIndex]?.message}</span>
-            </div>
-            {announcements.length > 1 && (
-              <span className="tb-home-notice-counter">
-                ({activeNotifIndex + 1}/{announcements.length})
-              </span>
-            )}
-            <Link
-              to={announcements[activeNotifIndex]?.targetUrl || "/notifications"}
-              className="tb-home-notice-link"
-            >
-              View details →
-            </Link>
-          </div>
-        </div>
-      )}
 
       {!q && (
         <section className="tb-hero">

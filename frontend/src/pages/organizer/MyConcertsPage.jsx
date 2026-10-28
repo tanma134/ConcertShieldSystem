@@ -110,12 +110,36 @@ export default function MyConcertsPage() {
                 </div>
                 </Link>
 
-                <Link
-                  to={`/organizer/events/${ev.eventId}/orders`}
-                  className="co-button co-button-primary mc-view-orders"
-                >
-                  View Orders
-                </Link>
+                <div style={{ display: "flex", gap: "8px", marginTop: "8px", flexWrap: "wrap" }}>
+                  <Link
+                    to={`/organizer/events/${ev.eventId}/orders`}
+                    className="co-button co-button-primary mc-view-orders"
+                    style={{ flex: 1, minWidth: "120px" }}
+                  >
+                    View Orders
+                  </Link>
+                  <Link
+                    to={`/organizer/events/${ev.eventId}/realtime-checkin`}
+                    className="co-button"
+                    style={{
+                      flex: 1,
+                      minWidth: "120px",
+                      background: "#059669",
+                      color: "#fff",
+                      textAlign: "center",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      textDecoration: "none",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      borderRadius: "6px",
+                      padding: "8px 12px",
+                    }}
+                  >
+                    📡 Live Check-in
+                  </Link>
+                </div>
 
                 {["Draft", "Rejected"].includes(ev.status) && <div className="mc-config-links">
                   <Link to={`/organizer/events/${ev.eventId}/compliance`}>Compliance</Link>

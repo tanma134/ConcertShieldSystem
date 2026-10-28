@@ -1,0 +1,44 @@
+Function Code,,UC_14.1_MonitorCheckinStatus,,,Function Name,,,,,,GetMonitorStatusAsync
+Created By,,Developer Name,,,Executed By,,,,,,QA Tester
+Lines  of code,,165.0,,,Lack of test cases,,,,,,0.0
+Test requirement,,"Organizer and Admin query live aggregate check-in throughput, capacity percentages, and per-gate traffic stats."
+Passed,,Failed,,Untested,,,,,,N/A/B,,,,Total Test Cases
+9.0,,0.0,,0.0,,,,,,"3,4,2",3.0,4.0,2.0,9.0
+
+,,,,,UTCID01,UTCID02,UTCID03,UTCID04,UTCID05,UTCID06,UTCID07,UTCID08,UTCID09
+Condition,Precondition
+,,,Database has active event with check-in records,,O,O,O,O,O,,,O,O
+,,,Event has 0 check-ins scanned so far,,,,,O,,,,,
+,,,Event does not exist in DB,,,,,,,O,,,
+,,,Caller is authorized Organizer or Admin,,O,O,O,O,O,O,O,O,
+,,,Caller is Customer role,,,,,,,,,,O
+,eventId
+,,,2001 (Active Concert Event),,O,O,O,O,O,,,O,O
+,,,99999 (Non-existent Event ID),,,,,,,O,,,
+,,,0 or -1 (Abnormal invalid Event ID),,,,,,,,O,,
+,gateId
+,,,null (all gates summary),,O,,,O,O,O,O,O,O
+,,,"""GATE_A"" (Filter Gate A)",,,O,,,,,,,
+,zone
+,,,null (all zones),,O,O,,O,O,O,O,O,O
+,,,"""VIP"" (Filter VIP zone)",,,,O,,,,,,
+,currentUserId
+,,,10 (Organizer owner ID),,O,O,O,O,O,O,O,,
+,,,99 (Non-owner organizer),,,,,,,,,O,
+,,,500 (Customer ID),,,,,,,,,,O
+Confirm,Return
+,,,"CheckinMonitorResponseDTO with ScannedTickets > 0, CheckinRate > 0%",,O,O,O,,O,,,,
+,,,"CheckinMonitorResponseDTO with ScannedTickets == 0, CheckinRate == 0.0%",,,,,O,,,,,
+,Exception
+,,,"KeyNotFoundException (404 ""Event not found"")",,,,,,,O,,,
+,,,"ArgumentException (400 ""Event ID must be positive"")",,,,,,,,O,,
+,,,"ForbiddenException (403 ""You are not authorized to view this event"")",,,,,,,,,O,O
+,Log message
+,,,"""Generated checkin monitor dashboard for event {EventId}""",,O,O,O,O,O,,,,
+,,,"""Event {EventId} not found""",,,,,,,O,,,
+,,,"""Invalid eventId: {EventId}""",,,,,,,,O,,
+,,,"""Access denied to monitoring dashboard for user {UserId}""",,,,,,,,,O,O
+Result,"Type(N : Normal, A : Abnormal, B : Boundary)",,,,N,N,N,B,B,A,A,A,A
+,Passed/Failed,,,,P,P,P,P,P,P,P,P,P
+,Executed Date,,,,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026
+,Defect ID,,,,,,,,,,,,

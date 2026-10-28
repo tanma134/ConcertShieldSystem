@@ -1,0 +1,40 @@
+Function Code,,UC_7.7_ViewVoucherUsageDetails,,,Function Name,,,,,,GetVoucherUsagesAsync
+Created By,,Developer Name,,,Executed By,,,,,,QA Tester
+Lines  of code,,110.0,,,Lack of test cases,,,,,,0.0
+Test requirement,,"View usage history list (orderId, userId, discountAmount, usedAt) for a specified voucher."
+Passed,,Failed,,Untested,,,,,,N/A/B,,,,Total Test Cases
+8.0,,0.0,,0.0,,,,,,"2,4,2",2.0,4.0,2.0,8.0
+
+,,,,,UTCID01,UTCID02,UTCID03,UTCID04,UTCID05,UTCID06,UTCID07,UTCID08
+Condition,Precondition
+,,,Database is accessible,,O,O,O,O,O,O,O,O
+,,,Target voucher exists and belongs to caller Organizer,,O,O,O,O,,,,
+,,,Target voucher belongs to another Organizer,,,,,,,O,,
+,,,Target voucher does not exist in DB,,,,,,O,,,
+,voucherId
+,,,101 (Voucher with 5 usages),,O,,,,,,,
+,,,102 (Voucher with 0 usages),,,O,,,,,,
+,,,1 (Boundary: min ID),,,,O,,,,,
+,,,999999 (Boundary: high valid ID),,,,,O,,,,
+,,,88888 (Non-existent ID),,,,,,O,,,
+,,,205 (Other organizer voucher),,,,,,,O,,
+,,,0 (Boundary: invalid ID),,,,,,,,O,
+,,,-5 (Abnormal: negative ID),,,,,,,,,O
+,isAdmin
+,,,false,,O,O,O,O,O,O,O,O
+Confirm,Return
+,,,List<VoucherUsageDTO> with Count == 5,,O,,O,O,,,,
+,,,List<VoucherUsageDTO> with Count == 0,,,O,,,,,,
+,Exception
+,,,"KeyNotFoundException (404 ""Voucher not found"")",,,,,,O,,,
+,,,"ForbiddenException (403 ""You do not have access to this voucher"")",,,,,,,O,,
+,,,"ArgumentException (400 ""Voucher ID must be positive"")",,,,,,,,O,O
+,Log message
+,,,"""Retrieved {Count} usage records for voucher {VoucherId}""",,O,O,O,O,,,,
+,,,"""Voucher {VoucherId} not found""",,,,,,O,,,
+,,,"""Unauthorized access attempt for voucher {VoucherId}""",,,,,,,O,,
+,,,"""Invalid voucher ID: {VoucherId}""",,,,,,,,O,O
+Result,"Type(N : Normal, A : Abnormal, B : Boundary)",,,,N,N,B,B,A,A,A,A
+,Passed/Failed,,,,P,P,P,P,P,P,P,P
+,Executed Date,,,,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026
+,Defect ID,,,,,,,,,,,

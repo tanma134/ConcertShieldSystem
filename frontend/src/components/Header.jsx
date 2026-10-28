@@ -10,7 +10,7 @@ const POPULAR_SEARCHES = ["Live Music", "EDM Festival", "K-Pop", "Jazz Night", "
 
 export default function Header() {
   const navigate = useNavigate();
-  const { user, logout, isAuthenticated, isAdmin, isOrganizer } = useAuth();
+  const { user, logout, isAuthenticated, isAdmin, isOrganizer, isStaff } = useAuth();
   const [searchParams] = useSearchParams();
   const [keyword, setKeyword] = useState(searchParams.get("q") || "");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -52,7 +52,7 @@ export default function Header() {
   };
 
   const fetchHeaderNotifications = () => {
-    if (!isAuthenticated || isAdmin) return;
+    if (isAdmin) return;
     notificationApi
       .getNotifications()
       .then((res) => {
@@ -62,7 +62,7 @@ export default function Header() {
           rawItems.map((n) => ({
             notificationId: n.notificationId ?? n.NotificationId ?? n.id ?? 0,
             title: n.title || n.Title || "",
-            message: n.message || n.Message || "",
+            message: n.message || n.Message || n.content || "",
             category: n.category || n.Category || "event_new",
             targetUrl: n.targetUrl || n.TargetUrl || "",
             isRead: n.isRead ?? n.IsRead ?? false,
@@ -75,7 +75,7 @@ export default function Header() {
   };
 
   useEffect(() => {
-    if (!isAuthenticated || isAdmin) return;
+    if (isAdmin) return;
 
     fetchHeaderNotifications();
 
@@ -317,7 +317,7 @@ export default function Header() {
           )}
 
           {/* Notification Bell Dropdown (Customer and Organizer only) */}
-          {isAuthenticated && !isAdmin && (
+          {!isAdmin && (
             <div className="tb-notif-wrap" ref={notifRef}>
               <button
                 type="button"
@@ -382,8 +382,29 @@ export default function Header() {
                             }
                           }}
                         >
-                          <div className="tb-notif-item-title">{notif.title}</div>
-                          <div className="tb-notif-item-msg">{notif.message}</div>
+                          <div className="tb-notif-item-content">
+                            <div className="tb-notif-item-title">{notif.title}</div>
+                            <div className="tb-notif-item-msg">{notif.message}</div>
+                          </div>
+                          <button
+                            type="button"
+                            className="tb-notif-item-delete"
+                            title="Xóa thông báo"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              const targetId = notif.notificationId;
+                              setNotifications((prev) => prev.filter((n) => n.notificationId !== targetId));
+                              if (!notif.isRead) {
+                                setUnreadCount((prev) => Math.max(0, prev - 1));
+                              }
+                              try {
+                                await notificationApi.deleteNotification(targetId);
+                              } catch (err) {}
+                              window.dispatchEvent(new Event("notification-updated"));
+                            }}
+                          >
+                            ✕
+                          </button>
                         </div>
                       ))
                     )}
@@ -402,6 +423,18 @@ export default function Header() {
           {isAuthenticated && (
             <Link to="/my-tickets" className="tb-header-link">
               My Tickets
+            </Link>
+          )}
+
+          {isStaff && (
+            <Link to="/staff/gate-assignment" className="tb-header-link" style={{ color: "#34d399", fontWeight: 600 }}>
+              Staff Portal
+            </Link>
+          )}
+
+          {isOrganizer && (
+            <Link to="/organizer/dashboard" className="tb-header-link">
+              Organizer
             </Link>
           )}
 
@@ -441,6 +474,26 @@ export default function Header() {
                     <Link to="/profile" onClick={() => setMenuOpen(false)}>
                       My Profile
                     </Link>
+                    {isStaff && (
+                      <>
+                        <Link to="/staff/gate-assignment" onClick={() => setMenuOpen(false)}>
+                          Gate Assignment
+                        </Link>
+                        <Link to="/staff/checkin/1" onClick={() => setMenuOpen(false)}>
+                          Check-in Scanner Terminal
+                        </Link>
+                      </>
+                    )}
+                    {isOrganizer && (
+                      <>
+                        <Link to="/organizer/dashboard" onClick={() => setMenuOpen(false)}>
+                          Organizer Dashboard
+                        </Link>
+                        <Link to="/organizer/verification" onClick={() => setMenuOpen(false)}>
+                          Business Verification
+                        </Link>
+                      </>
+                    )}
                     {isAdmin && (
                       <Link to="/admin/vouchers" onClick={() => setMenuOpen(false)}>
                         Vouchers Admin

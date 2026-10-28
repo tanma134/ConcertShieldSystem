@@ -1,0 +1,41 @@
+Function Code,,UC_15.5_ViewCheckinScanHistory,,,Function Name,,,,,,GetScanHistoryAsync
+Created By,,Developer Name,,,Executed By,,,,,,QA Tester
+Lines  of code,,130.0,,,Lack of test cases,,,,,,0.0
+Test requirement,,"Staff queries their personal recent scan history (status, ticket code, timestamp, gate) at scanner terminal."
+Passed,,Failed,,Untested,,,,,,N/A/B,,,,Total Test Cases
+9.0,,0.0,,0.0,,,,,,"3,3,3",3.0,3.0,3.0,9.0
+
+,,,,,UTCID01,UTCID02,UTCID03,UTCID04,UTCID05,UTCID06,UTCID07,UTCID08,UTCID09
+Condition,Precondition
+,,,Database contains scan logs for staff member,,O,O,O,O,O,,,O,O
+,,,Staff member has 0 scans performed today,,,,,,,O,,,
+,,,Caller has Staff role,,O,O,O,O,O,O,O,O,
+,,,Caller has Customer role,,,,,,,,,,O
+,eventId
+,,,3001 (Valid Event ID),,O,O,O,O,O,O,,O,O
+,,,0 or -1 (Abnormal),,,,,,,,O,,
+,statusFilter
+,,,null (all scans),,O,,,O,O,O,O,O,O
+,,,"""SUCCESS""",,,O,,,,,,,
+,,,"""FAILED""",,,,O,,,,,,
+,gateId
+,,,null (all gates),,O,O,O,,O,O,O,O,O
+,,,"""GATE_A""",,,,,O,,,,,
+,limit
+,,,20 (Normal),,O,O,O,O,,O,O,O,O
+,,,50 (Boundary: max limit),,,,,,O,,,,
+Confirm,Return
+,,,ScanHistoryResponseDTO with Items.Count > 0 and TotalScans >= Items.Count,,O,O,O,O,O,,,,
+,,,ScanHistoryResponseDTO with Items.Count == 0 and TotalScans == 0,,,,,,,O,,,
+,Exception
+,,,"ArgumentException (400 ""Event ID must be positive"")",,,,,,,,O,,
+,,,"ValidationException (400 ""Invalid status filter value"")",,,,,,,,,O,
+,,,"ForbiddenException (403 ""Staff permission required"")",,,,,,,,,,O
+,Log message
+,,,"""Fetched {Count} scan history records for staff {StaffId} at event {EventId}""",,O,O,O,O,O,O,,,
+,,,"""Invalid scan history parameters: {Error}""",,,,,,,,O,O,
+,,,"""Forbidden access by user {UserId}""",,,,,,,,,,O
+Result,"Type(N : Normal, A : Abnormal, B : Boundary)",,,,N,N,N,B,B,B,A,A,A
+,Passed/Failed,,,,P,P,P,P,P,P,P,P,P
+,Executed Date,,,,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026
+,Defect ID,,,,,,,,,,,,

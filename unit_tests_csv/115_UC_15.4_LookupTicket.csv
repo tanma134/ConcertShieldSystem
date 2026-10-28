@@ -1,0 +1,41 @@
+Function Code,,UC_15.4_LookupTicket,,,Function Name,,,,,,LookupTicketsAsync
+Created By,,Developer Name,,,Executed By,,,,,,QA Tester
+Lines  of code,,140.0,,,Lack of test cases,,,,,,0.0
+Test requirement,,"Staff searches for attendee tickets by customer email, phone number, attendee name, or order code at helpdesk."
+Passed,,Failed,,Untested,,,,,,N/A/B,,,,Total Test Cases
+9.0,,0.0,,0.0,,,,,,"3,3,3",3.0,3.0,3.0,9.0
+
+,,,,,UTCID01,UTCID02,UTCID03,UTCID04,UTCID05,UTCID06,UTCID07,UTCID08,UTCID09
+Condition,Precondition
+,,,Database has attendee tickets for event,,O,O,O,O,O,,,O,O
+,,,No tickets match search keyword,,,,,,,O,,,
+,,,Caller is authorized Staff,,O,O,O,O,O,O,O,O,
+,,,Caller is Customer role,,,,,,,,,,O
+,request.EventId
+,,,3001 (Valid Event ID),,O,O,O,O,O,O,,O,O
+,,,0 or -1 (Abnormal invalid Event ID),,,,,,,,O,,
+,request.SearchKeyword
+,,,"""0901234567"" (Search by Phone number)",,O,,,,,,,,
+,,,"""customer@example.com"" (Search by Email)",,,O,,,,,,,
+,,,"""Nguyen Van A"" (Search by Customer Name)",,,,O,,,,,,
+,,,"""ORD"" (Boundary: 3 chars minimum search length)",,,,,O,,,,,
+,,,"""ORD-2026-LONG-SEARCH-STRING-50-CHARS""",,,,,,O,,,,
+,,,"""NON_EXISTENT_KEYWORD""",,,,,,,O,,,
+,,,"""0901234567""",,,,,,,,O,,
+,,,"""AB"" (Abnormal: length < 3 chars)",,,,,,,,,O,
+,,,"""0901234567""",,,,,,,,,,O
+Confirm,Return
+,,,LookupTicketResponseDTO with Matches.Count > 0,,O,O,O,O,O,,,,
+,,,LookupTicketResponseDTO with Matches.Count == 0,,,,,,,O,,,
+,Exception
+,,,"ArgumentException (400 ""Event ID must be positive"")",,,,,,,,O,,
+,,,"ValidationException (400 ""Search keyword must have at least 3 characters"")",,,,,,,,,O,
+,,,"ForbiddenException (403 ""Staff permission required"")",,,,,,,,,,O
+,Log message
+,,,"""Found {Count} tickets matching keyword {Keyword} for event {EventId}""",,O,O,O,O,O,O,,,
+,,,"""Invalid lookup parameters: {Error}""",,,,,,,,O,O,
+,,,"""Unauthorized ticket lookup by user {UserId}""",,,,,,,,,,O
+Result,"Type(N : Normal, A : Abnormal, B : Boundary)",,,,N,N,N,B,B,B,A,A,A
+,Passed/Failed,,,,P,P,P,P,P,P,P,P,P
+,Executed Date,,,,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026
+,Defect ID,,,,,,,,,,,,

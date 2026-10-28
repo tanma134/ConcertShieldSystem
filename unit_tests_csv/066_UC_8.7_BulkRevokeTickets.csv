@@ -1,0 +1,52 @@
+Function Code,,UC_8.7_BulkRevokeTickets,,,Function Name,,,,,,BulkRevokeTicketsAsync
+Created By,,Developer Name,,,Executed By,,,,,,QA Tester
+Lines  of code,,185.0,,,Lack of test cases,,,,,,0.0
+Test requirement,,"Admin bulk revokes tickets due to event cancellation or schedule changes, invalidating QR tokens and generating audit logs."
+Passed,,Failed,,Untested,,,,,,N/A/B,,,,Total Test Cases
+10.0,,0.0,,0.0,,,,,,"3,5,2",3.0,5.0,2.0,10.0
+
+,,,,,UTCID01,UTCID02,UTCID03,UTCID04,UTCID05,UTCID06,UTCID07,UTCID08,UTCID09,UTCID10
+Condition,Precondition
+,,,Database is accessible and tickets exist in VALID status,,O,O,O,O,O,,,O,O,O
+,,,Event does not exist in DB,,,,,,,O,,,,
+,,,Tickets already in REVOKED status,,,,,,,,,O,,
+,,,Caller has Admin role,,O,O,O,O,O,O,O,O,O,
+,,,Caller has Staff role (non-admin),,,,,,,,,,,O
+,request.EventId
+,,,1001 (Valid Event ID),,O,O,O,O,O,,O,O,O,O
+,,,99999 (Non-existent Event ID),,,,,,,O,,,,
+,request.TicketIds
+,,,"[201, 202, 203] (Normal 3 tickets)",,O,,,,,,,,,
+,,,"[301, 302] (With SendNotification=true)",,,O,,,,,,,,
+,,,"[401, 402] (Reason=""SCHEDULE_CHANGE"")",,,,O,,,,,,,
+,,,[501] (Boundary: single ticket),,,,,O,,,,,,
+,,,List of 500 ticket IDs (Boundary: max batch size),,,,,,O,,,,,
+,,,null or [] (Empty list),,,,,,,,O,,,
+,,,"[601, 602] (Already revoked tickets)",,,,,,,,,O,,
+,,,"[701, 702] (With empty reason)",,,,,,,,,,O,
+,,,"[801, 802] (Called by Staff)",,,,,,,,,,,O
+,request.ReasonType
+,,,"""EVENT_CANCELLED""",,O,O,,O,O,O,,O,,O
+,,,"""SCHEDULE_CHANGE""",,,,O,,,,,,,
+,,,"""FORCE_MAJEURE""",,,,,,,,O,,O,
+,request.SendNotification
+,,,false,,O,,O,O,O,O,O,O,O,O
+,,,true (trigger notification dispatch),,,O,,,,,,,,
+Confirm,Return
+,,,BulkRevokeResponseDTO with RevokedCount == TicketIds.Count,,O,O,O,O,O,,,,,
+,Exception
+,,,"KeyNotFoundException (404 ""Event not found"")",,,,,,,O,,,,
+,,,"ValidationException (400 ""TicketIds list cannot be empty"")",,,,,,,,O,,,
+,,,"InvalidOperationException (400 ""Tickets are already revoked"")",,,,,,,,,O,,
+,,,"ValidationException (400 ""Revocation reason is required"")",,,,,,,,,,O,
+,,,"ForbiddenException (403 ""Admin privilege required"")",,,,,,,,,,,O
+,Log message
+,,,"""Bulk revoked {Count} tickets for event {EventId} successfully""",,O,O,O,O,O,,,,,
+,,,"""Event {EventId} not found for bulk revocation""",,,,,,,O,,,,
+,,,"""Validation error: {Message}""",,,,,,,,O,,O,
+,,,"""Conflict: tickets already revoked for event {EventId}""",,,,,,,,,O,,
+,,,"""Unauthorized bulk revoke attempt by user {UserId}""",,,,,,,,,,,O
+Result,"Type(N : Normal, A : Abnormal, B : Boundary)",,,,N,N,N,B,B,A,A,A,A,A
+,Passed/Failed,,,,P,P,P,P,P,P,P,P,P,P
+,Executed Date,,,,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026
+,Defect ID,,,,,,,,,,,,,

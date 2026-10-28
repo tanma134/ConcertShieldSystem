@@ -1,0 +1,35 @@
+ALTER TABLE ticket_reconciliations ADD COLUMN IF NOT EXISTS event_title VARCHAR(255);
+ALTER TABLE ticket_reconciliations ADD COLUMN IF NOT EXISTS admin_name VARCHAR(100);
+ALTER TABLE ticket_reconciliations ADD COLUMN IF NOT EXISTS total_tickets_revoked INT;
+ALTER TABLE ticket_reconciliations ADD COLUMN IF NOT EXISTS reason_type VARCHAR(50);
+ALTER TABLE ticket_reconciliations ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE ticket_reconciliations ADD COLUMN IF NOT EXISTS refund_status VARCHAR(50) DEFAULT 'QUEUED';
+ALTER TABLE ticket_reconciliations ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+
+ALTER TABLE ticket_revocations ADD COLUMN IF NOT EXISTS event_title VARCHAR(255);
+ALTER TABLE ticket_revocations ADD COLUMN IF NOT EXISTS revoked_by_name VARCHAR(100);
+ALTER TABLE ticket_revocations ADD COLUMN IF NOT EXISTS reason_note TEXT;
+ALTER TABLE ticket_revocations ADD COLUMN IF NOT EXISTS reconciliation_id INT;
+ALTER TABLE ticket_revocations ADD COLUMN IF NOT EXISTS is_bulk BOOLEAN DEFAULT FALSE;
+ALTER TABLE ticket_revocations ADD COLUMN IF NOT EXISTS refund_queued BOOLEAN DEFAULT TRUE;
+ALTER TABLE ticket_revocations ADD COLUMN IF NOT EXISTS notification_sent BOOLEAN DEFAULT TRUE;
+ALTER TABLE ticket_revocations ADD COLUMN IF NOT EXISTS seat_or_zone VARCHAR(100);
+ALTER TABLE ticket_revocations ADD COLUMN IF NOT EXISTS customer_name VARCHAR(100);
+ALTER TABLE ticket_revocations ALTER COLUMN ticket_id DROP NOT NULL;
+ALTER TABLE ticket_revocations ALTER COLUMN order_id DROP NOT NULL;
+ALTER TABLE ticket_revocations ALTER COLUMN customer_id DROP NOT NULL;
+ALTER TABLE ticket_revocations ALTER COLUMN reason_details DROP NOT NULL;
+ALTER TABLE ticket_revocations ALTER COLUMN ticket_code TYPE VARCHAR(100);
+
+ALTER TABLE ticket_reissues ADD COLUMN IF NOT EXISTS event_title VARCHAR(255);
+ALTER TABLE ticket_reissues ADD COLUMN IF NOT EXISTS reissued_by_name VARCHAR(100);
+ALTER TABLE ticket_reissues ADD COLUMN IF NOT EXISTS customer_name VARCHAR(100);
+ALTER TABLE ticket_reissues ADD COLUMN IF NOT EXISTS customer_email VARCHAR(100);
+ALTER TABLE ticket_reissues ADD COLUMN IF NOT EXISTS seat_or_zone VARCHAR(100);
+ALTER TABLE ticket_reissues ADD COLUMN IF NOT EXISTS dynamic_qr_status VARCHAR(50) DEFAULT 'ACTIVE';
+ALTER TABLE ticket_reissues ALTER COLUMN old_ticket_id DROP NOT NULL;
+ALTER TABLE ticket_reissues ALTER COLUMN new_ticket_id DROP NOT NULL;
+ALTER TABLE ticket_reissues ALTER COLUMN order_id DROP NOT NULL;
+ALTER TABLE ticket_reissues ALTER COLUMN customer_id DROP NOT NULL;
+ALTER TABLE ticket_reissues ALTER COLUMN old_ticket_code TYPE VARCHAR(100);
+ALTER TABLE ticket_reissues ALTER COLUMN new_ticket_code TYPE VARCHAR(100);

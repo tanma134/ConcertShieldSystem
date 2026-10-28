@@ -255,3 +255,171 @@
   width: 100vw;
   height: 100vh;
 }
+
+
+/* Policy Agreement Checkbox & Modal (UC 11.1 & 11.2) */
+.auth-policy-group {
+  margin: 16px 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  text-align: left;
+}
+
+.auth-policy-checkbox {
+  margin-top: 3px;
+  accent-color: #ff2d75;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.auth-policy-label {
+  font-size: 12.5px;
+  color: #a0a0aa;
+  line-height: 1.45;
+  cursor: pointer;
+  user-select: none;
+}
+
+.auth-policy-link {
+  color: #ff2d75;
+  background: none;
+  border: none;
+  padding: 0;
+  margin-left: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  display: inline;
+}
+
+.auth-policy-link:hover {
+  color: #ff6097;
+}
+
+.policy-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.policy-modal-card {
+  background: #15151c;
+  border: 1px solid #2a2b36;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 650px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
+
+.policy-modal-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid #262734;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.policy-modal-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.policy-modal-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.policy-modal-close:hover {
+  color: #ff2d75;
+}
+
+.policy-modal-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  color: #cbd5e1;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.policy-category-block {
+  background: #0c0c10;
+  border: 1px solid #232430;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+
+.policy-category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.policy-cat-name {
+  font-weight: 700;
+  color: #f1f5f9;
+  font-size: 0.95rem;
+}
+
+.policy-version-badge {
+  background: rgba(255, 45, 117, 0.15);
+  color: #ff2d75;
+  border: 1px solid rgba(255, 45, 117, 0.35);
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.policy-cat-desc {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin: 0 0 6px 0;
+}
+
+.policy-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #262734;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  background: #111117;
+}
+
+.btn-policy-agree {
+  background: #ff2d75;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.btn-policy-agree:hover {
+  background: #e02667;
+  transform: translateY(-1px);
+}

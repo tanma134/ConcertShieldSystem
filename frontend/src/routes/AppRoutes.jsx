@@ -70,6 +70,13 @@ import TicketPlaceholderPage from "../pages/TicketPlaceholderPage";
 import QueueManagementPage from "../pages/admin/QueueManagementPage";
 import QueueAbuseAlertsPage from "../pages/admin/QueueAbuseAlertsPage";
 import QueueAbuseAlertDetailPage from "../pages/admin/QueueAbuseAlertDetailPage";
+import TicketGovernancePage from "../pages/admin/TicketGovernancePage";
+import SystemPoliciesPage from "../pages/admin/SystemPoliciesPage";
+import OrganizerVerificationsPage from "../pages/admin/OrganizerVerificationsPage";
+import SubmitOrganizerVerificationPage from "../pages/organizer/SubmitOrganizerVerificationPage";
+import RealtimeCheckinMonitorPage from "../pages/organizer/RealtimeCheckinMonitorPage";
+import ViewGateAssignmentPage from "../pages/staff/ViewGateAssignmentPage";
+import StaffCheckinTerminalPage from "../pages/staff/StaffCheckinTerminalPage";
 
 export default function AppRoutes() {
   return (
@@ -362,6 +369,22 @@ export default function AppRoutes() {
       <Route path="/risk/decisions/:id/appeal" element={<ProtectedRoute><SubmitAppealPage /></ProtectedRoute>} />
       <Route path="/admin/seating-templates" element={<AdminRoute><AdminSeatingTemplatesPage /></AdminRoute>} />
       <Route path="/admin/vouchers" element={<AdminRoute><VoucherManagementPage /></AdminRoute>} />
+
+      {/* Staff Check-in & Gate Assignment (UC_15.1, 15.2, 15.3, 15.4, 15.5, 14.5, 14.6, 14.7) */}
+      <Route path="/staff/gate-assignment" element={<ProtectedRoute staffOnly><ViewGateAssignmentPage /></ProtectedRoute>} />
+      <Route path="/staff/gate-assignment/:eventId" element={<ProtectedRoute staffOnly><ViewGateAssignmentPage /></ProtectedRoute>} />
+      <Route path="/staff/checkin" element={<ProtectedRoute staffOnly><StaffCheckinTerminalPage /></ProtectedRoute>} />
+      <Route path="/staff/checkin/:eventId" element={<ProtectedRoute staffOnly><StaffCheckinTerminalPage /></ProtectedRoute>} />
+
+      {/* Admin Ticket Governance, Policies & Verifications (UC_8.7, 8.8, 8.10, 11.1, 11.2, 11.4, 11.5) */}
+      <Route path="/admin/ticket-governance" element={<AdminRoute><TicketGovernancePage /></AdminRoute>} />
+      <Route path="/admin/policies" element={<AdminRoute><SystemPoliciesPage /></AdminRoute>} />
+      <Route path="/admin/organizer-verifications" element={<AdminRoute><OrganizerVerificationsPage /></AdminRoute>} />
+
+      {/* Organizer Verification & Real-time Check-in Monitor (UC_11.3, 14.1, 14.7) */}
+      <Route path="/organizer/verification" element={<ProtectedRoute><SubmitOrganizerVerificationPage /></ProtectedRoute>} />
+      <Route path="/organizer/events/:eventId/realtime-checkin" element={<ProtectedRoute organizerOnly><RealtimeCheckinMonitorPage /></ProtectedRoute>} />
+      <Route path="/organizer/realtime-checkin" element={<ProtectedRoute organizerOnly><RealtimeCheckinMonitorPage /></ProtectedRoute>} />
     </Routes>
   );
 }

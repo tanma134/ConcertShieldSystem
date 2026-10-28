@@ -3888,7 +3888,7 @@
         },
         {
             "Key": "checkinops-gate-assignment",
-            "DownstreamPathTemplate": "/api/staff/gate-assignment",
+            "DownstreamPathTemplate": "/api/checkin/gate-assignment",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
                 {
@@ -3896,9 +3896,10 @@
                     "Port": 7330
                 }
             ],
-            "UpstreamPathTemplate": "/api/staff/gate-assignment",
+            "UpstreamPathTemplate": "/api/checkin/gate-assignment",
             "UpstreamHttpMethod": [
-                "Get"
+                "Get",
+                "Options"
             ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"
@@ -4833,6 +4834,259 @@
                 "Put",
                 "Patch",
                 "Delete"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "admin-policies-all",
+            "DownstreamPathTemplate": "/api/admin/policies/{everything}",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7076
+                }
+            ],
+            "UpstreamPathTemplate": "/api/admin/policies/{everything}",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete",
+                "Options"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "admin-policies-root",
+            "DownstreamPathTemplate": "/api/admin/policies",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7076
+                }
+            ],
+            "UpstreamPathTemplate": "/api/admin/policies",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete",
+                "Options"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "organizer-verification-all",
+            "DownstreamPathTemplate": "/api/organizer/verification/{everything}",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7058
+                }
+            ],
+            "UpstreamPathTemplate": "/api/organizer/verification/{everything}",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete",
+                "Options"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "organizer-verification-root",
+            "DownstreamPathTemplate": "/api/organizer/verification",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7058
+                }
+            ],
+            "UpstreamPathTemplate": "/api/organizer/verification",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete",
+                "Options"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "admin-verification-all",
+            "DownstreamPathTemplate": "/api/admin/verification/{everything}",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7058
+                }
+            ],
+            "UpstreamPathTemplate": "/api/admin/verification/{everything}",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete",
+                "Options"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "admin-verification-root",
+            "DownstreamPathTemplate": "/api/admin/verification",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7058
+                }
+            ],
+            "UpstreamPathTemplate": "/api/admin/verification",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete",
+                "Options"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "checkinops-scan-qr",
+            "DownstreamPathTemplate": "/api/checkin/scan-qr",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7330
+                }
+            ],
+            "UpstreamPathTemplate": "/api/checkin/scan-qr",
+            "UpstreamHttpMethod": [
+                "Post",
+                "Options"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "checkinops-offline-package",
+            "DownstreamPathTemplate": "/api/checkin/offline-package",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7330
+                }
+            ],
+            "UpstreamPathTemplate": "/api/checkin/offline-package",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Options"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "checkinops-offline-sync",
+            "DownstreamPathTemplate": "/api/checkin/offline-sync",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7330
+                }
+            ],
+            "UpstreamPathTemplate": "/api/checkin/offline-sync",
+            "UpstreamHttpMethod": [
+                "Post",
+                "Options"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "checkinops-conflicts-all",
+            "DownstreamPathTemplate": "/api/checkin/conflicts/{everything}",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7330
+                }
+            ],
+            "UpstreamPathTemplate": "/api/checkin/conflicts/{everything}",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete",
+                "Options"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "checkinops-conflicts-root",
+            "DownstreamPathTemplate": "/api/checkin/conflicts",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7330
+                }
+            ],
+            "UpstreamPathTemplate": "/api/checkin/conflicts",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Options"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "checkinops-governance-all",
+            "DownstreamPathTemplate": "/api/checkin/governance/{everything}",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7330
+                }
+            ],
+            "UpstreamPathTemplate": "/api/checkin/governance/{everything}",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete",
+                "Options"
             ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"

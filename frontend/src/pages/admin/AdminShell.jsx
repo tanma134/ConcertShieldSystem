@@ -9,6 +9,9 @@ export const ADMIN_LINKS = [
   ["/admin/events", "Event Approvals"],
   ["/admin/events/all", "All Events"],
   ["/admin/organizer-requests", "Organizer Requests"],
+  ["/admin/organizer-verifications", "Organizer Verifications"],
+  ["/admin/policies", "System Policies"],
+  ["/admin/ticket-governance", "Ticket Governance"],
   ["/admin/reviews", "Review Management"],
   ["/admin/wishlists", "Wishlist Management"],
   ["/admin/seating-templates", "Seating Templates"],
@@ -25,12 +28,12 @@ export const ADMIN_LINKS = [
   ["/admin/fraud-cases", "Fraud Cases"],
   ["/admin/risk/blocks", "Risk Blocks"],
   ["/admin/risk/appeals", "Appeals"],
-  ["/admin/risk/policy", "Risk Policy"]
+  ["/admin/risk/policy", "Risk Policy"],
   ["/admin/queue", "Virtual Queue"],
   ["/admin/queue/abuse-alerts", "Queue Abuse Alerts"],
 ];
 
-export default function AdminShell({ children, title = "Failed Transaction Queue" }) {
+export default function AdminShell({ children, title = "Admin Panel" }) {
   // Badge đỏ trên sidebar để admin biết còn việc chờ duyệt.
   const pending = useAdminPending();
   const badges = {

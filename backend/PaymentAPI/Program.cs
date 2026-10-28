@@ -141,9 +141,11 @@ builder.Services.AddSwaggerGen(c =>
 var app = builder.Build();
 
 // Thêm cột cho Risk Engine nếu chưa có (cùng cách AuthenticationAPI đang làm)
-using (var riskSchemaScope = app.Services.CreateScope())
+try
 {
+    using var riskSchemaScope = app.Services.CreateScope();
     var riskDb = riskSchemaScope.ServiceProvider.GetRequiredService<PaymentDbContext>();
+    riskDb.Database.SetCommandTimeout(30);
     await riskDb.Database.ExecuteSqlRawAsync(@"
         ALTER TABLE payment_transactions ADD COLUMN IF NOT EXISTS user_id integer;
         ALTER TABLE payment_transactions ADD COLUMN IF NOT EXISTS client_ip varchar(64);
@@ -166,6 +168,10 @@ using (var riskSchemaScope = app.Services.CreateScope())
         );
         CREATE UNIQUE INDEX IF NOT EXISTS uq_payment_refunds_return_request ON payment_refunds (return_request_id);
         CREATE INDEX IF NOT EXISTS ix_payment_refunds_order_id ON payment_refunds (order_id);");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"[PaymentAPI Schema Sync Warning] {ex.Message}");
 }
 
 if (app.Environment.IsDevelopment())

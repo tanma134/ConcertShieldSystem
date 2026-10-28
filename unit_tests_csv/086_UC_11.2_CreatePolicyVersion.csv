@@ -1,0 +1,49 @@
+Function Code,,UC_11.2_CreatePolicyVersion,,,Function Name,,,,,,CreatePolicyVersion
+Created By,,Developer Name,,,Executed By,,,,,,QA Tester
+Lines  of code,,155.0,,,Lack of test cases,,,,,,0.0
+Test requirement,,"Admin creates and deploys a new version of system policy rules (e.g. Refund deadline, Risk threshold)."
+Passed,,Failed,,Untested,,,,,,N/A/B,,,,Total Test Cases
+9.0,,0.0,,0.0,,,,,,"2,5,2",2.0,5.0,2.0,9.0
+
+,,,,,UTCID01,UTCID02,UTCID03,UTCID04,UTCID05,UTCID06,UTCID07,UTCID08,UTCID09
+Condition,Precondition
+,,,Database is accessible,,O,O,O,O,O,O,O,O,O
+,,,Policy version number does not exist for category,,O,O,O,O,,O,O,O,O
+,,,Policy version number already exists (duplicate),,,,,,O,,,,
+,,,Caller has Admin role,,O,O,O,O,O,O,O,O,
+,,,Caller has Organizer role,,,,,,,,,,O
+,dto.Category
+,,,"""REFUND""",,O,,O,,O,O,O,O,O
+,,,"""RISK""",,,O,,O,,,,,
+,dto.VersionNumber
+,,,"""2.1.0""",,O,,,,,,,,
+,,,"""1.5.0""",,,O,,,,,,,
+,,,"""3.0.0""",,,,O,O,,,,,
+,,,"""2.0.0"" (Existing duplicate version)",,,,,,O,,,,
+,,,""""" (Empty version)",,,,,,,O,,,
+,,,"""2.2.0""",,,,,,,,O,O,O
+,dto.RulesJson
+,,,"Valid JSON string '{""feePercent"": 5, ""cutoffHours"": 24}'",,O,O,O,,O,,,O,O
+,,,"Minimal valid JSON '{""k"":1}'",,,,,O,,,,,
+,,,Invalid JSON syntax '{feePercent: 5}',,,,,,,,O,,
+,dto.EffectiveDate
+,,,DateTime.UtcNow.AddDays(7) (Future),,O,O,,O,O,O,O,,O
+,,,DateTime.UtcNow (Boundary: immediate effect),,,,O,,,,,,
+,,,DateTime.UtcNow.AddDays(-5) (Abnormal: past),,,,,,,,,O,
+Confirm,Return
+,,,"PolicyVersionDTO with Id > 0 and Status=""DRAFT"" or ""ACTIVE""",,O,O,O,O,,,,,
+,Exception
+,,,"ConflictException (409 ""Policy version already exists"")",,,,,,O,,,,
+,,,"ValidationException (400 ""Version number is required"")",,,,,,,O,,,
+,,,"ValidationException (400 ""RulesJson must be valid JSON"")",,,,,,,,O,,
+,,,"ValidationException (400 ""EffectiveDate cannot be in the past"")",,,,,,,,,O,
+,,,"ForbiddenException (403 ""Admin role required"")",,,,,,,,,,O
+,Log message
+,,,"""Created policy version {Category} v{Version} successfully""",,O,O,O,O,,,,,
+,,,"""Duplicate policy version {Category} v{Version}""",,,,,,O,,,,
+,,,"""Policy validation error: {Error}""",,,,,,,O,O,O,
+,,,"""Unauthorized attempt to create policy by user {UserId}""",,,,,,,,,,O
+Result,"Type(N : Normal, A : Abnormal, B : Boundary)",,,,N,N,B,B,A,A,A,A,A
+,Passed/Failed,,,,P,P,P,P,P,P,P,P,P
+,Executed Date,,,,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026
+,Defect ID,,,,,,,,,,,,

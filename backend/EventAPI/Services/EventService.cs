@@ -404,6 +404,50 @@ namespace EventAPI.Services
             _governance.Queue("Notification", new NotificationMessage(entity.OrganizerId, "Concert approved", $"{entity.Title} has been published.", "event_approved", $"/events/{entity.Slug}"));
             await _eventRepository.UpdateAsync(entity);
             await approvalTransaction.CommitAsync();
+            // UC 20: Real-time In-App Notifications upon Event Approval
+            var approvedEventTitle = entity.Title;
+            var approvedEventId = entity.EventId;
+            var approvedOrganizerId = entity.OrganizerId;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    const string notifConnStr = "Host=localhost;Port=5432;Database=notification_db;Username=postgres;Password=123456";
+                    await using var conn = new Npgsql.NpgsqlConnection(notifConnStr);
+                    await conn.OpenAsync();
+
+                    // 1. Notification for Customer: Public event announced
+                    await using (var cmdCust = new Npgsql.NpgsqlCommand(@"
+                        INSERT INTO notifications (user_id, title, message, category, target_url, is_read, is_deleted, created_at)
+                        VALUES (0, @title, @msg, 'event_new', @url, false, false, NOW());", conn))
+                    {
+                        cmdCust.Parameters.AddWithValue("title", $"🎵 Sự kiện mới: {approvedEventTitle}");
+                        cmdCust.Parameters.AddWithValue("msg", $"Sự kiện âm nhạc \"{approvedEventTitle}\" vừa được Admin duyệt và chính thức mở bán trên ConcertShield. Hãy đặt vé ngay!");
+                        cmdCust.Parameters.AddWithValue("url", $"/events/{approvedEventId}");
+                        await cmdCust.ExecuteNonQueryAsync();
+                    }
+
+                    // 2. Notification for Organizer: Event approved & published
+                    if (approvedOrganizerId > 0)
+                    {
+                        await using (var cmdOrg = new Npgsql.NpgsqlCommand(@"
+                            INSERT INTO notifications (user_id, title, message, category, target_url, is_read, is_deleted, created_at)
+                            VALUES (@uid, @title, @msg, 'event_approved', @url, false, false, NOW());", conn))
+                        {
+                            cmdOrg.Parameters.AddWithValue("uid", approvedOrganizerId);
+                            cmdOrg.Parameters.AddWithValue("title", $"✅ Sự kiện đã được phê duyệt: {approvedEventTitle}");
+                            cmdOrg.Parameters.AddWithValue("msg", $"Sự kiện \"{approvedEventTitle}\" của bạn đã được Quản trị viên duyệt và công bố công khai trên hệ thống.");
+                            cmdOrg.Parameters.AddWithValue("url", "/organizer/events");
+                            await cmdOrg.ExecuteNonQueryAsync();
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to persist notifications for approved event {EventId}", approvedEventId);
+                }
+            });
 
             var roleGrant = await _roleClient.GrantRoleAsync(
                 entity.OrganizerId, "Organizer", adminBearerToken);

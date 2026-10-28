@@ -1,0 +1,50 @@
+Function Code,,UC_15.2_ScanDynamicQRTicket,,,Function Name,,,,,,ScanDynamicQrTicketAsync
+Created By,,Developer Name,,,Executed By,,,,,,QA Tester
+Lines  of code,,210.0,,,Lack of test cases,,,,,,0.0
+Test requirement,,"Staff scans encrypted rotating TOTP dynamic QR code, verifies cryptographic signature, checks replay, and records entry."
+Passed,,Failed,,Untested,,,,,,N/A/B,,,,Total Test Cases
+11.0,,0.0,,0.0,,,,,,"2,7,2",2.0,7.0,2.0,11.0
+
+,,,,,UTCID01,UTCID02,UTCID03,UTCID04,UTCID05,UTCID06,UTCID07,UTCID08,UTCID09,UTCID10,UTCID11
+Condition,Precondition
+,,,"Database has valid, un-scanned ticket for event",,O,O,O,O,,,,,,,
+,,,Ticket was already scanned (USED),,,,,,,O,,,,,
+,,,Ticket is in REVOKED status,,,,,,,,O,,,,
+,,,Ticket belongs to different event,,,,,,,,,O,,,
+,,,Ticket is designated for Gate B (not Gate A),,,,,,,,,,O,,
+,,,Caller is authorized Staff,,O,O,O,O,O,O,O,O,O,O,
+,,,Caller is Customer role,,,,,,,,,,,,O
+,request.EventId
+,,,3001 (Valid Event ID),,O,O,O,O,O,O,O,O,O,O,O
+,request.GateId
+,,,"""GATE_A""",,O,O,O,O,O,O,O,O,O,O,O
+,request.QrToken & TotpCode
+,,,Valid Dynamic QR Token with valid TOTP code,,O,O,,,,,,,,,
+,,,TOTP code at second 29 of 30s window (Boundary),,,,O,,,,,,,,
+,,,Scan right at gate opening timestamp (Boundary),,,,,O,,,,,,,
+,,,Expired TOTP code (timestamp drifted > 30s),,,,,,O,,,,,,
+,,,Valid token for already-used ticket,,,,,,,O,,,,,
+,,,Valid token for revoked ticket,,,,,,,,O,,,,
+,,,Valid token for Event 4001 (wrong event),,,,,,,,,O,,,
+,,,Valid token for Gate B (wrong gate),,,,,,,,,,O,,
+,,,Malformed/tampered QR ciphertext string,,,,,,,,,,,O,
+,,,Valid dynamic QR called by Customer,,,,,,,,,,,,O
+Confirm,Return
+,,,"ScanResultResponseDTO with Result=""SUCCESS"", AttendeeName, SeatCode, Zone=""VIP""",,O,O,O,O,,,,,,,
+,,,"ScanResultResponseDTO with Result=""EXPIRED_QR"", Message=""QR code expired""",,,,,,O,,,,,,
+,,,"ScanResultResponseDTO with Result=""ALREADY_USED"", ScannedAt=""18:30:00""",,,,,,,O,,,,,
+,,,"ScanResultResponseDTO with Result=""INVALID_STATUS"", Status=""REVOKED""",,,,,,,,O,,,,
+,,,"ScanResultResponseDTO with Result=""WRONG_EVENT"", Message=""Ticket belongs to another event""",,,,,,,,,O,,,
+,,,"ScanResultResponseDTO with Result=""WRONG_GATE"", Message=""Ticket assigned to Gate B""",,,,,,,,,,O,,
+,Exception
+,,,"SecurityException (400 ""Invalid QR ciphertext payload"")",,,,,,,,,,,O,
+,,,"ForbiddenException (403 ""Staff permission required"")",,,,,,,,,,,,O
+,Log message
+,,,"""Ticket {TicketId} checked in successfully at gate {GateId}""",,O,O,O,O,,,,,,,
+,,,"""Check-in scan rejected: {Result} for ticket {TicketId}""",,,,,,O,O,O,O,O,,
+,,,"""Tampered or corrupted QR token received""",,,,,,,,,,,O,
+,,,"""Forbidden check-in scan attempt by user {UserId}""",,,,,,,,,,,,O
+Result,"Type(N : Normal, A : Abnormal, B : Boundary)",,,,N,N,B,B,A,A,A,A,A,A,A
+,Passed/Failed,,,,P,P,P,P,P,P,P,P,P,P,P
+,Executed Date,,,,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026,26/10/2026
+,Defect ID,,,,,,,,,,,,,,

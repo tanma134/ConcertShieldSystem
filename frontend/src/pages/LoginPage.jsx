@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
 import authApi from "../api/authApi";
 import { useAuth } from "../context/AuthContext";
+import PlatformPolicyModal from "../components/PlatformPolicyModal";
 import "../styles/auth.css";
 
 export default function LoginPage() {
@@ -12,9 +13,33 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [showPolicyModal, setShowPolicyModal] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const redirectByRole = (loginData) => {
+    const roles = loginData?.roles || loginData?.Roles || [];
+    const roleNames = roles.map((role) =>
+      String(role?.roleName || role?.name || role).toLowerCase()
+    );
+
+    const isAdmin = roleNames.includes("admin");
+    const isStaff = roleNames.some((r) =>
+      r.includes("staff") || r.includes("validator") || r.includes("checkin")
+    );
+    const isOrganizer = roleNames.includes("organizer");
+
+    if (isAdmin) {
+      navigate("/admin");
+    } else if (isStaff) {
+      navigate("/staff/gate-assignment");
+    } else if (isOrganizer) {
+      navigate("/organizer/dashboard");
+    } else {
+      navigate("/");
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -24,11 +49,7 @@ export default function LoginPage() {
     try {
       const res = await authApi.login(form);
       login(res.data);
-      const roles = res.data?.roles || res.data?.Roles || [];
-      const isAdmin = roles.some((role) =>
-        String(role?.roleName || role?.name || role).toLowerCase() === "admin"
-      );
-      navigate(isAdmin ? "/admin" : "/");
+      redirectByRole(res.data);
     } catch (err) {
       setError(err.response?.data?.message || "Login failed. Please try again.");
     } finally {
@@ -44,11 +65,7 @@ export default function LoginPage() {
         idToken: credentialResponse.credential,
       });
       login(res.data);
-      const roles = res.data?.roles || res.data?.Roles || [];
-      const isAdmin = roles.some((role) =>
-        String(role?.roleName || role?.name || role).toLowerCase() === "admin"
-      );
-      navigate(isAdmin ? "/admin" : "/");
+      redirectByRole(res.data);
     } catch (err) {
       setError(err.response?.data?.message || "Google login failed. Please try again.");
     } finally {
@@ -115,8 +132,26 @@ export default function LoginPage() {
             <br />
             Don't have an account? <Link to="/register">Sign Up</Link>
           </div>
+
+          {/* Platform Policy Reference */}
+          <div style={{ marginTop: "18px", textAlign: "center", fontSize: "0.78rem", color: "#71717a" }}>
+            By signing in, you agree to the{" "}
+            <button
+              type="button"
+              className="auth-policy-link"
+              onClick={() => setShowPolicyModal(true)}
+            >
+              Platform Policies & Terms of Service
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* UC 11.1 & 11.2: Platform Policy Modal */}
+      <PlatformPolicyModal
+        isOpen={showPolicyModal}
+        onClose={() => setShowPolicyModal(false)}
+      />
     </div>
   );
 }
