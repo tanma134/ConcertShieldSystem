@@ -78,6 +78,9 @@ namespace EventAPI.Services
                 MaxTicketsPerAccount = dto.MaxTicketsPerAccount,
                 MetaTitle = dto.MetaTitle,
                 MetaDescription = dto.MetaDescription,
+                HoldTimeoutMinutes = dto.HoldTimeoutMinutes.HasValue && dto.HoldTimeoutMinutes.Value > 0 ? dto.HoldTimeoutMinutes.Value : 10,
+                ReEntryPolicy = Common.ReEntryPolicyTypes.Normalize(dto.ReEntryPolicy),
+                ReEntryDurationMinutes = dto.ReEntryDurationMinutes,
                 Status = EventStatus.Draft, // Creating a concert never grants the Organizer role by itself
                 CreatedBy = organizerId,
                 UpdatedBy = organizerId,
@@ -266,6 +269,9 @@ namespace EventAPI.Services
             if (dto.MaxTicketsPerAccount.HasValue) entity.MaxTicketsPerAccount = dto.MaxTicketsPerAccount;
             if (dto.MetaTitle != null) entity.MetaTitle = dto.MetaTitle;
             if (dto.MetaDescription != null) entity.MetaDescription = dto.MetaDescription;
+            if (dto.HoldTimeoutMinutes.HasValue && dto.HoldTimeoutMinutes.Value > 0) entity.HoldTimeoutMinutes = dto.HoldTimeoutMinutes.Value;
+            if (!string.IsNullOrWhiteSpace(dto.ReEntryPolicy)) entity.ReEntryPolicy = Common.ReEntryPolicyTypes.Normalize(dto.ReEntryPolicy);
+            if (dto.ReEntryDurationMinutes.HasValue) entity.ReEntryDurationMinutes = dto.ReEntryDurationMinutes.Value;
 
             if (entity.EndsAt <= entity.StartsAt)
                 throw new InvalidOperationException("EndsAt must be after StartsAt.");
@@ -618,6 +624,9 @@ namespace EventAPI.Services
             MaxTicketsPerAccount = e.MaxTicketsPerAccount,
             MetaTitle = e.MetaTitle,
             MetaDescription = e.MetaDescription,
+            HoldTimeoutMinutes = e.HoldTimeoutMinutes > 0 ? e.HoldTimeoutMinutes : 10,
+            ReEntryPolicy = e.ReEntryPolicy ?? Common.ReEntryPolicyTypes.NoReEntry,
+            ReEntryDurationMinutes = e.ReEntryDurationMinutes,
             CreatedAt = e.CreatedAt,
             UpdatedAt = e.UpdatedAt,
             PublishedAt = e.PublishedAt,

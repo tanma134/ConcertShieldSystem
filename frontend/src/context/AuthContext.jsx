@@ -5,6 +5,7 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const initialRoleRefreshStarted = useRef(false);
+  const accountStatusCheckInProgress = useRef(false);
   // =========================
   // USER
   // =========================
@@ -137,6 +138,29 @@ export function AuthProvider({ children }) {
     // Run once on application startup; the ref also protects React StrictMode.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+
+    const checkAccountStatus = async () => {
+      if (accountStatusCheckInProgress.current || !localStorage.getItem("accessToken")) return;
+      accountStatusCheckInProgress.current = true;
+      try {
+        const response = await authApi.getProfile();
+        if (response.data?.isActive === false) {
+          logout();
+          window.location.replace("/login?reason=account-blocked");
+        }
+      } catch {
+        // Transient network errors do not invalidate the current session.
+      } finally {
+        accountStatusCheckInProgress.current = false;
+      }
+    };
+
+    const timer = window.setInterval(checkAccountStatus, 5000);
+    return () => window.clearInterval(timer);
+  }, [isAuthenticated]);
 
   // =========================
   // ROLE CHECK

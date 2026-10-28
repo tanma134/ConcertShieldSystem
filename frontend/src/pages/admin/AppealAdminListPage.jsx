@@ -6,7 +6,7 @@ import { Shell, Banner, fmt, errMsg, statusPill, slaInfo } from "./frCommon";
 const STATUSES = ["", "Pending", "Accepted", "Rejected"];
 const EMPTY = { status: "Pending", userId: "", overdueOnly: false };
 
-// Appeal queue (BR-258: every appeal must be resolved within 48 hours of submission)
+// Appeal queue (every appeal must be resolved within 48 hours of submission)
 // GET api/admin/risk/appeals?status=&userId=&overdueOnly=&page=&pageSize=
 export default function AppealAdminListPage() {
   const [filters, setFilters] = useState(EMPTY);

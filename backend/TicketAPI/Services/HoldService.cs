@@ -16,20 +16,19 @@ namespace TicketAPI.Services
             };
 
         private readonly IDatabase _db;
+        private readonly EventEligibilityClient _eligibility;
         private readonly IEventApiClient _eventApiClient;
         private readonly ILogger<HoldService> _logger;
-        private readonly IStatusHistoryService _statusHistoryService;
 
         public HoldService(
             IConnectionMultiplexer redis,
             ILogger<HoldService> logger,
-            IEventApiClient eventApiClient,
-            IStatusHistoryService statusHistoryService)
+            IEventApiClient eventApiClient, EventEligibilityClient eligibility)
         {
             _db = redis.GetDatabase();
             _logger = logger;
             _eventApiClient = eventApiClient;
-            _statusHistoryService = statusHistoryService;
+            _eligibility = eligibility;
         }
 
         public async Task<bool> TryHoldSeatAsync(
@@ -43,6 +42,7 @@ namespace TicketAPI.Services
             ValidatePositive(userId, nameof(userId));
             ValidateDuration(durationSeconds);
 
+            await _eligibility.EnsureSalesAsync(eventId);
             return await _db.StringSetAsync(
                 SeatKey(eventId, seatId),
                 userId,
@@ -241,10 +241,9 @@ namespace TicketAPI.Services
         public async Task<HoldSessionResponse> CreateHoldSessionAsync(
             int userId,
             CreateHoldSessionRequest request,
-            int durationSeconds = 600)
+            int? durationSeconds = null)
         {
             ValidatePositive(userId, nameof(userId));
-            ValidateDuration(durationSeconds);
 
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
@@ -278,6 +277,7 @@ namespace TicketAPI.Services
                     "Danh sách SeatIds không hợp lệ hoặc có ghế bị lặp.");
             }
 
+            await _eligibility.EnsureSalesAsync(request.EventId);
             var eventInfo =
                 await _eventApiClient.GetEventByIdAsync(request.EventId);
 
@@ -286,6 +286,11 @@ namespace TicketAPI.Services
                 throw new InvalidOperationException(
                     $"Không lấy được thông tin vé của sự kiện {request.EventId}.");
             }
+
+            int effectiveDurationSeconds = durationSeconds.HasValue && durationSeconds.Value > 0
+                ? durationSeconds.Value
+                : (eventInfo.HoldTimeoutMinutes > 0 ? eventInfo.HoldTimeoutMinutes * 60 : 600);
+            ValidateDuration(effectiveDurationSeconds);
 
             var ticketCapacities = new Dictionary<int, int>();
 
@@ -300,6 +305,8 @@ namespace TicketAPI.Services
                         $"Loại vé {ticket.TicketTypeId} không thuộc sự kiện này.");
                 }
 
+                if (ticketInfo.Status != "Active" || ticketInfo.SalesStartsAt > DateTime.UtcNow || ticketInfo.SalesEndsAt <= DateTime.UtcNow)
+                    throw new InvalidOperationException("This ticket type is not currently on sale.");
                 ticketCapacities[ticket.TicketTypeId] =
                     Math.Max(0, ticketInfo.Quantity - ticketInfo.SoldQuantity);
             }
@@ -310,7 +317,7 @@ namespace TicketAPI.Services
             var acquired = await _db.StringSetAsync(
                 userLockKey,
                 holdId,
-                TimeSpan.FromSeconds(durationSeconds),
+                TimeSpan.FromSeconds(effectiveDurationSeconds),
                 When.NotExists);
 
             if (!acquired)
@@ -332,7 +339,7 @@ namespace TicketAPI.Services
                         userId,
                         ticket.Quantity,
                         ticketCapacities[ticket.TicketTypeId],
-                        durationSeconds);
+                        effectiveDurationSeconds);
 
                     if (!held)
                     {
@@ -350,7 +357,7 @@ namespace TicketAPI.Services
                         request.EventId,
                         seatId,
                         userId,
-                        durationSeconds);
+                        effectiveDurationSeconds);
 
                     if (!held)
                     {
@@ -366,7 +373,9 @@ namespace TicketAPI.Services
                     HoldId = holdId,
                     UserId = userId,
                     EventId = request.EventId,
-                    ExpiresAtUtc = DateTime.UtcNow.AddSeconds(durationSeconds),
+                    CreatedAtUtc = DateTime.UtcNow,
+                    DurationSeconds = effectiveDurationSeconds,
+                    ExpiresAtUtc = DateTime.UtcNow.AddSeconds(effectiveDurationSeconds),
                     Tickets = tickets,
                     SeatIds = seatIds
                 };
@@ -376,55 +385,12 @@ namespace TicketAPI.Services
                 var saved = await _db.StringSetAsync(
                     sessionKey,
                     JsonSerializer.Serialize(session, JsonOptions),
-                    TimeSpan.FromSeconds(durationSeconds),
+                    TimeSpan.FromSeconds(effectiveDurationSeconds),
                     When.NotExists);
 
                 if (!saved)
                     throw new InvalidOperationException(
                         "Không lưu được hold session.");
-
-                var historyItems = new List<StatusHistory>();
-
-                foreach (var ticket in tickets)
-                {
-                    historyItems.Add(new StatusHistory
-                    {
-                        TargetType = "TicketTypeInventory",
-                        TargetId = ticket.TicketTypeId,
-                        EventId = request.EventId,
-                        TicketTypeId = ticket.TicketTypeId,
-                        HoldId = holdId,
-                        CustomerId = userId,
-                        Action = "HoldCreated",
-                        OldStatus = "Available",
-                        NewStatus = "Held",
-                        Quantity = ticket.Quantity,
-                        ActorUserId = userId,
-                        ActorRole = "Customer",
-                        Metadata = "{}"
-                    });
-                }
-
-                foreach (var seatId in seatIds)
-                {
-                    historyItems.Add(new StatusHistory
-                    {
-                        TargetType = "Seat",
-                        TargetId = seatId,
-                        EventId = request.EventId,
-                        SeatId = seatId,
-                        HoldId = holdId,
-                        CustomerId = userId,
-                        Action = "HoldCreated",
-                        OldStatus = "Available",
-                        NewStatus = "Held",
-                        ActorUserId = userId,
-                        ActorRole = "Customer",
-                        Metadata = "{}"
-                    });
-                }
-
-                await _statusHistoryService.RecordRangeAsync(historyItems);
 
                 _logger.LogInformation(
                     "Tạo hold session {HoldId} cho user {UserId}, event {EventId}",
@@ -517,7 +483,42 @@ namespace TicketAPI.Services
                     "Phiên giữ vé đã hết hạn.");
             }
 
-            return ToResponse(session, remainingSeconds);
+            await _eligibility.EnsureSalesAsync(session.EventId);
+            var response = ToResponse(session, remainingSeconds);
+            await EnrichTicketsAsync(response);
+            return response;
+        }
+
+        // Gắn tên vé + đơn giá (nguồn: EventAPI) vào phản hồi để frontend hiển thị "vé đang mua".
+        private async Task EnrichTicketsAsync(HoldSessionResponse response)
+        {
+            try
+            {
+                var eventInfo = await _eventApiClient.GetEventByIdAsync(response.EventId);
+                if (eventInfo?.TicketTypes == null) return;
+
+                response.Tickets = response.Tickets.Select(ticket =>
+                {
+                    var type = eventInfo.TicketTypes.FirstOrDefault(
+                        t => t.TicketTypeId == ticket.TicketTypeId);
+
+                    return new TicketHoldItem
+                    {
+                        TicketTypeId = ticket.TicketTypeId,
+                        Quantity = ticket.Quantity,
+                        TypeName = type?.TypeName,
+                        UnitPrice = type?.Price
+                    };
+                }).ToList();
+
+                response.TotalAmount = response.Tickets.Sum(
+                    t => (t.UnitPrice ?? 0L) * t.Quantity);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Không lấy được tên/giá vé cho hold {HoldId}", response.HoldId);
+            }
         }
 
         public async Task<bool> ReleaseSeatAsync(
@@ -557,6 +558,8 @@ namespace TicketAPI.Services
             {
                 HoldId = session.HoldId,
                 EventId = session.EventId,
+                CreatedAtUtc = session.CreatedAtUtc,
+                DurationSeconds = session.DurationSeconds,
                 ExpiresAtUtc = session.ExpiresAtUtc,
                 RemainingSeconds = Math.Max(0, seconds),
                 Tickets = session.Tickets,
@@ -688,6 +691,7 @@ namespace TicketAPI.Services
             if (!saved)
                 throw new KeyNotFoundException("Phiên giữ vé đã hết hạn.");
 
+            await _eligibility.EnsureSalesAsync(session.EventId);
             return ToResponse(session, remainingSeconds);
         }
 
@@ -725,59 +729,18 @@ namespace TicketAPI.Services
 
             foreach (var ticket in session.Tickets ?? new List<TicketHoldItem>())
             {
-                var released = await ReleaseTicketsAsync(
+                await ReleaseTicketsAsync(
                     ticket.TicketTypeId,
                     userId,
                     ticket.Quantity);
-
-                if (released)
-                {
-                    await _statusHistoryService.RecordAsync(new StatusHistory
-                    {
-                        TargetType = "TicketTypeInventory",
-                        TargetId = ticket.TicketTypeId,
-                        EventId = session.EventId,
-                        TicketTypeId = ticket.TicketTypeId,
-                        HoldId = session.HoldId,
-                        CustomerId = userId,
-                        Action = "HoldReleased",
-                        OldStatus = "Held",
-                        NewStatus = "Available",
-                        Quantity = ticket.Quantity,
-                        ActorUserId = userId,
-                        ActorRole = "Customer",
-                        Reason = "CustomerCancelledHold",
-                        Metadata = "{}"
-                    });
-                }
             }
 
             foreach (var seatId in session.SeatIds ?? new List<int>())
             {
-                var released = await ReleaseSeatAsync(
+                await ReleaseSeatAsync(
                     session.EventId,
                     seatId,
                     userId);
-
-                if (released)
-                {
-                    await _statusHistoryService.RecordAsync(new StatusHistory
-                    {
-                        TargetType = "Seat",
-                        TargetId = seatId,
-                        EventId = session.EventId,
-                        SeatId = seatId,
-                        HoldId = session.HoldId,
-                        CustomerId = userId,
-                        Action = "HoldReleased",
-                        OldStatus = "Held",
-                        NewStatus = "Available",
-                        ActorUserId = userId,
-                        ActorRole = "Customer",
-                        Reason = "CustomerCancelledHold",
-                        Metadata = "{}"
-                    });
-                }
             }
 
             await _db.KeyDeleteAsync(sessionKey);
@@ -810,6 +773,151 @@ namespace TicketAPI.Services
                 await ReleaseUserHoldLockAsync(userId, holdId);
                 return null;
             }
+        }
+
+        public async Task<HoldSessionResponse> ChangeSeatsAsync(
+            string holdId,
+            int userId,
+            List<int> seatIds)
+        {
+            if (string.IsNullOrWhiteSpace(holdId))
+                throw new ArgumentException("HoldId không hợp lệ.");
+
+            ValidatePositive(userId, nameof(userId));
+
+            if (seatIds == null || seatIds.Count == 0)
+                throw new ArgumentException("Bạn phải chọn ít nhất một ghế.");
+
+            if (seatIds.Any(id => id <= 0) ||
+                seatIds.Distinct().Count() != seatIds.Count)
+            {
+                throw new ArgumentException("Danh sách ghế không hợp lệ hoặc có ghế bị lặp.");
+            }
+
+            var sessionKey = SessionKey(holdId);
+            var sessionJson = await _db.StringGetAsync(sessionKey);
+
+            if (sessionJson.IsNull)
+                throw new KeyNotFoundException("Phiên giữ vé không tồn tại hoặc đã hết hạn.");
+
+            var session = JsonSerializer.Deserialize<HoldSession>(
+                sessionJson.ToString(),
+                JsonOptions);
+
+            if (session == null)
+                throw new InvalidOperationException("Dữ liệu hold session không hợp lệ.");
+
+            if (session.UserId != userId)
+                throw new UnauthorizedAccessException(
+                    "Bạn không có quyền cập nhật phiên giữ vé này.");
+
+            var remainingSeconds = (int)Math.Ceiling(
+                (session.ExpiresAtUtc - DateTime.UtcNow).TotalSeconds);
+
+            var sessionTtl = await _db.KeyTimeToLiveAsync(sessionKey);
+
+            if (remainingSeconds <= 0 ||
+                sessionTtl == null ||
+                sessionTtl <= TimeSpan.Zero)
+            {
+                throw new KeyNotFoundException("Phiên giữ vé đã hết hạn.");
+            }
+
+            var currentSeatIds = session.SeatIds ?? new List<int>();
+
+            if (currentSeatIds.Count == 0)
+                throw new InvalidOperationException(
+                    "Phiên giữ vé này không có ghế để thay đổi.");
+
+            if (seatIds.Count != currentSeatIds.Count)
+                throw new ArgumentException(
+                    $"Bạn cần chọn đúng {currentSeatIds.Count} ghế.");
+
+            await _eligibility.EnsureSalesAsync(session.EventId);
+
+            var ttl = sessionTtl.Value < TimeSpan.FromSeconds(remainingSeconds)
+                ? sessionTtl.Value
+                : TimeSpan.FromSeconds(remainingSeconds);
+
+            var currentSeatSet = currentSeatIds.ToHashSet();
+            var newlyAcquiredSeatIds = new List<int>();
+
+            foreach (var seatId in seatIds)
+            {
+                if (currentSeatSet.Contains(seatId))
+                    continue;
+
+                var acquired = await _db.StringSetAsync(
+                    SeatKey(session.EventId, seatId),
+                    userId,
+                    ttl,
+                    When.NotExists);
+
+                if (!acquired)
+                {
+                    foreach (var acquiredSeatId in newlyAcquiredSeatIds)
+                    {
+                        await ReleaseSeatAsync(
+                            session.EventId,
+                            acquiredSeatId,
+                            userId);
+                    }
+
+                    throw new InvalidOperationException(
+                        $"Ghế {seatId} vừa được người khác chọn. Các ghế bạn đang giữ vẫn được giữ nguyên.");
+                }
+
+                newlyAcquiredSeatIds.Add(seatId);
+            }
+
+            var previousSeatIds = currentSeatIds.ToList();
+
+            session.SeatIds = seatIds.ToList();
+
+            if (session.Attendees != null &&
+                session.Attendees.Count == seatIds.Count)
+            {
+                for (var i = 0; i < session.Attendees.Count; i++)
+                {
+                    session.Attendees[i].SeatId = seatIds[i];
+                }
+            }
+
+            var saved = await _db.StringSetAsync(
+                sessionKey,
+                JsonSerializer.Serialize(session, JsonOptions),
+                ttl,
+                When.Exists);
+
+            if (!saved)
+            {
+                foreach (var acquiredSeatId in newlyAcquiredSeatIds)
+                {
+                    await ReleaseSeatAsync(
+                        session.EventId,
+                        acquiredSeatId,
+                        userId);
+                }
+
+                throw new KeyNotFoundException(
+                    "Phiên giữ vé đã hết hạn trong lúc cập nhật ghế.");
+            }
+
+            foreach (var oldSeatId in previousSeatIds)
+            {
+                if (!seatIds.Contains(oldSeatId))
+                {
+                    await ReleaseSeatAsync(
+                        session.EventId,
+                        oldSeatId,
+                        userId);
+                }
+            }
+
+            var response = ToResponse(session, remainingSeconds);
+            await EnrichTicketsAsync(response);
+
+            return response;
         }
     }
 }

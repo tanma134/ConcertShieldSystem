@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import AdminShell from "./AdminShell";
 import paymentReconciliationApi from "../../api/paymentReconciliationApi";
 import "./PaymentReconciliationExceptionsPage.css";
+import { useToast } from "../../components/ToastProvider";
 
 const PAGE_SIZE = 20;
 
@@ -90,6 +91,7 @@ export default function PaymentReconciliationExceptionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const toast = useToast();
 
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -127,10 +129,12 @@ export default function PaymentReconciliationExceptionsPage() {
       setPage(Number(result?.page) || nextPage);
       setTotalCount(Number(result?.totalCount) || 0);
     } catch (requestError) {
-      setError(
+      const message =
         requestError.response?.data?.message ||
-          "Could not load payment reconciliation exceptions."
-      );
+        "Could not load payment reconciliation exceptions.";
+
+      setError(message);
+      toast.error(message);
       setItems([]);
       setTotalCount(0);
     } finally {
@@ -184,12 +188,16 @@ export default function PaymentReconciliationExceptionsPage() {
     if (!selectedException) return;
 
     if (!resolutionAction) {
-      setResolutionError("No resolution action is selected.");
+      const message = "No resolution action is selected.";
+      setResolutionError(message);
+      toast.error(message);
       return;
     }
 
     if (!resolutionNote.trim()) {
-      setResolutionError("Please enter a resolution note.");
+      const message = "Please enter a resolution note.";
+      setResolutionError(message);
+      toast.error(message);
       return;
     }
 
@@ -218,16 +226,20 @@ export default function PaymentReconciliationExceptionsPage() {
       setSelectedException(null);
       setResolutionNote("");
       setResolutionStatus("Resolved");
-      setSuccessMessage(
-        `Transaction #${selectedException.paymentTransactionId}: ${getResolutionActionLabel(
-          resolutionAction
-        )} ${completedStatus.toLowerCase()}.`
-      );
+      const message =
+        `Transaction #${selectedException.paymentTransactionId}: ` +
+        `${getResolutionActionLabel(resolutionAction)} ` +
+        `${completedStatus.toLowerCase()}.`;
+
+      setSuccessMessage(message);
+      toast.success(message);
 
       // Resolved exceptions are excluded from the list, so reload from page 1.
       await loadExceptions(1, appliedFilters);
     } catch (requestError) {
-      setResolutionError(getErrorMessage(requestError));
+        const message = getErrorMessage(requestError);
+        setResolutionError(message);
+        toast.error(message);
     } finally {
       setSavingResolution(false);
     }
@@ -287,18 +299,6 @@ export default function PaymentReconciliationExceptionsPage() {
             </button>
           </div>
         </form>
-
-        {error && (
-          <div className="pre-error" role="alert">
-            {error}
-          </div>
-        )}
-
-        {successMessage && (
-          <div className="pre-success" role="status">
-            {successMessage}
-          </div>
-        )}
 
         <section className="pre-card">
           <div className="pre-card-heading">

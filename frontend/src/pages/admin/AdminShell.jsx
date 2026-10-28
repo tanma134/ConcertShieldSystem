@@ -18,6 +18,7 @@ export const ADMIN_LINKS = [
   ["/admin/vouchers", "Voucher Management"],
   ["/admin/change-requests", "Change Requests"],
   ["/admin/returns", "Ticket Returns / Refunds"],
+  ["/admin/refund-reconciliation", "Refund Reconciliation Report"],
   ["/admin/kyc/consent", "eKYC Consent"],
   ["/admin/kyc/deletion-requests", "eKYC Deletion Requests"],
   ["/admin/kyc-images", "eKYC Images"],
@@ -31,6 +32,12 @@ export const ADMIN_LINKS = [
   ["/admin/risk/policy", "Risk Policy"],
   ["/admin/queue", "Virtual Queue"],
   ["/admin/queue/abuse-alerts", "Queue Abuse Alerts"],
+  ["/admin/incidents", "Incident Escalations & Resolutions"],
+  ["/admin/support-cases", "Support Cases & Disputes"],
+  ["/admin/tickets", "Tickets"],
+  ["/admin/ticket-status-history", "Ticket Status History"],
+  ["/admin/failed-transaction-queue", "Failed Transaction Queue"],
+  ["/admin/payment-reconciliation", "Payment Reconciliation Exceptions"],
 ];
 
 export default function AdminShell({ children, title = "Admin Panel" }) {

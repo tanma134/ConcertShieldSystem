@@ -200,6 +200,10 @@ public partial class TicketDbContext : DbContext
                 .HasColumnName("ticket_id");
             entity.Property(e => e.CheckedInAt).HasColumnName("checked_in_at");
             entity.Property(e => e.CheckedInBy).HasColumnName("checked_in_by");
+            entity.Property(e => e.CheckedInGate).HasColumnName("checked_in_gate").HasMaxLength(100);
+            entity.Property(e => e.LastExitAt).HasColumnName("last_exit_at");
+            entity.Property(e => e.IsInside).HasColumnName("is_inside").HasDefaultValue(false);
+            entity.Property(e => e.ReEntryCount).HasColumnName("re_entry_count").HasDefaultValue(0);
             entity.Property(e => e.DeletedAt).HasColumnName("deleted_at");
             entity.Property(e => e.DeletedBy).HasColumnName("deleted_by");
             entity.Property(e => e.EventId).HasColumnName("event_id");

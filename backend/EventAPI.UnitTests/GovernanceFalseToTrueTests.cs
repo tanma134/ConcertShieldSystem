@@ -111,7 +111,7 @@ public class ReviewComplianceFalseToTrueTests
     [Fact] public void T06_ApprovedLaterVersionCanPublish() => Assert.True(GovernanceRules.ComplianceApproved(new Event { ComplianceStatus = "Approved", ComplianceVersion = 4, ComplianceReviewedVersion = 4 }));
 }
 
-// Report 3 (UC-87 Approve Event Change Request): note is required only when rejecting (10-1000), optional (max 1000) when approving.
+// note is required only when rejecting (10-1000), optional (max 1000) when approving.
 public class ReviewChangeRequestNoteFalseToTrueTests
 {
     // ---------- FALSE ----------

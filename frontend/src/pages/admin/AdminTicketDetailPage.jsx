@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import AdminShell from "./AdminShell";
 import TicketActionModal from "./TicketActionModal";
 import ticketApi from "../../api/ticketApi";
+import { useToast } from "../../components/ToastProvider";
 import "./AdminTicketDetailPage.css";
 
 function unwrap(response) {
@@ -24,29 +25,42 @@ function formatDate(value) {
 
 export default function AdminTicketDetailPage() {
   const { ticketId } = useParams();
+  const toast = useToast();
 
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+  const [error, setError] = useState(false);
   const [selectedAction, setSelectedAction] = useState(null);
 
   const loadTicket = useCallback(async () => {
     try {
       setLoading(true);
-      setError("");
+      setError(false);
 
       const response = await ticketApi.getAdminTicketDetails(ticketId);
-      setTicket(unwrap(response));
+      const data = unwrap(response);
+
+      if (!data) {
+        setTicket(null);
+        setError(true);
+        toast.error("Ticket not found.");
+        return;
+      }
+
+      setTicket(data);
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Could not load ticket details."
-      );
+      const message =
+        err?.response?.data?.message ||
+        err?.response?.data?.Message ||
+        "Could not load ticket details.";
+
+      setError(true);
       setTicket(null);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
-  }, [ticketId]);
+  }, [ticketId, toast]);
 
   useEffect(() => {
     loadTicket();
@@ -67,12 +81,8 @@ export default function AdminTicketDetailPage() {
       <AdminShell title="Ticket Details">
         <main className="admin-ticket-detail-page">
           <Link to="/admin/tickets" className="admin-ticket-back">
-            Back to Ticket Management
+            ← Back to Ticket Management
           </Link>
-
-          <div className="admin-ticket-detail-error" role="alert">
-            {error || "Ticket not found."}
-          </div>
         </main>
       </AdminShell>
     );
@@ -83,8 +93,7 @@ export default function AdminTicketDetailPage() {
   const canRevoke = ticketStatus === "active" && !ticket.checkedInAt;
 
   const canReissue =
-    ["active", "revoked"].includes(ticketStatus) &&
-    !ticket.checkedInAt;
+    ["active", "revoked"].includes(ticketStatus) && !ticket.checkedInAt;
 
   return (
     <AdminShell title={`Ticket #${ticket.ticketId}`}>
@@ -110,9 +119,7 @@ export default function AdminTicketDetailPage() {
               type="button"
               className="admin-ticket-detail-button revoke"
               disabled={!canRevoke}
-              onClick={() =>
-                setSelectedAction({ action: "revoke", ticket })
-              }
+              onClick={() => setSelectedAction({ action: "revoke", ticket })}
             >
               Revoke Ticket
             </button>
@@ -121,9 +128,7 @@ export default function AdminTicketDetailPage() {
               type="button"
               className="admin-ticket-detail-button reissue"
               disabled={!canReissue}
-              onClick={() =>
-                setSelectedAction({ action: "reissue", ticket })
-              }
+              onClick={() => setSelectedAction({ action: "reissue", ticket })}
             >
               Re-issue Ticket
             </button>
@@ -134,12 +139,6 @@ export default function AdminTicketDetailPage() {
           <div className="admin-ticket-detail-warning">
             This ticket cannot be revoked or re-issued because it has been
             checked in or its status does not allow these actions.
-          </div>
-        )}
-
-        {notice && (
-          <div className="admin-ticket-detail-notice" role="status">
-            {notice}
           </div>
         )}
 
@@ -230,17 +229,22 @@ export default function AdminTicketDetailPage() {
             ticket={selectedAction.ticket}
             onClose={() => setSelectedAction(null)}
             onSuccess={async (result, message) => {
+              const action = selectedAction.action;
               const replacementId =
-                selectedAction.action === "reissue"
-                  ? result?.ticketId
-                  : null;
+                action === "reissue" ? result?.ticketId : null;
 
-              setNotice(
-                replacementId
-                  ? `${message} Replacement ticket: #${replacementId}.`
-                  : message
-              );
+              const baseMessage =
+                message ||
+                (action === "reissue"
+                  ? "Ticket re-issued successfully."
+                  : "Ticket revoked successfully.");
 
+              const successMessage = replacementId
+                ? `${baseMessage} Replacement ticket: #${replacementId}.`
+                : baseMessage;
+
+              toast.success(successMessage);
+              setSelectedAction(null);
               await loadTicket();
             }}
           />

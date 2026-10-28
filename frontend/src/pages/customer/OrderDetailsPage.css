@@ -247,6 +247,28 @@
   background: #ca2bd9;
 }
 
+.order-details-support-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: 9px;
+  color: #cbd5e1;
+  background: #1e293b;
+  border: 1px solid #334155;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-right: 12px;
+}
+
+.order-details-support-btn:hover {
+  background: #334155;
+  color: #fff;
+  border-color: #64748b;
+}
+
 .order-details-state {
   padding: 44px 24px;
   border: 1px solid #29272f;
@@ -288,5 +310,107 @@
     padding-right: 18px;
     padding-left: 18px;
   }
+}
+
+/* Active / Resolved Support Case Banner */
+.order-support-banner {
+  margin-bottom: 20px;
+  padding: 18px 22px;
+  border-radius: 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  line-height: 1.5;
+}
+
+.order-support-banner.in-progress {
+  background: rgba(30, 58, 138, 0.25);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+.order-support-banner.resolved {
+  background: rgba(6, 78, 59, 0.25);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.order-support-icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.order-support-banner.in-progress .order-support-icon {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+.order-support-banner.resolved .order-support-icon {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+.order-support-content {
+  flex: 1;
+}
+
+.order-support-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.order-support-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.order-support-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+
+.order-support-badge.in-progress {
+  background: rgba(59, 130, 246, 0.3);
+  color: #93c5fd;
+}
+
+.order-support-badge.resolved {
+  background: rgba(16, 185, 129, 0.3);
+  color: #a7f3d0;
+}
+
+.order-support-desc {
+  font-size: 13px;
+  color: #d1d5db;
+  margin: 0 0 8px;
+}
+
+.order-support-resolution {
+  margin-top: 8px;
+  padding: 10px 14px;
+  background: rgba(16, 185, 129, 0.12);
+  border-left: 3px solid #10b981;
+  border-radius: 6px;
+  color: #e5e7eb;
+  font-size: 13px;
+}
+
+.order-support-meta {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 6px;
 }
 

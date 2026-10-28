@@ -112,7 +112,7 @@ namespace NotificationAPI.Controllers
         }
 
         /// <summary>
-        /// UC_22.2 Delete Notification: Dismiss entry from user tray without altering underlying business entities (BR-119).
+        /// Delete Notification: Dismiss entry from user tray without altering underlying business entities.
         /// </summary>
         [HttpDelete("{id}")]
         [Authorize]

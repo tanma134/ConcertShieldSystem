@@ -3,9 +3,11 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import eventApi from "../../api/eventApi";
 import ticketApi from "../../api/ticketApi";
 import voucherApi from "../../api/voucherApi";
+import ChangeSeatSelectionModal from "../../components/ChangeSeatSelectionModal";
 import "./PaymentInfoPage.css";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
+import { useToast } from "../../components/ToastProvider";
 
 const PAYMENT_METHODS = [
   {
@@ -97,6 +99,7 @@ const hasCodePrefix = (voucher, prefix) =>
 export default function PaymentInfoPage() {
   const { holdId } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [holdData, setHoldData] = useState(null);
   const [event, setEvent] = useState(null);
@@ -122,6 +125,19 @@ export default function PaymentInfoPage() {
   const [showCancelHoldDialog, setShowCancelHoldDialog] = useState(false);
   const [isCancellingHold, setIsCancellingHold] = useState(false);
   const [cancelHoldError, setCancelHoldError] = useState("");
+  const [showSeatSelection, setShowSeatSelection] = useState(false);
+
+  const handleSeatSelectionSaved = (updatedHold) => {
+    setHoldData((current) => {
+      if (!current) return current;
+
+      return {
+        ...current,
+        seatIds: updatedHold.seatIds,
+        attendees: updatedHold.attendees,
+      };
+    });
+  };
 
   const items = holdData?.items ?? [];
   const attendees = holdData?.attendees ?? [];
@@ -281,6 +297,7 @@ export default function PaymentInfoPage() {
       }
     }
 
+    toast.success("Checkout is ready. Review your order and continue to payment.");
     loadCheckout();
 
     return () => {
@@ -431,25 +448,23 @@ export default function PaymentInfoPage() {
 
   const handlePayment = async () => {
     if (!holdData) {
-      window.alert("Reservation information could not be loaded.");
+      toast.error("Reservation information could not be loaded.");
       return;
     }
 
     if (timeLeft <= 0) {
       setIsExpired(true);
-      window.alert(
-        "Your reservation has expired. Please select tickets again."
-      );
+      toast.error("Your reservation has expired. Please select tickets again.");
       return;
     }
 
     if (selectedPaymentMethod !== "vnpay") {
-      window.alert("This payment method is not available yet.");
+      toast.error("This payment method is not available yet.");
       return;
     }
 
     if (attendees.length === 0) {
-      window.alert("Attendee information is missing.");
+      toast.error("Attendee information is missing.");
       return;
     }
 
@@ -458,7 +473,7 @@ export default function PaymentInfoPage() {
     );
 
     if (primaryAttendees.length !== 1) {
-      window.alert(
+      toast.error(
         "Please return to attendee details and select exactly one account holder."
       );
       return;
@@ -469,7 +484,7 @@ export default function PaymentInfoPage() {
       !primaryHolder.email?.trim() ||
       !primaryHolder.phone?.trim()
     ) {
-      window.alert(
+      toast.error(
         "The account holder's name, email, or phone is missing. Please check attendee details."
       );
       return;
@@ -584,6 +599,9 @@ export default function PaymentInfoPage() {
         responseBody?.errors ||
         error.message ||
         "Could not start the payment.";
+
+      setLoadError(message);
+      toast.error(message);
 
       window.alert(
         typeof message === "string" ? message : JSON.stringify(message)
@@ -896,6 +914,17 @@ export default function PaymentInfoPage() {
                 </button>
               </div>
 
+              {(holdData.seatIds ?? []).length > 0 && (
+                <button
+                  type="button"
+                  className="tb-change-seats"
+                  onClick={() => setShowSeatSelection(true)}
+                  disabled={isExpired || isProcessing}
+                >
+                  Change Seat Selection
+                </button>
+              )}
+
               <div className="tb-hold-reference">
                 <span>Reservation ID</span>
                 <code>{holdId?.slice(0, 12).toUpperCase()}</code>
@@ -1085,6 +1114,17 @@ export default function PaymentInfoPage() {
           </section>
         </div>
       )}
+
+      <ChangeSeatSelectionModal
+        open={showSeatSelection}
+        holdId={holdId}
+        eventData={event}
+        holdItems={items}
+        attendees={attendees}
+        currentSeatIds={holdData?.seatIds ?? []}
+        onClose={() => setShowSeatSelection(false)}
+        onSaved={handleSeatSelectionSaved}
+      />
 
       {showCancelHoldDialog && (
         <div

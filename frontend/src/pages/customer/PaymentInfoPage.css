@@ -137,6 +137,30 @@
   letter-spacing: -0.02em;
 }
 
+.tb-change-seats {
+  width: 100%;
+  margin: -7px 0 16px;
+  padding: 10px 12px;
+  border: 1px solid rgb(56 189 248 / 38%);
+  border-radius: 9px;
+  background: rgb(14 165 233 / 8%);
+  color: #7dd3fc;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.tb-change-seats:hover:not(:disabled) {
+  border-color: #38bdf8;
+  background: rgb(14 165 233 / 16%);
+}
+
+.tb-change-seats:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
 .tb-event-tag,
 .tb-secure-badge {
   padding: 7px 10px;

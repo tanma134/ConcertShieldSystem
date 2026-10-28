@@ -4,6 +4,7 @@ import ticketApi from "../../api/ticketApi";
 import "./PaymentResult.css";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
+import { useToast } from "../../components/ToastProvider";
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat("vi-VN", {
@@ -14,6 +15,7 @@ const formatCurrency = (amount) =>
 export default function PaymentResult() {
   const [searchParams] = useSearchParams();
   const orderId = searchParams.get("orderId");
+  const toast = useToast();
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -24,7 +26,9 @@ export default function PaymentResult() {
 
     async function loadOrder() {
       if (!orderId) {
-        setError("Order information is missing.");
+        const message = "Order information is missing.";
+        setError(message);
+        toast.error(message);
         setLoading(false);
         return;
       }
@@ -32,28 +36,57 @@ export default function PaymentResult() {
       try {
         setLoading(true);
         setError("");
+        setOrder(null);
 
         const response = await ticketApi.getOrderById(orderId);
         const data = response.data?.data ?? response.data;
 
-        if (!cancelled) setOrder(data);
+        if (!data) {
+          throw new Error("Order information was not returned.");
+        }
+
+        if (!cancelled) {
+          setOrder(data);
+        }
       } catch (err) {
         if (!cancelled) {
-          setError(
+          const message =
             err.response?.data?.message ||
-              "Could not retrieve your order status."
-          );
+            err.message ||
+            "Could not retrieve your order status.";
+
+          setError(message);
+          toast.error(message);
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
     loadOrder();
+
     return () => {
       cancelled = true;
     };
-  }, [orderId]);
+  }, [orderId, toast]);
+
+  useEffect(() => {
+    if (!order) return;
+
+    const status = String(order.status || "").toLowerCase();
+
+    if (["paid", "completed", "success", "succeeded"].includes(status)) {
+      toast.success("Payment successful. Your order is confirmed.");
+    } else if (
+      ["failed", "cancelled", "canceled", "expired"].includes(status)
+    ) {
+      toast.error("Payment was not completed.");
+    } else {
+      toast.info("Payment is still pending. Please check again shortly.");
+    }
+  }, [order, toast]);
 
   if (loading) {
     return (
@@ -72,11 +105,17 @@ export default function PaymentResult() {
       <main className="payment-result-page">
         <section className="payment-result-card is-error">
           <div className="payment-result-icon">!</div>
-          <p className="payment-result-eyebrow">CONCERTSHIELD CHECKOUT</p>
+          <p className="payment-result-eyebrow">
+            CONCERTSHIELD CHECKOUT
+          </p>
           <h1>Could not check payment</h1>
           <p>{error}</p>
 
-          {orderId && <p className="payment-result-order-id">Order #{orderId}</p>}
+          {orderId && (
+            <p className="payment-result-order-id">
+              Order #{orderId}
+            </p>
+          )}
 
           <div className="payment-result-actions">
             <Link to="/" className="payment-result-button">
@@ -89,17 +128,23 @@ export default function PaymentResult() {
   }
 
   const status = String(order?.status || "").toLowerCase();
-  const isPaid = ["paid", "completed", "success", "succeeded"].includes(status);
-  const isFailed = ["failed", "cancelled", "canceled", "expired"].includes(
+  const isPaid = ["paid", "completed", "success", "succeeded"].includes(
     status
   );
+  const isFailed = [
+    "failed",
+    "cancelled",
+    "canceled",
+    "expired",
+  ].includes(status);
 
   const result = isPaid
     ? {
         className: "is-success",
         icon: "✓",
         title: "Payment successful",
-        message: "Your payment has been confirmed and your order is complete.",
+        message:
+          "Your payment has been confirmed and your order is complete.",
       }
     : isFailed
       ? {
@@ -112,68 +157,75 @@ export default function PaymentResult() {
           className: "is-pending",
           icon: "…",
           title: "Payment is pending",
-          message: "Your payment has not been confirmed yet. Please check again shortly.",
+          message:
+            "Your payment has not been confirmed yet. Please check again shortly.",
         };
 
   return (
     <>
-    <Header />
-    <main className="payment-result-page">
-      <section className={`payment-result-card ${result.className}`}>
-        <div className="payment-result-icon" aria-hidden="true">
-          {result.icon}
-        </div>
+      <Header />
 
-        <p className="payment-result-eyebrow">CONCERTSHIELD CHECKOUT</p>
-        <h1>{result.title}</h1>
-        <p className="payment-result-message">{result.message}</p>
-
-        <dl className="payment-result-details">
-          <div>
-            <dt>Order ID</dt>
-            <dd>{order?.orderId ?? orderId}</dd>
+      <main className="payment-result-page">
+        <section className={`payment-result-card ${result.className}`}>
+          <div className="payment-result-icon" aria-hidden="true">
+            {result.icon}
           </div>
 
-          {order?.eventName && (
+          <p className="payment-result-eyebrow">
+            CONCERTSHIELD CHECKOUT
+          </p>
+          <h1>{result.title}</h1>
+          <p className="payment-result-message">{result.message}</p>
+
+          <dl className="payment-result-details">
             <div>
-              <dt>Event</dt>
-              <dd>{order.eventName}</dd>
+              <dt>Order ID</dt>
+              <dd>{order?.orderId ?? orderId}</dd>
             </div>
-          )}
 
-          {order?.finalAmount != null && (
-            <div>
-              <dt>Total</dt>
-              <dd>{formatCurrency(order.finalAmount)}</dd>
-            </div>
-          )}
+            {order?.eventName && (
+              <div>
+                <dt>Event</dt>
+                <dd>{order.eventName}</dd>
+              </div>
+            )}
 
-          {order?.status && (
-            <div>
-              <dt>Order status</dt>
-              <dd className="payment-result-status">{order.status}</dd>
-            </div>
-          )}
-        </dl>
+            {order?.finalAmount != null && (
+              <div>
+                <dt>Total</dt>
+                <dd>{formatCurrency(order.finalAmount)}</dd>
+              </div>
+            )}
 
-        <div className="payment-result-actions">
-          {!isPaid && (
-            <button
-              type="button"
-              className="payment-result-button is-secondary"
-              onClick={() => window.location.reload()}
-            >
-              Check again
-            </button>
-          )}
+            {order?.status && (
+              <div>
+                <dt>Order status</dt>
+                <dd className="payment-result-status">
+                  {order.status}
+                </dd>
+              </div>
+            )}
+          </dl>
 
-          <Link to="/" className="payment-result-button">
-            Back to events
-          </Link>
-        </div>
-      </section>
-    </main>
-    <Footer />
-  </>
+          <div className="payment-result-actions">
+            {!isPaid && (
+              <button
+                type="button"
+                className="payment-result-button is-secondary"
+                onClick={() => window.location.reload()}
+              >
+                Check again
+              </button>
+            )}
+
+            <Link to="/" className="payment-result-button">
+              Back to events
+            </Link>
+          </div>
+        </section>
+      </main>
+
+      <Footer />
+    </>
   );
 }

@@ -1,4 +1,4 @@
-﻿namespace AuthenticationAPI.DTOs
+namespace AuthenticationAPI.DTOs
 {
     public class EkycSubmitRequestDto
     {
@@ -6,10 +6,10 @@
         public IFormFile CccdBackImage { get; set; } = null!;
         public IFormFile SelfieImage { get; set; } = null!;
 
-        /// <summary>Người dùng đã tích đồng ý (mặc định false - không được đồng ý sẵn).</summary>
+        /// <summary>Ng�?i d�ng �? t�ch �?ng ? (m?c �?nh false - kh�ng ��?c �?ng ? s?n).</summary>
         public bool ConsentAccepted { get; set; }
 
-        /// <summary>Phiên bản nội dung đồng ý mà người dùng đã thấy (lấy từ GET api/kyc/consent).</summary>
+        /// <summary>Phi�n b?n n?i dung �?ng ? m� ng�?i d�ng �? th?y (l?y t? GET api/kyc/consent).</summary>
         public string? ConsentVersion { get; set; }
     }
 
@@ -19,7 +19,7 @@
         public string Status { get; set; } = null!;
         public string? Message { get; set; }
 
-        /// <summary>BR-44: identity read from the ID card, shown to the user for review (read-only, ID number masked).</summary>
+        /// <summary> identity read from the ID card, shown to the user for review (read-only, ID number masked).</summary>
         public EkycIdentityInfoDto? Identity { get; set; }
     }
 

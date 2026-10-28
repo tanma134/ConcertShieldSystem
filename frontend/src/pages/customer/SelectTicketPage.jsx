@@ -5,6 +5,7 @@ import ticketApi from "../../api/ticketApi";
 import "./SelectTicketPage.css";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
+import { useToast } from "../../components/ToastProvider";
 
 const ZONE_PALETTE = [
   "#f59e0b",
@@ -93,6 +94,7 @@ function unwrapResponse(response) {
 export default function SelectTicketPage() {
   const { eventId } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -104,6 +106,7 @@ export default function SelectTicketPage() {
   const [ticketQuantities, setTicketQuantities] = useState({});
   const [zoneQuantities, setZoneQuantities] = useState({});
   const [selectedSeatIds, setSelectedSeatIds] = useState([]);
+  const [seatDetails, setSeatDetails] = useState(null);
 
   const [activeZone, setActiveZone] = useState(null);
   const [zoneDraftQuantity, setZoneDraftQuantity] = useState(0);
@@ -496,17 +499,17 @@ export default function SelectTicketPage() {
     );
 
     if (quantity < minPerAccount) {
-      window.alert(`Please select at least ${minPerAccount} ticket(s).`);
+      toast.error(`Please select at least ${minPerAccount} ticket(s).`);
       return;
     }
 
     if (quantity > maxPerAccount) {
-      window.alert(`You can select up to ${maxPerAccount} ticket(s).`);
+      toast.error(`You can select up to ${maxPerAccount} ticket(s).`);
       return;
     }
 
     if (isReservedSeating && availabilityError) {
-      window.alert(availabilityError);
+      toast.error(availabilityError);
       return;
     }
 
@@ -543,6 +546,7 @@ export default function SelectTicketPage() {
         throw new Error("Hold API did not return a valid holdId.");
       }
 
+      toast.success("Seats reserved successfully. Enter attendee details to continue.");
       navigate(`/checkout/question-form/${encodeURIComponent(holdId)}`);
     } catch (err) {
       const body = err.response?.data;
@@ -554,7 +558,7 @@ export default function SelectTicketPage() {
             err.message ||
             "Could not reserve the selected tickets.";
 
-      window.alert(message);
+      toast.error(message);
     } finally {
       setIsHolding(false);
     }
@@ -920,22 +924,39 @@ export default function SelectTicketPage() {
                       <span className="tb-badge">×{item.quantity}</span>
 
                       {item.seatIds?.length > 0 && (
-                        <small className="tb-seat-summary">
-                          {item.seatIds
-                            .map((id) => {
-                              const seat = zones
-                                .flatMap((zone) => zone.seats ?? [])
-                                .find(
-                                  (entry) =>
-                                    Number(entry.seatId) === Number(id)
-                                );
+                        <div className="tb-seat-summary">
+                          {item.seatIds.map((id) => {
+                            const zone = zones.find((candidate) =>
+                              (candidate.seats ?? []).some(
+                                (entry) => Number(entry.seatId) === Number(id)
+                              )
+                            );
+                            const seat = zone?.seats?.find(
+                              (entry) => Number(entry.seatId) === Number(id)
+                            );
 
-                              return seat
-                                ? `${seat.rowLabel}${seat.seatNumber}`
-                                : id;
-                            })
-                            .join(", ")}
-                        </small>
+                            return (
+                              <div className="tb-seat-summary-item" key={id}>
+                                <span>
+                                  {seat
+                                    ? `${zone.zoneName} · Row ${seat.rowLabel}, Seat ${seat.seatNumber}`
+                                    : `Seat ${id}`}
+                                </span>
+                                {seat && (
+                                  <button
+                                    type="button"
+                                    className="tb-seat-details-trigger"
+                                    onClick={() =>
+                                      setSeatDetails({ seat, zone })
+                                    }
+                                  >
+                                    Details
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
                       )}
                     </div>
                     <div className="tb-row-total">
@@ -1037,6 +1058,91 @@ export default function SelectTicketPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {seatDetails && (
+        <div
+          className="tb-seat-details-backdrop"
+          onMouseDown={() => setSeatDetails(null)}
+        >
+          <section
+            className="tb-seat-details-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tb-seat-details-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="tb-seat-details-close"
+              aria-label="Close seat details"
+              onClick={() => setSeatDetails(null)}
+            >
+              ×
+            </button>
+
+            <p className="tb-seat-details-eyebrow">SEAT INFORMATION</p>
+            <h2 id="tb-seat-details-title">
+              {seatDetails.zone.zoneName}
+            </h2>
+
+            <dl className="tb-seat-details-list">
+              <div>
+                <dt>Row</dt>
+                <dd>{seatDetails.seat.rowLabel || "—"}</dd>
+              </div>
+              <div>
+                <dt>Seat</dt>
+                <dd>{seatDetails.seat.seatNumber || "—"}</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd>
+                  {bookedSeatIds.includes(Number(seatDetails.seat.seatId))
+                    ? "Sold"
+                    : heldSeatIds.includes(Number(seatDetails.seat.seatId))
+                      ? "On hold"
+                      : selectedSeatIds.includes(Number(seatDetails.seat.seatId))
+                        ? "Selected"
+                        : "Available"}
+                </dd>
+              </div>
+              <div>
+                <dt>Ticket type</dt>
+                <dd>
+                  {seatDetails.zone.ticketTypeName ||
+                    getTicket(seatDetails.zone.ticketTypeId)?.typeName ||
+                    "—"}
+                </dd>
+              </div>
+              <div>
+                <dt>Price</dt>
+                <dd>
+                  {formatPrice(
+                    seatDetails.zone.price ??
+                      getTicket(seatDetails.zone.ticketTypeId)?.price
+                  )}
+                </dd>
+              </div>
+            </dl>
+
+            {(seatDetails.zone.ticketTypeDescription ||
+              getTicket(seatDetails.zone.ticketTypeId)?.description) && (
+              <p className="tb-seat-details-description">
+                {seatDetails.zone.ticketTypeDescription ||
+                  getTicket(seatDetails.zone.ticketTypeId)?.description}
+              </p>
+            )}
+
+            <button
+              type="button"
+              className="tb-seat-details-done"
+              onClick={() => setSeatDetails(null)}
+            >
+              Close
+            </button>
+          </section>
         </div>
       )}
     </div>

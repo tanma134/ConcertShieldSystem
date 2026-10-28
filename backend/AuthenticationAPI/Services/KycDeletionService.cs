@@ -1,4 +1,4 @@
-﻿
+
 using AuthenticationAPI.DTOs;
 using AuthenticationAPI.Models;
 using Microsoft.EntityFrameworkCore;
@@ -12,10 +12,10 @@ namespace AuthenticationAPI.Services
         public const string Completed = "Completed";
         public const string Rejected = "Rejected";
 
-        /// <summary>BR-56: data is deleted within 72 hours of the request.</summary>
+        /// <summary> data is deleted within 72 hours of the request.</summary>
         public const int DeletionDeadlineHours = 72;
 
-        // BR-228: the only valid grounds for rejecting a deletion request
+        // the only valid grounds for rejecting a deletion request
         public const string ReasonLegalRetention = "LegalRetention";
         public const string ReasonLegalHold = "LegalHold";
         public const string ReasonAuthorityRequest = "AuthorityRequest";
@@ -40,7 +40,7 @@ namespace AuthenticationAPI.Services
             _logger = logger;
         }
 
-        // ------------------------------------------------------------ Người dùng
+        // ------------------------------------------------------------ Ng�?i d�ng
 
         public async Task<KycDeletionRequestDto> RequestAsync(int userId, string? ip)
         {
@@ -65,7 +65,7 @@ namespace AuthenticationAPI.Services
             }
             catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
             {
-                // 2 request đồng thời: index unique (user_id) WHERE status='Pending' chặn cái sau
+                // 2 request �?ng th?i: index unique (user_id) WHERE status='Pending' ch?n c�i sau
                 throw new InvalidOperationException("You already have a pending deletion request");
             }
 
@@ -126,13 +126,13 @@ namespace AuthenticationAPI.Services
             if (records.Any(r => r.Status == "ManualReview"))
                 throw new InvalidOperationException("This user has a submission under manual review. Resolve it first, or reject the request");
 
-            // BR-220 / BR-227: data under legal hold or still inside the legal retention period cannot be deleted
+            // data under legal hold or still inside the legal retention period cannot be deleted
             if (records.Any(r => r.LegalHold))
                 throw new InvalidOperationException("Some of this user's data is under legal hold. Reject the request with reason code LegalHold");
             if (records.Any(r => IsWithinLegalRetention(r, setting.MinRetentionDays)))
                 throw new InvalidOperationException("Some of this user's data is still within the legally mandatory retention period. Reject the request with reason code LegalRetention");
 
-            // BR-230: deletion and the request decision succeed or fail together
+            // deletion and the request decision succeed or fail together
             await using var tx = await _db.Database.BeginTransactionAsync();
 
             foreach (var record in records)
@@ -161,7 +161,7 @@ namespace AuthenticationAPI.Services
             reasonCode = (reasonCode ?? "").Trim();
             note = (note ?? "").Trim();
 
-            // BR-228: only valid grounds, and the reason must be recorded
+            // only valid grounds, and the reason must be recorded
             if (!ValidReasonCodes.Contains(reasonCode))
                 throw new InvalidOperationException("Reason code must be LegalRetention, LegalHold or AuthorityRequest");
             if (note.Length == 0)
@@ -211,13 +211,13 @@ namespace AuthenticationAPI.Services
             return request;
         }
 
-        /// <summary>Hồ sơ còn dữ liệu cần xóa: chưa purge, hoặc đã purge nhưng còn hash/số CCCD mà chính sách không cho giữ.</summary>
+        /// <summary>H? s� c?n d? li?u c?n x�a: ch�a purge, ho?c �? purge nh�ng c?n hash/s? CCCD m� ch�nh s�ch kh�ng cho gi?.</summary>
         private IQueryable<EkycVerification> DeletableRecords(int userId, bool keepHash) =>
             _db.EkycVerifications.Where(e => e.UserId == userId
                 && (e.DataPurgedAt == null
                     || (!keepHash && (e.CccdNumberHash != null || e.CccdNumberEncrypted != null))));
 
-        /// <summary>BR-229: the approver must not be the person who submitted the request.</summary>
+        /// <summary> the approver must not be the person who submitted the request.</summary>
         private static void EnsureApproverIsNotRequester(KycDeletionRequest request, int? adminId)
         {
             if (adminId is null)
@@ -226,12 +226,12 @@ namespace AuthenticationAPI.Services
                 throw new InvalidOperationException("You cannot process your own deletion request");
         }
 
-        /// <summary>BR-227: still inside the legally mandatory retention period (counted from verification, or creation if never verified).</summary>
+        /// <summary> still inside the legally mandatory retention period (counted from verification, or creation if never verified).</summary>
         private static bool IsWithinLegalRetention(EkycVerification r, int minRetentionDays) =>
             r.DataPurgedAt == null
             && (r.VerifiedAt ?? r.CreatedAt) > DateTime.UtcNow.AddDays(-minRetentionDays);
 
-        /// <summary>BR-231: tell the user the outcome (with the reason if rejected). Never blocks the decision.</summary>
+        /// <summary> tell the user the outcome (with the reason if rejected). Never blocks the decision.</summary>
         private async Task NotifyUserAsync(int userId, bool approved, string? reason)
         {
             try
@@ -243,7 +243,7 @@ namespace AuthenticationAPI.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Không gửi được email kết quả yêu cầu xóa eKYC cho user {UserId}", userId);
+                _logger.LogError(ex, "Kh�ng g?i ��?c email k?t qu? y�u c?u x�a eKYC cho user {UserId}", userId);
             }
         }
 

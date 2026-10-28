@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import AdminShell from "./AdminShell";
 import failedTransactionApi from "../../api/failedTransactionApi";
 import "./FailedTransactionQueuePage.css";
+import { useToast } from "../../components/ToastProvider";
 
 const PAGE_SIZE = 10;
 
@@ -111,30 +112,40 @@ export default function FailedTransactionQueuePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const toast = useToast();
   const fromDateRef = useRef(null);
   const toDateRef = useRef(null);
 
-  const loadQueue = useCallback(async () => {
-    setLoading(true);
-    setError("");
+  const loadQueue = useCallback(
+    async (showSuccessToast = false) => {
+      setLoading(true);
+      setError("");
 
-    try {
-      const response = await failedTransactionApi.getQueue(page, PAGE_SIZE);
-      const result = unwrapResponse(response);
+      try {
+        const response = await failedTransactionApi.getQueue(page, PAGE_SIZE);
+        const result = unwrapResponse(response);
 
-      setItems(result.items ?? result.Items ?? []);
-      setTotalPages(result.totalPages ?? result.TotalPages ?? 1);
-    } catch (err) {
-      setItems([]);
-      setError(
-        err?.response?.data?.message ??
+        setItems(result.items ?? result.Items ?? []);
+        setTotalPages(result.totalPages ?? result.TotalPages ?? 1);
+
+        if (showSuccessToast) {
+          toast.success("Failed transaction queue refreshed.");
+        }
+      } catch (err) {
+        const message =
+          err?.response?.data?.message ??
           err?.response?.data?.Message ??
-          "Could not load the failed transaction queue."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [page]);
+          "Could not load the failed transaction queue.";
+
+        setItems([]);
+        setError(message);
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [page, toast]
+  );
 
   useEffect(() => {
     loadQueue();
@@ -147,14 +158,17 @@ export default function FailedTransactionQueuePage() {
 
   function handleFilterSubmit(event) {
     event.preventDefault();
-    setPage(1);
+
     setAppliedFilters({ ...filters });
+    setPage(1);
+    toast.info("Filters applied.");
   }
 
   function handleClearFilters() {
     setFilters(EMPTY_FILTERS);
     setAppliedFilters(EMPTY_FILTERS);
     setPage(1);
+    toast.info("Filters cleared.");
   }
 
   const filteredItems = items.filter((item) =>
@@ -176,7 +190,7 @@ export default function FailedTransactionQueuePage() {
           <button
             type="button"
             className="failed-queue-refresh"
-            onClick={loadQueue}
+            onClick={() => loadQueue(true)}
             disabled={loading}
           >
             {loading ? "Loading…" : "Refresh"}
@@ -245,6 +259,7 @@ export default function FailedTransactionQueuePage() {
             <button type="submit" className="failed-queue-apply">
               Apply filters
             </button>
+
             <button
               type="button"
               className="failed-queue-clear"
@@ -254,12 +269,6 @@ export default function FailedTransactionQueuePage() {
             </button>
           </div>
         </form>
-
-        {error && (
-          <div className="failed-queue-alert" role="alert">
-            {error}
-          </div>
-        )}
 
         <section className="failed-queue-card">
           <div className="failed-queue-card-heading">
@@ -271,7 +280,7 @@ export default function FailedTransactionQueuePage() {
 
           {loading ? (
             <div className="failed-queue-state">Loading transactions…</div>
-          ) : filteredItems.length === 0 ? (
+          ) : error ? null : filteredItems.length === 0 ? (
             <div className="failed-queue-state">
               No failed transactions match the selected filters.
             </div>

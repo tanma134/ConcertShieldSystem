@@ -48,11 +48,14 @@ export default function Header() {
     logout();
     setMenuOpen(false);
     setNotifOpen(false);
+    setNotifications([]);
+    setUnreadCount(0);
     navigate("/");
   };
 
   const fetchHeaderNotifications = () => {
-    if (isAdmin) return;
+    // Guests and admins have no bell
+    if (!isAuthenticated || isAdmin) return;
     notificationApi
       .getNotifications()
       .then((res) => {
@@ -75,7 +78,7 @@ export default function Header() {
   };
 
   useEffect(() => {
-    if (isAdmin) return;
+    if (!isAuthenticated || isAdmin) return;
 
     fetchHeaderNotifications();
 
@@ -108,6 +111,7 @@ export default function Header() {
       window.removeEventListener("storage", handleStorage);
       if (channel) channel.close();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isAdmin]);
 
   // Live suggestions as the user types (debounced).
@@ -163,6 +167,8 @@ export default function Header() {
       document.removeEventListener("keydown", handleEsc);
     };
   }, [menuOpen, searchOpen, notifOpen]);
+
+  const closeMenu = () => setMenuOpen(false);
 
   return (
     <header className="tb-header">
@@ -316,12 +322,14 @@ export default function Header() {
             </>
           )}
 
-          {/* Notification Bell Dropdown (Customer and Organizer only) */}
-          {!isAdmin && (
+          {/* Notification Bell Dropdown (logged-in Customer and Organizer only) */}
+          {isAuthenticated && !isAdmin && (
             <div className="tb-notif-wrap" ref={notifRef}>
               <button
                 type="button"
                 className="tb-header-link tb-notif-btn"
+                aria-haspopup="true"
+                aria-expanded={notifOpen}
                 onClick={() => {
                   const next = !notifOpen;
                   setNotifOpen(next);
@@ -390,6 +398,7 @@ export default function Header() {
                             type="button"
                             className="tb-notif-item-delete"
                             title="Xóa thông báo"
+                            aria-label="Xóa thông báo"
                             onClick={async (e) => {
                               e.stopPropagation();
                               const targetId = notif.notificationId;
@@ -432,15 +441,15 @@ export default function Header() {
             </Link>
           )}
 
-          {isOrganizer && (
-            <Link to="/organizer/dashboard" className="tb-header-link">
-              Organizer
-            </Link>
-          )}
-
           {isAdmin && (
             <Link to="/admin" className="tb-header-link">
               Admin
+            </Link>
+          )}
+
+          {isAuthenticated && (isStaff || isAdmin) && (
+            <Link to={isAdmin ? "/admin/incidents" : "/staff/incidents"} className="tb-header-link">
+              Incidents
             </Link>
           )}
 
@@ -450,6 +459,8 @@ export default function Header() {
                 <button
                   type="button"
                   className="tb-header-link tb-account-toggle"
+                  aria-haspopup="true"
+                  aria-expanded={menuOpen}
                   onClick={() => setMenuOpen((v) => !v)}
                 >
                   {user?.fullName || user?.email || "Account"}
@@ -471,39 +482,48 @@ export default function Header() {
                 </button>
                 {menuOpen && (
                   <div className="tb-account-menu">
-                    <Link to="/profile" onClick={() => setMenuOpen(false)}>
+                    <Link to="/profile" onClick={closeMenu}>
                       My Profile
                     </Link>
+
                     {isStaff && (
                       <>
-                        <Link to="/staff/gate-assignment" onClick={() => setMenuOpen(false)}>
+                        <Link to="/staff/gate-assignment" onClick={closeMenu}>
                           Gate Assignment
                         </Link>
-                        <Link to="/staff/checkin/1" onClick={() => setMenuOpen(false)}>
+                        <Link to="/staff/checkin/1" onClick={closeMenu}>
                           Check-in Scanner Terminal
                         </Link>
                       </>
                     )}
+
                     {isOrganizer && (
                       <>
-                        <Link to="/organizer/dashboard" onClick={() => setMenuOpen(false)}>
+                        <Link to="/organizer/dashboard" onClick={closeMenu}>
                           Organizer Dashboard
                         </Link>
-                        <Link to="/organizer/verification" onClick={() => setMenuOpen(false)}>
+                        <Link to="/organizer/verification" onClick={closeMenu}>
                           Business Verification
                         </Link>
                       </>
                     )}
+
+                    {(isStaff || isAdmin) && (
+                      <Link to={isAdmin ? "/admin/incidents" : "/staff/incidents"} onClick={closeMenu}>
+                        Incident Command
+                      </Link>
+                    )}
+
                     {isAdmin && (
-                      <Link to="/admin/vouchers" onClick={() => setMenuOpen(false)}>
+                      <Link to="/admin/vouchers" onClick={closeMenu}>
                         Vouchers Admin
                       </Link>
                     )}
 
-                    <Link to="/my-orders" className="tb-dropdown-link">
+                    <Link to="/my-orders" onClick={closeMenu}>
                       Order History
                     </Link>
-                    
+
                     <button type="button" onClick={handleLogout}>
                       Log Out
                     </button>

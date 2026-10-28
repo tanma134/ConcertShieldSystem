@@ -24,6 +24,10 @@ public static class DatabaseSchemaBootstrapper
                 ON public.event_staff(event_id, staff_user_id) WHERE is_active = true;
             CREATE INDEX IF NOT EXISTS ix_event_staff_staff_user
                 ON public.event_staff(staff_user_id) WHERE is_active = true;
+
+            ALTER TABLE public.events ADD COLUMN IF NOT EXISTS hold_timeout_minutes integer NOT NULL DEFAULT 10;
+            ALTER TABLE public.events ADD COLUMN IF NOT EXISTS re_entry_policy character varying(30) NOT NULL DEFAULT 'NoReEntry';
+            ALTER TABLE public.events ADD COLUMN IF NOT EXISTS re_entry_duration_minutes integer;
             """);
     }
 }

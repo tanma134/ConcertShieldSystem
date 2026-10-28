@@ -1,4 +1,4 @@
-﻿using TicketAPI.DTOs;
+using TicketAPI.DTOs;
 
 public interface IHoldService
 {
@@ -18,7 +18,7 @@ public interface IHoldService
     Task<HoldSessionResponse> CreateHoldSessionAsync(
         int userId,
         CreateHoldSessionRequest request,
-        int durationSeconds = 600);
+        int? durationSeconds = null);
 
     Task<HoldSessionResponse> GetHoldDetailsAsync(string holdId, int userId);
 
@@ -29,4 +29,9 @@ public interface IHoldService
     Task CancelHoldSessionAsync(string holdId, int userId);
 
     Task<HoldSessionResponse?> GetActiveHoldSessionAsync(int userId);
+
+    Task<HoldSessionResponse> ChangeSeatsAsync(
+    string holdId,
+    int userId,
+    List<int> seatIds);
 }

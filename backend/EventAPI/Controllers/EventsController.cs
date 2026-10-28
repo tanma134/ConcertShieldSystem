@@ -19,20 +19,40 @@ namespace EventAPI.Controllers
     public class EventsController : BaseApiController
     {
         private readonly IEventService _eventService;
+        private readonly IEventStaffService _eventStaffService;
         private readonly IValidator<CreateEventDTO> _createValidator;
         private readonly IValidator<UpdateEventDTO> _updateValidator;
         private readonly ILogger<EventsController> _logger;
 
         public EventsController(
             IEventService eventService,
+            IEventStaffService eventStaffService,
             IValidator<CreateEventDTO> createValidator,
             IValidator<UpdateEventDTO> updateValidator,
             ILogger<EventsController> logger)
         {
             _eventService = eventService;
+            _eventStaffService = eventStaffService;
             _createValidator = createValidator;
             _updateValidator = updateValidator;
             _logger = logger;
+        }
+
+        /// <summary>Returns assigned events and gates for a staff member.</summary>
+        [HttpGet("staff/{staffId:int}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetEventsByStaff(int staffId)
+        {
+            try
+            {
+                var targetId = staffId > 0 ? staffId : (CurrentUserIdOrNull ?? 0);
+                var result = await _eventStaffService.GetAssignmentsByStaffAsync(targetId);
+                return Ok(ApiResponseDTO<List<StaffEventAssignmentDTO>>.SuccessResponse(result));
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
         }
 
         // =====================================================================

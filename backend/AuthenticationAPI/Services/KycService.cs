@@ -1,4 +1,4 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using AuthenticationAPI.DTOs;
@@ -12,7 +12,7 @@ using Npgsql;
 namespace AuthenticationAPI.Services
 {
 
-    /// <summary>BR-03: thrown when the account's eKYC function is locked after 3 consecutive failures.</summary>
+    /// <summary> thrown when the account's eKYC function is locked after 3 consecutive failures.</summary>
     public class EkycLockedException : Exception
     {
         public DateTime LockedUntilUtc { get; }
@@ -25,7 +25,7 @@ namespace AuthenticationAPI.Services
 
     public class KycService : IKycService
     {
-        /// <summary>BR-03</summary>
+        /// <summary></summary>
         public const int MaxConsecutiveFailures = 3;
         public static readonly TimeSpan LockDuration = TimeSpan.FromHours(24);
         private const string SystemErrorReason = "System error during verification";
@@ -73,7 +73,7 @@ namespace AuthenticationAPI.Services
                 };
             }
 
-            // BR-03: 3 consecutive failures lock eKYC for 24 hours
+            // 3 consecutive failures lock eKYC for 24 hours
             await EnsureNotLockedAsync(userId);
 
             var record = new EkycVerification
@@ -112,7 +112,7 @@ namespace AuthenticationAPI.Services
             await using var selfieStream = new MemoryStream();
             await request.SelfieImage.CopyToAsync(selfieStream);
 
-            // BR-232: log the collection of the data and the purpose
+            // log the collection of the data and the purpose
             await _accessLog.LogAsync(record.UserId, record.EkycId, record.UserId, KycActorTypes.User,
                 KycAccessActions.Submit, ip, $"purpose=identity_verification; consentVersion={record.ConsentVersion}");
 
@@ -137,7 +137,7 @@ namespace AuthenticationAPI.Services
                 return await FailAsync(record, $"OCR failed: {ocrResult.ErrorMessage}");
 
             var idNumber = ocrResult.IdNumber ?? string.Empty;
-            // BR-44: identity comes from the ID card only; the user just reviews it (ID number masked)
+            // identity comes from the ID card only; the user just reviews it (ID number masked)
             identity = new EkycIdentityInfoDto
             {
                 FullName = ocrResult.FullName,
@@ -233,7 +233,7 @@ namespace AuthenticationAPI.Services
             ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation };
 
         /// <summary>
-        /// BR-03: counts consecutive failed submissions (newest first). Every 3rd consecutive failure locks the
+        /// counts consecutive failed submissions (newest first). Every 3rd consecutive failure locks the
         /// function for 24h; after the lock expires the counter starts again (a 4th failure alone does not re-lock).
         /// System errors are not the user's fault and are ignored.
         /// </summary>
@@ -282,7 +282,7 @@ namespace AuthenticationAPI.Services
 
         private string GenerateVerifiedToken(int userId, int ekycId)
         {
-            // Shares the secret with AuthenticationAPI's JWT (JwtSettings:SecretKey in appsettings) —
+            // Shares the secret with AuthenticationAPI's JWT (JwtSettings:SecretKey in appsettings) �
             // so TicketingService can verify it with the same key.
             var secret = _config["JwtSettings:SecretKey"]
                 ?? throw new InvalidOperationException("Missing configuration JwtSettings:SecretKey");

@@ -195,4 +195,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+await app.EnsureWeekTaskSchemaAsync();
+
 app.Run();

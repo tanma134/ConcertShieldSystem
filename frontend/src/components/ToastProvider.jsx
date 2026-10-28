@@ -36,6 +36,9 @@ export function ToastProvider({ children }) {
       success: (message) => push("success", message),
       error: (message) => push("error", message),
       info: (message) => push("info", message),
+      showSuccess: (message) => push("success", message),
+      showError: (message) => push("error", message),
+      showInfo: (message) => push("info", message),
     }),
     [push]
   );

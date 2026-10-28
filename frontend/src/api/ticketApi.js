@@ -1,7 +1,10 @@
 import axiosClient from "./axiosClient";
 
 const ticketApi = {
-  createHoldSession: (dto) => axiosClient.post("/Holds/session", dto),
+  createHoldSession: (dto, queueToken) =>
+    axiosClient.post("/Holds/session", dto, {
+      headers: queueToken ? { "X-Queue-Token": queueToken } : {},
+    }),
   getHoldDetails: (holdId) => axiosClient.get(`/Holds/session/${holdId}`),
   createOrder: (dto) => axiosClient.post("/Orders/create", dto),
   getBookedSeatIds: (eventId) =>
@@ -22,23 +25,37 @@ const ticketApi = {
     axiosClient.post(
       `/Holds/session/${encodeURIComponent(holdId)}/cancel`
     ),
+  scanTicket: (dto) => axiosClient.post("/checkin/scan", dto),
   getTicketHistory: (ticketId) =>
-    axiosClient.get(
-      `/Tickets/${encodeURIComponent(ticketId)}/history`
-    ),
-  getAdminStatusHistories: (params) =>
-    axiosClient.get("/admin/status-histories", { params }),
+  axiosClient.get(`/Tickets/${ticketId}/history`),
+  
+  changeHoldSeats: (holdId, seatIds) =>
+    axiosClient.put(`/Holds/session/${encodeURIComponent(holdId)}/seats`, {
+      seatIds,
+    }),
+
   getAdminTickets: (params) =>
     axiosClient.get("/admin/tickets", { params }),
 
+  getAdminStatusHistories: (params) =>
+    axiosClient.get("/admin/status-histories", { params }),
+
   getAdminTicketDetails: (ticketId) =>
-    axiosClient.get(`/admin/tickets/${ticketId}`),
+    axiosClient.get(
+      `/admin/tickets/${encodeURIComponent(ticketId)}`
+    ),
 
   revokeTicket: (ticketId, reason) =>
-    axiosClient.post(`/admin/tickets/${ticketId}/revoke`, { reason }),
+    axiosClient.post(
+      `/admin/tickets/${encodeURIComponent(ticketId)}/revoke`,
+      { reason }
+    ),
 
   reissueTicket: (ticketId, reason) =>
-    axiosClient.post(`/admin/tickets/${ticketId}/reissue`, { reason }),
-  }
+    axiosClient.post(
+      `/admin/tickets/${encodeURIComponent(ticketId)}/reissue`,
+      { reason }
+    ),
+};
 
 export default ticketApi;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace TicketAPI.Models;
@@ -28,6 +28,14 @@ public partial class Ticket
     public DateTime? CheckedInAt { get; set; }
 
     public int? CheckedInBy { get; set; }
+
+    public string? CheckedInGate { get; set; }
+
+    public DateTime? LastExitAt { get; set; }
+
+    public bool IsInside { get; set; }
+
+    public int ReEntryCount { get; set; }
 
     public bool IsDeleted { get; set; }
 

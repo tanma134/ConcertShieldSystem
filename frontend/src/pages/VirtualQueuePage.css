@@ -241,6 +241,32 @@
   margin: 0 0 28px;
 }
 
+.queue-window-times {
+  display: grid;
+  gap: 12px;
+  max-width: 500px;
+  margin: 0 0 24px;
+}
+
+.queue-window-times div {
+  display: grid;
+  gap: 5px;
+  padding: 13px 15px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(161, 145, 198, 0.2);
+  border-radius: 12px;
+}
+
+.queue-window-times span {
+  color: var(--tb-text-muted, #aaa) !important;
+  font-size: 12px;
+}
+
+.queue-window-times strong {
+  color: #fff !important;
+  font-size: 14px;
+}
+
 .queue-state-icon {
   width: 58px;
   height: 58px;

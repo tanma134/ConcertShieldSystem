@@ -1,4 +1,4 @@
-﻿using AuthenticationAPI.Models;
+using AuthenticationAPI.Models;
 
 namespace AuthenticationAPI.Repositories
 {
@@ -7,20 +7,20 @@ namespace AuthenticationAPI.Repositories
         Task<int> CreateAsync(EkycVerification record);
 
         /// <summary>
-        /// Lưu record. Nếu truyền userEkycStatus thì cập nhật luôn User.EkycStatus trong cùng 1 lần SaveChanges
-        /// (không bao giờ hạ cấp user đang ở trạng thái "Passed").
+        /// L�u record. N?u truy?n userEkycStatus th? c?p nh?t lu�n User.EkycStatus trong c�ng 1 l?n SaveChanges
+        /// (kh�ng bao gi? h? c?p user �ang ? tr?ng th�i "Passed").
         /// </summary>
         Task UpdateAsync(EkycVerification record, string? userEkycStatus = null);
 
         Task<EkycVerification?> GetByIdAsync(int ekycId);
 
-        /// <summary>Record mới nhất của user có trạng thái Passed hoặc ManualReview (null nếu chưa có).</summary>
+        /// <summary>Record m?i nh?t c?a user c� tr?ng th�i Passed ho?c ManualReview (null n?u ch�a c�).</summary>
         Task<EkycVerification?> GetActiveByUserAsync(int userId);
 
-        /// <summary>CCCD (theo hash) đã được tài khoản KHÁC xác thực/đang chờ duyệt chưa.</summary>
+        /// <summary>CCCD (theo hash) �? ��?c t�i kho?n KH�C x�c th?c/�ang ch? duy?t ch�a.</summary>
         Task<bool> IsCccdUsedByAnotherUserAsync(string cccdHash, int userId);
 
-        /// <summary>N record mới nhất của user (mới nhất trước), dùng để đếm số lần thất bại liên tiếp (BR-03).</summary>
+        /// <summary>N record m?i nh?t c?a user (m?i nh?t tr�?c), d�ng �? �?m s? l?n th?t b?i li�n ti?p .</summary>
         Task<List<EkycVerification>> GetRecentByUserAsync(int userId, int take);
     }
 }

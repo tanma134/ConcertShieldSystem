@@ -9,7 +9,7 @@ const MAX = 2000;
 const MAX_LINKS = 5;
 
 // Customer view of a risk decision + Submit Appeal Request
-// GET api/risk/decisions/{id} (public view: outcome and general reason only, BR-237) + POST api/risk/appeals
+// GET api/risk/decisions/{id} (public view: outcome and general reason only) + POST api/risk/appeals
 // Route: /risk/decisions/:id/appeal  (open it from the block notification)
 export default function SubmitAppealPage() {
   const { id } = useParams();

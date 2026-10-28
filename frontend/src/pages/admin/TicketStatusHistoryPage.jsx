@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import AdminShell from "./AdminShell";
 import ticketApi from "../../api/ticketApi";
+import { useToast } from "../../components/ToastProvider";
 import "./TicketStatusHistoryPage.css";
 
 const PAGE_SIZE = 20;
@@ -73,6 +74,8 @@ function getStatusChange(item) {
 }
 
 export default function TicketStatusHistoryPage() {
+  const toast = useToast();
+
   const [items, setItems] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
@@ -86,7 +89,11 @@ export default function TicketStatusHistoryPage() {
 
   const [appliedFilters, setAppliedFilters] = useState({});
 
-  async function loadHistory(nextPage, filters) {
+  async function loadHistory(
+    nextPage,
+    filters,
+    successMessage = ""
+  ) {
     try {
       setLoading(true);
       setError("");
@@ -110,13 +117,20 @@ export default function TicketStatusHistoryPage() {
       setItems(Array.isArray(data?.items) ? data.items : []);
       setTotalCount(Number(data?.totalCount) || 0);
       setPage(Number(data?.page) || nextPage);
+
+      if (successMessage) {
+        toast.success(successMessage);
+      }
     } catch (err) {
-      setError(
+      const message =
         err.response?.data?.message ||
-          "Could not load ticket status history."
-      );
+        err.response?.data?.Message ||
+        "Could not load ticket status history.";
+
+      setError(message);
       setItems([]);
       setTotalCount(0);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -139,7 +153,7 @@ export default function TicketStatusHistoryPage() {
     };
 
     setAppliedFilters(filters);
-    loadHistory(1, filters);
+    loadHistory(1, filters, "Filters applied.");
   }
 
   function clearFilters() {
@@ -150,7 +164,7 @@ export default function TicketStatusHistoryPage() {
     setFrom("");
     setTo("");
     setAppliedFilters(filters);
-    loadHistory(1, filters);
+    loadHistory(1, filters, "Filters cleared.");
   }
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
@@ -233,12 +247,6 @@ export default function TicketStatusHistoryPage() {
           </div>
         </form>
 
-        {error && (
-          <div className="tsh-error" role="alert">
-            {error}
-          </div>
-        )}
-
         <section className="tsh-table-card">
           <div className="tsh-table-heading">
             <div>
@@ -253,7 +261,7 @@ export default function TicketStatusHistoryPage() {
 
           {loading ? (
             <div className="tsh-state">Loading status history...</div>
-          ) : items.length === 0 ? (
+          ) : error ? null : items.length === 0 ? (
             <div className="tsh-state">
               No status history matches these filters.
             </div>
@@ -281,9 +289,11 @@ export default function TicketStatusHistoryPage() {
                       <td>Event #{item.eventId}</td>
 
                       <td>
-                        <span className={`tsh-target tsh-target-${String(
-                          item.targetType || "other"
-                        ).toLowerCase()}`}>
+                        <span
+                          className={`tsh-target tsh-target-${String(
+                            item.targetType || "other"
+                          ).toLowerCase()}`}
+                        >
                           {getTargetLabel(item)}
                         </span>
                       </td>
@@ -302,19 +312,14 @@ export default function TicketStatusHistoryPage() {
                         {item.quantity != null && (
                           <span>Quantity: {item.quantity}</span>
                         )}
-                        {item.orderId && (
-                          <span>Order #{item.orderId}</span>
-                        )}
-                        {item.ticketId && (
-                          <span>Ticket #{item.ticketId}</span>
-                        )}
-                        {item.actorRole && (
-                          <span>By {item.actorRole}</span>
-                        )}
+                        {item.orderId && <span>Order #{item.orderId}</span>}
+                        {item.ticketId && <span>Ticket #{item.ticketId}</span>}
+                        {item.actorRole && <span>By {item.actorRole}</span>}
                         {!item.quantity &&
                           !item.orderId &&
                           !item.ticketId &&
-                          !item.actorRole && "—"}
+                          !item.actorRole &&
+                          "—"}
                       </td>
                     </tr>
                   ))}

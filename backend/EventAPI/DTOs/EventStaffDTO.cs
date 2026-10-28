@@ -36,4 +36,21 @@ namespace EventAPI.DTOs
         public string Email { get; set; } = string.Empty;
         public bool IsAssigned { get; set; }
     }
+
+    // An event and gate a staff member is assigned to.
+    public class StaffEventAssignmentDTO
+    {
+        public int EventStaffId { get; set; }
+        public int EventId { get; set; }
+        public int StaffUserId { get; set; }
+        public string GateName { get; set; } = "Main Gate";
+        public string EventTitle { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string LocationName { get; set; } = string.Empty;
+        public DateTime StartsAt { get; set; }
+        public DateTime EndsAt { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public bool CanReviewReturns { get; set; }
+        public DateTime AssignedAt { get; set; }
+    }
 }
