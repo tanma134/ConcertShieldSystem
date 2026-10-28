@@ -446,10 +446,122 @@
 }
 
 .tb-seat-summary {
-  display: block;
+  display: grid;
   margin-top: 5px;
   color: var(--tb-text-muted);
   font-size: 11px;
+}
+
+.tb-seat-summary-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.tb-seat-details-trigger {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border: 1px solid rgb(56 189 248 / 45%);
+  border-radius: 6px;
+  background: rgb(56 189 248 / 10%);
+  color: #7dd3fc;
+  font: inherit;
+  cursor: pointer;
+}
+
+.tb-seat-details-trigger:hover {
+  background: rgb(56 189 248 / 20%);
+}
+
+.tb-seat-details-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(0 0 0 / 68%);
+}
+
+.tb-seat-details-modal {
+  position: relative;
+  width: min(100%, 440px);
+  padding: 28px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 16px;
+  background: #171923;
+  color: #f4f4f5;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 45%);
+}
+
+.tb-seat-details-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #d4d4d8;
+  font-size: 25px;
+  cursor: pointer;
+}
+
+.tb-seat-details-eyebrow {
+  margin: 0 40px 7px 0;
+  color: #7dd3fc;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.tb-seat-details-modal h2 {
+  margin: 0 36px 20px 0;
+  font-size: 22px;
+}
+
+.tb-seat-details-list {
+  display: grid;
+  margin: 0;
+}
+
+.tb-seat-details-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 11px 0;
+  border-bottom: 1px solid rgb(255 255 255 / 9%);
+}
+
+.tb-seat-details-list dt {
+  color: #a1a1aa;
+}
+
+.tb-seat-details-list dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 650;
+}
+
+.tb-seat-details-description {
+  margin: 16px 0 0;
+  color: #c4c4cc;
+  line-height: 1.5;
+}
+
+.tb-seat-details-done {
+  width: 100%;
+  margin-top: 22px;
+  padding: 11px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: #38bdf8;
+  color: #082f49;
+  font-weight: 750;
+  cursor: pointer;
 }
 
 .tb-zone-modal-availability,
@@ -664,4 +776,8 @@
   .ticket-loading-skeleton i {
     animation: none;
   }
+}
+
+#tb-seat-details-title {
+  color: #fff;
 }

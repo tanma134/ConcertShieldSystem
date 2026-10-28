@@ -64,4 +64,9 @@
     {
         public List<HoldAttendeeDto> Attendees { get; set; } = new();
     }
+
+    public class ChangeHoldSeatsRequest
+    {
+        public List<int> SeatIds { get; set; } = new();
+    }
 }

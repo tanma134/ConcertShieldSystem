@@ -774,5 +774,150 @@ namespace TicketAPI.Services
                 return null;
             }
         }
+
+        public async Task<HoldSessionResponse> ChangeSeatsAsync(
+            string holdId,
+            int userId,
+            List<int> seatIds)
+        {
+            if (string.IsNullOrWhiteSpace(holdId))
+                throw new ArgumentException("HoldId không hợp lệ.");
+
+            ValidatePositive(userId, nameof(userId));
+
+            if (seatIds == null || seatIds.Count == 0)
+                throw new ArgumentException("Bạn phải chọn ít nhất một ghế.");
+
+            if (seatIds.Any(id => id <= 0) ||
+                seatIds.Distinct().Count() != seatIds.Count)
+            {
+                throw new ArgumentException("Danh sách ghế không hợp lệ hoặc có ghế bị lặp.");
+            }
+
+            var sessionKey = SessionKey(holdId);
+            var sessionJson = await _db.StringGetAsync(sessionKey);
+
+            if (sessionJson.IsNull)
+                throw new KeyNotFoundException("Phiên giữ vé không tồn tại hoặc đã hết hạn.");
+
+            var session = JsonSerializer.Deserialize<HoldSession>(
+                sessionJson.ToString(),
+                JsonOptions);
+
+            if (session == null)
+                throw new InvalidOperationException("Dữ liệu hold session không hợp lệ.");
+
+            if (session.UserId != userId)
+                throw new UnauthorizedAccessException(
+                    "Bạn không có quyền cập nhật phiên giữ vé này.");
+
+            var remainingSeconds = (int)Math.Ceiling(
+                (session.ExpiresAtUtc - DateTime.UtcNow).TotalSeconds);
+
+            var sessionTtl = await _db.KeyTimeToLiveAsync(sessionKey);
+
+            if (remainingSeconds <= 0 ||
+                sessionTtl == null ||
+                sessionTtl <= TimeSpan.Zero)
+            {
+                throw new KeyNotFoundException("Phiên giữ vé đã hết hạn.");
+            }
+
+            var currentSeatIds = session.SeatIds ?? new List<int>();
+
+            if (currentSeatIds.Count == 0)
+                throw new InvalidOperationException(
+                    "Phiên giữ vé này không có ghế để thay đổi.");
+
+            if (seatIds.Count != currentSeatIds.Count)
+                throw new ArgumentException(
+                    $"Bạn cần chọn đúng {currentSeatIds.Count} ghế.");
+
+            await _eligibility.EnsureSalesAsync(session.EventId);
+
+            var ttl = sessionTtl.Value < TimeSpan.FromSeconds(remainingSeconds)
+                ? sessionTtl.Value
+                : TimeSpan.FromSeconds(remainingSeconds);
+
+            var currentSeatSet = currentSeatIds.ToHashSet();
+            var newlyAcquiredSeatIds = new List<int>();
+
+            foreach (var seatId in seatIds)
+            {
+                if (currentSeatSet.Contains(seatId))
+                    continue;
+
+                var acquired = await _db.StringSetAsync(
+                    SeatKey(session.EventId, seatId),
+                    userId,
+                    ttl,
+                    When.NotExists);
+
+                if (!acquired)
+                {
+                    foreach (var acquiredSeatId in newlyAcquiredSeatIds)
+                    {
+                        await ReleaseSeatAsync(
+                            session.EventId,
+                            acquiredSeatId,
+                            userId);
+                    }
+
+                    throw new InvalidOperationException(
+                        $"Ghế {seatId} vừa được người khác chọn. Các ghế bạn đang giữ vẫn được giữ nguyên.");
+                }
+
+                newlyAcquiredSeatIds.Add(seatId);
+            }
+
+            var previousSeatIds = currentSeatIds.ToList();
+
+            session.SeatIds = seatIds.ToList();
+
+            if (session.Attendees != null &&
+                session.Attendees.Count == seatIds.Count)
+            {
+                for (var i = 0; i < session.Attendees.Count; i++)
+                {
+                    session.Attendees[i].SeatId = seatIds[i];
+                }
+            }
+
+            var saved = await _db.StringSetAsync(
+                sessionKey,
+                JsonSerializer.Serialize(session, JsonOptions),
+                ttl,
+                When.Exists);
+
+            if (!saved)
+            {
+                foreach (var acquiredSeatId in newlyAcquiredSeatIds)
+                {
+                    await ReleaseSeatAsync(
+                        session.EventId,
+                        acquiredSeatId,
+                        userId);
+                }
+
+                throw new KeyNotFoundException(
+                    "Phiên giữ vé đã hết hạn trong lúc cập nhật ghế.");
+            }
+
+            foreach (var oldSeatId in previousSeatIds)
+            {
+                if (!seatIds.Contains(oldSeatId))
+                {
+                    await ReleaseSeatAsync(
+                        session.EventId,
+                        oldSeatId,
+                        userId);
+                }
+            }
+
+            var response = ToResponse(session, remainingSeconds);
+            await EnrichTicketsAsync(response);
+
+            return response;
+        }
     }
 }

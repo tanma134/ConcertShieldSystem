@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import AdminShell from "./AdminShell";
 import TicketActionModal from "./TicketActionModal";
 import ticketApi from "../../api/ticketApi";
+import { useToast } from "../../components/ToastProvider";
 import "./AdminTicketsPage.css";
 
 const PAGE_SIZE = 20;
@@ -26,13 +27,13 @@ function formatDate(value) {
 
 export default function AdminTicketsPage() {
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [tickets, setTickets] = useState([]);
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
 
   const [ticketId, setTicketId] = useState("");
   const [orderId, setOrderId] = useState("");
@@ -63,13 +64,19 @@ export default function AdminTicketsPage() {
       setTickets(Array.isArray(data?.items) ? data.items : []);
       setTotalCount(Number(data?.totalCount) || 0);
     } catch (err) {
-      setError(err.response?.data?.message || "Could not load tickets.");
+      const message =
+        err?.response?.data?.message ||
+        err?.response?.data?.Message ||
+        "Could not load tickets.";
+
+      setError(message);
       setTickets([]);
       setTotalCount(0);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
-  }, [filters, page]);
+  }, [filters, page, toast]);
 
   useEffect(() => {
     loadTickets();
@@ -79,7 +86,6 @@ export default function AdminTicketsPage() {
     event.preventDefault();
 
     setPage(1);
-    setNotice("");
     setFilters({
       ticketId: ticketId.trim(),
       orderId: orderId.trim(),
@@ -87,6 +93,8 @@ export default function AdminTicketsPage() {
       status,
       search: search.trim(),
     });
+
+    toast.info("Filters applied.");
   }
 
   function clearFilters() {
@@ -96,8 +104,9 @@ export default function AdminTicketsPage() {
     setStatus("");
     setSearch("");
     setPage(1);
-    setNotice("");
     setFilters({});
+
+    toast.info("Filters cleared.");
   }
 
   function canRevoke(ticket) {
@@ -135,18 +144,6 @@ export default function AdminTicketsPage() {
             <span>tickets</span>
           </div>
         </header>
-
-        {notice && (
-          <div className="admin-tickets-notice" role="status">
-            {notice}
-          </div>
-        )}
-
-        {error && (
-          <div className="admin-tickets-error" role="alert">
-            {error}
-          </div>
-        )}
 
         <form className="admin-tickets-filters" onSubmit={applyFilters}>
           <label>
@@ -230,7 +227,7 @@ export default function AdminTicketsPage() {
 
           {loading ? (
             <div className="admin-tickets-state">Loading tickets...</div>
-          ) : tickets.length === 0 ? (
+          ) : error ? null : tickets.length === 0 ? (
             <div className="admin-tickets-state">
               No tickets match these filters.
             </div>
@@ -365,17 +362,22 @@ export default function AdminTicketsPage() {
             ticket={selectedAction.ticket}
             onClose={() => setSelectedAction(null)}
             onSuccess={async (result, message) => {
+              const action = selectedAction.action;
               const replacementId =
-                selectedAction.action === "reissue"
-                  ? result?.ticketId
-                  : null;
+                action === "reissue" ? result?.ticketId : null;
 
-              setNotice(
-                replacementId
-                  ? `${message} Replacement ticket: #${replacementId}.`
-                  : message
-              );
+              const defaultMessage =
+                action === "reissue"
+                  ? "Ticket re-issued successfully."
+                  : "Ticket revoked successfully.";
 
+              const baseMessage = message || defaultMessage;
+              const successMessage = replacementId
+                ? `${baseMessage} Replacement ticket: #${replacementId}.`
+                : baseMessage;
+
+              toast.success(successMessage);
+              setSelectedAction(null);
               await loadTickets();
             }}
           />

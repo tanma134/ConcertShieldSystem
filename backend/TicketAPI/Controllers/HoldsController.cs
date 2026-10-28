@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using TicketAPI.DTOs;
+using TicketAPI.Risk;
 using TicketAPI.Services;
 
 namespace TicketAPI.Controllers
@@ -267,6 +268,43 @@ namespace TicketAPI.Controllers
                     success = false,
                     message = "Could not cancel the reservation."
                 });
+            }
+        }
+
+        [HttpPut("session/{holdId}/seats")]
+        public async Task<IActionResult> ChangeSeats(
+            string holdId,
+            [FromBody] ChangeHoldSeatsRequest request)
+        {
+            var userId = GetUserId();
+
+            if (userId == null)
+                return Unauthorized(new { success = false, message = "Token không hợp lệ." });
+
+            try
+            {
+                var result = await _holdService.ChangeSeatsAsync(
+                    holdId,
+                    userId.Value,
+                    request.SeatIds);
+
+                return Ok(new { success = true, data = result });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { success = false, message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { success = false, message = ex.Message });
             }
         }
     }

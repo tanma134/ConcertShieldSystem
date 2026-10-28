@@ -31,6 +31,10 @@ export const ADMIN_LINKS = [
   ["/admin/queue/abuse-alerts", "Queue Abuse Alerts"],
   ["/admin/incidents", "Incident Escalations & Resolutions"],
   ["/admin/support-cases", "Support Cases & Disputes"],
+  ["/admin/tickets", "Tickets"],
+  ["/admin/ticket-status-history", "Ticket Status History"],
+  ["/admin/failed-transaction-queue", "Failed Transaction Queue"],
+  ["/admin/payment-reconciliation", "Payment Reconciliation Exceptions"],
 ];
 
 export default function AdminShell({ children, title = "Failed Transaction Queue" }) {

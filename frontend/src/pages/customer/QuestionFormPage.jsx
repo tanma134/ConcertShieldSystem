@@ -5,6 +5,7 @@ import eventApi from "../../api/eventApi";
 import "./QuestionFormPage.css";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
+import { useToast } from "../../components/ToastProvider";
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat("vi-VN", {
@@ -21,6 +22,37 @@ const formatTime = (seconds) => {
     "0"
   )}`;
 };
+
+function normalizePhone(phone) {
+  const normalized = phone.replace(/[().\s-]/g, "");
+
+  if (normalized.startsWith("+84")) {
+    return `0${normalized.slice(3)}`;
+  }
+
+  return normalized;
+}
+
+function validateAttendeeFormats(attendees) {
+  const vietnamPhonePattern = /^(?:0\d{9}|\+84\d{9})$/;
+  const identityPattern = /^(?:\d{9}|\d{12}|[A-Za-z0-9]{6,12})$/;
+
+  for (const [index, attendee] of attendees.entries()) {
+    const row = index + 1;
+    const phone = attendee.phone.trim().replace(/[().\s-]/g, "");
+    const citizenId = attendee.citizenId.trim();
+
+    if (!vietnamPhonePattern.test(phone)) {
+      return `Attendee ${row}: enter a valid phone number, such as 0912345678 or +84912345678.`;
+    }
+
+    if (!identityPattern.test(citizenId)) {
+      return `Attendee ${row}: enter a valid ID number. ID numbers must have 9 or 12 digits; passport numbers must be 6–12 letters or digits.`;
+    }
+  }
+
+  return "";
+}
 
 function buildAttendeeRows(hold, eventData, savedAttendees = []) {
   const ticketItems = hold.items ?? [];
@@ -56,7 +88,7 @@ function buildAttendeeRows(hold, eventData, savedAttendees = []) {
 
   const seatsByTicketType = new Map();
 
-  // Giữ thứ tự seatIds từ hold để mapping ổn định.
+  // Keep the seatIds order so attendee-to-seat mapping stays stable.
   for (const seatId of heldSeatIds) {
     const seat = seatInfoById.get(seatId);
     const seats = seatsByTicketType.get(seat.ticketTypeId) ?? [];
@@ -95,7 +127,7 @@ function buildAttendeeRows(hold, eventData, savedAttendees = []) {
             ? `Row ${seat.rowLabel} · Seat ${seat.seatNumber}`
             : null,
 
-        // Không mặc định attendee đầu tiên làm chủ tài khoản.
+        // Do not automatically assign the first attendee as the account holder.
         isPrimaryBuyer: saved.isPrimaryBuyer === true,
 
         fullName: saved.fullName ?? "",
@@ -118,6 +150,7 @@ function buildAttendeeRows(hold, eventData, savedAttendees = []) {
 export default function QuestionFormPage() {
   const { holdId } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [holdData, setHoldData] = useState(null);
   const [eventData, setEventData] = useState(null);
@@ -301,7 +334,7 @@ export default function QuestionFormPage() {
     );
 
     if (primaryAttendees.length !== 1) {
-      window.alert("Please select exactly one primary account holder.");
+      toast.error("Please select exactly one primary account holder.");
       return;
     }
 
@@ -317,9 +350,16 @@ export default function QuestionFormPage() {
     });
 
     if (!allFieldsValid) {
-      window.alert(
+      toast.error(
         "Please complete the required details for every attendee. The primary account holder must also provide an email address."
       );
+      return;
+    }
+
+    const formatError = validateAttendeeFormats(attendees);
+
+    if (formatError) {
+      toast.error(formatError);
       return;
     }
 
@@ -327,18 +367,18 @@ export default function QuestionFormPage() {
       attendee.citizenId.trim().toLowerCase()
     );
     const phoneNumbers = attendees.map((attendee) =>
-      attendee.phone.trim()
+      normalizePhone(attendee.phone.trim())
     );
 
     if (new Set(citizenIds).size !== citizenIds.length) {
-      window.alert(
+      toast.error(
         "Each attendee must have a unique ID card or passport number."
       );
       return;
     }
 
     if (new Set(phoneNumbers).size !== phoneNumbers.length) {
-      window.alert("Each attendee must have a unique phone number.");
+      toast.error("Each attendee must have a unique phone number.");
       return;
     }
 
@@ -360,12 +400,14 @@ export default function QuestionFormPage() {
 
       await ticketApi.saveHoldAttendees(holdId, attendeePayload);
 
+      toast.success("Attendee details saved. Opening checkout...");
       navigate(`/checkout/payment-info/${holdId}`);
     } catch (error) {
       console.error("Could not save attendees:", error);
 
-      window.alert(
+      toast.error(
         error.response?.data?.message ||
+          error.response?.data?.Message ||
           "Could not save attendee information. Please try again."
       );
     } finally {
@@ -430,268 +472,269 @@ export default function QuestionFormPage() {
 
   return (
     <>
-    <Header />
-    <main className="qf-page">
-      <div className="qf-container qf-layout">
-        <section className="qf-main">
-          <form id="attendee-form" onSubmit={handleSubmit}>
-            <div className="qf-section-heading">
-              <div>
-                <p className="qf-eyebrow">TICKET HOLDERS</p>
-                <h2>Attendee details</h2>
-              </div>
+      <Header />
 
-              <span className="qf-count">
-                {attendees.length} tickets
-              </span>
-            </div>
-
-            <p className="qf-primary-hint">
-              Select which attendee is the account holder. Every attendee must
-              provide an ID card or passport number.
-            </p>
-
-            {attendees.map((attendee, index) => (
-              <article
-                className={`qf-attendee-card ${
-                  attendee.isPrimaryBuyer ? "is-primary" : ""
-                }`}
-                key={`${attendee.ticketTypeId}-${attendee.seatId ?? "no-seat"}-${index}`}
-              >
-                <div className="qf-ticket-summary">
-                  <div className="qf-ticket-index">{index + 1}</div>
-
-                  <div className="qf-ticket-copy">
-                    <span className="qf-ticket-label">
-                      Attendee {index + 1}
-                    </span>
-                    <strong>{attendee.ticketName}</strong>
-                  </div>
-
-                  <div
-                    className={`qf-seat ${
-                      attendee.seatLabel ? "" : "qf-no-seat"
-                    }`}
-                  >
-                    <span>
-                      {attendee.seatLabel ? "Assigned seat" : "Admission"}
-                    </span>
-                    <strong>
-                      {attendee.seatLabel ??
-                        "Zone / General admission"}
-                    </strong>
-                  </div>
+      <main className="qf-page">
+        <div className="qf-container qf-layout">
+          <section className="qf-main">
+            <form id="attendee-form" onSubmit={handleSubmit}>
+              <div className="qf-section-heading">
+                <div>
+                  <p className="qf-eyebrow">TICKET HOLDERS</p>
+                  <h2>Attendee details</h2>
                 </div>
 
-                <label className="qf-primary-choice">
-                  <input
-                    type="radio"
-                    name="primaryBuyer"
-                    checked={attendee.isPrimaryBuyer}
-                    onChange={() => handlePrimaryBuyerChange(index)}
-                  />
-                  <span>This ticket is for me (account holder)</span>
-                </label>
+                <span className="qf-count">{attendees.length} tickets</span>
+              </div>
 
-                <div className="qf-form-grid">
-                  <label className="qf-field">
-                    <span>
-                      Full name <b>*</b>
-                    </span>
+              <p className="qf-primary-hint">
+                Select which attendee is the account holder. Every attendee
+                must provide an ID card or passport number.
+              </p>
+
+              {attendees.map((attendee, index) => (
+                <article
+                  className={`qf-attendee-card ${
+                    attendee.isPrimaryBuyer ? "is-primary" : ""
+                  }`}
+                  key={`${attendee.ticketTypeId}-${attendee.seatId ?? "no-seat"}-${index}`}
+                >
+                  <div className="qf-ticket-summary">
+                    <div className="qf-ticket-index">{index + 1}</div>
+
+                    <div className="qf-ticket-copy">
+                      <span className="qf-ticket-label">
+                        Attendee {index + 1}
+                      </span>
+                      <strong>{attendee.ticketName}</strong>
+                    </div>
+
+                    <div
+                      className={`qf-seat ${
+                        attendee.seatLabel ? "" : "qf-no-seat"
+                      }`}
+                    >
+                      <span>
+                        {attendee.seatLabel ? "Assigned seat" : "Admission"}
+                      </span>
+                      <strong>
+                        {attendee.seatLabel ?? "Zone / General admission"}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <label className="qf-primary-choice">
                     <input
-                      type="text"
-                      autoComplete="name"
-                      value={attendee.fullName}
-                      onChange={(event) =>
-                        handleInputChange(
-                          index,
-                          "fullName",
-                          event.target.value
-                        )
-                      }
-                      placeholder="Enter full name"
-                      required
+                      type="radio"
+                      name="primaryBuyer"
+                      checked={attendee.isPrimaryBuyer}
+                      onChange={() => handlePrimaryBuyerChange(index)}
                     />
+                    <span>This ticket is for me (account holder)</span>
                   </label>
 
-                  <label className="qf-field">
-                    <span>
-                      ID card / Passport <b>*</b>
-                    </span>
-                    <input
-                      type="text"
-                      value={attendee.citizenId}
-                      onChange={(event) =>
-                        handleInputChange(
-                          index,
-                          "citizenId",
-                          event.target.value
-                        )
-                      }
-                      placeholder="Enter ID card or passport number"
-                      required
-                    />
-                  </label>
-
-                  <label className="qf-field">
-                    <span>
-                      Phone number <b>*</b>
-                    </span>
-                    <input
-                      type="tel"
-                      autoComplete="tel"
-                      value={attendee.phone}
-                      onChange={(event) =>
-                        handleInputChange(index, "phone", event.target.value)
-                      }
-                      placeholder="Enter phone number"
-                      required
-                    />
-                  </label>
-
-                  {attendee.isPrimaryBuyer && (
+                  <div className="qf-form-grid">
                     <label className="qf-field">
                       <span>
-                        Email address <b>*</b>
+                        Full name <b>*</b>
                       </span>
                       <input
-                        type="email"
-                        autoComplete="email"
-                        value={attendee.email}
+                        type="text"
+                        autoComplete="name"
+                        value={attendee.fullName}
                         onChange={(event) =>
                           handleInputChange(
                             index,
-                            "email",
+                            "fullName",
                             event.target.value
                           )
                         }
-                        placeholder="name@example.com"
+                        placeholder="Enter full name"
                         required
                       />
                     </label>
-                  )}
-                </div>
-              </article>
-            ))}
-          </form>
-        </section>
 
-        <aside className="qf-sidebar">
-          <section className="qf-panel qf-countdown-panel">
-            <p className="qf-eyebrow">TIME LEFT TO COMPLETE</p>
-            <strong className={timeLeft < 120 ? "is-urgent" : ""}>
-              {formatTime(timeLeft)}
-            </strong>
-            <span>
-              Your reservation will be released when the timer expires.
-            </span>
+                    <label className="qf-field">
+                      <span>
+                        ID card <b>*</b>
+                      </span>
+                      <input
+                        type="text"
+                        value={attendee.citizenId}
+                        onChange={(event) =>
+                          handleInputChange(
+                            index,
+                            "citizenId",
+                            event.target.value
+                          )
+                        }
+                        placeholder="Enter ID card or passport number"
+                        required
+                      />
+                    </label>
+
+                    <label className="qf-field">
+                      <span>
+                        Phone number <b>*</b>
+                      </span>
+                      <input
+                        type="tel"
+                        autoComplete="tel"
+                        value={attendee.phone}
+                        onChange={(event) =>
+                          handleInputChange(
+                            index,
+                            "phone",
+                            event.target.value
+                          )
+                        }
+                        placeholder="Enter phone number"
+                        required
+                      />
+                    </label>
+
+                    {attendee.isPrimaryBuyer && (
+                      <label className="qf-field">
+                        <span>
+                          Email address <b>*</b>
+                        </span>
+                        <input
+                          type="email"
+                          autoComplete="email"
+                          value={attendee.email}
+                          onChange={(event) =>
+                            handleInputChange(
+                              index,
+                              "email",
+                              event.target.value
+                            )
+                          }
+                          placeholder="name@example.com"
+                          required
+                        />
+                      </label>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </form>
           </section>
 
-          <section className="qf-panel">
-            <div className="qf-order-heading">
-              <p className="qf-eyebrow">YOUR ORDER</p>
+          <aside className="qf-sidebar">
+            <section className="qf-panel qf-countdown-panel">
+              <p className="qf-eyebrow">TIME LEFT TO COMPLETE</p>
+              <strong className={timeLeft < 120 ? "is-urgent" : ""}>
+                {formatTime(timeLeft)}
+              </strong>
+              <span>
+                Your reservation will be released when the timer expires.
+              </span>
+            </section>
+
+            <section className="qf-panel">
+              <div className="qf-order-heading">
+                <p className="qf-eyebrow">YOUR ORDER</p>
+
+                <button
+                  type="button"
+                  className="qf-change-tickets"
+                  onClick={() => {
+                    setCancelHoldError("");
+                    setShowCancelHoldDialog(true);
+                  }}
+                >
+                  Choose different tickets
+                </button>
+              </div>
+
+              <h2>{eventData.title ?? "Booking summary"}</h2>
+
+              <div className="qf-summary-list">
+                {holdData.items.map((item) => (
+                  <div className="qf-summary-item" key={item.ticketTypeId}>
+                    <span>
+                      {item.typeName} <small>× {item.quantity}</small>
+                    </span>
+                    <strong>
+                      {formatCurrency(item.price * item.quantity)}
+                    </strong>
+                  </div>
+                ))}
+              </div>
+
+              <div className="qf-total">
+                <span>Total</span>
+                <strong>{formatCurrency(holdData.totalAmount)}</strong>
+              </div>
+
+              <button
+                type="submit"
+                form="attendee-form"
+                className="qf-button qf-submit"
+                disabled={isSubmitting || timeLeft <= 0}
+              >
+                {isSubmitting
+                  ? "Saving attendee details..."
+                  : "Continue to payment"}
+                {!isSubmitting && <span aria-hidden="true">→</span>}
+              </button>
+            </section>
+          </aside>
+        </div>
+      </main>
+
+      {showCancelHoldDialog && (
+        <div
+          className="hold-cancel-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !isCancellingHold) {
+              setShowCancelHoldDialog(false);
+            }
+          }}
+        >
+          <section
+            className="hold-cancel-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="hold-cancel-title"
+          >
+            <h2 id="hold-cancel-title">Cancel your reservation?</h2>
+
+            <p>
+              Your currently held tickets will be released so you can choose
+              again.
+            </p>
+
+            {cancelHoldError && (
+              <p className="hold-cancel-error" role="alert">
+                {cancelHoldError}
+              </p>
+            )}
+
+            <div className="hold-cancel-actions">
+              <button
+                type="button"
+                className="hold-cancel-stay"
+                disabled={isCancellingHold}
+                onClick={() => setShowCancelHoldDialog(false)}
+              >
+                Stay here
+              </button>
 
               <button
                 type="button"
-                className="qf-change-tickets"
-                onClick={() => {
-                  setCancelHoldError("");
-                  setShowCancelHoldDialog(true);
-                }}
+                className="hold-cancel-confirm"
+                disabled={isCancellingHold}
+                onClick={confirmCancelHold}
               >
-                Choose different tickets
+                {isCancellingHold ? "Cancelling..." : "Cancel reservation"}
               </button>
             </div>
-
-            <h2>{eventData.title ?? "Booking summary"}</h2>
-
-            <div className="qf-summary-list">
-              {holdData.items.map((item) => (
-                <div
-                  className="qf-summary-item"
-                  key={item.ticketTypeId}
-                >
-                  <span>
-                    {item.typeName} <small>× {item.quantity}</small>
-                  </span>
-                  <strong>
-                    {formatCurrency(item.price * item.quantity)}
-                  </strong>
-                </div>
-              ))}
-            </div>
-
-            <div className="qf-total">
-              <span>Total</span>
-              <strong>{formatCurrency(holdData.totalAmount)}</strong>
-            </div>
-
-            <button
-              type="submit"
-              form="attendee-form"
-              className="qf-button qf-submit"
-              disabled={isSubmitting || timeLeft <= 0}
-            >
-              {isSubmitting
-                ? "Saving attendee details..."
-                : "Continue to payment"}
-              {!isSubmitting && <span aria-hidden="true">→</span>}
-            </button>
           </section>
-        </aside>
-      </div>
-    </main>
-
-    {showCancelHoldDialog && (
-    <div
-      className="hold-cancel-backdrop"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !isCancellingHold) {
-          setShowCancelHoldDialog(false);
-        }
-      }}
-    >
-      <section
-        className="hold-cancel-dialog"
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="hold-cancel-title"
-      >
-        <h2 id="hold-cancel-title">Cancel your reservation?</h2>
-
-        <p>
-          Your currently held tickets will be released so you can choose again.
-        </p>
-
-        {cancelHoldError && (
-          <p className="hold-cancel-error" role="alert">
-            {cancelHoldError}
-          </p>
-        )}
-
-        <div className="hold-cancel-actions">
-          <button
-            type="button"
-            className="hold-cancel-stay"
-            disabled={isCancellingHold}
-            onClick={() => setShowCancelHoldDialog(false)}
-          >
-            Stay here
-          </button>
-
-          <button
-            type="button"
-            className="hold-cancel-confirm"
-            disabled={isCancellingHold}
-            onClick={confirmCancelHold}
-          >
-            {isCancellingHold ? "Cancelling..." : "Cancel reservation"}
-          </button>
         </div>
-      </section>
-    </div>
-  )}
-    <Footer />
-  </>
+      )}
+
+      <Footer />
+    </>
   );
 }

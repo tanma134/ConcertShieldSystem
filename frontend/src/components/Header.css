@@ -429,3 +429,8 @@
 @media (prefers-reduced-motion: reduce) {
   .tb-header * { transition: none !important; }
 }
+
+.tb-header a,
+.tb-footer a {
+  text-decoration: none;
+}

@@ -640,3 +640,39 @@
   line-height: 18px;
   text-align: center;
 }
+
+/* Sidebar links: remove browser's default underline */
+.admin-nav .admin-nav-item,
+.admin-nav .admin-nav-item:hover,
+.admin-nav .admin-nav-item.active {
+  text-decoration: none;
+}
+
+/* Desktop: sidebar and right content scroll independently */
+@media (min-width: 851px) {
+  .admin-shell {
+    height: 100vh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .admin-sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    height: 100vh;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .admin-main {
+    width: calc(100% - 252px);
+    height: 100vh;
+    min-height: 0;
+    margin-left: 252px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}

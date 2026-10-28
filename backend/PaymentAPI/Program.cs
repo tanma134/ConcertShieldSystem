@@ -57,6 +57,10 @@ builder.Services.AddScoped<IPaymentTransactionService, PaymentTransactionService
 builder.Services.AddScoped<IPaymentTransactionRepository, PaymentTransactionRepository>();
 builder.Services.AddScoped<IRefundService, RefundService>();
 
+builder.Services.AddScoped<IPaymentReconciliationResolutionRepository,PaymentReconciliationResolutionRepository>();
+
+builder.Services.AddScoped<IPaymentReconciliationService, PaymentReconciliationService>();
+
 // Risk Engine
 builder.Services.AddRiskClient(builder.Configuration);
 builder.Services.AddScoped<IPaymentRiskService, PaymentRiskService>();
