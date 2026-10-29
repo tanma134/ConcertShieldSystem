@@ -40,6 +40,7 @@ export default function VirtualQueuePage() {
   const [error, setError] = useState("");
   const [now, setNow] = useState(Date.now());
   const [token, setToken] = useState(() => localStorage.getItem(tokenKey(eventId)));
+  const [eventImageState, setEventImageState] = useState({ eventId, index: 0 });
   const autoJoinKey = useRef("");
 
   const loadStatus = async (currentToken = token) => {
@@ -78,6 +79,16 @@ export default function VirtualQueuePage() {
   const remaining = useMemo(() => formatRemaining(status?.admissionExpiresAt), [status?.admissionExpiresAt, now]);
   const preQueueRemaining = useMemo(() => formatRemaining(status?.preQueueEndsAt), [status?.preQueueEndsAt, now]);
   const positionPercent = status?.position && status?.totalWaiting ? Math.min(100, Math.round((status.position / status.totalWaiting) * 100)) : 0;
+  const eventImageUrls = useMemo(() => {
+    const galleryUrls = Array.isArray(event?.images)
+      ? event.images
+        .slice()
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+        .map((image) => image.imageUrl)
+      : [];
+    return [...new Set([event?.bannerUrl, event?.posterUrl, ...galleryUrls].filter(Boolean))];
+  }, [event]);
+  const eventImageIndex = eventImageState.eventId === eventId ? eventImageState.index : 0;
 
   return (
     <div className="tb-app">
@@ -97,9 +108,13 @@ export default function VirtualQueuePage() {
 
           <div className="queue-layout">
             <aside className="queue-event-card">
-              {event?.bannerUrl || event?.posterUrl ? (
-                <img src={event.bannerUrl || event.posterUrl} alt="" />
-              ) : <div className="queue-event-placeholder" aria-hidden="true">CS</div>}
+              {eventImageUrls[eventImageIndex] ? (
+                <img
+                  src={eventImageUrls[eventImageIndex]}
+                  alt={event?.title || "Event"}
+                  onError={() => setEventImageState({ eventId, index: eventImageIndex + 1 })}
+                />
+              ) : <div className="queue-event-placeholder" role="img" aria-label="Event image unavailable">CS</div>}
               <div className="queue-event-copy">
                 <span className="queue-event-label">Your event</span>
                 <h1>{event?.title || "Your ticket access"}</h1>
