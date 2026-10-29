@@ -48,6 +48,82 @@
 .queue-detail-meta h3 { margin: 0 0 22px; color: var(--admin-accent); }
 .queue-detail-meta .queue-admin-details { grid-template-columns: 86px 1fr; gap: 16px 12px; margin: 0; font-size: 13px; }
 .queue-detail-actions { margin: 0; }
+.queue-management-page .admin-panel { margin-top: 24px; }
+.queue-management-page .queue-management-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 24px;
+}
+.queue-management-page .summary-card { min-height: 120px; }
+.queue-management-page .queue-config-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.6fr) repeat(3, minmax(150px, 1fr)) auto;
+  align-items: end;
+  gap: 14px;
+  padding: 18px 22px 22px;
+}
+.queue-management-page .queue-config-form label,
+.queue-management-page .queue-filter-control {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+  color: var(--admin-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+.queue-management-page .queue-config-form input,
+.queue-management-page .queue-config-form select,
+.queue-management-page .queue-filter-control select {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px 10px;
+  color: var(--admin-ink);
+  background: var(--admin-surface-2);
+  border: 1px solid var(--admin-line);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+}
+.queue-management-page .queue-config-form input:focus,
+.queue-management-page .queue-config-form select:focus,
+.queue-management-page .queue-filter-control select:focus {
+  border-color: var(--admin-accent-dark);
+  outline: 0;
+  box-shadow: 0 0 0 3px var(--admin-accent-soft);
+}
+.queue-management-page .queue-config-form button { white-space: nowrap; }
+.queue-management-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 270px);
+  align-items: end;
+  gap: 14px;
+  padding-bottom: 14px;
+}
+.queue-management-toolbar .search-box { width: 100%; max-width: none; }
+.queue-management-page .queue-filter-control { width: min(100%, 270px); }
+.queue-management-table { min-width: 790px; }
+.queue-management-page .queue-status-admitted,
+.queue-management-page .queue-status-completed {
+  color: var(--admin-success);
+  background: var(--admin-success-soft);
+}
+.queue-management-page .queue-status-blocked,
+.queue-management-page .queue-status-revoked,
+.queue-management-page .queue-status-expired {
+  color: var(--admin-danger);
+  background: var(--admin-danger-soft);
+}
+.queue-management-page .queue-status-waiting,
+.queue-management-page .queue-status-prequeue {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.12);
+}
+.queue-management-page .queue-status-registered {
+  color: var(--admin-accent);
+  background: var(--admin-accent-soft);
+}
+.queue-management-page .danger-button:disabled { opacity: 0.5; cursor: not-allowed; }
 .queue-config-panel { margin-bottom: 20px; }
 .queue-config-panel label { display: grid; gap: 5px; color: var(--tb-muted, #aaa); font-size: 12px; }
 .queue-config-panel .queue-event-select { min-width: 260px; }
@@ -131,8 +207,20 @@
 .admin-filter-bar select option,
 .queue-session-actions select option { background: var(--tb-surface-2, #1e1830); color: var(--admin-ink, #f5f3fb); }
 @media (max-width: 760px) {
+  .queue-management-page .queue-config-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .queue-management-page .queue-management-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .queue-management-page .queue-config-form button { grid-column: 1 / -1; }
+  .queue-management-page .queue-filter-control { width: 100%; }
   .queue-session-actions { align-items: stretch; flex-direction: column; }
-  .queue-session-actions select, .queue-config-panel .queue-event-select { min-width: 0; width: 100%; }
+  .queue-session-actions select, .queue-config-panel .queue-event-select { min-width: 0; width: 100%;   }
+
+  @media (max-width: 540px) {
+    .queue-management-page .queue-config-form,
+    .queue-management-page .queue-management-summary { grid-template-columns: 1fr; }
+    .queue-management-page .queue-config-form button { grid-column: auto; }
+    .queue-management-toolbar { grid-template-columns: 1fr; }
+    .queue-management-toolbar .search-box { max-width: none; }
+  }
   .queue-security-header, .queue-alert-toolbar { align-items: stretch; flex-direction: column; }
   .queue-alert-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .queue-alert-filters { align-items: stretch; }
