@@ -1,16 +1,13 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import reviewApi from "../../api/reviewApi";
-import { useAuth } from "../../context/AuthContext";
 import "./AdminDashboardPage.css";
 import "./ReviewManagementPage.css";
 import AdminShell from "./AdminShell";
 
 const stars = (rating) => "★".repeat(rating) + "☆".repeat(5 - rating);
+const LONG_REVIEW_THRESHOLD = 120;
 
 export default function ReviewManagementPage() {
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
   const [reviews, setReviews] = useState([]);
   const [filters, setFilters] = useState({ eventName: "", rating: "", status: "all", page: 1 });
   const [paging, setPaging] = useState({ page: 1, pageSize: 10, totalPages: 1 });
@@ -18,6 +15,7 @@ export default function ReviewManagementPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [pendingVisibility, setPendingVisibility] = useState(null);
+  const [reviewToView, setReviewToView] = useState(null);
   const [replyTarget, setReplyTarget] = useState(null);
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
@@ -53,6 +51,228 @@ export default function ReviewManagementPage() {
     finally { setSending(false); }
   };
 
-  const nav = (path) => navigate(path);
-  return <><AdminShell title="Review Management"><section className="admin-header review-admin-header"><div><p>Moderation</p><h1>Review Management</h1></div></section>{error && <div className="auth-message error">{error}<button type="button" onClick={() => setError("")}>Dismiss</button></div>}{success && <div className="auth-message success">{success}<button type="button" onClick={() => setSuccess("")}>Dismiss</button></div>}<section className="admin-panel"><form className="review-admin-toolbar" onSubmit={search}><input type="search" value={filters.eventName} onChange={(event) => setFilters((current) => ({ ...current, eventName: event.target.value }))} placeholder="Search event..." /><select value={filters.rating} onChange={(event) => updateFilter("rating", event.target.value)}><option value="">All Ratings</option>{[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{stars(rating)}</option>)}</select><select value={filters.status} onChange={(event) => updateFilter("status", event.target.value)}><option value="all">All Status</option><option value="active">Active</option><option value="hidden">Hidden</option></select><button type="submit" className="admin-button-secondary">Search</button></form>{loading ? <div className="empty-state">Loading reviews...</div> : reviews.length === 0 ? <div className="empty-state">No reviews found.</div> : <div className="table-wrap"><table className="user-table review-admin-table"><thead><tr><th>ID</th><th>Event</th><th>Customer</th><th>Rating</th><th>Comment</th><th>Replies</th><th>Status</th><th>Created At</th><th>Actions</th></tr></thead><tbody>{reviews.map((review) => <tr key={review.reviewId}><td>#{review.reviewId}</td><td>{review.eventName || `Event #${review.eventId}`}</td><td>{review.userName || `User #${review.userId}`}</td><td><span className="review-admin-rating">{stars(review.rating)}</span></td><td className="review-comment-cell" title={review.comment || ""}>{review.comment || "-"}</td><td>{review.replies?.length || 0}</td><td><span className={`status-pill ${review.isDeleted ? "inactive" : "active"}`}>{review.isDeleted ? "Hidden" : "Active"}</span></td><td>{new Date(review.createdAt).toLocaleDateString()}</td><td><div className="table-actions"><button type="button" className="text-button" onClick={() => setReplyTarget(review)}>Reply</button><button type="button" className="danger-button" onClick={() => setPendingVisibility(review)}>{review.isDeleted ? "Show" : "Hide"}</button></div></td></tr>)}</tbody></table></div>}<div className="review-pagination"><button type="button" className="admin-button-secondary" disabled={paging.page <= 1 || loading} onClick={() => setFilters((current) => ({ ...current, page: current.page - 1 }))}>Previous</button><span>Page {paging.page} of {paging.totalPages}</span><button type="button" className="admin-button-secondary" disabled={paging.page >= paging.totalPages || loading} onClick={() => setFilters((current) => ({ ...current, page: current.page + 1 }))}>Next</button></div></section></AdminShell>{pendingVisibility && <div className="modal-overlay" onClick={() => setPendingVisibility(null)}><div className="modal-card small" onClick={(event) => event.stopPropagation()}><div className="modal-header"><h3>{pendingVisibility.isDeleted ? "Show Review" : "Hide Review"}</h3><button type="button" className="icon-button" onClick={() => setPendingVisibility(null)}>x</button></div><div className="modal-body"><p>Are you sure you want to {pendingVisibility.isDeleted ? "show" : "hide"} this review?</p></div><div className="modal-footer"><button type="button" className="admin-button-secondary" onClick={() => setPendingVisibility(null)}>Cancel</button><button type="button" className="admin-button" onClick={confirmVisibility}>{pendingVisibility.isDeleted ? "Show Review" : "Hide Review"}</button></div></div></div>}{replyTarget && <div className="modal-overlay" onClick={() => setReplyTarget(null)}><div className="modal-card" onClick={(event) => event.stopPropagation()}><div className="modal-header"><h3>Reply to Review</h3><button type="button" className="icon-button" onClick={() => setReplyTarget(null)}>x</button></div><div className="modal-body"><div className="review-reply-context"><strong>{replyTarget.userName || `User #${replyTarget.userId}`}</strong><span className="review-admin-rating">{stars(replyTarget.rating)}</span><p>{replyTarget.comment || "No comment"}</p></div><form onSubmit={sendReply} className="review-reply-form"><textarea value={reply} maxLength={1000} onChange={(event) => setReply(event.target.value)} placeholder="Write a reply..." rows="5" required /><div className="modal-footer"><button type="button" className="admin-button-secondary" onClick={() => setReplyTarget(null)}>Cancel</button><button type="submit" className="admin-button" disabled={sending}>{sending ? "Sending..." : "Send Reply"}</button></div></form></div></div></div>}</>;
+  return (
+    <>
+      <AdminShell title="Review Management">
+        <section className="admin-header review-admin-header">
+          <div>
+            <p>Moderation</p>
+            <h1>Review Management</h1>
+          </div>
+        </section>
+        {error && (
+          <div className="auth-message error">
+            {error}
+            <button type="button" onClick={() => setError("")}>Dismiss</button>
+          </div>
+        )}
+        {success && (
+          <div className="auth-message success">
+            {success}
+            <button type="button" onClick={() => setSuccess("")}>Dismiss</button>
+          </div>
+        )}
+        <section className="admin-panel">
+          <form className="review-admin-toolbar" onSubmit={search}>
+            <input
+              type="search"
+              value={filters.eventName}
+              onChange={(event) => setFilters((current) => ({ ...current, eventName: event.target.value }))}
+              placeholder="Search event..."
+            />
+            <select value={filters.rating} onChange={(event) => updateFilter("rating", event.target.value)}>
+              <option value="">All Ratings</option>
+              {[5, 4, 3, 2, 1].map((rating) => (
+                <option key={rating} value={rating}>{stars(rating)}</option>
+              ))}
+            </select>
+            <select value={filters.status} onChange={(event) => updateFilter("status", event.target.value)}>
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="hidden">Hidden</option>
+            </select>
+            <button type="submit" className="admin-button-secondary">Search</button>
+          </form>
+          {loading ? (
+            <div className="empty-state">Loading reviews...</div>
+          ) : reviews.length === 0 ? (
+            <div className="empty-state">No reviews found.</div>
+          ) : (
+            <div className="table-wrap">
+              <table className="user-table review-admin-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Event</th>
+                    <th>Customer</th>
+                    <th>Rating</th>
+                    <th>Comment</th>
+                    <th>Replies</th>
+                    <th>Status</th>
+                    <th>Created At</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reviews.map((review) => {
+                    const comment = review.comment || "";
+                    const isLongReview = comment.length > LONG_REVIEW_THRESHOLD;
+
+                    return (
+                      <tr key={review.reviewId}>
+                        <td>#{review.reviewId}</td>
+                        <td>{review.eventName || `Event #${review.eventId}`}</td>
+                        <td>{review.userName || `User #${review.userId}`}</td>
+                        <td><span className="review-admin-rating">{stars(review.rating)}</span></td>
+                        <td className="review-comment-cell">
+                          <span className="review-comment-preview">
+                            {comment
+                              ? isLongReview
+                                ? `${comment.slice(0, LONG_REVIEW_THRESHOLD).trimEnd()}…`
+                                : comment
+                              : "-"}
+                          </span>
+                          {isLongReview && (
+                            <button
+                              type="button"
+                              className="review-view-button"
+                              onClick={() => setReviewToView(review)}
+                            >
+                              View review
+                            </button>
+                          )}
+                        </td>
+                        <td>{review.replies?.length || 0}</td>
+                        <td>
+                          <span className={`status-pill ${review.isDeleted ? "inactive" : "active"}`}>
+                            {review.isDeleted ? "Hidden" : "Active"}
+                          </span>
+                        </td>
+                        <td>{new Date(review.createdAt).toLocaleDateString()}</td>
+                        <td>
+                          <div className="table-actions">
+                            <button type="button" className="text-button" onClick={() => setReplyTarget(review)}>
+                              Reply
+                            </button>
+                            <button type="button" className="danger-button" onClick={() => setPendingVisibility(review)}>
+                              {review.isDeleted ? "Show" : "Hide"}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div className="review-pagination">
+            <button
+              type="button"
+              className="admin-button-secondary"
+              disabled={paging.page <= 1 || loading}
+              onClick={() => setFilters((current) => ({ ...current, page: current.page - 1 }))}
+            >
+              Previous
+            </button>
+            <span>Page {paging.page} of {paging.totalPages}</span>
+            <button
+              type="button"
+              className="admin-button-secondary"
+              disabled={paging.page >= paging.totalPages || loading}
+              onClick={() => setFilters((current) => ({ ...current, page: current.page + 1 }))}
+            >
+              Next
+            </button>
+          </div>
+        </section>
+      </AdminShell>
+
+      {reviewToView && (
+        <div className="modal-overlay" onClick={() => setReviewToView(null)}>
+          <div
+            className="modal-card review-content-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="review-content-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h3 id="review-content-title">Customer Review</h3>
+              <button type="button" className="icon-button" onClick={() => setReviewToView(null)}>x</button>
+            </div>
+            <div className="modal-body">
+              <div className="review-content-meta">
+                <strong>{reviewToView.userName || `User #${reviewToView.userId}`}</strong>
+                <span>{reviewToView.eventName || `Event #${reviewToView.eventId}`}</span>
+                <span className="review-admin-rating">{stars(reviewToView.rating)}</span>
+                <time dateTime={reviewToView.createdAt}>
+                  {new Date(reviewToView.createdAt).toLocaleString("vi-VN")}
+                </time>
+              </div>
+              <p className="review-full-content">{reviewToView.comment || "No comment"}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingVisibility && (
+        <div className="modal-overlay" onClick={() => setPendingVisibility(null)}>
+          <div className="modal-card small" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{pendingVisibility.isDeleted ? "Show Review" : "Hide Review"}</h3>
+              <button type="button" className="icon-button" onClick={() => setPendingVisibility(null)}>x</button>
+            </div>
+            <div className="modal-body">
+              <p>Are you sure you want to {pendingVisibility.isDeleted ? "show" : "hide"} this review?</p>
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="admin-button-secondary" onClick={() => setPendingVisibility(null)}>
+                Cancel
+              </button>
+              <button type="button" className="admin-button" onClick={confirmVisibility}>
+                {pendingVisibility.isDeleted ? "Show Review" : "Hide Review"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {replyTarget && (
+        <div className="modal-overlay" onClick={() => setReplyTarget(null)}>
+          <div className="modal-card" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Reply to Review</h3>
+              <button type="button" className="icon-button" onClick={() => setReplyTarget(null)}>x</button>
+            </div>
+            <div className="modal-body">
+              <div className="review-reply-context">
+                <strong>{replyTarget.userName || `User #${replyTarget.userId}`}</strong>
+                <span className="review-admin-rating">{stars(replyTarget.rating)}</span>
+                <p>{replyTarget.comment || "No comment"}</p>
+              </div>
+              <form onSubmit={sendReply} className="review-reply-form">
+                <textarea
+                  value={reply}
+                  maxLength={1000}
+                  onChange={(event) => setReply(event.target.value)}
+                  placeholder="Write a reply..."
+                  rows="5"
+                  required
+                />
+                <div className="modal-footer">
+                  <button type="button" className="admin-button-secondary" onClick={() => setReplyTarget(null)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="admin-button" disabled={sending}>
+                    {sending ? "Sending..." : "Send Reply"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 }

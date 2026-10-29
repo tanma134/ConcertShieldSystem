@@ -2750,6 +2750,24 @@
             }
         },
         {
+            "Key": "review-reply",
+            "DownstreamPathTemplate": "/api/Reviews/{reviewId}/replies",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7290
+                }
+            ],
+            "UpstreamPathTemplate": "/api/reviews/{reviewId}/replies",
+            "UpstreamHttpMethod": [
+                "Post"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
             "Key": "wishlist-admin-summary",
             "DownstreamPathTemplate": "/api/Wishlist/admin/summary",
             "DownstreamScheme": "https",
