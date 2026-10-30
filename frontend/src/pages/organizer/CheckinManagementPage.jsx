@@ -147,7 +147,7 @@ export default function CheckinManagementPage() {
               Revenue
             </Link>
             <Link to="/organizer/dashboard" className="tb-btn tb-btn-outline">
-              ← Dashboard
+              Dashboard
             </Link>
           </div>
         </div>

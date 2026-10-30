@@ -262,7 +262,7 @@ export default function TicketGovernancePage() {
       if (e.eventId) {
         map.set(Number(e.eventId), {
           eventId: Number(e.eventId),
-          title: e.title || `Event #${e.eventId}`,
+          title: e.title || `Event ${e.eventId}`,
         });
       }
     });
@@ -272,7 +272,7 @@ export default function TicketGovernancePage() {
       if (r.eventId) {
         map.set(Number(r.eventId), {
           eventId: Number(r.eventId),
-          title: r.eventTitle || `Event #${r.eventId}`,
+          title: r.eventTitle || `Event ${r.eventId}`,
         });
       }
     });
@@ -282,18 +282,19 @@ export default function TicketGovernancePage() {
       if (rv.eventId) {
         map.set(Number(rv.eventId), {
           eventId: Number(rv.eventId),
-          title: rv.eventTitle || `Event #${rv.eventId}`,
+          title: rv.eventTitle || `Event ${rv.eventId}`,
         });
       }
     });
 
     // 4. Known events on platform for comprehensive filtering
     const platformEvents = [
-      { eventId: 1, title: "Event #1: Anh Trai Say Hi - Mùa 1 Grand Finale (Cancelled)" },
-      { eventId: 16, title: "Event #16: AMEE - E11EVEN Tour 2027 (Postponed)" },
-      { eventId: 20, title: "Event #20: Acoustic Night" },
-      { eventId: 17, title: "Event #17: Hoàng Thùy Linh - See Tình Tour" },
-      { eventId: 18, title: "Event #18: Wren Evans - Call Me Tour" },
+      { eventId: 1, title: "Anh Trai Say Hi - Mùa 1 Grand Finale (Cancelled)" },
+      { eventId: 16, title: "AMEE - E11EVEN Tour 2027 (Postponed)" },
+      { eventId: 20, title: "Acoustic Night" },
+      { eventId: 21, title: 'Hà Anh Tuấn - "Chân Trời Rực Rỡ" Live Concert' },
+      { eventId: 17, title: "Hoàng Thùy Linh - See Tình Tour" },
+      { eventId: 18, title: "Wren Evans - Call Me Tour" },
     ];
     platformEvents.forEach((pe) => {
       if (!map.has(pe.eventId)) {
@@ -310,7 +311,6 @@ export default function TicketGovernancePage() {
         {/* KPI Summary Cards */}
         <div className="gov-stats-grid">
           <div className="gov-stat-card stat-danger">
-            <div className="stat-icon">🚫</div>
             <div className="stat-info">
               <span className="stat-label">Total Revoked Tickets</span>
               <strong className="stat-val">
@@ -321,7 +321,6 @@ export default function TicketGovernancePage() {
           </div>
 
           <div className="gov-stat-card stat-warning">
-            <div className="stat-icon">📢</div>
             <div className="stat-info">
               <span className="stat-label">Bulk Event Disruptions</span>
               <strong className="stat-val">
@@ -332,18 +331,16 @@ export default function TicketGovernancePage() {
           </div>
 
           <div className="gov-stat-card stat-success">
-            <div className="stat-icon">🔄</div>
             <div className="stat-info">
               <span className="stat-label">Reissued Tickets</span>
               <strong className="stat-val">
                 {loadingStats ? "..." : stats.totalReissuedTickets}
               </strong>
-              <span className="stat-sub">1-to-1 traceability: Old ↔ New</span>
+              <span className="stat-sub">1-to-1 traceability: Old to New</span>
             </div>
           </div>
 
           <div className="gov-stat-card stat-info-theme">
-            <div className="stat-icon">🔔</div>
             <div className="stat-info">
               <span className="stat-label">Notifications</span>
               <strong className="stat-val">Enabled</strong>
@@ -359,7 +356,7 @@ export default function TicketGovernancePage() {
             className={`gov-tab-btn ${activeTab === "BULK_REVOKE" ? "active" : ""}`}
             onClick={() => setActiveTab("BULK_REVOKE")}
           >
-            💥 Bulk Revocation
+            Bulk Revocation
           </button>
           <button
             type="button"
@@ -369,7 +366,7 @@ export default function TicketGovernancePage() {
               fetchRevocations();
             }}
           >
-            📋 Revocation History
+            Revocation History
           </button>
           <button
             type="button"
@@ -379,7 +376,7 @@ export default function TicketGovernancePage() {
               fetchReissues();
             }}
           >
-            🔁 Reissue History
+            Reissue History
           </button>
         </div>
 
@@ -400,11 +397,11 @@ export default function TicketGovernancePage() {
                 {bulkSuccessResult && (
                   <div className="gov-alert gov-alert-success">
                     <div className="alert-header">
-                      <strong>✅ Bulk Revocation Succeeded!</strong>
+                      <strong>Bulk Revocation Succeeded!</strong>
                     </div>
                     <p>{bulkSuccessResult.message}</p>
                     <div className="alert-details">
-                      <span>Record ID: <strong>#{bulkSuccessResult.reconciliationId}</strong></span>
+                      <span>Record ID: <strong>{bulkSuccessResult.reconciliationId}</strong></span>
                       <span>Total Revoked: <strong>{bulkSuccessResult.totalRevokedTickets}</strong></span>
                       <span>Gate Cache: <strong>Invalidated</strong></span>
                       <span>Notification: <strong>Sent to Users</strong></span>
@@ -434,23 +431,23 @@ export default function TicketGovernancePage() {
                     ) : (
                       eligibleEvents.map((ev) => (
                         <option key={ev.eventId} value={ev.eventId}>
-                          #{ev.eventId} - {ev.title} ({Number(ev.activeTicketsCount).toLocaleString()} active tickets)
+                          {ev.title} ({Number(ev.activeTicketsCount).toLocaleString()} active tickets)
                         </option>
                       ))
                     )}
                   </select>
                   {eligibleEvents.length === 0 && !loadingEvents && (
                     <div className="gov-empty-events-warning">
-                      <span>⚠️ Currently there are no events with active tickets. All events have already been reconciled or cancelled.</span>
+                      <span>Currently there are no events with active tickets. All events have already been reconciled or cancelled.</span>
                     </div>
                   )}
                   {selectedEventObj && eligibleEvents.length > 0 && (
                     <>
                       <div className="event-meta-pill">
-                        <span>📍 Venue: <strong>{selectedEventObj.location}</strong></span>
-                        <span>🎫 Active Tickets: <strong>{Number(selectedEventObj.activeTicketsCount).toLocaleString()} tickets</strong></span>
-                        <span>📅 Date: <strong>{new Date(selectedEventObj.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</strong></span>
-                        <span>📊 Status: <strong>{selectedEventObj.status}</strong></span>
+                        <span>Venue: <strong>{selectedEventObj.location}</strong></span>
+                        <span>Active Tickets: <strong>{Number(selectedEventObj.activeTicketsCount).toLocaleString()} tickets</strong></span>
+                        <span>Date: <strong>{new Date(selectedEventObj.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</strong></span>
+                        <span>Status: <strong>{selectedEventObj.status}</strong></span>
                       </div>
 
                       {/* Bảng cảnh báo hiển thị tổng số vé sẽ bị hủy (Bước 2) */}
@@ -462,7 +459,6 @@ export default function TicketGovernancePage() {
                         borderRadius: "8px"
                       }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-                          <span style={{ fontSize: "1.4rem" }}>⚠️</span>
                           <strong style={{ fontSize: "1rem", color: "#d46b08" }}>
                             CẢNH BÁO: SỰ KIỆN ĐÃ ĐƯỢC CHẤP NHẬN HỦY / HOÃN ({selectedEventObj.status.toUpperCase()})
                           </strong>
@@ -480,7 +476,7 @@ export default function TicketGovernancePage() {
                           fontWeight: "bold",
                           fontSize: "1.05rem"
                         }}>
-                          🚨 Tổng số vé sẽ bị hủy: {Number(selectedEventObj.activeTicketsCount).toLocaleString()} vé
+                          Tổng số vé sẽ bị hủy: {Number(selectedEventObj.activeTicketsCount).toLocaleString()} vé
                         </div>
                       </div>
                     </>
@@ -501,7 +497,7 @@ export default function TicketGovernancePage() {
                         onChange={() => setReasonType("EVENT_CANCELLED")}
                       />
                       <div className="box-content">
-                        <strong>❌ Event Cancelled (Force Majeure)</strong>
+                        <strong>Event Cancelled (Force Majeure)</strong>
                         <span>Permanently cancel show due to severe weather, venue disruption, or artist withdrawal.</span>
                       </div>
                     </label>
@@ -515,7 +511,7 @@ export default function TicketGovernancePage() {
                         onChange={() => setReasonType("EVENT_POSTPONED")}
                       />
                       <div className="box-content">
-                        <strong>⏳ Event Postponed / Rescheduled</strong>
+                        <strong>Event Postponed / Rescheduled</strong>
                         <span>Hold show and revoke existing tickets to reissue replacement tickets for the new schedule.</span>
                       </div>
                     </label>
@@ -581,7 +577,7 @@ export default function TicketGovernancePage() {
                       setShowConfirmModal(true);
                     }}
                   >
-                    🚨 Confirm & Execute Bulk Revocation
+                    Confirm & Execute Bulk Revocation
                   </button>
                 </div>
               </div>
@@ -604,7 +600,7 @@ export default function TicketGovernancePage() {
                     {reconciliations.map((r) => (
                       <div key={r.reconciliationId} className="reconcile-item">
                         <div className="reconcile-top">
-                          <span className="reconcile-id">Record #{r.reconciliationId}</span>
+                          <span className="reconcile-id">Record {r.reconciliationId}</span>
                           <span className={`badge-reason ${r.reasonType}`}>
                             {r.reasonType === "EVENT_CANCELLED" ? "CANCELLED" : "POSTPONED"}
                           </span>
@@ -612,9 +608,9 @@ export default function TicketGovernancePage() {
                         </div>
                         <h4 className="reconcile-title">{r.eventTitle}</h4>
                         <div className="reconcile-meta">
-                          <span>👤 Admin: <strong>{r.adminName}</strong></span>
-                          <span>🎫 Revoked Tickets: <strong>{r.totalTicketsRevoked} tickets</strong></span>
-                          <span>🕒 Date: <strong>{new Date(r.createdAt).toLocaleString("en-US")}</strong></span>
+                          <span>Admin: <strong>{r.adminName}</strong></span>
+                          <span>Revoked Tickets: <strong>{r.totalTicketsRevoked} tickets</strong></span>
+                          <span>Date: <strong>{new Date(r.createdAt).toLocaleString("en-US")}</strong></span>
                         </div>
                         <p className="reconcile-note">"{r.notes}"</p>
                       </div>
@@ -629,7 +625,7 @@ export default function TicketGovernancePage() {
               <div className="gov-modal-overlay">
                 <div className="gov-modal">
                   <div className="gov-modal-header modal-danger">
-                    <h3>⚠️ Confirm Bulk Ticket Revocation</h3>
+                    <h3>Confirm Bulk Ticket Revocation</h3>
                     <button
                       type="button"
                       className="close-btn"
@@ -725,7 +721,7 @@ export default function TicketGovernancePage() {
                       fetchRevocations();
                     }}
                   >
-                    🔍 Search
+                    Search
                   </button>
                 </div>
 
@@ -841,7 +837,7 @@ export default function TicketGovernancePage() {
                     disabled={revocationPage <= 1}
                     onClick={() => setRevocationPage((p) => Math.max(1, p - 1))}
                   >
-                    ← Previous
+                    Previous
                   </button>
                   <button
                     type="button"
@@ -849,7 +845,7 @@ export default function TicketGovernancePage() {
                     disabled={revocationPage >= revocationTotalPages}
                     onClick={() => setRevocationPage((p) => Math.min(revocationTotalPages, p + 1))}
                   >
-                    Next →
+                    Next
                   </button>
                 </div>
               </div>
@@ -893,7 +889,7 @@ export default function TicketGovernancePage() {
                       fetchReissues();
                     }}
                   >
-                    🔍 Search
+                    Search
                   </button>
                 </div>
 
@@ -927,7 +923,7 @@ export default function TicketGovernancePage() {
                     <thead>
                       <tr>
                         <th>Old Ticket (Revoked)</th>
-                        <th>→</th>
+                        <th>Replaced By</th>
                         <th>New Ticket (Active)</th>
                         <th>Event</th>
                         <th>Beneficiary Attendee</th>
@@ -947,7 +943,7 @@ export default function TicketGovernancePage() {
                               <span className="badge-revoked-tag">Revoked</span>
                             </div>
                           </td>
-                          <td className="arrow-cell">➔</td>
+                          <td className="arrow-cell">to</td>
                           <td>
                             <div className="ticket-trace-box new-ticket">
                               <span className="trace-label">NEW TICKET</span>
@@ -971,7 +967,7 @@ export default function TicketGovernancePage() {
                             <span className="reissue-reason-text">{item.reason}</span>
                           </td>
                           <td>
-                            <span className="badge-qr-active">● Active</span>
+                            <span className="badge-qr-active">Active</span>
                           </td>
                         </tr>
                       ))}
@@ -992,7 +988,7 @@ export default function TicketGovernancePage() {
                     disabled={reissuePage <= 1}
                     onClick={() => setReissuePage((p) => Math.max(1, p - 1))}
                   >
-                    ← Previous
+                    Previous
                   </button>
                   <button
                     type="button"
@@ -1000,7 +996,7 @@ export default function TicketGovernancePage() {
                     disabled={reissuePage >= reissueTotalPages}
                     onClick={() => setReissuePage((p) => Math.min(reissueTotalPages, p + 1))}
                   >
-                    Next →
+                    Next
                   </button>
                 </div>
               </div>
@@ -1013,9 +1009,6 @@ export default function TicketGovernancePage() {
           <div className="gov-modal-overlay">
             <div className="gov-dialog-modal">
               <div className={`gov-dialog-header ${noticeDialog.type?.toLowerCase()}`}>
-                <span className="dialog-icon">
-                  {noticeDialog.type === "ERROR" ? "❌" : noticeDialog.type === "WARNING" ? "⚠️" : "ℹ️"}
-                </span>
                 <h3>{noticeDialog.title}</h3>
                 <button
                   type="button"
@@ -1046,7 +1039,7 @@ export default function TicketGovernancePage() {
           <div className="gov-modal-overlay">
             <div className="gov-modal success-summary-modal">
               <div className="gov-modal-header modal-success">
-                <h3>✅ Bulk Revocation Completed Successfully!</h3>
+                <h3>Bulk Revocation Completed Successfully!</h3>
                 <button
                   type="button"
                   className="close-btn"
@@ -1064,7 +1057,7 @@ export default function TicketGovernancePage() {
                 <div className="modal-summary-table">
                   <div>
                     <span>Reconciliation Record ID:</span>
-                    <strong>#{successResultModal.reconciliationId}</strong>
+                    <strong>{successResultModal.reconciliationId}</strong>
                   </div>
                   <div>
                     <span>Total Tickets Revoked:</span>
@@ -1082,12 +1075,12 @@ export default function TicketGovernancePage() {
                   </div>
                   <div>
                     <span>Gate Scanner Cache (Redis):</span>
-                    <strong className="text-success">✔ Flushed Redis & gate memory</strong>
+                    <strong className="text-success">Flushed Redis & gate memory</strong>
                   </div>
                   <div>
                     <span>Attendee Notifications:</span>
                     <strong className={successResultModal.notificationSent ? "text-success" : "text-muted"}>
-                      {successResultModal.notificationSent ? "✔ In-app notification sent to all ticket owners" : "Skipped"}
+                      {successResultModal.notificationSent ? "In-app notification sent to all ticket owners" : "Skipped"}
                     </strong>
                   </div>
                 </div>
@@ -1101,7 +1094,7 @@ export default function TicketGovernancePage() {
                     setActiveTab("REVOCATION_HISTORY");
                   }}
                 >
-                  View Revocation History →
+                  View Revocation History
                 </button>
                 <button
                   type="button"

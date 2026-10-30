@@ -149,10 +149,10 @@ export default function OrganizerVerificationsPage() {
       <div className="filter-tabs-row">
         <div className="tabs-group">
           {[
-            { id: "Pending", label: "⏳ Pending Verification", count: pendingCount },
-            { id: "Approved", label: "✅ Approved Organizers" },
-            { id: "Rejected", label: "❌ Rejected Applications" },
-            { id: "ALL", label: "📋 All Requests" },
+            { id: "Pending", label: "Pending Verification", count: pendingCount },
+            { id: "Approved", label: "Approved Organizers" },
+            { id: "Rejected", label: "Rejected Applications" },
+            { id: "ALL", label: "All Requests" },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -165,7 +165,7 @@ export default function OrganizerVerificationsPage() {
         </div>
 
         <button className="btn-refresh" onClick={() => fetchRequests(statusFilter)}>
-          🔄 Refresh List
+          Refresh List
         </button>
       </div>
 
@@ -177,7 +177,7 @@ export default function OrganizerVerificationsPage() {
             <p>Loading verification applications...</p>
           </div>
         ) : error ? (
-          <div className="error-banner">⚠️ {error}</div>
+          <div className="error-banner">{error}</div>
         ) : requestsList.length === 0 ? (
           <div className="empty-box">No organizer verification requests found matching filter "{statusFilter}".</div>
         ) : (
@@ -199,12 +199,12 @@ export default function OrganizerVerificationsPage() {
                 {requestsList.map((req) => (
                   <tr key={req.requestId}>
                     <td>
-                      <span className="id-tag">#{req.requestId}</span>
+                      <span className="id-tag">{req.requestId}</span>
                     </td>
                     <td>
                       <div className="company-info-cell">
                         <strong>{req.companyName || "N/A Business Name"}</strong>
-                        <span className="email-sub">{req.userEmail || `User #${req.userId}`}</span>
+                        <span className="email-sub">{req.userEmail || `User ${req.userId}`}</span>
                       </div>
                     </td>
                     <td>
@@ -212,13 +212,13 @@ export default function OrganizerVerificationsPage() {
                     </td>
                     <td>
                       <div className="contact-cell">
-                        <span>👤 {req.representativeName || req.userFullName || "N/A"}</span>
-                        <span className="phone-sub">📞 {req.phoneNumber || "N/A"}</span>
+                        <span>{req.representativeName || req.userFullName || "N/A"}</span>
+                        <span className="phone-sub">{req.phoneNumber || "N/A"}</span>
                       </div>
                     </td>
                     <td>
                       <span className="doc-count-badge">
-                        📎 {req.documents?.length || 0} File(s)
+                        {req.documents?.length || 0} File(s)
                       </span>
                     </td>
                     <td>
@@ -231,7 +231,7 @@ export default function OrganizerVerificationsPage() {
                     </td>
                     <td>
                       <button className="btn-inspect" onClick={() => handleInspectRequest(req)}>
-                        🔍 Inspect Documents
+                        Inspect Documents
                       </button>
                     </td>
                   </tr>
@@ -247,14 +247,14 @@ export default function OrganizerVerificationsPage() {
         <div className="modal-overlay">
           <div className="modal-card extra-wide">
             <div className="modal-header">
-              <h2>🔍 Organizer Legal Document Inspection (Request #{selectedRequest.requestId})</h2>
-              <button className="btn-close" onClick={() => setShowDetailModal(false)}>✕</button>
+              <h2>Organizer Legal Document Inspection (Request {selectedRequest.requestId})</h2>
+              <button className="btn-close" onClick={() => setShowDetailModal(false)}>Close</button>
             </div>
 
             <div className="modal-body">
               {/* Applicant Enterprise Overview */}
               <div className="applicant-overview-card">
-                <h3>🏢 Enterprise Legal Information</h3>
+                <h3>Enterprise Legal Information</h3>
                 <div className="overview-grid">
                   <div>
                     <span className="label">Company Name:</span>
@@ -294,10 +294,10 @@ export default function OrganizerVerificationsPage() {
 
               {/* Cloudinary Documents Inspection (UC_11.3 / UC_11.4) */}
               <div className="documents-inspection-card">
-                <h3>📂 Uploaded Legal Verification Documents (Cloudinary Cloud Storage)</h3>
+                <h3>Uploaded Legal Verification Documents (Cloudinary Cloud Storage)</h3>
                 {selectedRequest.documents?.length === 0 ? (
                   <div className="no-docs-warning">
-                    ⚠️ No verification documents uploaded for this request yet.
+                    No verification documents uploaded for this request yet.
                   </div>
                 ) : (
                   <div className="docs-grid">
@@ -313,10 +313,10 @@ export default function OrganizerVerificationsPage() {
                           <div className="doc-card-top">
                             <span className="doc-type-tag">
                               {docType === "BUSINESS_LICENSE"
-                                ? "📄 Business Registration License"
+                                ? "Business Registration License"
                                 : docType === "REPRESENTATIVE_ID"
-                                ? "🪪 Representative ID / Passport"
-                                : "📁 Event Portfolio / Track Record"}
+                                ? "Representative ID / Passport"
+                                : "Event Portfolio / Track Record"}
                             </span>
                           </div>
 
@@ -330,7 +330,7 @@ export default function OrganizerVerificationsPage() {
                               />
                             ) : (
                               <div className="doc-file-icon">
-                                📄 <span>PDF / Document File</span>
+                                <span>PDF / Document File</span>
                               </div>
                             )}
                           </div>
@@ -344,7 +344,7 @@ export default function OrganizerVerificationsPage() {
                                 rel="noreferrer"
                                 className="btn-view-cloud"
                               >
-                                🔗 View Full File on Cloudinary ↗
+                                View Full File on Cloudinary
                               </a>
                             )}
                           </div>
@@ -358,7 +358,7 @@ export default function OrganizerVerificationsPage() {
               {/* Status Note & Rejection Reason Display if already reviewed */}
               {selectedRequest.status === "Rejected" && selectedRequest.rejectionReason && (
                 <div className="rejection-reason-banner">
-                  <strong>❌ Previous Rejection Reason:</strong>
+                  <strong>Previous Rejection Reason:</strong>
                   <p>{selectedRequest.rejectionReason}</p>
                 </div>
               )}
@@ -392,7 +392,7 @@ export default function OrganizerVerificationsPage() {
                       setShowRejectModal(true);
                     }}
                   >
-                    ❌ Reject Verification
+                    Reject Verification
                   </button>
 
                   <button
@@ -400,7 +400,7 @@ export default function OrganizerVerificationsPage() {
                     disabled={submittingDecision}
                     onClick={handleApproveSubmit}
                   >
-                    {submittingDecision ? "Approving..." : "✅ Approve & Grant Organizer Role"}
+                    {submittingDecision ? "Approving..." : "Approve & Grant Organizer Role"}
                   </button>
                 </>
               )}
@@ -414,8 +414,8 @@ export default function OrganizerVerificationsPage() {
         <div className="modal-overlay">
           <div className="modal-card">
             <div className="modal-header">
-              <h2>❌ Reject Organizer Verification Request #{selectedRequest.requestId}</h2>
-              <button className="btn-close" onClick={() => setShowRejectModal(false)}>✕</button>
+              <h2>Reject Organizer Verification Request {selectedRequest.requestId}</h2>
+              <button className="btn-close" onClick={() => setShowRejectModal(false)}>Close</button>
             </div>
 
             <form onSubmit={handleRejectSubmit}>
@@ -454,8 +454,8 @@ export default function OrganizerVerificationsPage() {
         <div className="modal-overlay" onClick={() => setPreviewDoc(null)}>
           <div className="modal-card lightbox" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>📷 Document Preview: {previewDoc.documentType || previewDoc.type || "Document"}</h2>
-              <button className="btn-close" onClick={() => setPreviewDoc(null)}>✕</button>
+              <h2>Document Preview: {previewDoc.documentType || previewDoc.type || "Document"}</h2>
+              <button className="btn-close" onClick={() => setPreviewDoc(null)}>Close</button>
             </div>
             <div className="lightbox-body">
               <img src={previewDoc.fileUrl || previewDoc.url || previewDoc.previewUrl} alt="Document Preview" className="lightbox-img" />
@@ -469,8 +469,8 @@ export default function OrganizerVerificationsPage() {
         <div className="modal-overlay">
           <div className="modal-card dialog-popup">
             <div className={`modal-header ${confirmDialog.type === "SUCCESS" ? "header-success" : "header-warning"}`}>
-              <h2>{confirmDialog.type === "SUCCESS" ? "✅" : "⚠️"} {confirmDialog.title}</h2>
-              <button className="btn-close" onClick={() => setConfirmDialog(null)}>✕</button>
+              <h2>{confirmDialog.title}</h2>
+              <button className="btn-close" onClick={() => setConfirmDialog(null)}>Close</button>
             </div>
             <div className="modal-body">
               <p className="dialog-text">{confirmDialog.message}</p>
@@ -500,10 +500,8 @@ export default function OrganizerVerificationsPage() {
         <div className="modal-overlay">
           <div className="modal-card dialog-popup">
             <div className={`modal-header ${noticeDialog.type === "ERROR" ? "header-danger" : noticeDialog.type === "SUCCESS" ? "header-success" : "header-warning"}`}>
-              <h2>
-                {noticeDialog.type === "ERROR" ? "❌" : noticeDialog.type === "SUCCESS" ? "✅" : "⚠️"} {noticeDialog.title}
-              </h2>
-              <button className="btn-close" onClick={() => setNoticeDialog(null)}>✕</button>
+              <h2>{noticeDialog.title}</h2>
+              <button className="btn-close" onClick={() => setNoticeDialog(null)}>Close</button>
             </div>
             <div className="modal-body">
               <p className="dialog-text">{noticeDialog.message}</p>

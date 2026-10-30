@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import jsQR from "jsqr";
-import { BrowserMultiFormatReader } from "@zxing/library";
+import { BrowserMultiFormatReader, BrowserQRCodeReader } from "@zxing/library";
 import checkinApi from "../../api/checkinApi";
+import staffApi from "../../api/staffApi";
 import { useAuth } from "../../context/AuthContext";
 import offlineCheckinDb from "../../utils/offlineCheckinDb";
 import OfflineConflictModal from "../../components/OfflineConflictModal";
@@ -13,7 +14,8 @@ export default function StaffCheckinTerminalPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const currentEventId = eventId ? Number(eventId) : 20;
+  const [assignedEvents, setAssignedEvents] = useState([]);
+  const currentEventId = eventId ? Number(eventId) : (assignedEvents.length > 0 ? assignedEvents[0].eventId : 20);
   const [activeTab, setActiveTab] = useState("SCAN"); // "SCAN", "MANUAL", "LOOKUP", "HISTORY", "OFFLINE"
 
   // Gate Assignment & Shift Info
@@ -42,6 +44,10 @@ export default function StaffCheckinTerminalPage() {
 
   // Manual Check-in Modal State
   const [showManualModal, setShowManualModal] = useState(false);
+  const [manualLookupTickets, setManualLookupTickets] = useState([]);
+  const [searchingManualTickets, setSearchingManualTickets] = useState(false);
+  const [selectedManualTicket, setSelectedManualTicket] = useState(null);
+  const [manualLookupSearched, setManualLookupSearched] = useState(false);
   const [manualForm, setManualForm] = useState({
     ticketCode: "",
     cccdNumber: "",
@@ -95,6 +101,29 @@ export default function StaffCheckinTerminalPage() {
       // ignore
     }
   }, [currentEventId]);
+
+  useEffect(() => {
+    loadAssignedEvents();
+  }, [user?.userId, user?.id]);
+
+  const loadAssignedEvents = async () => {
+    try {
+      const staffId = user?.userId ?? user?.id ?? user?.UserId ?? 0;
+      const res = await staffApi.getMyAssignments(staffId);
+      const list = res.data?.data || [];
+      setAssignedEvents(list);
+
+      // If currently on an event that is not in the assigned list, automatically switch to first assigned event
+      if (list.length > 0) {
+        const isCurrentAssigned = list.some((e) => e.eventId === Number(currentEventId));
+        if (!isCurrentAssigned) {
+          navigate(`/staff/checkin/${list[0].eventId}`, { replace: true });
+        }
+      }
+    } catch (err) {
+      console.warn("Could not load staff assigned events in terminal:", err);
+    }
+  };
 
   // Load Gate Assignment, History, and Auto-preload Offline Package on Mount
   useEffect(() => {
@@ -265,7 +294,7 @@ export default function StaffCheckinTerminalPage() {
 
         if (isSilent) {
           setSyncNotice({
-            text: `⚡ Successfully auto-synchronized ${syncResult.totalProcessed || queue.length} offline scans to server!`,
+            text: `Successfully auto-synchronized ${syncResult.totalProcessed || queue.length} offline scans to server!`,
           });
           setTimeout(() => setSyncNotice(null), 5000);
         } else {
@@ -328,7 +357,7 @@ export default function StaffCheckinTerminalPage() {
       );
 
       const serverStatusPrefix = !navigator.onLine
-        ? "[⚡ Network Disconnected - Offline Mode]"
+        ? "[Network Disconnected - Offline Mode]"
         : "[Server Unreachable - Auto Offline Mode] (CheckinAPI backend not responding on localhost).";
 
       setScanResult({
@@ -379,7 +408,7 @@ export default function StaffCheckinTerminalPage() {
         setTerminalDialog({
           type: "WARNING",
           title: "Access Denied",
-          message: "⛔ Access Denied: Scanner functions are locked because you are outside your assigned shift hours.",
+          message: "Access Denied: Scanner functions are locked because you are outside your assigned shift hours.",
         });
         return;
       }
@@ -505,6 +534,46 @@ export default function StaffCheckinTerminalPage() {
     } catch (e) {}
   }, []);
 
+  const cleanEventTitle = (title) => {
+    if (!title) return "";
+    return title
+      .replace(/^Event\s*#\s*\d+\s*:\s*/i, "")
+      .replace(/^Event\s*#\s*/i, "Event ")
+      .replace(/^Concert\s*#\s*\d+\s*:\s*/i, "")
+      .replace(/^Concert\s*#\s*/i, "Concert ")
+      .trim();
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement("canvas");
+        c.width = img.width;
+        c.height = img.height;
+        const cCtx = c.getContext("2d");
+        cCtx.drawImage(img, 0, 0);
+        const imgData = cCtx.getImageData(0, 0, img.width, img.height);
+        const decodeQR = typeof jsQR === "function" ? jsQR : (jsQR?.default || window.jsQR);
+        const res = decodeQR ? decodeQR(imgData.data, img.width, img.height, { inversionAttempts: "attemptBoth" }) : null;
+        if (res && res.data) {
+          const codeTrimmed = res.data.trim();
+          console.log("Decoded uploaded QR image:", codeTrimmed);
+          setAutoScannedFlash(true);
+          setTimeout(() => setAutoScannedFlash(false), 800);
+          handleProcessScan(codeTrimmed);
+        } else {
+          setCameraError("Could not detect a QR code in the uploaded image. Please ensure the QR code image is clear and try again.");
+        }
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Real-time Dual-Engine QR Scanner (ZXing + Native BarcodeDetector + jsQR)
   useEffect(() => {
     let active = true;
@@ -519,7 +588,7 @@ export default function StaffCheckinTerminalPage() {
       stopWebcam();
 
       try {
-        const codeReader = new BrowserMultiFormatReader();
+        const codeReader = new BrowserQRCodeReader();
         zxingReaderRef.current = codeReader;
 
         const deviceId = selectedDeviceId || undefined;
@@ -544,7 +613,7 @@ export default function StaffCheckinTerminalPage() {
               }
 
               lastScannedQrRef.current = { code: codeTrimmed, timestamp: now };
-              console.log("📷 ZXing Live Auto-Detected QR Code:", codeTrimmed);
+              console.log("ZXing Live Auto-Detected QR Code:", codeTrimmed);
               setAutoScannedFlash(true);
               setTimeout(() => setAutoScannedFlash(false), 800);
               handleProcessScan(codeTrimmed);
@@ -552,7 +621,7 @@ export default function StaffCheckinTerminalPage() {
           }
         );
 
-        // Secondary Backup: Throttled Frame Analyzer (250ms) with BarcodeDetector + jsQR
+        // Secondary Backup: Throttled Frame Analyzer (200ms) with BarcodeDetector + jsQR
         const canvas = canvasRef.current;
         const ctx = canvas.getContext("2d", { willReadFrequently: true });
 
@@ -565,9 +634,8 @@ export default function StaffCheckinTerminalPage() {
           if (!video || video.readyState < 2 || !video.videoWidth || !video.videoHeight) return;
 
           try {
-            const scale = Math.min(1, 500 / Math.max(video.videoWidth, video.videoHeight));
-            const targetW = Math.max(10, Math.floor(video.videoWidth * scale));
-            const targetH = Math.max(10, Math.floor(video.videoHeight * scale));
+            const targetW = video.videoWidth;
+            const targetH = video.videoHeight;
 
             if (canvas.width !== targetW || canvas.height !== targetH) {
               canvas.width = targetW;
@@ -612,13 +680,13 @@ export default function StaffCheckinTerminalPage() {
                 return;
               }
               lastScannedQrRef.current = { code: codeTrimmed, timestamp: now };
-              console.log("📷 jsQR / BarcodeDetector Auto-Detected QR Code:", codeTrimmed);
+              console.log("jsQR / BarcodeDetector Auto-Detected QR Code:", codeTrimmed);
               setAutoScannedFlash(true);
               setTimeout(() => setAutoScannedFlash(false), 800);
               handleProcessScan(codeTrimmed);
             }
           } catch (e) {}
-        }, 250);
+        }, 200);
 
       } catch (err) {
         console.warn("Camera start error:", err);
@@ -709,6 +777,46 @@ export default function StaffCheckinTerminalPage() {
     }
   };
 
+  // Search Tickets by CCCD in Manual Mode
+  const searchTicketsByCccd = async (cccdVal) => {
+    const val = (cccdVal !== undefined ? cccdVal : manualForm.cccdNumber || "").trim();
+    if (!val || val.length < 9) {
+      setTerminalDialog({
+        type: "WARNING",
+        title: "Invalid ID / CCCD Number",
+        message: "Please enter a valid National ID / CCCD number (9 to 12 digits) to find tickets.",
+      });
+      return;
+    }
+
+    try {
+      setSearchingManualTickets(true);
+      setManualLookupSearched(true);
+      const res = await checkinApi.lookupTickets({
+        eventId: Number(currentEventId),
+        searchType: "CCCD",
+        queryValue: val,
+      });
+
+      const list = res?.data?.data?.tickets || [];
+      setManualLookupTickets(list);
+      const firstAvailable = list.find((t) => t.status === "AVAILABLE") || list[0] || null;
+      setSelectedManualTicket(firstAvailable);
+      if (firstAvailable) {
+        setManualForm((prev) => ({
+          ...prev,
+          ticketCode: firstAvailable.ticketCode,
+        }));
+      }
+    } catch (err) {
+      console.error("Error looking up tickets by CCCD:", err);
+      setManualLookupTickets([]);
+      setSelectedManualTicket(null);
+    } finally {
+      setSearchingManualTickets(false);
+    }
+  };
+
   // Submit Manual Check-in
   const handleManualCheckinSubmit = async (e) => {
     e.preventDefault();
@@ -716,7 +824,7 @@ export default function StaffCheckinTerminalPage() {
       setTerminalDialog({
         type: "WARNING",
         title: "Outside Shift Hours",
-        message: "⛔ Manual check-in is disabled because you are outside your assigned shift hours.",
+        message: "Manual check-in is disabled because you are outside your assigned shift hours.",
       });
       return;
     }
@@ -724,7 +832,7 @@ export default function StaffCheckinTerminalPage() {
       setTerminalDialog({
         type: "WARNING",
         title: "Invalid ID / CCCD Number",
-        message: "⚠️ Please enter a valid National ID / Passport number (9 to 12 digits).",
+        message: "Please enter a valid National ID / Passport number (9 to 12 digits).",
       });
       return;
     }
@@ -732,17 +840,18 @@ export default function StaffCheckinTerminalPage() {
       setTerminalDialog({
         type: "WARNING",
         title: "Physical Identity Verification Required",
-        message: "⚠️ Physical inspection of attendee's face against original ID card photo is required before confirming!",
+        message: "Physical inspection of attendee's face against original ID card photo is required before confirming!",
       });
       return;
     }
 
     try {
       setScanning(true);
+      const tCode = selectedManualTicket?.ticketCode || manualForm.ticketCode.trim();
       const res = await checkinApi.manualCheckin({
         eventId: Number(currentEventId),
         gateId: gateAssignment?.gateId || "GATE_A",
-        ticketCode: manualForm.ticketCode.trim(),
+        ticketCode: tCode,
         cccdNumber: manualForm.cccdNumber.trim(),
         reasonCode: manualForm.reasonCode,
         reasonNote: manualForm.reasonNote,
@@ -755,12 +864,12 @@ export default function StaffCheckinTerminalPage() {
           setTerminalDialog({
             type: "ERROR",
             title: "Manual Check-in Failed",
-            message: "⚠️ " + result.message,
+            message: result.message,
           });
           return;
         }
         setScanResult(result);
-        playAudioFeedback("SUCCESS");
+        playAudioFeedback(result.status === "SUCCESS" ? "SUCCESS" : "ERROR");
         setShowManualModal(false);
         setManualForm({
           ticketCode: "",
@@ -769,6 +878,9 @@ export default function StaffCheckinTerminalPage() {
           reasonNote: "",
           cccdVerified: false,
         });
+        setSelectedManualTicket(null);
+        setManualLookupTickets([]);
+        setManualLookupSearched(false);
         fetchScanHistory();
       }
     } catch (err) {
@@ -810,19 +922,21 @@ export default function StaffCheckinTerminalPage() {
       setTerminalDialog({
         type: "WARNING",
         title: "Outside Shift Hours",
-        message: "⛔ Check-in functions are locked because you are outside your assigned shift hours.",
+        message: "Check-in functions are locked because you are outside your assigned shift hours.",
       });
       return;
     }
-    setShowLookupModal(false);
+    setActiveTab("MANUAL");
+    setSelectedManualTicket(ticket);
+    setManualLookupTickets([ticket]);
+    setManualLookupSearched(true);
     setManualForm({
       ticketCode: ticket.ticketCode,
-      cccdNumber: ticket.maskedCccd || "",
+      cccdNumber: ticket.maskedCccd && ticket.maskedCccd !== "N/A" ? ticket.maskedCccd : "",
       reasonCode: "DEAD_BATTERY",
       reasonNote: `Verified via lookup ${lookupSearch.searchType}`,
       cccdVerified: false,
     });
-    setShowManualModal(true);
   };
 
 
@@ -832,10 +946,6 @@ export default function StaffCheckinTerminalPage() {
         return "Enter Phone Number (e.g. 0987654321)...";
       case "CCCD":
         return "Enter ID / CCCD Number (e.g. 079201008812)...";
-      case "ORDER_CODE":
-        return "Enter Order Code (e.g. ORD-2026-7711)...";
-      case "TICKET_CODE":
-        return "Enter Ticket Code (e.g. TKT-2026-8812)...";
       case "EMAIL":
         return "Enter Email Address (e.g. customer@ticketbox.com)...";
       default:
@@ -849,30 +959,39 @@ export default function StaffCheckinTerminalPage() {
       <header className="terminal-header">
         <div className="header-left">
           <button className="btn-back" onClick={() => navigate("/staff/gate-assignment")}>
-            ← Exit Scanner Terminal
+            Exit Scanner Terminal
           </button>
           <div className="gate-title-block">
             <span className="badge-terminal">GATE ADMISSION CONTROL TERMINAL</span>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginTop: "0.25rem" }}>
-              <h1 style={{ margin: 0 }}>
+            <div className="gate-title-row">
+              <h1 className="terminal-event-title">
                 {currentEventId === 20
                   ? "Acoustic Night"
-                  : gateAssignment?.eventName || "Acoustic Night"}
+                  : currentEventId === 21
+                  ? "Hà Anh Tuấn - \"Chân Trời Rực Rỡ\" Live Concert"
+                  : cleanEventTitle(assignedEvents.find((e) => e.eventId === currentEventId)?.eventTitle)
+                  || cleanEventTitle(gateAssignment?.eventTitle)
+                  || cleanEventTitle(gateAssignment?.eventName)
+                  || `Event ${currentEventId}`}
               </h1>
-              <span className="badge-event-active">● Event Active</span>
+              <span className="badge-event-active">Event Active</span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.35rem", marginBottom: "0.25rem" }}>
-              <span style={{ fontSize: "0.85rem", color: "#94a3b8", fontWeight: 600 }}>Switch Event:</span>
+            <div className="event-switch-row">
+              <span className="event-switch-label">Switch Event:</span>
               <select
                 value={currentEventId}
                 onChange={(e) => navigate(`/staff/checkin/${e.target.value}`)}
                 className="event-selector-dark"
               >
-                <option value="20">Event #20: Acoustic Night (Grand Live Stage)</option>
-                <option value="1">Event #1: Anh Trai Say Hi - Mùa 1 Grand Finale</option>
-                <option value="18">Event #18: Wren Evans - "Call Me" Tour</option>
-                <option value="17">Event #17: Hoàng Thùy Linh - "See Tình" World Tour VN</option>
-                <option value="16">Event #16: AMEE - "E11EVEN" Tour 2027</option>
+                {assignedEvents.length > 0 ? (
+                  assignedEvents.map((ev) => (
+                    <option key={ev.eventId} value={ev.eventId}>
+                      {cleanEventTitle(ev.eventTitle)} ({ev.gateName || "Main Gate"})
+                    </option>
+                  ))
+                ) : (
+                  <option value="" disabled>Chưa có sự kiện nào được phân công</option>
+                )}
               </select>
             </div>
             <p className="shift-sub">
@@ -900,7 +1019,7 @@ export default function StaffCheckinTerminalPage() {
               }
             }}
           >
-            {isOfflineMode ? "🟠 Offline Mode" : "🟢 Online Mode"}
+            {isOfflineMode ? "Offline Mode" : "Online Mode"}
           </button>
 
           {/* UC_14.6: Compact Auto-Sync Indicator in Header */}
@@ -912,7 +1031,7 @@ export default function StaffCheckinTerminalPage() {
               disabled={syncingOffline}
               title="Pending offline scans waiting for sync."
             >
-              {syncingOffline ? "🔄 Syncing..." : `⚡ Pending Sync (${offlineQueueCount})`}
+              {syncingOffline ? "Syncing..." : `Pending Sync (${offlineQueueCount})`}
             </button>
           )}
 
@@ -922,7 +1041,7 @@ export default function StaffCheckinTerminalPage() {
             onClick={() => setShowConflictModal(true)}
             title="Review and resolve offline check-in conflicts"
           >
-            ⚠️ Conflicts {pendingConflictsCount > 0 ? `(${pendingConflictsCount})` : ""}
+            Conflicts {pendingConflictsCount > 0 ? `(${pendingConflictsCount})` : ""}
           </button>
         </div>
       </header>
@@ -934,21 +1053,21 @@ export default function StaffCheckinTerminalPage() {
           className={`terminal-nav-tab ${activeTab === "SCAN" ? "active" : ""}`}
           onClick={() => setActiveTab("SCAN")}
         >
-          📷 Scan Dynamic QR
+          Scan Dynamic QR
         </button>
         <button
           type="button"
           className={`terminal-nav-tab ${activeTab === "MANUAL" ? "active" : ""}`}
           onClick={() => setActiveTab("MANUAL")}
         >
-          ⌨️ Manual Input
+          Manual Input
         </button>
         <button
           type="button"
           className={`terminal-nav-tab ${activeTab === "LOOKUP" ? "active" : ""}`}
           onClick={() => setActiveTab("LOOKUP")}
         >
-          🔍 Lookup Ticket
+          Lookup Ticket
         </button>
         <button
           type="button"
@@ -958,14 +1077,14 @@ export default function StaffCheckinTerminalPage() {
             fetchScanHistory();
           }}
         >
-          📊 Scan History
+          Scan History
         </button>
         <button
           type="button"
           className={`terminal-nav-tab ${activeTab === "OFFLINE" ? "active" : ""}`}
           onClick={() => setActiveTab("OFFLINE")}
         >
-          ⚡ Offline & Sync {offlineQueueCount > 0 ? `(${offlineQueueCount})` : ""}
+          Offline & Sync {offlineQueueCount > 0 ? `(${offlineQueueCount})` : ""}
         </button>
       </div>
 
@@ -974,7 +1093,7 @@ export default function StaffCheckinTerminalPage() {
         <div className="offline-sync-toast">
           <span>{syncNotice.text}</span>
           <button type="button" onClick={() => setSyncNotice(null)} className="toast-dismiss">
-            ✕
+            Close
           </button>
         </div>
       )}
@@ -983,7 +1102,6 @@ export default function StaffCheckinTerminalPage() {
       {gateAssignment && gateAssignment.isShiftActive === false && (
         <div className="shift-inactive-banner">
           <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-            <span style={{ fontSize: "2rem" }}>⛔</span>
             <div>
               <h4 style={{ margin: "0 0 0.25rem 0", fontSize: "1.15rem" }}>ACCESS DENIED: OUTSIDE SHIFT OPERATIONAL HOURS</h4>
               <p style={{ margin: 0, fontSize: "0.95rem" }}>
@@ -992,7 +1110,7 @@ export default function StaffCheckinTerminalPage() {
             </div>
           </div>
           <button className="btn-secondary" onClick={() => navigate("/staff/gate-assignment")}>
-            ← Return to Gate Selection
+            Return to Gate Selection
           </button>
         </div>
       )}
@@ -1006,7 +1124,7 @@ export default function StaffCheckinTerminalPage() {
           <div className="scanner-viewfinder-card">
             <div className="viewfinder-header">
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                <span style={{ fontWeight: 700, fontSize: "1.1rem" }}>📷 Camera QR Scanner</span>
+                <span style={{ fontWeight: 700, fontSize: "1.1rem" }}>Camera QR Scanner</span>
                 <span className="live-engine-tag">ZXing Real-Time</span>
               </div>
               <div className="viewfinder-tools">
@@ -1024,6 +1142,15 @@ export default function StaffCheckinTerminalPage() {
                     ))}
                   </select>
                 )}
+                <label className="btn-upload-cam-file" title="Upload QR image file">
+                  Upload QR Image
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    style={{ display: "none" }}
+                  />
+                </label>
                 <button
                   className="btn-toggle-cam"
                   onClick={() => setCameraActive(!cameraActive)}
@@ -1037,7 +1164,7 @@ export default function StaffCheckinTerminalPage() {
             <div className={`camera-box ${cameraActive && gateAssignment?.isShiftActive !== false ? "active" : "paused"} ${autoScannedFlash ? "flash-detected" : ""}`}>
               {gateAssignment && gateAssignment.isShiftActive === false ? (
                 <div className="camera-off-msg">
-                  <span>🔒 SCANNING LOCKED</span>
+                  <span>SCANNING LOCKED</span>
                   <p>Check-in scanner is disabled outside assigned shift operational hours</p>
                 </div>
               ) : cameraActive ? (
@@ -1047,7 +1174,7 @@ export default function StaffCheckinTerminalPage() {
                   <div className={`scanner-frame ${autoScannedFlash ? "detected" : ""}`}></div>
                   {isCooldownActive ? (
                     <div className="cooldown-overlay-banner">
-                      ⏸️ Pausing 2s to verify scan...
+                      Pausing 2s to verify scan...
                     </div>
                   ) : (
                     <p className="scanner-hint">Point attendee QR code at camera to scan automatically</p>
@@ -1055,7 +1182,7 @@ export default function StaffCheckinTerminalPage() {
                 </>
               ) : (
                 <div className="camera-off-msg">
-                  <span>📷 Camera Paused</span>
+                  <span>Camera Paused</span>
                   <p>Click Activate Camera, upload a QR image, or use a handheld barcode scanner</p>
                 </div>
               )}
@@ -1063,7 +1190,7 @@ export default function StaffCheckinTerminalPage() {
 
             {cameraError && (
               <div className="camera-warning-banner">
-                ℹ️ {cameraError}
+                {cameraError}
               </div>
             )}
           </div>
@@ -1079,13 +1206,6 @@ export default function StaffCheckinTerminalPage() {
                   : "feedback-error"
               }`}
             >
-              <div className="feedback-icon">
-                {scanResult.status === "SUCCESS"
-                  ? "✅"
-                  : scanResult.status === "ALREADY_USED"
-                  ? "⚠️"
-                  : "❌"}
-              </div>
               <div className="feedback-body">
                 <h2>{scanResult.status === "SUCCESS" ? "ENTRY PERMITTED" : scanResult.status}</h2>
                 <p className="feedback-msg">{scanResult.message}</p>
@@ -1113,14 +1233,14 @@ export default function StaffCheckinTerminalPage() {
           {/* Real-time Admission Scan Feed Table Underneath (Figure 114) */}
           <div className="scan-feed-section">
             <div className="feed-header-row">
-              <h3>📋 Real-time Admission Scan Feed</h3>
+              <h3>Real-time Admission Scan Feed</h3>
               <div style={{ display: "flex", gap: "0.5rem" }}>
                 <button
                   type="button"
                   className="btn-history-view-all"
                   onClick={() => setActiveTab("HISTORY")}
                 >
-                  View Full History ({historyStats.totalScans || 248}) →
+                  View Full History ({historyStats.totalScans ?? 0})
                 </button>
               </div>
             </div>
@@ -1177,7 +1297,7 @@ export default function StaffCheckinTerminalPage() {
         <div className="terminal-manual-tab">
           <div className="card-manual-input">
             <div className="manual-card-header">
-              <h2>⌨️ Manual / Hardware Scanner Input</h2>
+              <h2>Manual / Hardware Scanner Input</h2>
               <p className="card-subtext">
                 For attendees with dead phone batteries, damaged screens, or direct handheld hardware scanner input.
               </p>
@@ -1185,40 +1305,127 @@ export default function StaffCheckinTerminalPage() {
 
             {/* Prominent Physical Verification Notice */}
             <div className="staff-face-notice">
-              <div className="notice-icon">⚠️</div>
               <div className="notice-content">
                 <strong>MANDATORY PHYSICAL CHECK:</strong>
                 <p>Check-in staff MUST physically match attendee's <strong>REAL FACE</strong> against portrait photo on their <strong>ORIGINAL ID / CCCD CARD</strong> before checking in.</p>
               </div>
             </div>
 
-            {/* Quick Demo Pre-fill Buttons */}
+            {/* Manual Check-in Form: Enter CCCD to find and select tickets */}
             <form onSubmit={handleManualCheckinSubmit} className="manual-form-grid">
-              <div className="form-group">
-                <label>Ticket ID / Code *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Enter Ticket ID manually, or scan with barcode gun..."
-                  value={manualForm.ticketCode}
-                  onChange={(e) =>
-                    setManualForm({ ...manualForm, ticketCode: e.target.value })
-                  }
-                />
+              <div className="form-group cccd-box-full">
+                <label>Attendee National ID / CCCD Number *</label>
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Nhập số CCCD (e.g. 001202000000, 079201008812)..."
+                    value={manualForm.cccdNumber}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setManualForm({ ...manualForm, cccdNumber: val });
+                      if (!val.trim()) {
+                        setManualLookupTickets([]);
+                        setSelectedManualTicket(null);
+                        setManualLookupSearched(false);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        searchTicketsByCccd(manualForm.cccdNumber);
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn-lookup-pink"
+                    style={{ whiteSpace: "nowrap", padding: "0 1.25rem", minHeight: "44px" }}
+                    onClick={() => searchTicketsByCccd(manualForm.cccdNumber)}
+                    disabled={searchingManualTickets || !manualForm.cccdNumber.trim()}
+                  >
+                    {searchingManualTickets ? "Đang tìm..." : "Tìm vé theo CCCD"}
+                  </button>
+                </div>
               </div>
 
-              <div className="form-group">
-                <label>Attendee National ID / CCCD Number *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. 001202000000 (9 to 12 digits)"
-                  value={manualForm.cccdNumber}
-                  onChange={(e) =>
-                    setManualForm({ ...manualForm, cccdNumber: e.target.value })
-                  }
-                />
-              </div>
+              {/* Real-time DB lookup results for this CCCD */}
+              {searchingManualTickets && (
+                <div className="cccd-box-full" style={{ color: "#38bdf8", padding: "0.5rem 0", fontStyle: "italic" }}>
+                  Đang tra cứu vé từ cơ sở dữ liệu...
+                </div>
+              )}
+
+              {manualLookupSearched && !searchingManualTickets && manualLookupTickets.length === 0 && (
+                <div className="cccd-box-full empty-lookup-box" style={{ margin: "0.5rem 0" }}>
+                  Không tìm thấy vé nào thuộc số CCCD <strong>{manualForm.cccdNumber}</strong> cho sự kiện này trong cơ sở dữ liệu.
+                </div>
+              )}
+
+              {manualLookupTickets.length > 0 && (
+                <div className="cccd-box-full manual-tickets-preview-box" style={{ margin: "0.5rem 0" }}>
+                  <label style={{ fontSize: "0.875rem", color: "#94a3b8", display: "block", marginBottom: "0.5rem" }}>
+                    Vé tìm thấy trong Database ({manualLookupTickets.length} vé) - Chọn vé cần check-in:
+                  </label>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                    {manualLookupTickets.map((t) => {
+                      const isSelected = selectedManualTicket?.ticketId === t.ticketId || selectedManualTicket?.ticketCode === t.ticketCode;
+                      const isAvailable = t.status === "AVAILABLE";
+                      return (
+                        <div
+                          key={t.ticketId || t.ticketCode}
+                          onClick={() => {
+                            if (isAvailable) {
+                              setSelectedManualTicket(t);
+                              setManualForm((prev) => ({ ...prev, ticketCode: t.ticketCode }));
+                            }
+                          }}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "0.75rem 1rem",
+                            borderRadius: "8px",
+                            background: isSelected ? "rgba(255, 45, 117, 0.15)" : "rgba(30, 41, 59, 0.7)",
+                            border: isSelected ? "2px solid #ff2d75" : "1px solid #334155",
+                            cursor: isAvailable ? "pointer" : "not-allowed",
+                            opacity: isAvailable ? 1 : 0.65,
+                            transition: "all 0.2s ease",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                            <input
+                              type="radio"
+                              name="selectedManualTicket"
+                              checked={isSelected}
+                              disabled={!isAvailable}
+                              onChange={() => {
+                                setSelectedManualTicket(t);
+                                setManualForm((prev) => ({ ...prev, ticketCode: t.ticketCode }));
+                              }}
+                              style={{ accentColor: "#ff2d75", width: "18px", height: "18px", cursor: isAvailable ? "pointer" : "default" }}
+                            />
+                            <div>
+                              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                                <span className="t-code-badge" style={{ fontSize: "0.85rem" }}>{t.ticketCode}</span>
+                                <strong style={{ color: "#f8fafc" }}>{t.customerName || "Khán giả"}</strong>
+                              </div>
+                              <div style={{ fontSize: "0.8rem", color: "#94a3b8", marginTop: "0.2rem" }}>
+                                Khu vực: <span style={{ color: "#fbbf24" }}>{t.zoneName}</span> • Ghế: {t.seatNumber || "General"}
+                              </div>
+                            </div>
+                          </div>
+                          <div>
+                            <span className={`status-pill ${t.status}`}>
+                              {t.status === "AVAILABLE" ? "HỢP LỆ / SẴN SÀNG" : t.status === "CHECKED_IN" ? "ĐÃ CHECK-IN" : t.status}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div className="form-group">
                 <label>Reason Code *</label>
@@ -1228,10 +1435,10 @@ export default function StaffCheckinTerminalPage() {
                     setManualForm({ ...manualForm, reasonCode: e.target.value })
                   }
                 >
-                  <option value="DEAD_BATTERY">📱 Attendee phone battery depleted</option>
-                  <option value="BROKEN_SCREEN">⚡ Phone screen damaged or unreadable</option>
-                  <option value="NETWORK_ERROR">🌐 Mobile network error on attendee phone</option>
-                  <option value="OTHER">📋 Paper ticket / Special exception</option>
+                  <option value="DEAD_BATTERY">Attendee phone battery depleted</option>
+                  <option value="BROKEN_SCREEN">Phone screen damaged or unreadable</option>
+                  <option value="NETWORK_ERROR">Mobile network error on attendee phone</option>
+                  <option value="OTHER">Paper ticket / Special exception</option>
                 </select>
               </div>
 
@@ -1267,9 +1474,9 @@ export default function StaffCheckinTerminalPage() {
                 <button
                   type="submit"
                   className="btn-validate-ticket-pink"
-                  disabled={!manualForm.cccdVerified || !manualForm.ticketCode.trim() || !manualForm.cccdNumber.trim()}
+                  disabled={!manualForm.cccdVerified || !manualForm.cccdNumber.trim() || (!selectedManualTicket && !manualForm.ticketCode.trim()) || scanning}
                 >
-                  {scanning ? "Verifying..." : "Validate Ticket →"}
+                  {scanning ? "Đang xử lý..." : "Xác nhận Check-in Vé"}
                 </button>
               </div>
             </form>
@@ -1286,9 +1493,6 @@ export default function StaffCheckinTerminalPage() {
                 }`}
                 style={{ marginTop: "1.5rem" }}
               >
-                <div className="feedback-icon">
-                  {scanResult.status === "SUCCESS" ? "✅" : scanResult.status === "ALREADY_USED" ? "⚠️" : "❌"}
-                </div>
                 <div className="feedback-body">
                   <h2>{scanResult.status === "SUCCESS" ? "ENTRY PERMITTED" : scanResult.status}</h2>
                   <p className="feedback-msg">{scanResult.message}</p>
@@ -1312,7 +1516,7 @@ export default function StaffCheckinTerminalPage() {
         <div className="terminal-lookup-tab">
           <div className="card-lookup-main">
             <div className="lookup-header">
-              <h2>🔍 Manual Ticket Lookup</h2>
+              <h2>Manual Ticket Lookup</h2>
               <p className="card-subtext">
                 Search ticket inventory by attendee identification parameters. Non-searched personal data fields are masked to preserve data privacy.
               </p>
@@ -1322,11 +1526,9 @@ export default function StaffCheckinTerminalPage() {
               {/* Filter Pills */}
               <div className="search-type-selector">
                 {[
-                  { id: "PHONE", label: "📞 Phone Number" },
-                  { id: "CCCD", label: "🪪 ID / CCCD Number" },
-                  { id: "ORDER_CODE", label: "🧾 Order Code" },
-                  { id: "TICKET_CODE", label: "🎫 Ticket Code" },
-                  { id: "EMAIL", label: "✉️ Email Address" },
+                  { id: "PHONE", label: "Phone Number" },
+                  { id: "CCCD", label: "ID / CCCD Number" },
+                  { id: "EMAIL", label: "Email Address" },
                 ].map((type) => (
                   <button
                     type="button"
@@ -1364,7 +1566,7 @@ export default function StaffCheckinTerminalPage() {
                   className="btn-lookup-pink"
                   disabled={searchingLookup || !lookupSearch.queryValue.trim()}
                 >
-                  {searchingLookup ? "Searching..." : "🔍 Search Ticket"}
+                  {searchingLookup ? "Searching..." : "Search Ticket"}
                 </button>
               </div>
             </form>
@@ -1379,7 +1581,6 @@ export default function StaffCheckinTerminalPage() {
                 ) : (
                   <div className="attendee-result-card">
                     <div className="attendee-card-header">
-                      <div className="attendee-avatar">👤</div>
                       <div>
                         <h3>{lookupResults.tickets[0]?.customerName || "Nguyen Thanh"}</h3>
                         <div className="attendee-meta-pills">
@@ -1411,7 +1612,7 @@ export default function StaffCheckinTerminalPage() {
                                   disabled={gateAssignment?.isShiftActive === false}
                                   onClick={() => handleLookupCheckinNow(t)}
                                 >
-                                  Check-in Manually Now →
+                                  Check-in Manually Now
                                 </button>
                               ) : (
                                 <span className="checked-in-timestamp">
@@ -1436,7 +1637,7 @@ export default function StaffCheckinTerminalPage() {
         <div className="terminal-history-tab">
           <div className="history-main-card">
             <div className="history-header-block">
-              <h2>📊 Scan History</h2>
+              <h2>Scan History</h2>
               <p className="card-subtext">
                 Audit trail of admissions for the current event shift.
               </p>
@@ -1446,22 +1647,22 @@ export default function StaffCheckinTerminalPage() {
             <div className="kpi-cards-grid">
               <div className="kpi-card total">
                 <span className="kpi-label">TOTAL SCANS</span>
-                <strong className="kpi-value">{historyStats.totalScans || 248}</strong>
+                <strong className="kpi-value">{historyStats.totalScans ?? 0}</strong>
                 <small className="kpi-sub">All admission attempts</small>
               </div>
               <div className="kpi-card approved">
                 <span className="kpi-label">APPROVED</span>
-                <strong className="kpi-value green">{historyStats.approvedScans || 231}</strong>
+                <strong className="kpi-value green">{historyStats.approvedScans ?? 0}</strong>
                 <small className="kpi-sub">Admitted to stadium</small>
               </div>
               <div className="kpi-card used">
                 <span className="kpi-label">ALREADY USED</span>
-                <strong className="kpi-value yellow">{historyStats.alreadyUsedScans || 12}</strong>
+                <strong className="kpi-value yellow">{historyStats.alreadyUsedScans ?? 0}</strong>
                 <small className="kpi-sub">Duplicate scan denied</small>
               </div>
               <div className="kpi-card invalid">
                 <span className="kpi-label">ERRORS / INVALID</span>
-                <strong className="kpi-value red">{historyStats.invalidScans || 5}</strong>
+                <strong className="kpi-value red">{historyStats.invalidScans ?? 0}</strong>
                 <small className="kpi-sub">QR tampered / Wrong gate</small>
               </div>
             </div>
@@ -1470,10 +1671,10 @@ export default function StaffCheckinTerminalPage() {
             <div className="history-filter-row">
               <div className="filter-pills-group">
                 {[
-                  { id: "ALL", label: `All (${historyStats.totalScans || 248})` },
-                  { id: "SUCCESS", label: `Approved (${historyStats.approvedScans || 231})` },
-                  { id: "ALREADY_USED", label: `Already Used (${historyStats.alreadyUsedScans || 12})` },
-                  { id: "WRONG_GATE", label: `Errors (${historyStats.invalidScans || 5})` },
+                  { id: "ALL", label: `All (${historyStats.totalScans ?? 0})` },
+                  { id: "SUCCESS", label: `Approved (${historyStats.approvedScans ?? 0})` },
+                  { id: "ALREADY_USED", label: `Already Used (${historyStats.alreadyUsedScans ?? 0})` },
+                  { id: "WRONG_GATE", label: `Errors (${historyStats.invalidScans ?? 0})` },
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -1492,7 +1693,7 @@ export default function StaffCheckinTerminalPage() {
                 className="btn-refresh-history"
                 onClick={() => fetchScanHistory()}
               >
-                🔄 Refresh Logs
+                Refresh Logs
               </button>
             </div>
 
@@ -1527,7 +1728,7 @@ export default function StaffCheckinTerminalPage() {
                         </td>
                         <td>{item.customerName || "N/A"}</td>
                         <td>
-                          <span style={{ color: "#94a3b8" }}>{gateAssignment?.gateName || "Gate A"}</span>
+                          <span style={{ color: "#94a3b8" }}>{item.gateName || gateAssignment?.gateName || "Gate A"}</span>
                         </td>
                         <td>
                           <span className="method-tag-dark">{item.scanMethod || "Dynamic QR"}</span>
@@ -1556,7 +1757,7 @@ export default function StaffCheckinTerminalPage() {
         <div className="terminal-offline-tab">
           <div className="card-offline-control">
             <div className="offline-card-header">
-              <h2>⚡ Offline Check-in Mode & Edge Sync</h2>
+              <h2>Offline Check-in Mode & Edge Sync</h2>
               <p className="card-subtext">
                 UC_14.5, UC_14.6, UC_14.7: Edge admission redundancy allows gates to verify tickets without cloud internet connection using IndexedDB cached packages.
               </p>
@@ -1566,7 +1767,7 @@ export default function StaffCheckinTerminalPage() {
               <div className="offline-info-card">
                 <span className="offline-card-title">Network Connectivity</span>
                 <strong style={{ fontSize: "1.3rem", color: isNetworkOnline ? "#10b981" : "#ef4444" }}>
-                  {isNetworkOnline ? "🟢 Online (Server Reachable)" : "🔴 Offline (Network Disconnected)"}
+                  {isNetworkOnline ? "Online (Server Reachable)" : "Offline (Network Disconnected)"}
                 </strong>
                 <p style={{ margin: "0.5rem 0 0", color: "#94a3b8", fontSize: "0.85rem" }}>
                   Current Mode: <strong style={{ color: isOfflineMode ? "#f59e0b" : "#10b981" }}>{isOfflineMode ? "Offline Verification Active" : "Cloud Online"}</strong>
@@ -1579,7 +1780,7 @@ export default function StaffCheckinTerminalPage() {
                   {offlinePackageMeta ? `${offlinePackageMeta.totalTickets || 3} Preloaded Tickets` : "No Package Loaded"}
                 </strong>
                 <p style={{ margin: "0.5rem 0 0", color: "#94a3b8", fontSize: "0.85rem" }}>
-                  Event: <strong>{offlinePackageMeta?.eventTitle || "Acoustic Night"}</strong>
+                  Event: <strong>{offlinePackageMeta?.eventTitle || "Assigned Concert"}</strong>
                 </p>
               </div>
 
@@ -1601,7 +1802,7 @@ export default function StaffCheckinTerminalPage() {
                 onClick={handleDownloadOfflinePackage}
                 disabled={downloadingPackage}
               >
-                {downloadingPackage ? "⏳ Preloading..." : "📥 Download / Refresh Offline Package"}
+                {downloadingPackage ? "Preloading..." : "Download / Refresh Offline Package"}
               </button>
 
               <button
@@ -1610,7 +1811,7 @@ export default function StaffCheckinTerminalPage() {
                 onClick={() => handleSyncOfflineScans(false)}
                 disabled={syncingOffline || offlineQueueCount === 0}
               >
-                {syncingOffline ? "🔄 Synchronizing..." : `⚡ Synchronize Scans to Server (${offlineQueueCount})`}
+                {syncingOffline ? "Synchronizing..." : `Synchronize Scans to Server (${offlineQueueCount})`}
               </button>
 
               <button
@@ -1618,7 +1819,7 @@ export default function StaffCheckinTerminalPage() {
                 className="btn-offline-action-warning"
                 onClick={() => setShowConflictModal(true)}
               >
-                ⚠️ Resolve Conflicts {pendingConflictsCount > 0 ? `(${pendingConflictsCount})` : ""}
+                Resolve Conflicts {pendingConflictsCount > 0 ? `(${pendingConflictsCount})` : ""}
               </button>
             </div>
           </div>
@@ -1644,15 +1845,6 @@ export default function StaffCheckinTerminalPage() {
           <div className="terminal-dialog-box">
             <div className={`terminal-dialog-header ${terminalDialog.type?.toLowerCase()}`}>
               <div className="dialog-header-left">
-                <span className="dialog-icon">
-                  {terminalDialog.type === "ERROR"
-                    ? "❌"
-                    : terminalDialog.type === "WARNING"
-                    ? "⚠️"
-                    : terminalDialog.type === "SYNC_RESULT"
-                    ? "🚀"
-                    : "ℹ️"}
-                </span>
                 <h3>{terminalDialog.title}</h3>
               </div>
               <button
@@ -1706,7 +1898,7 @@ export default function StaffCheckinTerminalPage() {
                     setShowConflictModal(true);
                   }}
                 >
-                  ⚠️ Resolve Conflicts Now
+                  Resolve Conflicts Now
                 </button>
               )}
               <button

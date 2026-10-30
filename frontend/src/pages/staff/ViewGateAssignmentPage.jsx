@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import checkinApi from "../../api/checkinApi";
+import staffApi from "../../api/staffApi";
 import { useAuth } from "../../context/AuthContext";
 import "./ViewGateAssignmentPage.css";
 
@@ -9,13 +10,41 @@ export default function ViewGateAssignmentPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const currentEventId = eventId ? Number(eventId) : 20; // Default to Acoustic Night (20) or 1
+  const [assignedEvents, setAssignedEvents] = useState([]);
   const [assignment, setAssignment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const currentEventId = eventId ? Number(eventId) : (assignedEvents.length > 0 ? assignedEvents[0].eventId : 20);
+
+  // Load events assigned to this staff member from event_staff table
   useEffect(() => {
-    fetchGateAssignment();
+    loadAssignedEvents();
+  }, [user?.userId, user?.id]);
+
+  const loadAssignedEvents = async () => {
+    try {
+      const staffId = user?.userId ?? user?.id ?? user?.UserId ?? 0;
+      const res = await staffApi.getMyAssignments(staffId);
+      const list = res.data?.data || [];
+      setAssignedEvents(list);
+
+      // If user navigated to base path without eventId or event is no longer assigned, auto-select their first assigned event
+      if (list.length > 0) {
+        const isCurrentAssigned = list.some((e) => e.eventId === Number(currentEventId));
+        if (!isCurrentAssigned) {
+          navigate(`/staff/gate-assignment/${list[0].eventId}`, { replace: true });
+        }
+      }
+    } catch (err) {
+      console.warn("Could not load staff assignments from event_staff:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (currentEventId) {
+      fetchGateAssignment();
+    }
   }, [currentEventId]);
 
   const fetchGateAssignment = async () => {
@@ -42,6 +71,26 @@ export default function ViewGateAssignmentPage() {
     navigate(`/staff/checkin/${targetEventId}`);
   };
 
+  const currentAssignedEvent = assignedEvents.find((e) => e.eventId === currentEventId);
+  const eventTitle =
+    currentEventId === 20
+      ? "Acoustic Night"
+      : currentEventId === 21
+      ? "Hà Anh Tuấn - \"Chân Trời Rực Rỡ\" Live Concert"
+      : currentAssignedEvent?.eventTitle
+      || (assignment?.eventTitle && !assignment.eventTitle.startsWith("Concert") && !assignment.eventTitle.startsWith("Event") ? assignment.eventTitle : null)
+      || assignment?.eventName
+      || `Event ${currentEventId}`;
+
+  const formatEventTime = () => {
+    if (currentAssignedEvent?.startsAt && currentAssignedEvent?.endsAt) {
+      const s = new Date(currentAssignedEvent.startsAt);
+      const e = new Date(currentAssignedEvent.endsAt);
+      return `${s.toLocaleDateString("vi-VN")} · ${s.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })} - ${e.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`;
+    }
+    return currentEventId === 20 ? "20/10/2026 · 18:00 - 23:59" : "20/11/2026 · 19:30 - 23:00";
+  };
+
   return (
     <div className="gate-assignment-page-wrapper">
       <div className="gate-assignment-container">
@@ -60,10 +109,15 @@ export default function ViewGateAssignmentPage() {
               onChange={(e) => navigate(`/staff/gate-assignment/${e.target.value}`)}
               className="event-select-dropdown"
             >
-              <option value="20">Event #20: Acoustic Night (Published)</option>
-              <option value="1">Event #1: Anh Trai Say Hi - Grand Finale (Cancelled)</option>
-              <option value="16">Event #16: AMEE - E11EVEN Tour 2027 (Postponed)</option>
-              <option value="17">Event #17: Hoàng Thùy Linh - See Tình Tour</option>
+              {assignedEvents.length > 0 ? (
+                assignedEvents.map((ev) => (
+                  <option key={ev.eventId} value={ev.eventId}>
+                    {ev.eventTitle} ({ev.gateName || "Main Gate"})
+                  </option>
+                ))
+              ) : (
+                <option value="" disabled>Chưa có sự kiện nào được phân công</option>
+              )}
             </select>
           </div>
         </div>
@@ -75,39 +129,35 @@ export default function ViewGateAssignmentPage() {
           </div>
         ) : error ? (
           <div className="gate-error-banner">
-            ⚠️ {error}
+            {error}
             <button className="btn-retry" onClick={fetchGateAssignment}>Retry</button>
           </div>
         ) : (
           <div className="gate-content-layout">
-            {/* Top Event Banner Card (Figure 113) */}
+            {/* Top Event Banner Card */}
             <div className="event-banner-card">
               <div className="banner-left">
-                <h2 className="event-name-pink">
-                  {currentEventId === 20 ? "Acoustic Night" : assignment?.eventTitle || "Acoustic Night"}
-                </h2>
-                <div className="event-date-sub">
-                  {currentEventId === 20 ? "20/10/2026 · 18:00 - 23:59" : "27/10/2026 · 19:00 - 23:00"}
-                </div>
+                <h2 className="event-name-pink">{eventTitle}</h2>
+                <div className="event-date-sub">{formatEventTime()}</div>
               </div>
               <div className="banner-right">
                 <span className="event-status-active">Event Active</span>
               </div>
             </div>
 
-            {/* Detail Grid Cards based strictly on Database Fields */}
+            {/* Detail Grid Cards based on Database Fields */}
             <div className="details-grid-2x2">
               {/* Card 1: Assigned Gate */}
               <div className="detail-dark-card">
                 <div className="card-label-gray">Assigned Gate</div>
                 <div className="card-value-white">
-                  {assignment?.gateName || "Gate A - Main Entrance"}
+                  {assignment?.gateName || currentAssignedEvent?.gateName || "Main Gate"}
                 </div>
                 <div className="card-meta-line">
                   Gate Code: <strong>{assignment?.gateId || "GATE_A"}</strong>
                 </div>
                 <div className="card-meta-line">
-                  Assigned Event: <strong>{currentEventId === 20 ? "Acoustic Night" : assignment?.eventTitle || "Acoustic Night"}</strong>
+                  Assigned Event: <strong>{eventTitle}</strong>
                 </div>
               </div>
 
@@ -120,10 +170,11 @@ export default function ViewGateAssignmentPage() {
                     : "17:30 - 00:30"}
                 </div>
                 <div className="card-meta-line">
-                  Shift Name: <strong>{assignment?.shiftName || "Evening Shift"}</strong>
+                  Shift Name: <strong>{assignment?.shiftName || "Active Shift"}</strong>
                 </div>
                 <div className="card-meta-line">
-                  Shift Status: <strong style={{ color: assignment?.isShiftActive !== false ? "#10b981" : "#ef4444" }}>
+                  Shift Status:{" "}
+                  <strong style={{ color: assignment?.isShiftActive !== false ? "#10b981" : "#ef4444" }}>
                     {assignment?.isShiftActive !== false ? "Active / In Progress" : "Inactive"}
                   </strong>
                 </div>
@@ -136,10 +187,13 @@ export default function ViewGateAssignmentPage() {
                   {user?.fullName || user?.email || "Check-in Officer"}
                 </div>
                 <div className="card-meta-line">
-                  Staff ID: <strong>#{user?.id || 1}</strong>
+                  Staff ID: <strong>{user?.userId || user?.id || 1}</strong>
                 </div>
                 <div className="card-meta-line">
-                  Scanned in Shift: <strong style={{ color: "#ff2d75" }}>{assignment?.totalScannedInShift || 248} scans</strong>
+                  Scanned in Shift:{" "}
+                  <strong style={{ color: "#ff2d75" }}>
+                    {assignment?.totalScannedInShift ?? 0} scans
+                  </strong>
                 </div>
               </div>
 
@@ -158,7 +212,7 @@ export default function ViewGateAssignmentPage() {
               </div>
             </div>
 
-            {/* Bottom Button (Figure 113) */}
+            {/* Bottom Button */}
             <div className="gate-footer-action">
               <button className="btn-open-terminal-pink" onClick={handleOpenScanner}>
                 Open Check-in Terminal
