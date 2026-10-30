@@ -141,12 +141,12 @@ export default function SubmitOrganizerVerificationPage() {
           color: notice.type === "success" ? "#10b981" : "#ef4444",
           fontWeight: "600",
         }}>
-          <span>{notice.type === "success" ? "✅ " : "⚠️ "}{notice.message}</span>
+          <span>{notice.message}</span>
           <button
             onClick={() => setNotice(null)}
-            style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", fontSize: "1.2rem", fontWeight: "bold" }}
+            style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", fontSize: "0.9rem", fontWeight: "600" }}
           >
-            ✕
+            Dismiss
           </button>
         </div>
       )}
@@ -162,9 +162,6 @@ export default function SubmitOrganizerVerificationPage() {
           {existingRequest && (
             <div className={`status-tracker-card ${existingRequest.status.toLowerCase()}`}>
               <div className="tracker-top">
-                <span className="tracker-icon">
-                  {existingRequest.status === "Approved" ? "🎉" : existingRequest.status === "Pending" ? "⏳" : "❌"}
-                </span>
                 <div>
                   <h2>Application Status: {existingRequest.status.toUpperCase()}</h2>
                   <p className="tracker-sub">
@@ -175,19 +172,19 @@ export default function SubmitOrganizerVerificationPage() {
 
               {existingRequest.status === "Approved" && (
                 <div className="approved-notice">
-                  ✅ <strong>Account Verified:</strong> Your enterprise credentials have been reviewed and approved by Platform Administrators. You have full access to Event Organizer features.
+                  <strong>Account Verified:</strong> Your enterprise credentials have been reviewed and approved by Platform Administrators. You have full access to Event Organizer features.
                 </div>
               )}
 
               {existingRequest.status === "Pending" && (
                 <div className="pending-notice">
-                  ⏳ <strong>Pending Review:</strong> Your uploaded documents are currently being audited by Platform Administrators. You will receive an automated email notification once the review is completed.
+                  <strong>Pending Review:</strong> Your uploaded documents are currently being audited by Platform Administrators. You will receive an automated email notification once the review is completed.
                 </div>
               )}
 
               {existingRequest.status === "Rejected" && (
                 <div className="rejected-notice">
-                  <strong>❌ Application Rejected:</strong>
+                  <strong>Application Rejected:</strong>
                   <p className="reason-text">{existingRequest.rejectionReason || "Verification criteria not met."}</p>
                   <p className="re-submit-hint">Please review the auditor notes above, update company information or attach clearer document files below, and re-submit.</p>
                 </div>
@@ -197,7 +194,7 @@ export default function SubmitOrganizerVerificationPage() {
 
           {/* Submission Form (UC_11.3) */}
           <div className="form-card">
-            <h3>🏢 Enterprise Legal Information & Document Upload</h3>
+            <h3>Enterprise Legal Information & Document Upload</h3>
 
             <form onSubmit={handleSubmit}>
               <div className="form-row-2">
@@ -278,13 +275,13 @@ export default function SubmitOrganizerVerificationPage() {
 
               {/* Cloudinary Document Upload Section with Image Previews */}
               <div className="upload-documents-section">
-                <h4>☁️ Upload Verification Documents (Cloudinary Cloud Storage)</h4>
+                <h4>Upload Verification Documents (Cloudinary Cloud Storage)</h4>
                 <p className="upload-hint">Upload high-resolution scanned images (JPG, PNG, WEBP) or PDF documents (max 10MB per file).</p>
 
                 <div className="upload-grid">
                   {/* File 1: Business License */}
                   <div className="upload-box">
-                    <span className="box-title">📄 Business Registration License *</span>
+                    <span className="box-title">Business Registration License *</span>
                     {businessLicenseDoc ? (
                       <div className="file-preview-card">
                         {businessLicenseDoc.isImage ? (
@@ -292,16 +289,16 @@ export default function SubmitOrganizerVerificationPage() {
                             <img src={businessLicenseDoc.previewUrl} alt="Business License Preview" className="doc-preview-img" />
                           </div>
                         ) : (
-                          <div className="pdf-preview-badge">📄 PDF File: {businessLicenseDoc.file.name}</div>
+                          <div className="pdf-preview-badge">PDF File: {businessLicenseDoc.file.name}</div>
                         )}
                         <div className="file-meta">
-                          <span className="file-name-text">✓ {businessLicenseDoc.file.name}</span>
+                          <span className="file-name-text">{businessLicenseDoc.file.name}</span>
                           <button
                             type="button"
                             className="btn-remove-file"
                             onClick={() => removeFile(setBusinessLicenseDoc, businessLicenseDoc)}
                           >
-                            ✕ Remove
+                            Remove
                           </button>
                         </div>
                       </div>
@@ -317,7 +314,7 @@ export default function SubmitOrganizerVerificationPage() {
 
                   {/* File 2: Representative ID */}
                   <div className="upload-box">
-                    <span className="box-title">🪪 Legal Representative ID / Passport *</span>
+                    <span className="box-title">Legal Representative ID / Passport *</span>
                     {representativeIdDoc ? (
                       <div className="file-preview-card">
                         {representativeIdDoc.isImage ? (
@@ -325,16 +322,16 @@ export default function SubmitOrganizerVerificationPage() {
                             <img src={representativeIdDoc.previewUrl} alt="ID / Passport Preview" className="doc-preview-img" />
                           </div>
                         ) : (
-                          <div className="pdf-preview-badge">📄 PDF File: {representativeIdDoc.file.name}</div>
+                          <div className="pdf-preview-badge">PDF File: {representativeIdDoc.file.name}</div>
                         )}
                         <div className="file-meta">
-                          <span className="file-name-text">✓ {representativeIdDoc.file.name}</span>
+                          <span className="file-name-text">{representativeIdDoc.file.name}</span>
                           <button
                             type="button"
                             className="btn-remove-file"
                             onClick={() => removeFile(setRepresentativeIdDoc, representativeIdDoc)}
                           >
-                            ✕ Remove
+                            Remove
                           </button>
                         </div>
                       </div>
@@ -350,7 +347,7 @@ export default function SubmitOrganizerVerificationPage() {
 
                   {/* File 3: Capability Portfolio */}
                   <div className="upload-box">
-                    <span className="box-title">📁 Track Record / Capability Portfolio</span>
+                    <span className="box-title">Track Record / Capability Portfolio</span>
                     {portfolioDoc ? (
                       <div className="file-preview-card">
                         {portfolioDoc.isImage ? (
@@ -358,16 +355,16 @@ export default function SubmitOrganizerVerificationPage() {
                             <img src={portfolioDoc.previewUrl} alt="Portfolio Preview" className="doc-preview-img" />
                           </div>
                         ) : (
-                          <div className="pdf-preview-badge">📄 Document File: {portfolioDoc.file.name}</div>
+                          <div className="pdf-preview-badge">Document File: {portfolioDoc.file.name}</div>
                         )}
                         <div className="file-meta">
-                          <span className="file-name-text">✓ {portfolioDoc.file.name}</span>
+                          <span className="file-name-text">{portfolioDoc.file.name}</span>
                           <button
                             type="button"
                             className="btn-remove-file"
                             onClick={() => removeFile(setPortfolioDoc, portfolioDoc)}
                           >
-                            ✕ Remove
+                            Remove
                           </button>
                         </div>
                       </div>
@@ -385,7 +382,7 @@ export default function SubmitOrganizerVerificationPage() {
 
               <div className="form-actions">
                 <button type="submit" className="btn-submit-verification" disabled={submitting}>
-                  {submitting ? "⏳ Uploading documents to Cloudinary..." : existingRequest ? "🔄 Update & Re-submit Documents" : "🚀 Submit Verification Documents"}
+                  {submitting ? "Uploading documents to Cloudinary..." : existingRequest ? "Update & Re-submit Documents" : "Submit Verification Documents"}
                 </button>
               </div>
             </form>

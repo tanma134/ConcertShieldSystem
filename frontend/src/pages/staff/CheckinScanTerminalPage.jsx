@@ -138,7 +138,7 @@ export default function CheckinScanTerminalPage() {
                     cursor: "pointer",
                   }}
                 >
-                  🟢 Entry
+                  Entry
                 </button>
                 <button
                   type="button"
@@ -154,7 +154,7 @@ export default function CheckinScanTerminalPage() {
                     cursor: "pointer",
                   }}
                 >
-                  🟡 Exit
+                  Exit
                 </button>
               </div>
             </div>
@@ -207,7 +207,7 @@ export default function CheckinScanTerminalPage() {
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px" }}>
-              <span style={{ fontSize: "2.5rem" }}>{lastResult.success ? "✅" : "❌"}</span>
+              <span style={{ fontSize: "1.1rem", fontWeight: "800", color: lastResult.success ? "#15803d" : "#b91c1c" }}>{lastResult.success ? "SUCCESS" : "REJECTED"}</span>
               <div>
                 <h2
                   style={{

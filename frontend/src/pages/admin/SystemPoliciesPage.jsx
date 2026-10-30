@@ -7,31 +7,26 @@ const CATEGORIES = [
   {
     id: "PRICE_TICKETING",
     name: "Pricing & Ticketing Policy",
-    icon: "🏷️",
     desc: "Regulations on official ticket pricing, platform service fees, per-order limits, and anti-scalping mechanisms.",
   },
   {
     id: "REFUND_CANCELLATION",
     name: "Refund & Event Cancellation",
-    icon: "🔄",
     desc: "Standards for 100% attendee refunds upon cancellation, refund processing timelines, and purchase protection.",
   },
   {
     id: "VIRTUAL_QUEUE",
     name: "Virtual Queue & Reservation",
-    icon: "⏳",
     desc: "Fair randomized queue number allocation, waiting room throughput, and seat reservation hold timeouts.",
   },
   {
     id: "RISK_ANTI_FRAUD",
     name: "Anti-Scalping & Dynamic QR Protection",
-    icon: "🛡️",
     desc: "Dynamic rotating QR security mandates, screenshot anti-fraud measures, and secondary market account blacklisting.",
   },
   {
     id: "TERMS_OF_SERVICE",
     name: "Platform Terms of Service (TOS)",
-    icon: "📜",
     desc: "Binding user agreements, legal responsibilities, and dispute resolution for Organizers, Attendees, and Platform.",
   },
 ];
@@ -146,7 +141,7 @@ export default function SystemPoliciesPage() {
         {/* Header Banner */}
         <header className="policy-gov-header">
           <div className="header-info">
-            <span className="policy-top-badge">⚖️ GOVERNANCE & POLICY VERSIONING</span>
+            <span className="policy-top-badge">GOVERNANCE & POLICY VERSIONING</span>
             <h1>Platform Policy Governance & Version Archive</h1>
             <p className="subtitle">
               Immutable platform archive and lifecycle management for ticketing policies, financial rules, and compliance standards.
@@ -154,21 +149,21 @@ export default function SystemPoliciesPage() {
             </p>
           </div>
           <button className="btn-publish-new" onClick={handleOpenCreateModal}>
-            📢 Enact New Policy Version
+            Enact New Policy Version
           </button>
         </header>
 
         {successMsg && (
           <div className="policy-toast success">
-            <span>✅ {successMsg}</span>
-            <button onClick={() => setSuccessMsg(null)}>✕</button>
+            <span>{successMsg}</span>
+            <button onClick={() => setSuccessMsg(null)}>Close</button>
           </div>
         )}
 
         {error && (
           <div className="policy-toast error">
-            <span>⚠️ {error}</span>
-            <button onClick={() => setError(null)}>✕</button>
+            <span>{error}</span>
+            <button onClick={() => setError(null)}>Close</button>
           </div>
         )}
 
@@ -180,7 +175,6 @@ export default function SystemPoliciesPage() {
               className={`cat-tab-btn ${selectedCategory === cat.id ? "active" : ""}`}
               onClick={() => setSelectedCategory(cat.id)}
             >
-              <span className="cat-icon">{cat.icon}</span>
               <div className="cat-text">
                 <strong>{cat.name}</strong>
               </div>
@@ -193,10 +187,10 @@ export default function SystemPoliciesPage() {
           <div className="active-policy-spotlight">
             <div className="spotlight-badge-row">
               <span className="badge-active-version">
-                🟢 Active In-Force Version: {activePolicy.versionCode} (v{activePolicy.versionNumber})
+                Active In-Force Version: {activePolicy.versionCode} (v{activePolicy.versionNumber})
               </span>
               <span className="badge-effective-date">
-                📅 Effective from: {new Date(activePolicy.effectiveDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                Effective from: {new Date(activePolicy.effectiveDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
               </span>
             </div>
 
@@ -213,7 +207,7 @@ export default function SystemPoliciesPage() {
                 className="btn-read-doc"
                 onClick={() => setReadingDoc(activePolicy)}
               >
-                📖 Read Full Policy Document
+                Read Full Policy Document
               </button>
             </div>
           </div>
@@ -223,7 +217,7 @@ export default function SystemPoliciesPage() {
         <section className="policy-history-section">
           <div className="history-section-header">
             <div>
-              <h3>📋 Enacted Version History ({currentCatObj.name})</h3>
+              <h3>Enacted Version History ({currentCatObj.name})</h3>
               <p>{currentCatObj.desc}</p>
             </div>
             <button
@@ -231,7 +225,7 @@ export default function SystemPoliciesPage() {
               onClick={() => loadHistory(selectedCategory)}
               disabled={loading}
             >
-              {loading ? "🔄 Querying..." : "🔄 Refresh Data"}
+              {loading ? "Querying..." : "Refresh Data"}
             </button>
           </div>
 
@@ -288,7 +282,7 @@ export default function SystemPoliciesPage() {
                       </td>
                       <td>
                         <span className={`status-pill ${item.status.toLowerCase()}`}>
-                          {item.status === "Active" ? "🟢 Active In-Force" : "⚪ Archived"}
+                          {item.status === "Active" ? "Active In-Force" : "Archived"}
                         </span>
                       </td>
                       <td>
@@ -296,7 +290,7 @@ export default function SystemPoliciesPage() {
                           className="btn-action-read"
                           onClick={() => setReadingDoc(item)}
                         >
-                          📖 Read Document
+                          Read Document
                         </button>
                       </td>
                     </tr>
@@ -321,23 +315,23 @@ export default function SystemPoliciesPage() {
                   </div>
                   <h2>{readingDoc.title}</h2>
                   <div className="doc-meta-row">
-                    <span>📅 Effective: <strong>{new Date(readingDoc.effectiveDate).toLocaleDateString("en-US")}</strong></span>
-                    <span>👤 Enacted By: <strong>{readingDoc.createdByAdminName}</strong></span>
-                    <span>🕒 Date Signed: <strong>{new Date(readingDoc.createdAt).toLocaleString("en-US")}</strong></span>
+                    <span>Effective: <strong>{new Date(readingDoc.effectiveDate).toLocaleDateString("en-US")}</strong></span>
+                    <span>Enacted By: <strong>{readingDoc.createdByAdminName}</strong></span>
+                    <span>Date Signed: <strong>{new Date(readingDoc.createdAt).toLocaleString("en-US")}</strong></span>
                   </div>
                 </div>
-                <button className="btn-close-doc" onClick={() => setReadingDoc(null)}>✕</button>
+                <button className="btn-close-doc" onClick={() => setReadingDoc(null)}>Close</button>
               </header>
 
               <div className="doc-modal-body">
                 <div className="doc-summary-box">
-                  <h4>📌 Scope & Purpose of Enactment:</h4>
+                  <h4>Scope & Purpose of Enactment:</h4>
                   <p><strong>Target Audience:</strong> {readingDoc.scope}</p>
                   <p><strong>Revision Justification:</strong> {readingDoc.changeSummary}</p>
                 </div>
 
                 <div className="doc-full-content">
-                  <h3>📜 Full Policy Provisions & Articles:</h3>
+                  <h3>Full Policy Provisions & Articles:</h3>
                   <div className="content-rendered">
                     {readingDoc.content.split("\n\n").map((para, idx) => (
                       <p key={idx}>{para}</p>
@@ -348,7 +342,7 @@ export default function SystemPoliciesPage() {
 
               <footer className="doc-modal-footer">
                 <span className="doc-hash-audit">
-                  🛡️ Immutable audit record from database (Policy ID #{readingDoc.policyId})
+                  Immutable audit record from database (Policy ID {readingDoc.policyId})
                 </span>
                 <button className="btn-done-read" onClick={() => setReadingDoc(null)}>
                   Close Document
@@ -364,10 +358,10 @@ export default function SystemPoliciesPage() {
             <div className="policy-create-modal" onClick={(e) => e.stopPropagation()}>
               <header className="create-modal-header">
                 <div>
-                  <h2>📢 Enact & Publish New Policy Version</h2>
+                  <h2>Enact & Publish New Policy Version</h2>
                   <p>Category: <strong>{currentCatObj.name}</strong></p>
                 </div>
-                <button className="btn-close-doc" onClick={() => setShowCreateModal(false)}>✕</button>
+                <button className="btn-close-doc" onClick={() => setShowCreateModal(false)}>Close</button>
               </header>
 
               <form onSubmit={handlePublishPolicy}>
@@ -436,7 +430,7 @@ export default function SystemPoliciesPage() {
 
                 <footer className="create-modal-footer">
                   <span className="create-note">
-                    ℹ️ When a new policy version is published, the currently active version is automatically transitioned to "Archived" status in the database.
+                    When a new policy version is published, the currently active version is automatically transitioned to "Archived" status in the database.
                   </span>
                   <div className="create-actions">
                     <button

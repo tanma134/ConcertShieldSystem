@@ -137,7 +137,6 @@ export default function RealtimeCheckinMonitorPage() {
     return (
       <div className="rcm-container" style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
         <div className="rcm-card" style={{ maxWidth: "480px", textAlign: "center", padding: "40px 24px" }}>
-          <div style={{ fontSize: "48px", marginBottom: "16px" }}>⛔</div>
           <h2 style={{ fontSize: "20px", fontWeight: 800, color: "#f87171", margin: "0 0 12px" }}>Access Denied (BR-398 / BR-61)</h2>
           <p style={{ fontSize: "14px", color: "#cbd5e1", lineHeight: 1.6, margin: "0 0 24px" }}>
             {error || "You do not have authorization to view the real-time check-in monitoring dashboard for this concert."}
@@ -169,7 +168,6 @@ export default function RealtimeCheckinMonitorPage() {
       <header className="rcm-header-bar">
         <div className="rcm-header-title">
           <h1>
-            <span>📊</span>
             <span>{eventTitle}</span>
             <span className="rcm-live-badge">
               <span className="rcm-pulse-dot"></span>
@@ -177,7 +175,7 @@ export default function RealtimeCheckinMonitorPage() {
             </span>
           </h1>
           <div className="rcm-header-subtitle">
-            Real-time Check-in Monitoring Dashboard • Event ID #{activeEventId}
+            Real-time Check-in Monitoring Dashboard • Event ID {activeEventId}
           </div>
         </div>
 
@@ -190,7 +188,7 @@ export default function RealtimeCheckinMonitorPage() {
           >
             {eventList.map((evt) => (
               <option key={evt.id} value={evt.id}>
-                {evt.title} (#{evt.id})
+                {evt.title} (ID: {evt.id})
               </option>
             ))}
           </select>
@@ -206,14 +204,14 @@ export default function RealtimeCheckinMonitorPage() {
             onClick={() => setShowConflictModal(true)}
             title="View & Resolve Offline Check-in Conflicts"
           >
-            ⚠️ Offline Conflicts {pendingConflictsCount > 0 ? `(${pendingConflictsCount})` : ""}
+            Offline Conflicts {pendingConflictsCount > 0 ? `(${pendingConflictsCount})` : ""}
           </button>
           <button
             className={`rcm-btn ${autoRefresh ? "rcm-btn-primary" : ""}`}
             onClick={() => setAutoRefresh(!autoRefresh)}
             title="Toggle automatic data push updates"
           >
-            {autoRefresh ? "⚡ Live Push: ON" : "⏸ Live Push: OFF"}
+            {autoRefresh ? "Live Push: ON" : "Live Push: OFF"}
           </button>
 
           <select
@@ -228,11 +226,11 @@ export default function RealtimeCheckinMonitorPage() {
           </select>
 
           <button className="rcm-btn" onClick={handleManualRefresh} disabled={refreshing}>
-            {refreshing ? "🔄 Refreshing..." : "🔄 Refresh Now"}
+            {refreshing ? "Refreshing..." : "Refresh Now"}
           </button>
 
           <button className="rcm-btn" onClick={() => navigate("/organizer/dashboard")}>
-            ← Dashboard
+            Dashboard
           </button>
         </div>
       </header>
@@ -240,8 +238,8 @@ export default function RealtimeCheckinMonitorPage() {
       <main className="rcm-content">
         {error && (
           <div style={{ background: "rgba(239, 68, 68, 0.2)", border: "1px solid #f87171", color: "#f87171", padding: "12px 18px", borderRadius: "10px", marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span>⚠️ {error}</span>
-            <button onClick={() => setError("")} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontWeight: 800 }}>✕</button>
+            <span>{error}</span>
+            <button onClick={() => setError("")} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontWeight: 800 }}>Close</button>
           </div>
         )}
 
@@ -251,7 +249,6 @@ export default function RealtimeCheckinMonitorPage() {
           <div className="rcm-metric-card">
             <div className="rcm-metric-label">
               <span>1. Total Tickets Issued</span>
-              <span className="rcm-metric-icon">🎫</span>
             </div>
             <div className="rcm-metric-value">{totalIssued.toLocaleString()}</div>
             <div style={{ fontSize: "12px", color: "#94a3b8" }}>Total sold/issued tickets</div>
@@ -264,7 +261,6 @@ export default function RealtimeCheckinMonitorPage() {
           <div className="rcm-metric-card">
             <div className="rcm-metric-label">
               <span>2. Checked-in</span>
-              <span className="rcm-metric-icon">✅</span>
             </div>
             <div className="rcm-metric-value" style={{ color: "#34d399" }}>{checkedIn.toLocaleString()}</div>
             <div style={{ fontSize: "12px", color: "#94a3b8" }}>Attendees passed gate</div>
@@ -277,7 +273,6 @@ export default function RealtimeCheckinMonitorPage() {
           <div className="rcm-metric-card">
             <div className="rcm-metric-label">
               <span>3. Pending Admission</span>
-              <span className="rcm-metric-icon">⏳</span>
             </div>
             <div className="rcm-metric-value" style={{ color: "#fbbf24" }}>{pending.toLocaleString()}</div>
             <div style={{ fontSize: "12px", color: "#94a3b8" }}>Tickets yet to enter</div>
@@ -290,7 +285,6 @@ export default function RealtimeCheckinMonitorPage() {
           <div className="rcm-metric-card">
             <div className="rcm-metric-label">
               <span>4. Occupancy Rate</span>
-              <span className="rcm-metric-icon">📈</span>
             </div>
             <div className="rcm-metric-value" style={{ color: "#c084fc" }}>{occupancyRate}%</div>
             <div style={{ fontSize: "12px", color: "#94a3b8" }}>(Checked-in / Total Issued) * 100</div>
@@ -303,7 +297,6 @@ export default function RealtimeCheckinMonitorPage() {
         {/* Scan Velocity Banner */}
         <div className="rcm-telemetry-banner">
           <div className="rcm-telemetry-item">
-            <div className="rcm-telemetry-icon">⚡</div>
             <div className="rcm-telemetry-text">
               <div>Current Velocity</div>
               <div>{currentScanRatePerMin} scans / min</div>
@@ -311,7 +304,6 @@ export default function RealtimeCheckinMonitorPage() {
           </div>
 
           <div className="rcm-telemetry-item">
-            <div className="rcm-telemetry-icon">🔥</div>
             <div className="rcm-telemetry-text">
               <div>Peak Rate Observed</div>
               <div>{peakScanRatePerMin} scans / min</div>
@@ -319,7 +311,6 @@ export default function RealtimeCheckinMonitorPage() {
           </div>
 
           <div className="rcm-telemetry-item">
-            <div className="rcm-telemetry-icon">🕒</div>
             <div className="rcm-telemetry-text">
               <div>Last Synced At</div>
               <div>{lastRefreshedAt ? lastRefreshedAt.toLocaleTimeString() : "--:--:--"}</div>
@@ -333,7 +324,6 @@ export default function RealtimeCheckinMonitorPage() {
           <div className="rcm-card">
             <div className="rcm-card-header">
               <div className="rcm-card-title">
-                <span>🚪</span>
                 <span>Gate Admission Breakdown</span>
               </div>
               <select
@@ -375,7 +365,6 @@ export default function RealtimeCheckinMonitorPage() {
           <div className="rcm-card">
             <div className="rcm-card-header">
               <div className="rcm-card-title">
-                <span>🪑</span>
                 <span>Ticket Tier & Seating Zone Breakdown</span>
               </div>
               <select
@@ -418,7 +407,6 @@ export default function RealtimeCheckinMonitorPage() {
         <div className="rcm-card">
           <div className="rcm-card-header">
             <div className="rcm-card-title">
-              <span>📡</span>
               <span>Recent Scan Telemetry Stream</span>
             </div>
             <span style={{ fontSize: "12px", color: "#94a3b8" }}>Showing latest entrance scans</span>

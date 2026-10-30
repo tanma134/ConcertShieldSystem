@@ -303,6 +303,15 @@ namespace CheckinAPI.DTOs
         [JsonPropertyName("isAssigned")]
         public bool IsAssigned { get; set; } = true;
 
+        [JsonPropertyName("eventId")]
+        public int EventId { get; set; }
+
+        [JsonPropertyName("eventTitle")]
+        public string EventTitle { get; set; } = string.Empty;
+
+        [JsonPropertyName("eventName")]
+        public string EventName { get; set; } = string.Empty;
+
         [JsonPropertyName("isShiftActive")]
         public bool IsShiftActive { get; set; } = true;
 

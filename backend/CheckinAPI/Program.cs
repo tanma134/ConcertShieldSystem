@@ -36,7 +36,7 @@ builder.Services.AddCors(options =>
 });
 
 // JWT Authentication Configuration
-var jwtSecret = builder.Configuration["Jwt:SecretKey"] ?? "AntigravityConcertShieldSystemJwtSuperSecretKey2026!#";
+var jwtSecret = builder.Configuration["Jwt:SecretKey"] ?? "SuperSecretKey_MustBe32CharsOrMore!@#";
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "AuthenticationAPI";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "AuthenticationAPIUsers";
 

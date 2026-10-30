@@ -94,8 +94,8 @@ export default function RequestOrganizerPage() {
 
           {isOrganizer && (
             <div className="org-alert org-alert--success">
-              🎉 You already have the <strong>Organizer</strong> role!{" "}
-              <Link to="/organizer/events/new">Create your first event →</Link>
+              You already have the <strong>Organizer</strong> role!{" "}
+              <Link to="/organizer/events/new">Create your first event</Link>
             </div>
           )}
 

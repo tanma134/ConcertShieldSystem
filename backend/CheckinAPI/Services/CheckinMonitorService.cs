@@ -170,7 +170,7 @@ namespace CheckinAPI.Services
 
                 // 5. Query Recent Scans directly from checkin_logs
                 using (var cmd = new NpgsqlCommand(@"
-                    SELECT COALESCE(checkin_id, 0) AS log_id, ticket_code, customer_name, zone_name, gate_name, scan_method, status, COALESCE(scanned_at, scan_time, NOW()) AS scanned_at
+                    SELECT log_id, ticket_code, customer_name, zone_name, gate_name, scan_method, status, COALESCE(scanned_at, scan_time, NOW()) AS scanned_at
                     FROM checkin_logs
                     WHERE event_id = @eid
                     ORDER BY scanned_at DESC
@@ -468,17 +468,20 @@ namespace CheckinAPI.Services
         // ==========================================
         public async Task<ScanResultResponseDTO> ManualCheckinAsync(ManualCheckinRequestDTO request, int staffUserId, string staffUserName)
         {
-            if (string.IsNullOrWhiteSpace(request.TicketCode))
+            string rawCode = (request.TicketCode ?? "").Trim();
+            string cccd = (request.CccdNumber ?? "").Trim();
+
+            if (string.IsNullOrWhiteSpace(rawCode) && string.IsNullOrWhiteSpace(cccd))
             {
                 return new ScanResultResponseDTO
                 {
                     Success = false,
                     Status = "INVALID_INPUT",
-                    Message = "Please enter a valid ticket code or serial number."
+                    Message = "Please enter Attendee ID / CCCD number or Ticket Code."
                 };
             }
 
-            if (string.IsNullOrWhiteSpace(request.CccdNumber) || request.CccdNumber.Trim().Length < 9)
+            if (string.IsNullOrWhiteSpace(cccd) || cccd.Length < 9)
             {
                 return new ScanResultResponseDTO
                 {
@@ -498,7 +501,6 @@ namespace CheckinAPI.Services
                 };
             }
 
-            string rawCode = request.TicketCode.Trim();
             string gateName = request.GateId == "GATE_B" ? "Gate B - North Wing" : "Gate A - Main Entrance";
 
             try
@@ -506,31 +508,62 @@ namespace CheckinAPI.Services
                 using var conn = new NpgsqlConnection(_ticketDbConnection);
                 await conn.OpenAsync();
 
-                string sql = @"
-                    SELECT t.ticket_id, t.ticket_code, t.event_id, t.ticket_type_name, t.owner_name, 
-                           t.status, t.is_checked_in, t.checked_in_at, t.gate_id,
-                           o.order_id, o.full_name, o.phone
-                    FROM tickets t
-                    LEFT JOIN orders o ON t.order_id = o.order_id
-                    WHERE (t.ticket_code::text ILIKE @code OR t.ticket_id::text = @code)
-                      AND t.is_deleted = false
-                    LIMIT 1;";
+                string sql;
+                if (!string.IsNullOrWhiteSpace(rawCode))
+                {
+                    sql = @"
+                        SELECT t.ticket_id, t.ticket_code, t.event_id, t.ticket_type_name, t.owner_name, 
+                               t.status, t.is_checked_in, t.checked_in_at, t.gate_id,
+                               o.order_id, o.full_name, o.phone
+                        FROM tickets t
+                        LEFT JOIN orders o ON t.order_id = o.order_id
+                        LEFT JOIN order_attendees oa ON o.order_id = oa.order_id
+                        WHERE (t.ticket_code::text ILIKE @code OR t.ticket_id::text = @exactCode)
+                          AND (t.event_id = @eid OR @eid <= 0)
+                          AND t.is_deleted = false
+                        LIMIT 1;";
+                }
+                else
+                {
+                    sql = @"
+                        SELECT t.ticket_id, t.ticket_code, t.event_id, t.ticket_type_name, t.owner_name, 
+                               t.status, t.is_checked_in, t.checked_in_at, t.gate_id,
+                               o.order_id, o.full_name, o.phone
+                        FROM tickets t
+                        LEFT JOIN orders o ON t.order_id = o.order_id
+                        LEFT JOIN order_attendees oa ON o.order_id = oa.order_id
+                        WHERE (oa.citizen_id ILIKE @cccd OR o.full_name ILIKE @cccd)
+                          AND (t.event_id = @eid OR @eid <= 0)
+                          AND t.is_deleted = false
+                        ORDER BY t.is_checked_in ASC, t.ticket_id ASC
+                        LIMIT 1;";
+                }
 
                 using var cmd = new NpgsqlCommand(sql, conn);
-                cmd.Parameters.AddWithValue("code", $"%{rawCode}%");
+                if (!string.IsNullOrWhiteSpace(rawCode))
+                {
+                    cmd.Parameters.AddWithValue("code", $"%{rawCode}%");
+                    cmd.Parameters.AddWithValue("exactCode", rawCode);
+                }
+                else
+                {
+                    cmd.Parameters.AddWithValue("cccd", $"%{cccd}%");
+                }
+                cmd.Parameters.AddWithValue("eid", request.EventId);
 
                 using var reader = await cmd.ExecuteReaderAsync();
                 if (!await reader.ReadAsync())
                 {
                     await reader.CloseAsync();
-                    await RecordScanLogAsync(conn, rawCode, "Attendee", "General", request.GateId, gateName, $"Manual ({request.ReasonCode})", "INVALID_TICKET", staffUserId, request.EventId);
+                    string searchRef = !string.IsNullOrWhiteSpace(rawCode) ? rawCode : $"CCCD {cccd}";
+                    await RecordScanLogAsync(conn, searchRef, "Attendee", "General", request.GateId, gateName, $"Manual ({request.ReasonCode})", "INVALID_TICKET", staffUserId, request.EventId);
 
                     return new ScanResultResponseDTO
                     {
                         Success = false,
                         Status = "TICKET_NOT_FOUND",
-                        Message = $"Ticket '{rawCode}' was not found in the ticketing database.",
-                        TicketCode = rawCode,
+                        Message = $"No ticket matching '{searchRef}' was found for this event in the database.",
+                        TicketCode = searchRef,
                         ScannedAt = DateTime.UtcNow
                     };
                 }
@@ -639,10 +672,11 @@ namespace CheckinAPI.Services
                 await conn.OpenAsync();
 
                 var sql = @"
-                    SELECT t.ticket_id, t.ticket_code, t.event_id, t.ticket_type_name, t.owner_name,
+                    SELECT DISTINCT ON (t.ticket_id)
+                           t.ticket_id, t.ticket_code, t.event_id, t.ticket_type_name, t.owner_name,
                            t.status, t.is_checked_in, t.checked_in_at, t.gate_id,
                            o.order_id, o.full_name, o.phone, o.email,
-                           COALESCE(oa.citizen_id, '001202000000') as citizen_id
+                           COALESCE(oa.citizen_id, '') as citizen_id
                     FROM tickets t
                     LEFT JOIN orders o ON t.order_id = o.order_id
                     LEFT JOIN order_attendees oa ON o.order_id = oa.order_id
@@ -655,11 +689,11 @@ namespace CheckinAPI.Services
 
                 if (searchType == "PHONE")
                 {
-                    sql += " AND (o.phone ILIKE @q OR oa.phone ILIKE @q OR t.owner_name ILIKE @q)";
+                    sql += " AND (o.phone ILIKE @q OR oa.phone ILIKE @q)";
                 }
                 else if (searchType == "EMAIL")
                 {
-                    sql += " AND (o.email ILIKE @q OR t.owner_name ILIKE @q)";
+                    sql += " AND o.email ILIKE @q";
                 }
                 else if (searchType == "ORDER_CODE")
                 {
@@ -678,7 +712,7 @@ namespace CheckinAPI.Services
                     sql += " AND (t.owner_name ILIKE @q OR o.full_name ILIKE @q)";
                 }
 
-                sql += " ORDER BY t.ticket_id ASC LIMIT 25;";
+                sql += " ORDER BY t.ticket_id ASC LIMIT 50;";
 
                 using var cmd = new NpgsqlCommand(sql, conn);
                 if (request.EventId > 0) cmd.Parameters.AddWithValue("eid", request.EventId);
@@ -693,7 +727,8 @@ namespace CheckinAPI.Services
                     string tCode = reader["ticket_code"]?.ToString() ?? "";
                     string oName = reader["owner_name"]?.ToString() ?? reader["full_name"]?.ToString() ?? "Attendee";
                     string status = reader["status"]?.ToString() ?? "Active";
-                    string cccd = reader["citizen_id"]?.ToString() ?? "001202000000";
+                    string cccd = reader["citizen_id"]?.ToString() ?? "";
+                    if (string.IsNullOrWhiteSpace(cccd) && searchType == "CCCD") cccd = query;
                     bool isChecked = Convert.ToBoolean(reader["is_checked_in"]) || status == "Used";
                     DateTime? checkAt = reader["checked_in_at"] != DBNull.Value ? Convert.ToDateTime(reader["checked_in_at"]) : null;
                     string gate = reader["gate_id"]?.ToString() ?? "Gate A";
@@ -705,7 +740,7 @@ namespace CheckinAPI.Services
                         CustomerName = oName,
                         MaskedPhone = searchType == "PHONE" ? phone : MaskString(phone, 3, 3),
                         MaskedEmail = searchType == "EMAIL" ? email : MaskEmail(email),
-                        MaskedCccd = searchType == "CCCD" ? cccd : MaskString(cccd, 3, 3),
+                        MaskedCccd = searchType == "CCCD" ? cccd : (string.IsNullOrWhiteSpace(cccd) ? "N/A" : MaskString(cccd, 3, 3)),
                         ZoneName = reader["ticket_type_name"]?.ToString() ?? "Standard Zone",
                         SeatNumber = "General Admission",
                         OrderId = reader["order_id"] != DBNull.Value ? $"ORD-{reader["order_id"]}" : "ORD-DIRECT",
@@ -761,16 +796,28 @@ namespace CheckinAPI.Services
                 await conn.OpenAsync();
 
                 // 1. Summary Statistics for the Event & Gate
-                using (var statCmd = new NpgsqlCommand(@"
+                var statSql = @"
                     SELECT 
                         COUNT(*) AS total,
                         COUNT(CASE WHEN status = 'SUCCESS' THEN 1 END) AS approved,
                         COUNT(CASE WHEN status = 'ALREADY_USED' THEN 1 END) AS already_used,
                         COUNT(CASE WHEN status NOT IN ('SUCCESS', 'ALREADY_USED') THEN 1 END) AS invalid
                     FROM checkin_logs
-                    WHERE (event_id = @eid OR @eid <= 0);", conn))
+                    WHERE (event_id = @eid OR @eid <= 0)";
+
+                if (!string.IsNullOrWhiteSpace(gateId) && !gateId.Equals("ALL", StringComparison.OrdinalIgnoreCase))
+                {
+                    statSql += " AND (gate_id = @gid OR gate_name ILIKE ('%' || @gid || '%') OR gate_id IS NULL)";
+                }
+
+                using (var statCmd = new NpgsqlCommand(statSql, conn))
                 {
                     statCmd.Parameters.AddWithValue("eid", eventId);
+                    if (!string.IsNullOrWhiteSpace(gateId) && !gateId.Equals("ALL", StringComparison.OrdinalIgnoreCase))
+                    {
+                        statCmd.Parameters.AddWithValue("gid", gateId);
+                    }
+
                     using var statReader = await statCmd.ExecuteReaderAsync();
                     if (await statReader.ReadAsync())
                     {
@@ -782,17 +829,40 @@ namespace CheckinAPI.Services
                 }
 
                 // 2. Filtered Scan Feed List
-                var sql = "SELECT COALESCE(checkin_id, 0) AS log_id, ticket_code, customer_name, zone_name, gate_name, scan_method, status, COALESCE(scanned_at, scan_time, NOW()) AS scanned_at FROM checkin_logs WHERE 1=1";
+                var sql = "SELECT log_id, ticket_code, customer_name, zone_name, gate_name, scan_method, status, COALESCE(scanned_at, scan_time, NOW()) AS scanned_at FROM checkin_logs WHERE 1=1";
                 if (eventId > 0) sql += " AND event_id = @eid";
-                if (!string.IsNullOrWhiteSpace(gateId) && !gateId.Equals("ALL", StringComparison.OrdinalIgnoreCase)) sql += " AND (gate_id = @gid OR gate_name ILIKE @gid OR gate_id IS NULL)";
-                if (!string.IsNullOrWhiteSpace(statusFilter) && !statusFilter.Equals("ALL", StringComparison.OrdinalIgnoreCase)) sql += " AND status = @st";
+                if (!string.IsNullOrWhiteSpace(gateId) && !gateId.Equals("ALL", StringComparison.OrdinalIgnoreCase))
+                {
+                    sql += " AND (gate_id = @gid OR gate_name ILIKE ('%' || @gid || '%') OR gate_id IS NULL)";
+                }
+
+                if (!string.IsNullOrWhiteSpace(statusFilter) && !statusFilter.Equals("ALL", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (statusFilter.Equals("ERRORS", StringComparison.OrdinalIgnoreCase) ||
+                        statusFilter.Equals("INVALID", StringComparison.OrdinalIgnoreCase) ||
+                        statusFilter.Equals("WRONG_GATE", StringComparison.OrdinalIgnoreCase))
+                    {
+                        sql += " AND status NOT IN ('SUCCESS', 'ALREADY_USED')";
+                    }
+                    else
+                    {
+                        sql += " AND status = @st";
+                    }
+                }
 
                 sql += " ORDER BY scanned_at DESC LIMIT 100;";
 
                 using var cmd = new NpgsqlCommand(sql, conn);
                 if (eventId > 0) cmd.Parameters.AddWithValue("eid", eventId);
                 if (!string.IsNullOrWhiteSpace(gateId) && !gateId.Equals("ALL", StringComparison.OrdinalIgnoreCase)) cmd.Parameters.AddWithValue("gid", gateId);
-                if (!string.IsNullOrWhiteSpace(statusFilter) && !statusFilter.Equals("ALL", StringComparison.OrdinalIgnoreCase)) cmd.Parameters.AddWithValue("st", statusFilter);
+                if (!string.IsNullOrWhiteSpace(statusFilter) && 
+                    !statusFilter.Equals("ALL", StringComparison.OrdinalIgnoreCase) &&
+                    !statusFilter.Equals("ERRORS", StringComparison.OrdinalIgnoreCase) &&
+                    !statusFilter.Equals("INVALID", StringComparison.OrdinalIgnoreCase) &&
+                    !statusFilter.Equals("WRONG_GATE", StringComparison.OrdinalIgnoreCase))
+                {
+                    cmd.Parameters.AddWithValue("st", statusFilter);
+                }
 
                 using var reader = await cmd.ExecuteReaderAsync();
                 while (await reader.ReadAsync())
