@@ -119,6 +119,16 @@ namespace EventAPI.Services
             if (dto.Name != null) entity.Name = dto.Name;
             if (dto.Description != null) entity.Description = dto.Description;
             if (dto.IsPublic.HasValue && isAdmin) entity.IsPublic = dto.IsPublic.Value;
+            if (dto.LayoutJson != null) entity.LayoutJson = dto.LayoutJson;
+            if (dto.Zones != null)
+            {
+                if (dto.Zones.Count == 0)
+                    throw new InvalidOperationException("At least one zone is required.");
+                foreach (var z in dto.Zones)
+                    ValidateTemplateZone(z);
+                entity.ZonesJson = JsonSerializer.Serialize(dto.Zones);
+            }
+            entity.UpdatedAt = DateTime.UtcNow;
 
             await _templateRepository.UpdateAsync(entity);
             return MapToResponse(entity);
@@ -136,9 +146,9 @@ namespace EventAPI.Services
             var template = await GetVisibleEntityAsync(templateId, callerId, isAdmin);
             var zones = DeserializeZones(template.ZonesJson);
 
-            if (dto.ZoneMappings == null || dto.ZoneMappings.Count != zones.Count)
+            if (dto.ZoneMappings == null || dto.ZoneMappings.Count == 0)
                 throw new InvalidOperationException(
-                    $"This template has {zones.Count} zone(s) — map every zone to a ticket type before applying it.");
+                    "At least one zone mapping is required before applying the template.");
 
             var ticketTypes = await _ticketTypeRepository.GetByEventIdAsync(eventId);
             var validTicketTypeIds = ticketTypes.Select(t => t.TicketTypeId).ToHashSet();

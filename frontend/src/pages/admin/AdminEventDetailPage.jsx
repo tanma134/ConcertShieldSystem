@@ -16,6 +16,7 @@ export default function AdminEventDetailPage() {
   const [complianceReady, setComplianceReady] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [errorDetails, setErrorDetails] = useState([]);
 
   const [showReject, setShowReject] = useState(false);
   const [reason, setReason] = useState("");
@@ -25,6 +26,7 @@ export default function AdminEventDetailPage() {
   const load = () => {
     setLoading(true);
     setError("");
+    setErrorDetails([]);
     eventApi
       .adminGetById(id)
       .then((res) => setEvent(res.data?.data || null))
@@ -49,7 +51,9 @@ export default function AdminEventDetailPage() {
       setEvent(res.data?.data || event);
       setResult({ type: "approved", message: res.data?.message });
     } catch (err) {
+      const apiErrors = err.response?.data?.errors || err.response?.data?.data?.errors || [];
       setError(err.response?.data?.message || "Could not approve this event.");
+      setErrorDetails(Array.isArray(apiErrors) ? apiErrors : []);
     } finally {
       setSubmitting(false);
     }
@@ -75,6 +79,30 @@ export default function AdminEventDetailPage() {
     }
   };
 
+  const [toggleLoading, setToggleLoading] = useState(false);
+
+  const handleToggleFeatured = async () => {
+    setToggleLoading(true);
+    setError("");
+    try {
+      const res = await eventApi.toggleFeatured(id);
+      const updated = res.data?.data;
+      if (updated) {
+        setEvent(updated);
+      } else {
+        setEvent((prev) => ({ ...prev, isFeatured: !prev.isFeatured }));
+      }
+      setResult({
+        type: "info",
+        message: res.data?.message || (event.isFeatured ? "Removed from Featured" : "Marked as Featured")
+      });
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not update Featured status.");
+    } finally {
+      setToggleLoading(false);
+    }
+  };
+
   const canDecide = event?.status === "Pending";
 
   return (
@@ -87,12 +115,23 @@ export default function AdminEventDetailPage() {
               Check everything below, then approve or reject this submission.
             </p>
           </div>
-          <Link to="/admin/events" className="tb-btn tb-btn-outline">
+          <Link to="/admin/events" className="tb-btn tb-btn-outline" style={{ textDecoration: "none" }}>
             ← Back to queue
           </Link>
         </div>
 
-        {error && <div className="ow-error">{error}</div>}
+        {error && (
+          <div className="ow-error">
+            <div><strong>{error}</strong></div>
+            {errorDetails.length > 0 && (
+              <ul style={{ margin: "8px 0 0", paddingLeft: "20px" }}>
+                {errorDetails.map((msg, idx) => (
+                  <li key={idx}>{msg}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
         {loading && <div className="tb-loading">Loading...</div>}
 
         {result && (
@@ -119,13 +158,58 @@ export default function AdminEventDetailPage() {
               )}
               <div>
                 <h3>{event.title}</h3>
-                <span
-                  className={
-                    "admin-status-pill admin-status-" + (event.status || "").toLowerCase()
-                  }
-                >
-                  {event.status}
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", margin: "6px 0 10px", flexWrap: "wrap" }}>
+                  <span
+                    className={
+                      "admin-status-pill admin-status-" + (event.status || "").toLowerCase()
+                    }
+                  >
+                    {event.status}
+                  </span>
+                  {event.isFeatured ? (
+                    <span style={{
+                      background: "rgba(234, 179, 8, 0.15)",
+                      border: "1px solid rgba(234, 179, 8, 0.4)",
+                      color: "#facc15",
+                      padding: "2px 8px",
+                      borderRadius: "999px",
+                      fontSize: "12px",
+                      fontWeight: 600
+                    }}>
+                      ⭐ Featured on Homepage
+                    </span>
+                  ) : (
+                    <span style={{
+                      background: "rgba(148, 163, 184, 0.1)",
+                      border: "1px solid rgba(148, 163, 184, 0.2)",
+                      color: "#94a3b8",
+                      padding: "2px 8px",
+                      borderRadius: "999px",
+                      fontSize: "12px"
+                    }}>
+                      Regular Event
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    className="tb-btn tb-btn-outline"
+                    onClick={handleToggleFeatured}
+                    disabled={toggleLoading}
+                    style={{
+                      padding: "4px 10px",
+                      fontSize: "12px",
+                      borderRadius: "6px",
+                      borderColor: event.isFeatured ? "#eab308" : "rgba(255, 255, 255, 0.2)",
+                      color: event.isFeatured ? "#fef08a" : "#cbd5e1"
+                    }}
+                  >
+                    {toggleLoading
+                      ? "Updating..."
+                      : event.isFeatured
+                      ? "⭐ Unmark Featured"
+                      : "☆ Mark as Featured"}
+                  </button>
+                </div>
                 {event.shortDescription && <p>{event.shortDescription}</p>}
                 <p className="ow-hint">
                   {formatDateRange(event.startsAt, event.endsAt)}
@@ -172,7 +256,7 @@ export default function AdminEventDetailPage() {
               <StepTicketsSeating
                 eventId={Number(id)}
                 event={event}
-                forceEditable
+                readOnly
                 standalone
                 onRefresh={load}
                 onSaved={load}
@@ -180,33 +264,51 @@ export default function AdminEventDetailPage() {
             </section>
 
             <GovernancePanel event={event} admin onUpdated={load} onCompliance={setComplianceReady} />
-            {canDecide && (
-              <div className="ow-actions">
-                <button
-                  type="button"
-                  className="tb-btn tb-btn-outline"
-                  onClick={() => navigate("/admin/events")}
-                >
-                  ← Back to queue
-                </button>
-                <button
-                  type="button"
-                  className="tb-btn tb-btn-outline admin-btn-danger"
-                  onClick={() => setShowReject((v) => !v)}
-                  disabled={submitting}
-                >
-                  {showReject ? "Close" : "✕ Reject"}
-                </button>
-                <button
-                  type="button"
-                  className="tb-btn tb-btn-primary"
-                  onClick={handleApprove}
-                  disabled={submitting || !complianceReady}
-                >
-                  {submitting ? "Working..." : "✓ Approve & Publish"}
-                </button>
-              </div>
-            )}
+            <div className="ow-actions">
+              <button
+                type="button"
+                className="tb-btn tb-btn-outline"
+                onClick={() => navigate("/admin/events")}
+              >
+                ← Back to queue
+              </button>
+              <button
+                type="button"
+                className="tb-btn tb-btn-outline"
+                onClick={handleToggleFeatured}
+                disabled={toggleLoading}
+                style={{
+                  borderColor: event.isFeatured ? "#eab308" : "rgba(255, 255, 255, 0.25)",
+                  color: event.isFeatured ? "#fef08a" : "inherit"
+                }}
+              >
+                {toggleLoading
+                  ? "Updating..."
+                  : event.isFeatured
+                  ? "⭐ Remove from Featured"
+                  : "⭐ Mark as Featured"}
+              </button>
+              {canDecide && (
+                <>
+                  <button
+                    type="button"
+                    className="tb-btn tb-btn-outline admin-btn-danger"
+                    onClick={() => setShowReject((v) => !v)}
+                    disabled={submitting}
+                  >
+                    {showReject ? "Close" : "✕ Reject"}
+                  </button>
+                  <button
+                    type="button"
+                    className="tb-btn tb-btn-primary"
+                    onClick={handleApprove}
+                    disabled={submitting || !complianceReady}
+                  >
+                    {submitting ? "Working..." : "✓ Approve & Publish"}
+                  </button>
+                </>
+              )}
+            </div>
 
             {canDecide && showReject && (
               <form className="ow-inline-form" onSubmit={handleReject}>

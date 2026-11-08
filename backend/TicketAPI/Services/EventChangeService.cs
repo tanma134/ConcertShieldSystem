@@ -9,6 +9,13 @@ public class EventChangeService(TicketDbContext db)
 {
     // Payment callback và apply dùng cùng advisory lock trong TicketDB, kể cả khi chạy nhiều instance.
     public async Task LockEventAsync(int eventId, CancellationToken ct) { await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(7421, {eventId})", ct); }
+    private static bool DatesEqual(DateTime? a, DateTime? b)
+    {
+        if (!a.HasValue && !b.HasValue) return true;
+        if (!a.HasValue || !b.HasValue) return false;
+        return Math.Abs((a.Value - b.Value).TotalSeconds) < 1;
+    }
+
     public async Task ApplyAsync(ApplyChangeInput input, CancellationToken ct)
     {
         if (input.ChangeId <= 0 || input.EventId <= 0 || input.ScheduleVersion < 1 || (input.Type != "Postpone" && input.Type != "Reschedule")) throw new ArgumentException("Invalid event change.");
@@ -18,7 +25,7 @@ public class EventChangeService(TicketDbContext db)
         var existing = await db.Set<AppliedEventChange>().FindAsync(new object[] { input.ChangeId }, ct);
         if (existing != null)
         {
-            if (existing.EventId != input.EventId || existing.ScheduleVersion != input.ScheduleVersion || existing.Type != input.Type || existing.StartsAt != input.StartsAt || existing.EndsAt != input.EndsAt) throw new InvalidOperationException("Idempotency key was reused for a different change.");
+            if (existing.EventId != input.EventId || existing.ScheduleVersion != input.ScheduleVersion || existing.Type != input.Type || !DatesEqual(existing.StartsAt, input.StartsAt) || !DatesEqual(existing.EndsAt, input.EndsAt)) throw new InvalidOperationException("Idempotency key was reused for a different change.");
             return;
         }
         if (await db.Set<AppliedEventChange>().AnyAsync(x => x.EventId == input.EventId && x.ScheduleVersion >= input.ScheduleVersion, ct)) throw new InvalidOperationException("Stale schedule change.");

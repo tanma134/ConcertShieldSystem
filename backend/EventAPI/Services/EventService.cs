@@ -494,6 +494,22 @@ namespace EventAPI.Services
             return await MapToResponseWithSeatingAsync(reloaded!);
         }
 
+        public async Task<EventResponseDTO> ToggleFeaturedAsync(int id, int adminId)
+        {
+            var entity = await _eventRepository.GetByIdAsync(id, includeChildren: false)
+                ?? throw new KeyNotFoundException($"Event #{id} not found.");
+
+            entity.IsFeatured = !entity.IsFeatured;
+            entity.UpdatedBy = adminId;
+            entity.UpdatedAt = DateTime.UtcNow;
+
+            await _eventRepository.UpdateAsync(entity);
+            _logger.LogInformation("Event {EventId} featured status changed to {IsFeatured} by admin {AdminId}", id, entity.IsFeatured, adminId);
+
+            var reloaded = await _eventRepository.GetByIdAsync(id, includeChildren: true);
+            return await MapToResponseWithSeatingAsync(reloaded!);
+        }
+
         public async Task<EventResponseDTO> CancelAsync(int id, int callerId, bool isAdmin)
         {
             var entity = await GetOwnedEntityAsync(id, callerId, isAdmin);
@@ -593,7 +609,7 @@ namespace EventAPI.Services
         {
             ComplianceStatus = e.ComplianceStatus,
             ScheduleAnnounced = e.Status != EventStatus.Postponed,
-            CanSell = EventStatus.Normalize(e.Status) == EventStatus.Published && !e.SalesFrozen && GovernanceRules.ComplianceApproved(e) && e.StartsAt > DateTime.UtcNow && e.TicketTypes.Any(t => !t.IsDeleted && t.Status == "Active" && t.Quantity > t.SoldQuantity && (!t.SalesStartsAt.HasValue || t.SalesStartsAt <= DateTime.UtcNow) && (!t.SalesEndsAt.HasValue || t.SalesEndsAt > DateTime.UtcNow)),
+            CanSell = EventStatus.Normalize(e.Status) == EventStatus.Published && !e.SalesFrozen && GovernanceRules.ComplianceApproved(e) && (e.EndsAt != default ? e.EndsAt > DateTime.UtcNow : e.StartsAt > DateTime.UtcNow) && e.TicketTypes.Any(t => !t.IsDeleted && t.Status == "Active" && t.Quantity > t.SoldQuantity && (!t.SalesStartsAt.HasValue || t.SalesStartsAt <= DateTime.UtcNow) && (!t.SalesEndsAt.HasValue || t.SalesEndsAt > DateTime.UtcNow)),
             EventId = e.EventId,
             OrganizerId = e.OrganizerId,
             CategoryId = e.CategoryId,

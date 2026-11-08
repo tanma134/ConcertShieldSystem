@@ -379,6 +379,21 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
+        /// <summary>Toggles the IsFeatured flag for a concert. Admin only.</summary>
+        [HttpPost("{id:int}/feature")]
+        [HttpPatch("{id:int}/feature")]
+        [Authorize(Policy = "RequireAdmin")]
+        public async Task<IActionResult> ToggleFeatured(int id)
+        {
+            try
+            {
+                var result = await _eventService.ToggleFeaturedAsync(id, CurrentUserId);
+                var msg = result.IsFeatured ? "Concert marked as featured." : "Concert removed from featured.";
+                return Ok(ApiResponseDTO<EventResponseDTO>.SuccessResponse(result, msg));
+            }
+            catch (Exception ex) { return HandleException(ex); }
+        }
+
         // =====================================================================
         // POSTER / BANNER (Cloudinary)
         // =====================================================================

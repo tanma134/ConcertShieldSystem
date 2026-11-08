@@ -89,7 +89,22 @@ export default function AdminEventsPage() {
                       )}
                     </td>
                     <td>
-                      <div className="ow-td-title">{ev.title}</div>
+                      <div className="ow-td-title" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span>{ev.title}</span>
+                        {ev.isFeatured && (
+                          <span style={{
+                            background: "rgba(234, 179, 8, 0.2)",
+                            color: "#facc15",
+                            padding: "1px 6px",
+                            borderRadius: "4px",
+                            fontSize: "11px",
+                            fontWeight: 600,
+                            whiteSpace: "nowrap"
+                          }}>
+                            ⭐ Featured
+                          </span>
+                        )}
+                      </div>
                       {ev.hasSeatingChart && (
                         <div className="ow-td-sub">Has seating chart</div>
                       )}

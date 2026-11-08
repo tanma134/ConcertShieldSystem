@@ -517,7 +517,13 @@ function renderPhysicalSeats(zone, width, height, color) {
 }
 
 function zoneCapacityText(zone) {
-  const capacity = Number(zone.capacity ?? zone.totalSeats ?? zone.seats?.length ?? 0);
+  const capacity = Number(
+    zone.capacity ??
+    zone.totalSeats ??
+    (zone.rows && zone.seatsPerRow ? zone.rows * zone.seatsPerRow : null) ??
+    zone.seats?.length ??
+    0
+  );
   return zone.zoneType === "Standing" ? `${capacity} standing` : `${capacity} seats`;
 }
 

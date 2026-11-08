@@ -13,7 +13,6 @@ const eventApi = {
   getByCategory: (categoryId, filter = {}) =>
     axiosClient.get(`/events/category/${categoryId}`, { params: filter }),
   getBySlug: (slug) => axiosClient.get(`/events/slug/${slug}`),
-  getById: (id) => axiosClient.get(`/events/${id}`),
   checkSlug: (slug, excludeEventId = null) =>
     axiosClient.get("/events/slug-availability", {
       params: { slug, ...(excludeEventId ? { excludeEventId } : {}) },
@@ -60,6 +59,7 @@ const eventApi = {
   adminGetById: (id) => axiosClient.get(`/events/admin/${id}`),
   approve: (id) => axiosClient.post(`/events/${id}/approve`),
   reject: (id, reason) => axiosClient.post(`/events/${id}/reject`, { reason }),
+  toggleFeatured: (id) => axiosClient.post(`/events/${id}/feature`),
 };
 
 export default eventApi;

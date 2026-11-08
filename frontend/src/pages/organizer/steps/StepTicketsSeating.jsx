@@ -1,6 +1,7 @@
 import { pricingTimeError, nextLocalMinute } from '../../../utils/eventTimeRules';
 import { useToastedError } from "../../../components/ToastProvider";
 import { Fragment, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import ticketTypeApi from "../../../api/ticketTypeApi";
 import seatingApi from "../../../api/seatingApi";
 import seatingTemplateApi from "../../../api/seatingTemplateApi";
@@ -100,6 +101,34 @@ export default function StepTicketsSeating({
             readOnly={readOnly}
           />}
 
+          {(!only || only === "refunds") && (
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              background: "rgba(192, 38, 211, 0.08)",
+              border: "1px solid rgba(192, 38, 211, 0.25)",
+              borderRadius: "10px",
+              padding: "14px 18px",
+              marginBottom: "18px",
+              marginTop: "24px",
+              flexWrap: "wrap",
+              gap: "12px"
+            }}>
+              <div>
+                <strong style={{ color: "var(--tb-text, #f5f3fb)", display: "block", marginBottom: "4px" }}>
+                  📋 Compliance Documents & Event Governance
+                </strong>
+                <span style={{ color: "var(--tb-text-muted, #a89db8)", fontSize: "13px" }}>
+                  Upload required event legal documents and verification before submitting for approval.
+                </span>
+              </div>
+              <Link to={`/organizer/events/${eventId}/compliance`} className="tb-btn tb-btn-outline ow-btn-sm">
+                Compliance documents →
+              </Link>
+            </div>
+          )}
+
           {(!only || only === "refunds") && <RefundPolicySection
             eventId={eventId}
             refundPolicies={refundPolicies}
@@ -186,7 +215,7 @@ function DynamicPricingSection({ ticketTypes, event, readOnly }) {
     <div className="ow-section-head"><h3>Dynamic Pricing Rules</h3>{!readOnly && <button type="button" className="tb-btn tb-btn-outline ow-btn-sm" onClick={() => setShowForm((v) => !v)}>{showForm ? "Close" : "+ Add pricing rule"}</button>}</div>
     {error && <div className="ow-error">{error}</div>}
     {!rules.length && <div className="ow-empty-row">No dynamic pricing rules yet.</div>}
-    {!!rules.length && <table className="ow-table"><thead><tr><th>Rule</th><th>Ticket</th><th>Type</th><th>Adjustment</th><th>Discount period</th>{!readOnly && <th></th>}</tr></thead><tbody>{rules.map((r) => <tr key={r.pricingRuleId}><td>{r.ruleName}</td><td>{ticketTypes.find((t) => t.ticketTypeId === r.ticketTypeId)?.typeName}</td><td>{r.ruleType}</td><td>{r.adjustedPrice != null ? formatPrice(r.adjustedPrice) : `${r.discountPercent}% off`}</td><td>{r.ruleType === "QuantityBased" ? "Quantity threshold" : `${r.triggerFrom ? new Date(r.triggerFrom).toLocaleString() : "—"} → ${r.triggerTo ? new Date(r.triggerTo).toLocaleString() : "—"}`}</td>{!readOnly && <td><button type="button" className="ow-link-danger" onClick={() => remove(r.pricingRuleId)}>Delete</button></td>}</tr>)}</tbody></table>}
+    {!!rules.length && <table className="ow-table"><thead><tr><th>Rule</th><th>Ticket</th><th>Type</th><th>Adjustment</th><th>Discount period</th>{!readOnly && <th></th>}</tr></thead><tbody>{rules.map((r) => <tr key={r.pricingRuleId}><td>{r.ruleName}</td><td>{ticketTypes.find((t) => t.ticketTypeId === r.ticketTypeId)?.typeName}</td><td>{r.ruleType}</td><td>{r.adjustedPrice != null ? formatPrice(r.adjustedPrice) : `${r.discountPercent}% off`}</td><td>{r.ruleType === "QuantityBased" ? "Quantity threshold" : `${r.triggerFrom ? new Date(r.triggerFrom).toLocaleString() : "—"} → ${r.triggerTo ? new Date(r.triggerTo).toLocaleString() : "—"}`}</td>{!readOnly && <td><button type="button" className="ow-link-danger" onClick={() => { if (window.confirm("Are you sure you want to delete this pricing rule?")) remove(r.pricingRuleId); }}>Delete</button></td>}</tr>)}</tbody></table>}
     {!readOnly && showForm && <form className="ow-inline-form" onSubmit={submit}><div className="ow-grid">
       <label className="ow-field"><span>Ticket class *</span><select value={form.ticketTypeId} onChange={(e) => setForm({ ...form, ticketTypeId: e.target.value })}><option value="">-- Select --</option>{ticketTypes.map((t) => <option key={t.ticketTypeId} value={t.ticketTypeId}>{t.typeName}</option>)}</select></label>
       <label className="ow-field"><span>Rule name *</span><input value={form.ruleName} onChange={(e) => setForm({ ...form, ruleName: e.target.value })} /></label>
@@ -250,6 +279,9 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
     setError("");
     setTouched({});
     setShowForm(true);
+    setTimeout(() => {
+      document.getElementById("ticket-type-form")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, 50);
   };
 
   const cancelEdit = () => {
@@ -370,6 +402,8 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
   };
 
   const handleDelete = async (ticketTypeId) => {
+    const t = ticketTypes.find((x) => x.ticketTypeId === ticketTypeId);
+    if (!window.confirm(`Are you sure you want to delete ticket type "${t?.typeName || ticketTypeId}"?`)) return;
     setError("");
     try {
       await ticketTypeApi.remove(ticketTypeId);
@@ -480,7 +514,12 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
       )}
 
       {!readOnly && showForm && (
-        <form className="ow-inline-form" onSubmit={handleAdd}>
+        <form id="ticket-type-form" className="ow-inline-form" onSubmit={handleAdd}>
+          {editingId && (
+            <div style={{ marginBottom: "14px", color: "#d8b4fe", fontWeight: 600, fontSize: "14px" }}>
+              ✏️ Editing Ticket Type: {form.typeName || "Ticket"}
+            </div>
+          )}
           <div className="ow-grid">
             <label className="ow-field">
               <span>Ticket type name *</span>
@@ -727,6 +766,9 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
     setShowForm(true);
     setError("");
     setTouched({});
+    setTimeout(() => {
+      document.getElementById("seating-zone-form")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, 50);
   };
 
   const resetZoneForm = () => {
@@ -802,6 +844,8 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
   };
 
   const handleDeleteZone = async (seatZoneId) => {
+    const z = (chart?.zones || []).find((x) => x.seatZoneId === seatZoneId);
+    if (!window.confirm(`Are you sure you want to delete zone "${z?.zoneName || seatZoneId}"?`)) return;
     setError("");
     try {
       await seatingApi.removeZone(seatZoneId);
@@ -990,7 +1034,12 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
               )}
 
               {showForm && (
-                <form className="ow-inline-form" onSubmit={handleAddZone}>
+                <form id="seating-zone-form" className="ow-inline-form" onSubmit={handleAddZone}>
+                  {editingZoneId && (
+                    <div style={{ marginBottom: "14px", color: "#d8b4fe", fontWeight: 600, fontSize: "14px" }}>
+                      ✏️ Editing Seating Zone: {form.zoneName || "Zone"}
+                    </div>
+                  )}
                   <div className="ow-grid">
                     <label className="ow-field">
                       <span>Zone name *</span>
@@ -1225,7 +1274,24 @@ function TemplatePicker({ eventId, ticketTypes, onApplied }) {
   const [error, setError] = useToastedError();
   const [selected, setSelected] = useState(null); // full SeatingTemplateResponseDTO
   const [mappings, setMappings] = useState({}); // zoneIndex -> editable zone copy
+  const [excludedZones, setExcludedZones] = useState(new Set()); // excluded zone indexes
   const [applying, setApplying] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState(null); // template being edited
+  const [editForm, setEditForm] = useState({ name: "", description: "", zones: [] });
+  const [editSaving, setEditSaving] = useState(false);
+
+  const loadTemplates = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await seatingTemplateApi.getVisible();
+      setTemplates(res.data?.data || []);
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not load templates.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -1250,32 +1316,169 @@ function TemplatePicker({ eventId, ticketTypes, onApplied }) {
 
   const openTemplate = async (id) => {
     setError("");
+    setEditingTemplate(null);
     try {
       const res = await seatingTemplateApi.getById(id);
       const full = res.data?.data;
       setSelected(full);
-      setMappings(Object.fromEntries((full.zones || []).map((zone, index) => [index, {
-        ticketTypeId: "", zoneName: zone.zoneName, zoneType: zone.zoneType,
-        rows: zone.rows || 1, seatsPerRow: zone.seatsPerRow || 1,
-        rowLabelPrefix: zone.rowLabelPrefix || "A", capacity: zone.capacity || 1,
-        shapeJson: zone.shapeJson || null,
-      }])));
+      setExcludedZones(new Set());
+      setMappings(
+        Object.fromEntries(
+          (full.zones || []).map((zone, index) => [
+            index,
+            {
+              ticketTypeId: "",
+              zoneName: zone.zoneName,
+              zoneType: zone.zoneType,
+              rows: zone.rows || 1,
+              seatsPerRow: zone.seatsPerRow || 1,
+              rowLabelPrefix: zone.rowLabelPrefix || "A",
+              capacity: zone.capacity || 1,
+              shapeJson: zone.shapeJson || null,
+            },
+          ])
+        )
+      );
     } catch (err) {
       setError(err.response?.data?.message || "Could not load this template.");
     }
   };
 
+  const startEditTemplate = async (t) => {
+    setError("");
+    setSelected(null);
+    try {
+      const res = await seatingTemplateApi.getById(t.seatingTemplateId);
+      const full = res.data?.data || t;
+      setEditingTemplate(full);
+      setEditForm({
+        name: full.name || "",
+        description: full.description || "",
+        zones:
+          full.zones && full.zones.length > 0
+            ? full.zones.map((z, idx) => ({ ...z, _id: idx + 1 }))
+            : [
+                {
+                  _id: 1,
+                  zoneName: "Zone A",
+                  zoneType: "Seated",
+                  rows: 10,
+                  seatsPerRow: 10,
+                  rowLabelPrefix: "A",
+                  capacity: 100,
+                },
+              ],
+      });
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not load template details.");
+    }
+  };
+
+  const cancelEditTemplate = () => {
+    setEditingTemplate(null);
+    setEditForm({ name: "", description: "", zones: [] });
+  };
+
+  const handleSaveTemplateEdit = async (e) => {
+    e.preventDefault();
+    if (!editForm.name.trim()) {
+      setError("Template name is required.");
+      return;
+    }
+    if (!editForm.zones.length) {
+      setError("Template must have at least one zone.");
+      return;
+    }
+    setEditSaving(true);
+    setError("");
+    try {
+      await seatingTemplateApi.update(editingTemplate.seatingTemplateId, {
+        name: editForm.name.trim(),
+        description: editForm.description.trim() || null,
+        zones: editForm.zones.map((z) => ({
+          zoneName: z.zoneName,
+          zoneType: z.zoneType,
+          shapeJson: z.shapeJson,
+          rows: Number(z.rows) || 1,
+          seatsPerRow: Number(z.seatsPerRow) || 1,
+          rowLabelPrefix: z.rowLabelPrefix || "A",
+          capacity: Number(z.capacity) || 100,
+        })),
+      });
+      setEditingTemplate(null);
+      await loadTemplates();
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not save template changes.");
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const handleDeleteTemplate = async (t) => {
+    if (!window.confirm(`Are you sure you want to delete template "${t.name}"?`)) return;
+    setError("");
+    try {
+      await seatingTemplateApi.remove(t.seatingTemplateId);
+      if (selected?.seatingTemplateId === t.seatingTemplateId) setSelected(null);
+      if (editingTemplate?.seatingTemplateId === t.seatingTemplateId) setEditingTemplate(null);
+      await loadTemplates();
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not delete template.");
+    }
+  };
+
+  const removeZoneFromEdit = (zoneLocalId) => {
+    if (editForm.zones.length <= 1) {
+      setError("Template must have at least one zone.");
+      return;
+    }
+    setEditForm((prev) => ({
+      ...prev,
+      zones: prev.zones.filter((z) => z._id !== zoneLocalId),
+    }));
+  };
+
+  const addZoneToEdit = () => {
+    setEditForm((prev) => ({
+      ...prev,
+      zones: [
+        ...prev.zones,
+        {
+          _id: Date.now(),
+          zoneName: `Zone ${String.fromCharCode(65 + prev.zones.length)}`,
+          zoneType: "Seated",
+          rows: 10,
+          seatsPerRow: 10,
+          rowLabelPrefix: String.fromCharCode(65 + prev.zones.length),
+          capacity: 100,
+          shapeJson: null,
+        },
+      ],
+    }));
+  };
+
   const handleApply = async () => {
     if (!selected) return;
-    const zoneMappings = selected.zones.map((_, index) => ({ zoneIndex: index,
-      ...mappings[index], ticketTypeId: Number(mappings[index]?.ticketTypeId) || 0,
+    const activeZoneIndexes = (selected.zones || [])
+      .map((_, index) => index)
+      .filter((index) => !excludedZones.has(index));
+
+    if (activeZoneIndexes.length === 0) {
+      setError("Please keep at least one zone before applying the template.");
+      return;
+    }
+
+    const zoneMappings = activeZoneIndexes.map((index) => ({
+      zoneIndex: index,
+      ...mappings[index],
+      ticketTypeId: Number(mappings[index]?.ticketTypeId) || 0,
       rows: Number(mappings[index]?.rows) || 1,
       seatsPerRow: Number(mappings[index]?.seatsPerRow) || 1,
       capacity: Number(mappings[index]?.capacity) || 1,
     }));
 
     if (zoneMappings.some((m) => !m.ticketTypeId)) {
-      setError("Map every zone to a ticket type before applying the template.");
+      setError("Map every active zone to a ticket type before applying the template.");
       return;
     }
 
@@ -1304,7 +1507,192 @@ function TemplatePicker({ eventId, ticketTypes, onApplied }) {
     <div className="ow-template-picker">
       {error && <div className="ow-error">{error}</div>}
 
-      {!selected && (
+      {/* Template Edit Panel */}
+      {editingTemplate && (
+        <form className="ow-template-mapping" onSubmit={handleSaveTemplateEdit} style={{ marginBottom: "1.5rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+            <h3>Edit Template: {editingTemplate.name}</h3>
+            <button type="button" className="ow-link" onClick={cancelEditTemplate}>
+              ✕ Cancel
+            </button>
+          </div>
+          <p className="ow-hint">
+            Update the template name, description, and default zones. Changes will be saved to your template library.
+          </p>
+
+          <div className="ow-inline-form">
+            <label className="ow-field">
+              <span>Name *</span>
+              <input
+                required
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+              />
+            </label>
+            <label className="ow-field ow-span-2">
+              <span>Description</span>
+              <input
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+              />
+            </label>
+          </div>
+
+          <h4 style={{ marginTop: "1rem", marginBottom: "0.5rem" }}>Zones ({editForm.zones.length})</h4>
+          <table className="ow-table">
+            <thead>
+              <tr>
+                <th>Zone Name</th>
+                <th>Type</th>
+                <th>Rows / Capacity</th>
+                <th>Prefix</th>
+                <th style={{ textAlign: "right" }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {editForm.zones.map((z) => (
+                <tr key={z._id}>
+                  <td>
+                    <input
+                      required
+                      value={z.zoneName}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          zones: prev.zones.map((item) =>
+                            item._id === z._id ? { ...item, zoneName: e.target.value } : item
+                          ),
+                        }))
+                      }
+                    />
+                  </td>
+                  <td>
+                    <select
+                      value={z.zoneType}
+                      onChange={(e) =>
+                        setEditForm((prev) => ({
+                          ...prev,
+                          zones: prev.zones.map((item) =>
+                            item._id === z._id ? { ...item, zoneType: e.target.value } : item
+                          ),
+                        }))
+                      }
+                    >
+                      <option value="Seated">Seated</option>
+                      <option value="Standing">Standing</option>
+                    </select>
+                  </td>
+                  <td>
+                    {z.zoneType === "Seated" ? (
+                      <div className="ow-template-dimensions">
+                        <input
+                          type="number"
+                          min="1"
+                          aria-label="Rows"
+                          value={z.rows || 1}
+                          onChange={(e) =>
+                            setEditForm((prev) => ({
+                              ...prev,
+                              zones: prev.zones.map((item) =>
+                                item._id === z._id ? { ...item, rows: e.target.value } : item
+                              ),
+                            }))
+                          }
+                        />
+                        <span>×</span>
+                        <input
+                          type="number"
+                          min="1"
+                          aria-label="Seats per row"
+                          value={z.seatsPerRow || 1}
+                          onChange={(e) =>
+                            setEditForm((prev) => ({
+                              ...prev,
+                              zones: prev.zones.map((item) =>
+                                item._id === z._id ? { ...item, seatsPerRow: e.target.value } : item
+                              ),
+                            }))
+                          }
+                        />
+                      </div>
+                    ) : (
+                      <input
+                        type="number"
+                        min="1"
+                        aria-label="Capacity"
+                        value={z.capacity || 100}
+                        onChange={(e) =>
+                          setEditForm((prev) => ({
+                            ...prev,
+                            zones: prev.zones.map((item) =>
+                              item._id === z._id ? { ...item, capacity: e.target.value } : item
+                            ),
+                          }))
+                        }
+                      />
+                    )}
+                  </td>
+                  <td>
+                    {z.zoneType === "Seated" ? (
+                      <input
+                        maxLength={3}
+                        style={{ width: "60px" }}
+                        value={z.rowLabelPrefix || "A"}
+                        onChange={(e) =>
+                          setEditForm((prev) => ({
+                            ...prev,
+                            zones: prev.zones.map((item) =>
+                              item._id === z._id ? { ...item, rowLabelPrefix: e.target.value } : item
+                            ),
+                          }))
+                        }
+                      />
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    {editForm.zones.length > 1 && (
+                      <button
+                        type="button"
+                        className="ow-link-danger"
+                        onClick={() => removeZoneFromEdit(z._id)}
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="ow-inline-form-actions" style={{ marginTop: "1rem" }}>
+            <button type="button" className="tb-btn tb-btn-outline ow-btn-sm" onClick={addZoneToEdit}>
+              + Add zone
+            </button>
+            <div style={{ marginLeft: "auto", display: "flex", gap: "8px" }}>
+              <button
+                type="button"
+                className="tb-btn tb-btn-outline ow-btn-sm"
+                onClick={cancelEditTemplate}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="tb-btn tb-btn-primary ow-btn-sm"
+                disabled={editSaving}
+              >
+                {editSaving ? "Saving..." : "Save Template"}
+              </button>
+            </div>
+          </div>
+        </form>
+      )}
+
+      {/* Template Card Grid */}
+      {!selected && !editingTemplate && (
         <>
           {templates.length === 0 && (
             <div className="ow-empty-row">
@@ -1315,31 +1703,81 @@ function TemplatePicker({ eventId, ticketTypes, onApplied }) {
           {templates.length > 0 && (
             <div className="ow-template-grid">
               {templates.map((t) => (
-                <button
-                  type="button"
+                <div
                   key={t.seatingTemplateId}
                   className="ow-template-card"
                   onClick={() => openTemplate(t.seatingTemplateId)}
+                  role="button"
+                  tabIndex={0}
+                  style={{ cursor: "pointer", display: "flex", flexDirection: "column" }}
                 >
-                  <div className="ow-template-card-title">
-                    {t.name}
-                    {t.isPublic && !t.isMine && (
-                      <span className="ow-template-badge">Shared</span>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      width: "100%",
+                      marginBottom: "6px",
+                    }}
+                  >
+                    <div className="ow-template-card-title" style={{ margin: 0 }}>
+                      {t.name}
+                      {t.isPublic && !t.isMine && (
+                        <span className="ow-template-badge">Shared</span>
+                      )}
+                      {t.isMine && (
+                        <span
+                          className="ow-template-badge"
+                          style={{
+                            background: "rgba(34, 197, 94, 0.15)",
+                            color: "#22c55e",
+                            borderColor: "rgba(34, 197, 94, 0.3)",
+                          }}
+                        >
+                          Mine
+                        </span>
+                      )}
+                    </div>
+                    {t.isMine && (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ display: "flex", gap: "6px", flexShrink: 0 }}
+                      >
+                        <button
+                          type="button"
+                          className="ow-link"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startEditTemplate(t);
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="ow-link-danger"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTemplate(t);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     )}
                   </div>
-                  {t.description && (
-                    <div className="ow-hint">{t.description}</div>
-                  )}
-                  <div className="ow-hint">
+                  {t.description && <div className="ow-hint">{t.description}</div>}
+                  <div className="ow-hint" style={{ marginTop: "auto", paddingTop: "6px" }}>
                     {t.totalZones} zone(s) · ~{t.estimatedCapacity} capacity
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           )}
         </>
       )}
 
+      {/* Template Zone Mapping for Apply */}
       {selected && (
         <div className="ow-template-mapping">
           <p className="ow-hint">
@@ -1360,48 +1798,141 @@ function TemplatePicker({ eventId, ticketTypes, onApplied }) {
                 <th>Type</th>
                 <th>Rows / Capacity</th>
                 <th>Ticket type *</th>
+                <th style={{ textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {selected.zones.map((z, index) => (
-                <tr key={index}>
-                  <td><input value={mappings[index]?.zoneName || ""} onChange={(e) => setMappings((m) => ({ ...m, [index]: { ...m[index], zoneName: e.target.value } }))} /></td>
-                  <td>
-                    <span
-                      className={
-                        "ow-zone-badge " +
-                        (z.zoneType === "Seated" ? "ow-zone-seated" : "ow-zone-standing")
-                      }
-                    >
-                      {mappings[index]?.zoneType === "Seated" ? "Seated" : "Standing"}
-                    </span>
-                    <select value={mappings[index]?.zoneType || z.zoneType} onChange={(e) => setMappings((m) => ({ ...m, [index]: { ...m[index], zoneType: e.target.value } }))}>
-                      <option value="Seated">Seated</option><option value="Standing">Standing</option>
-                    </select>
-                  </td>
-                  <td>{mappings[index]?.zoneType === "Seated" ? <div className="ow-template-dimensions">
-                    <input type="number" min="1" aria-label="Rows" value={mappings[index]?.rows || 1} onChange={(e) => setMappings((m) => ({ ...m, [index]: { ...m[index], rows: e.target.value } }))} />
-                    <span>×</span><input type="number" min="1" aria-label="Seats per row" value={mappings[index]?.seatsPerRow || 1} onChange={(e) => setMappings((m) => ({ ...m, [index]: { ...m[index], seatsPerRow: e.target.value } }))} />
-                  </div> : <input type="number" min="1" aria-label="Capacity" value={mappings[index]?.capacity || 1} onChange={(e) => setMappings((m) => ({ ...m, [index]: { ...m[index], capacity: e.target.value } }))} />}</td>
-                  <td>
-                    <select
-                      value={mappings[index]?.ticketTypeId || ""}
-                      onChange={(e) =>
-                        setMappings((m) => ({ ...m, [index]: { ...m[index], ticketTypeId: e.target.value } }))
-                      }
-                    >
-                      <option value="">-- Select ticket type --</option>
-                      {ticketTypes.map((tt) => (
-                        <option key={tt.ticketTypeId} value={tt.ticketTypeId}>
-                          {tt.typeName}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                </tr>
-              ))}
+              {selected.zones
+                .map((z, index) => ({ z, index }))
+                .filter(({ index }) => !excludedZones.has(index))
+                .map(({ z, index }) => (
+                  <tr key={index}>
+                    <td>
+                      <input
+                        value={mappings[index]?.zoneName || ""}
+                        onChange={(e) =>
+                          setMappings((m) => ({
+                            ...m,
+                            [index]: { ...m[index], zoneName: e.target.value },
+                          }))
+                        }
+                      />
+                    </td>
+                    <td>
+                      <span
+                        className={
+                          "ow-zone-badge " +
+                          (z.zoneType === "Seated" ? "ow-zone-seated" : "ow-zone-standing")
+                        }
+                      >
+                        {mappings[index]?.zoneType === "Seated" ? "Seated" : "Standing"}
+                      </span>
+                      <select
+                        value={mappings[index]?.zoneType || z.zoneType}
+                        onChange={(e) =>
+                          setMappings((m) => ({
+                            ...m,
+                            [index]: { ...m[index], zoneType: e.target.value },
+                          }))
+                        }
+                      >
+                        <option value="Seated">Seated</option>
+                        <option value="Standing">Standing</option>
+                      </select>
+                    </td>
+                    <td>
+                      {mappings[index]?.zoneType === "Seated" ? (
+                        <div className="ow-template-dimensions">
+                          <input
+                            type="number"
+                            min="1"
+                            aria-label="Rows"
+                            value={mappings[index]?.rows || 1}
+                            onChange={(e) =>
+                              setMappings((m) => ({
+                                ...m,
+                                [index]: { ...m[index], rows: e.target.value },
+                              }))
+                            }
+                          />
+                          <span>×</span>
+                          <input
+                            type="number"
+                            min="1"
+                            aria-label="Seats per row"
+                            value={mappings[index]?.seatsPerRow || 1}
+                            onChange={(e) =>
+                              setMappings((m) => ({
+                                ...m,
+                                [index]: { ...m[index], seatsPerRow: e.target.value },
+                              }))
+                            }
+                          />
+                        </div>
+                      ) : (
+                        <input
+                          type="number"
+                          min="1"
+                          aria-label="Capacity"
+                          value={mappings[index]?.capacity || 1}
+                          onChange={(e) =>
+                            setMappings((m) => ({
+                              ...m,
+                              [index]: { ...m[index], capacity: e.target.value },
+                            }))
+                          }
+                        />
+                      )}
+                    </td>
+                    <td>
+                      <select
+                        value={mappings[index]?.ticketTypeId || ""}
+                        onChange={(e) =>
+                          setMappings((m) => ({
+                            ...m,
+                            [index]: { ...m[index], ticketTypeId: e.target.value },
+                          }))
+                        }
+                      >
+                        <option value="">-- Select ticket type --</option>
+                        {ticketTypes.map((tt) => (
+                          <option key={tt.ticketTypeId} value={tt.ticketTypeId}>
+                            {tt.typeName}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td style={{ textAlign: "right" }}>
+                      <button
+                        type="button"
+                        className="ow-link-danger"
+                        onClick={() => {
+                          const next = new Set(excludedZones);
+                          next.add(index);
+                          setExcludedZones(next);
+                        }}
+                        title="Remove this zone from mapping"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           </table>
+
+          {excludedZones.size > 0 && (
+            <div className="ow-hint" style={{ marginTop: "0.5rem" }}>
+              {excludedZones.size} zone(s) excluded from layout.{" "}
+              <button
+                type="button"
+                className="ow-link"
+                onClick={() => setExcludedZones(new Set())}
+              >
+                Restore all zones
+              </button>
+            </div>
+          )}
 
           <div className="ow-inline-form-actions">
             <button
@@ -1519,6 +2050,9 @@ function RefundPolicySection({ eventId, refundPolicies, readOnly, onChanged }) {
       deadlineBeforeEventHours: policy.deadlineBeforeEventHours, refundPercent: policy.refundPercent,
       requiresOrganizerApproval: !!policy.requiresOrganizerApproval });
     setShowForm(true); setError("");
+    setTimeout(() => {
+      document.getElementById("refund-policy-form")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, 50);
   };
 
   const handleChange = (e) => {
@@ -1636,7 +2170,12 @@ function RefundPolicySection({ eventId, refundPolicies, readOnly, onChanged }) {
       )}
 
       {!readOnly && showForm && (
-        <form className="ow-inline-form" onSubmit={handleAdd}>
+        <form id="refund-policy-form" className="ow-inline-form" onSubmit={handleAdd}>
+          {editingId && (
+            <div style={{ marginBottom: "14px", color: "#d8b4fe", fontWeight: 600, fontSize: "14px" }}>
+              ✏️ Editing Refund Policy: {form.policyName || "Policy"}
+            </div>
+          )}
           <div className="ow-grid">
             <label className="ow-field ow-span-2">
               <span>Policy name *</span>

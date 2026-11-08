@@ -318,23 +318,66 @@
 }
 
 .ow-file-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  overflow: hidden;
+  display: none !important;
 }
 
 .ow-image-actions label {
   cursor: pointer;
 }
 
+/* ---- Modern Action Buttons in Tables & Lists (.ow-link, .ow-link-danger) ---- */
+.ow-table td:last-child {
+  white-space: nowrap;
+}
+
+.ow-link,
 .ow-link-danger {
-  background: none;
-  border: none;
-  color: #f87171;
-  font-size: 12.5px;
-  padding: 0;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 5px 12px !important;
+  border-radius: 6px !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  margin-right: 8px !important;
+  transition: all 0.15s ease-in-out !important;
+  text-decoration: none !important;
+  border: 1px solid transparent !important;
+  line-height: 1.2 !important;
+}
+
+.ow-link:last-child,
+.ow-link-danger:last-child {
+  margin-right: 0 !important;
+}
+
+/* Edit & View Buttons (Purple / Violet accent) */
+.ow-link {
+  background: rgba(168, 85, 247, 0.15) !important;
+  border-color: rgba(168, 85, 247, 0.35) !important;
+  color: #d8b4fe !important;
+}
+
+.ow-link:hover {
+  background: rgba(168, 85, 247, 0.28) !important;
+  border-color: rgba(168, 85, 247, 0.65) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+}
+
+/* Delete Button (Soft red danger accent) */
+.ow-link-danger {
+  background: rgba(239, 68, 68, 0.12) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  color: #f87171 !important;
+}
+
+.ow-link-danger:hover {
+  background: rgba(239, 68, 68, 0.25) !important;
+  border-color: rgba(239, 68, 68, 0.6) !important;
+  color: #fca5a5 !important;
+  transform: translateY(-1px);
 }
 
 .ow-gallery-section h3 {
@@ -885,4 +928,62 @@
 .ow-zonemap-info.is-warning {
   border-color: #f87171;
   color: #fca5a5;
+}
+
+/* ---- Visual Zone Map Shape Tools & Mode Pills ---- */
+.ow-zonemap-shape-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+
+.ow-zonemap-drawing-bar {
+  background: rgba(124, 58, 237, 0.12);
+  border-color: rgba(168, 85, 247, 0.35);
+}
+
+.ow-shape-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: #d4d4d8;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  line-height: 1.3;
+  outline: none;
+  user-select: none;
+}
+
+.ow-shape-pill:hover:not(:disabled) {
+  background: rgba(168, 85, 247, 0.2);
+  border-color: rgba(168, 85, 247, 0.45);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.ow-shape-pill.active {
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  color: #fff;
+  font-weight: 600;
+  border-color: transparent;
+  box-shadow: 0 3px 12px rgba(124, 58, 237, 0.45);
+}
+
+.ow-shape-pill:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
 }

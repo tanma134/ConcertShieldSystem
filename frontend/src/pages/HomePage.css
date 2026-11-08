@@ -78,8 +78,31 @@ body {
 
 /* ===== Danh sách ===== */
 .tb-list-section {
-  padding: 40px 24px 20px;
+  padding: 32px 24px;
   scroll-margin-top: 90px;
+}
+
+.tb-featured-section {
+  padding-top: 36px;
+  padding-bottom: 52px;
+  margin-bottom: 36px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+}
+
+.tb-featured-section::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 24px;
+  right: 24px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.35), transparent);
+}
+
+.tb-upcoming-section {
+  padding-top: 16px;
+  padding-bottom: 70px;
 }
 
 .tb-list-header {

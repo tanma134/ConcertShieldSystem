@@ -62,14 +62,31 @@ export default function GovernancePanel({event,admin=false,onUpdated,onComplianc
       {current.length===0?<p>No documents submitted.</p>:<ul>{current.map(doc=><li key={doc.id}>{doc.documentType}: {doc.fileName} · {date(doc.submittedAt)} <button disabled={busy} onClick={()=>download(doc)}>Download</button></li>)}</ul>}
       {editable&&<form onSubmit={e=>{e.preventDefault();run(async()=>{const problem=fileError(file,record.maxBytes);if(problem)throw new Error(problem);await api.upload(id,type,file);setFile(null);setFileKey(k=>k+1);setNotice('Document saved. Submit the concert when the required set is complete.');});}}>
         <label>Document type<select value={type} onChange={e=>setType(e.target.value)}>{record.requiredTypes.map(t=><option key={t}>{t}</option>)}</select></label>
-        <label>File<input key={fileKey} type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={e=>setFile(e.target.files[0]||null)}/></label>
+        <div style={{display:'flex',flexDirection:'column',gap:'4px'}}><span style={{fontSize:'12px',color:'var(--tb-muted,#a89db8)'}}>File</span><div style={{display:'flex',alignItems:'center',gap:'8px'}}><label className="tb-btn tb-btn-outline" style={{cursor:'pointer',margin:0}}><input key={fileKey} type="file" accept=".pdf,.png,.jpg,.jpeg" style={{display:'none'}} onChange={e=>setFile(e.target.files[0]||null)}/>Choose file</label><span style={{fontSize:'13px',color:'var(--tb-muted,#a89db8)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'200px'}}>{file?file.name:'No file chosen'}</span></div></div>
         <button className="tb-btn tb-btn-primary" disabled={busy||!file}>{busy?'Uploading document…':'Upload document'}</button>
       </form>}
       {!editable&&!admin&&<p>Documents are read-only while this concert is {event.status}.</p>}
-      {admin&&event.status==='Pending'&&record.status==='PendingReview'&&<form onSubmit={e=>{e.preventDefault();run(async()=>{const problem=validateReview(decision,notes);if(problem)throw new Error(problem);await api.reviewCompliance(id,{version:record.version,decision,notes:notes.trim()});setNotes('');setNotice('Compliance decision saved. Concert approval is a separate action.');onUpdated?.();});}}>
-        <label>Compliance decision<select value={decision} onChange={e=>setDecision(e.target.value)}>{['Approved','Rejected','RequestMoreInfo'].map(d=><option key={d}>{d}</option>)}</select></label>
-        <label>Review notes<textarea required maxLength={2000} value={notes} onChange={e=>setNotes(e.target.value)}/></label>
-        <button className="tb-btn tb-btn-primary" disabled={busy}>Submit review</button>
+      {admin&&event.status==='Pending'&&record.status==='PendingReview'&&<form className="governance-compliance-review-form" onSubmit={e=>{e.preventDefault();run(async()=>{const problem=validateReview(decision,notes);if(problem)throw new Error(problem);await api.reviewCompliance(id,{version:record.version,decision,notes:notes.trim()});setNotes('');setNotice('Compliance decision saved. Concert approval is a separate action.');onUpdated?.();});}}>
+        <div className="governance-form-row">
+          <label>Compliance decision
+            <select value={decision} onChange={e=>setDecision(e.target.value)}>
+              {['Approved','Rejected','RequestMoreInfo'].map(d=><option key={d}>{d}</option>)}
+            </select>
+          </label>
+        </div>
+        <label>Review notes *
+          <textarea
+            required
+            maxLength={2000}
+            value={notes}
+            onChange={e=>setNotes(e.target.value)}
+            placeholder="Enter review decision notes or explain reasons (required)..."
+            rows={3}
+          />
+        </label>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+          <button className="tb-btn tb-btn-primary" disabled={busy}>Submit review</button>
+        </div>
       </form>}
       <details><summary>Document and review history</summary>
         <ul>{record.documents.filter(d=>d.version!==record.version).map(d=><li key={d.id}>Version {d.version} · {d.documentType} · {d.fileName} <button disabled={busy} onClick={()=>download(d)}>Download</button></li>)}</ul>

@@ -20,7 +20,7 @@ export default function EventCard({ event }) {
             e.currentTarget.src = FALLBACK_IMG;
           }}
         />
-        {event.isFeatured && <span className="tb-card-hot">🔥 HOT</span>}
+        {event.isFeatured && <span className="tb-card-hot">🔥 FEATURED</span>}
       </div>
       <div className="tb-card-body">
         <span className="tb-card-tag">CONCERT</span>

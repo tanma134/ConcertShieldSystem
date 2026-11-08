@@ -2145,6 +2145,25 @@
             }
         },
         {
+            "Key": "event-feature",
+            "DownstreamPathTemplate": "/api/events/{id}/feature",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7289
+                }
+            ],
+            "UpstreamPathTemplate": "/api/events/{id}/feature",
+            "UpstreamHttpMethod": [
+                "Post",
+                "Patch"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
             "Key": "event-approve",
             "DownstreamPathTemplate": "/api/events/{id}/approve",
             "DownstreamScheme": "https",
@@ -4002,7 +4021,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7330
+                    "Port": 7335
                 }
             ],
             "UpstreamPathTemplate": "/api/incidents",
@@ -4021,7 +4040,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7330
+                    "Port": 7335
                 }
             ],
             "UpstreamPathTemplate": "/api/incidents/{id}/evidence",
@@ -4039,7 +4058,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7330
+                    "Port": 7335
                 }
             ],
             "UpstreamPathTemplate": "/api/incidents/{id}",
@@ -4058,7 +4077,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7330
+                    "Port": 7335
                 }
             ],
             "UpstreamPathTemplate": "/api/incidents/{id}/escalate",
@@ -4076,7 +4095,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7330
+                    "Port": 7335
                 }
             ],
             "UpstreamPathTemplate": "/api/incidents/{id}/resolution",
@@ -4094,7 +4113,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7330
+                    "Port": 7335
                 }
             ],
             "UpstreamPathTemplate": "/api/incidents/{id}/resolve",

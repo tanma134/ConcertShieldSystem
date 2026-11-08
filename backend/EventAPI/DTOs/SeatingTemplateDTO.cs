@@ -73,6 +73,10 @@ namespace EventAPI.DTOs
 
         /// <summary>Only honored when the caller is an Admin.</summary>
         public bool? IsPublic { get; set; }
+
+        public string? LayoutJson { get; set; }
+
+        public List<SeatingTemplateZoneDTO>? Zones { get; set; }
     }
 
     /// <summary>One entry in an organizer's zone-to-ticket-type mapping for UC_26.2 — Apply Seating Template.</summary>

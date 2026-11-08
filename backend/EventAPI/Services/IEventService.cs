@@ -38,6 +38,9 @@ namespace EventAPI.Services
         /// <summary>Pending -> Rejected (with reason). Admin only.</summary>
         Task<EventResponseDTO> RejectAsync(int id, string reason, int adminId);
 
+        /// <summary>Toggles IsFeatured flag on an event. Admin only.</summary>
+        Task<EventResponseDTO> ToggleFeaturedAsync(int id, int adminId);
+
         /// <summary>Approved/Pending -> Cancelled. Owner or Admin.</summary>
         Task<EventResponseDTO> CancelAsync(int id, int callerId, bool isAdmin);
 

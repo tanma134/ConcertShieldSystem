@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import EventCard from "../components/EventCard";
@@ -91,13 +91,12 @@ export default function HomePage() {
               Hundreds of concerts big and small are waiting for you
             </p>
             <div className="tb-hero-actions">
-              <button
-                type="button"
+              <Link
+                to="/events"
                 className="tb-btn tb-btn-primary"
-                onClick={() => scrollTo(upcomingRef)}
               >
-                Explore Concerts
-              </button>
+                Explore All Concerts
+              </Link>
               <button
                 type="button"
                 className="tb-btn tb-btn-outline"
@@ -111,19 +110,15 @@ export default function HomePage() {
       )}
 
       {!q && (featuredLoading || featured.length > 0) && (
-        <section className="tb-container tb-list-section" ref={hotRef}>
+        <section className="tb-container tb-list-section tb-featured-section" ref={hotRef}>
           <div className="tb-list-header">
-            <h2>🔥 Trending Concerts</h2>
-            <a
+            <h2>⭐ Featured Concerts</h2>
+            <Link
+              to="/events"
               className="tb-section-link"
-              onClick={(e) => {
-                e.preventDefault();
-                scrollTo(upcomingRef);
-              }}
-              href="#upcoming"
             >
-              View all →
-            </a>
+              View all on sale →
+            </Link>
           </div>
 
           {featuredLoading && <div className="tb-loading">Loading...</div>}
@@ -139,7 +134,7 @@ export default function HomePage() {
       )}
 
       <section
-        className="tb-container tb-list-section"
+        className="tb-container tb-list-section tb-upcoming-section"
         ref={upcomingRef}
         id="upcoming"
       >
@@ -173,11 +168,18 @@ export default function HomePage() {
         )}
 
         {!loading && !error && events.length > 0 && (
-          <div className="tb-grid">
-            {events.map((ev) => (
-              <EventCard key={ev.eventId} event={ev} />
-            ))}
-          </div>
+          <>
+            <div className="tb-grid">
+              {events.map((ev) => (
+                <EventCard key={ev.eventId} event={ev} />
+              ))}
+            </div>
+            <div style={{ textAlign: "center", marginTop: "40px" }}>
+              <Link to="/events" className="tb-btn tb-btn-outline" style={{ padding: "12px 32px", fontSize: "14px" }}>
+                Browse All Concerts On Sale →
+              </Link>
+            </div>
+          </>
         )}
       </section>
 

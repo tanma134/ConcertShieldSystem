@@ -55,3 +55,22 @@
   .governance-panel label { min-width: 100%; }
   .governance-panel form > button { width: 100%; margin: 0; }
 }
+
+/* Compliance review form layout */
+.governance-panel form.governance-compliance-review-form {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  align-items: stretch !important;
+}
+.governance-compliance-review-form .governance-form-row {
+  display: flex;
+  max-width: 320px;
+}
+.governance-compliance-review-form label {
+  width: 100%;
+}
+.governance-compliance-review-form textarea {
+  width: 100%;
+  min-height: 85px;
+}

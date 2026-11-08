@@ -44,7 +44,7 @@ function parseShape(shapeJson) {
   }
 }
 
-function getZonePosition(shapeJson) {
+function getZonePosition(shapeJson, rows = 0, columns = 0) {
   const shape = parseShape(shapeJson);
 
   if (
@@ -78,11 +78,13 @@ function getZonePosition(shapeJson) {
     };
   }
 
+  const minHeightPx = rows > 0 ? Math.max(76, rows * 18 + 32) : 60;
   return {
     left: `${Number(shape.x) || 0}%`,
     top: `${Number(shape.y) || 0}%`,
     width: `${Number(shape.w) || 20}%`,
     height: `${Number(shape.h) || 18}%`,
+    minHeight: `${minHeightPx}px`,
     transform: `rotate(${Number(shape.rot) || 0}deg)`,
   };
 }
@@ -732,7 +734,7 @@ export default function SelectTicketPage() {
                       key={zone.seatZoneId}
                       className="tb-seat-zone"
                       style={{
-                        ...getZonePosition(zone.shapeJson),
+                        ...getZonePosition(zone.shapeJson, rows, columns),
                         "--zone-color": color,
                         "--seat-columns": columns,
                         "--seat-rows": rows,

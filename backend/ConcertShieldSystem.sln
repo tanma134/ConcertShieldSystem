@@ -25,7 +25,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RefundAPI", "RefundAPI\Refu
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReviewAPI", "ReviewAPI\ReviewAPI.csproj", "{B5E08B8C-8E9E-4C97-9C7C-4B6E5B3D9F11}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdminAPI.Tests", "AdminAPI.Tests\AdminAPI.Tests.csproj", "{049A5F83-EF0B-4942-B657-1DD475526FC9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdminAPI.UnitTests", "AdminAPI.UnitTests\AdminAPI.UnitTests.csproj", "{049A5F83-EF0B-4942-B657-1DD475526FC9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventAPI.UnitTests", "EventAPI.UnitTests\EventAPI.UnitTests.csproj", "{5B52F891-EFEE-44B9-BADC-7D3D26EDDCBF}"
 EndProject
@@ -33,7 +33,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TicketAPI.UnitTests", "Tick
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IncidentAPI", "IncidentAPI\IncidentAPI.csproj", "{700A809E-0F8D-4694-8883-32DE2E4B2E3D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PaymentAPI.Tests", "PaymentAPI.Tests\PaymentAPI.Tests.csproj", "{C839B23E-002D-4B03-B692-003E5DB779FC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PaymentAPI.UnitTests", "PaymentAPI.UnitTests\PaymentAPI.UnitTests.csproj", "{C839B23E-002D-4B03-B692-003E5DB779FC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthenticationAPI.UnitTests", "AuthenticationAPI.UnitTests\AuthenticationAPI.UnitTests.csproj", "{A1111111-2222-3333-4444-555555555555}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -244,4 +246,6 @@ Global
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {02A54FE8-9AB2-4864-80FF-DBD130A9A954}
 	EndGlobalSection
-EndGlobal
+EndProject("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthenticationAPI.UnitTests", "AuthenticationAPI.UnitTests\AuthenticationAPI.UnitTests.csproj", "{A1111111-2222-3333-4444-555555555555}"
+EndProject
+Global
