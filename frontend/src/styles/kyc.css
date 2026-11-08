@@ -1,15 +1,15 @@
 :root {
-  --kyc-bg: #0d0d0d;
-  --kyc-card: #161616;
-  --kyc-line: #2a2a2a;
-  --kyc-field: #1e1e1e;
-  --kyc-primary: #e84393;
-  --kyc-primary-dark: #d43585;
-  --kyc-primary-light: rgba(232, 67, 147, 0.12);
+  --kyc-bg: #0b0816;
+  --kyc-card: #181228;
+  --kyc-line: #3d3262;
+  --kyc-field: #231b3a;
+  --kyc-primary: #ff6fb5;
+  --kyc-primary-dark: #d61f6e;
+  --kyc-primary-light: rgba(255, 111, 181, 0.16);
   --kyc-text: #ffffff;
-  --kyc-muted: #888888;
-  --kyc-faint: #555555;
-  --kyc-stage: #050505;
+  --kyc-muted: #d3cae6;
+  --kyc-faint: #b8aed0;
+  --kyc-stage: #050309;
   --kyc-radius: 16px;
 }
 

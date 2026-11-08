@@ -191,7 +191,7 @@
 .tb-btn-clear {
   background: transparent;
   border: 1px solid #ef4444;
-  color: #ef4444;
+  color: #f48181;
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 13px;
@@ -200,8 +200,8 @@
   transition: all 0.2s;
 }
 .tb-btn-clear:hover {
-  background: #ef4444;
-  color: #fff;
+  background: #e21313;
+  color: #ffffff;
 }
 
 /* Zone bị khóa (khi zone khác đang được chọn) */
@@ -537,7 +537,7 @@
 }
 
 .tb-seat-details-list dt {
-  color: #a1a1aa;
+  color: #b9b9bf;
 }
 
 .tb-seat-details-list dd {
@@ -726,7 +726,7 @@
 
 .ticket-loading-card p {
   margin: 0;
-  color: #aaa5b4;
+  color: #bab6c2;
   font-size: 14px;
 }
 

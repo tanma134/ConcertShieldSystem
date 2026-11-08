@@ -328,7 +328,7 @@
 
 .deletion-status-badge.rejected {
   background: rgba(239, 68, 68, 0.18);
-  color: #ef4444;
+  color: #f48181;
 }
 
 /* Account restrictions (risk decisions + appeal) */

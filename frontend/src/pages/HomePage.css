@@ -174,7 +174,7 @@ body {
 }
 
 .tb-home-notice-pill {
-  background: linear-gradient(135deg, #7c3aed, #ec4899);
+  background: linear-gradient(135deg, #7c3aed, #d61f6e);
   color: #fff;
   padding: 3px 10px;
   border-radius: 9999px;
@@ -196,7 +196,7 @@ body {
 }
 
 .tb-home-notice-body strong {
-  color: #ec4899;
+  color: #f17bb5;
   margin-right: 6px;
 }
 
@@ -207,7 +207,7 @@ body {
 }
 
 .tb-home-notice-link {
-  color: #c084fc;
+  color: #c389fc;
   font-weight: 600;
   text-decoration: none;
   font-size: 12.5px;
@@ -216,7 +216,7 @@ body {
 }
 
 .tb-home-notice-link:hover {
-  color: #f472b6;
+  color: #f57bbb;
   text-decoration: underline;
 }
 
@@ -266,7 +266,7 @@ body {
 
 .home-notif-badge {
   background: rgba(255, 45, 117, 0.15);
-  color: #ff2d75;
+  color: #ff74a4;
   border: 1px solid rgba(255, 45, 117, 0.4);
   font-size: 0.72rem;
   font-weight: 700;
@@ -294,7 +294,7 @@ body {
 }
 
 .btn-notif-filter.active {
-  background: #ff2d75;
+  background: #d61f6e;
   border-color: #ff2d75;
   color: #ffffff;
 }
@@ -316,7 +316,7 @@ body {
 
 .btn-notif-action-sm:hover {
   background: #232430;
-  color: #ff2d75;
+  color: #ff4c89;
   border-color: #ff2d75;
 }
 
@@ -361,7 +361,7 @@ body {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #ff2d75;
+  background: #d61f6e;
   flex-shrink: 0;
   box-shadow: 0 0 6px #ff2d75;
 }
@@ -407,7 +407,7 @@ body {
 
 .notif-row-msg {
   font-size: 0.8rem;
-  color: #94a3b8;
+  color: #b0bbca;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -422,14 +422,14 @@ body {
 
 .notif-row-time {
   font-size: 0.75rem;
-  color: #64748b;
+  color: #b2bbc7;
   white-space: nowrap;
 }
 
 .btn-notif-read-inline {
   background: rgba(255, 45, 117, 0.1);
   border: 1px solid rgba(255, 45, 117, 0.3);
-  color: #ff2d75;
+  color: #ff74a4;
   font-size: 0.75rem;
   padding: 4px 10px;
   border-radius: 6px;
@@ -438,14 +438,14 @@ body {
 }
 
 .btn-notif-read-inline:hover {
-  background: #ff2d75;
+  background: #d61f6e;
   color: #ffffff;
 }
 
 .btn-notif-delete-inline {
   background: transparent;
   border: none;
-  color: #64748b;
+  color: #b2bbc7;
   font-size: 0.95rem;
   padding: 4px 6px;
   border-radius: 6px;
@@ -454,14 +454,14 @@ body {
 }
 
 .btn-notif-delete-inline:hover {
-  color: #ef4444;
+  color: #f48181;
   background: rgba(239, 68, 68, 0.1);
 }
 
 .home-notif-empty {
   text-align: center;
   padding: 30px;
-  color: #64748b;
+  color: #b2bbc7;
   font-size: 0.88rem;
 }
 

@@ -27,7 +27,7 @@
 
 .concert-orders-description {
   margin: 8px 0 0;
-  color: #aaa1b3;
+  color: #beb8c5;
   font-size: 14px;
 }
 
@@ -167,7 +167,7 @@
 
 .concert-orders-card-heading p {
   margin: 6px 0 0;
-  color: #a99fb1;
+  color: #bdb6c3;
   font-size: 13px;
 }
 
@@ -190,7 +190,7 @@
 }
 
 .co-table th {
-  color: #bdb3c8;
+  color: #c0b6ca;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -212,7 +212,7 @@
 
 .co-customer-email {
   margin-top: 4px;
-  color: #a99fb1;
+  color: #bdb6c3;
   font-size: 12px;
 }
 
@@ -250,7 +250,7 @@
 
 .co-state {
   padding: 40px 20px;
-  color: #aaa2b7;
+  color: #bcb6c7;
   text-align: center;
 }
 

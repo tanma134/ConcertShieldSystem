@@ -5,20 +5,20 @@
  * var(--tb-*) nhưng không có .tb-app cha nên biến rỗng, nút mất màu/mất viền.
  */
 :root {
-  --tb-bg: #0a0812;
-  --tb-bg-alt: #120e1c;
-  --tb-surface: #171223;
-  --tb-surface-2: #1e1830;
-  --tb-border: #2a2340;
-  --tb-text: #f5f3fb;
-  --tb-text-muted: #a89db8;
-  --tb-primary: #c026d3;
-  --tb-primary-2: #a855f7;
-  --tb-primary-dark: #7c3aed;
-  --tb-pink: #ec4899;
-  --tb-primary-light: rgba(192, 38, 211, 0.14);
-  --tb-gradient: linear-gradient(135deg, #7c3aed 0%, #c026d3 55%, #ec4899 100%);
-  --tb-price: #fbbf24;
+  --tb-bg: #0b0816;
+  --tb-bg-alt: #130e22;
+  --tb-surface: #181228;
+  --tb-surface-2: #231b3a;
+  --tb-border: #3d3262;
+  --tb-text: #ffffff;
+  --tb-text-muted: #d3cae6;
+  --tb-primary: #d946ef;
+  --tb-primary-2: #c4a1ff;
+  --tb-primary-dark: #8b5cf6;
+  --tb-pink: #ff6fb5;
+  --tb-primary-light: rgba(217, 70, 239, 0.18);
+  --tb-gradient: linear-gradient(135deg, #6d28d9 0%, #a21caf 55%, #d61f6e 100%);
+  --tb-price: #ffd24a;
 }
 
 .tb-app {
@@ -100,7 +100,7 @@
 }
 
 .tb-error {
-  color: #f87171;
+  color: #ff9a9a;
 }
 
 .tb-section-link {

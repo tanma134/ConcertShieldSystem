@@ -27,7 +27,7 @@
 
 .tb-header-content > p {
   margin: 0;
-  color: #a7a5b2;
+  color: #bab8c2;
 }
 
 .tb-back-link {
@@ -49,7 +49,7 @@
   align-items: center;
   gap: 12px;
   margin-top: 26px;
-  color: #777581;
+  color: #b8b7be;
   font-size: 12px;
 }
 
@@ -124,7 +124,7 @@
 .tb-eyebrow {
   display: block;
   margin-bottom: 5px;
-  color: #b78bdd;
+  color: #bc93df;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -223,7 +223,7 @@
 }
 
 .tb-event-meta b {
-  color: #777482;
+  color: #b8b7be;
   font-size: 10px;
   font-weight: 750;
   letter-spacing: 0.1em;
@@ -232,12 +232,12 @@
 
 .tb-event-loading {
   padding: 28px 0;
-  color: #aaa7b3;
+  color: #bab7c1;
   font-size: 13px;
 }
 
 .tb-muted {
-  color: #aaa7b3;
+  color: #bab7c1;
   font-size: 12px;
 }
 
@@ -258,7 +258,7 @@
 .tb-contact-item span {
   display: block;
   margin-bottom: 7px;
-  color: #8e8b98;
+  color: #b8b7be;
   font-size: 11px;
 }
 
@@ -364,7 +364,7 @@
 }
 
 .tb-method-copy small {
-  color: #9693a0;
+  color: #b8b7bf;
   font-size: 11px;
   line-height: 1.4;
 }
@@ -373,7 +373,7 @@
   padding: 6px 8px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 999px;
-  color: #9693a0;
+  color: #b8b7bf;
   font-size: 9px;
   font-weight: 750;
   white-space: nowrap;
@@ -419,7 +419,7 @@
 .tb-voucher-box > small {
   display: block;
   margin-top: 7px;
-  color: #777482;
+  color: #b8b7be;
   font-size: 10px;
 }
 
@@ -432,7 +432,7 @@
 }
 
 .tb-countdown-label {
-  color: #a8a4b0;
+  color: #bab7c1;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -448,7 +448,7 @@
 }
 
 .tb-countdown.is-urgent {
-  color: #fb7185;
+  color: #fb7b8e;
   animation: tb-countdown-pulse 1s ease-in-out infinite;
 }
 
@@ -460,7 +460,7 @@
 
 .tb-countdown-panel p {
   margin: 0;
-  color: #918d9b;
+  color: #bbb9c1;
   font-size: 11px;
   line-height: 1.5;
 }
@@ -477,7 +477,7 @@
   margin: 3px 0 16px;
   padding: 10px 0 13px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  color: #8e8b98;
+  color: #b8b7be;
   font-size: 11px;
 }
 
@@ -509,7 +509,7 @@
 }
 
 .tb-summary-item span {
-  color: #8e8b98;
+  color: #b8b7be;
   font-size: 10px;
 }
 
@@ -578,7 +578,7 @@
   align-items: center;
   gap: 6px;
   margin-top: 13px;
-  color: #85818f;
+  color: #b9b7bf;
   font-size: 10px;
   text-align: center;
 }
@@ -639,7 +639,7 @@
 
 .tb-expired-card p {
   margin: 0 0 20px;
-  color: #aaa4b1;
+  color: #bcb7c1;
   font-size: 13px;
 }
 
@@ -791,7 +791,7 @@
 
 .qf-loading-card p {
   margin: 0;
-  color: #aaa5b4;
+  color: #bab6c2;
   font-size: 14px;
 }
 
@@ -896,7 +896,7 @@
 }
 
 .tb-voucher-open-copy small {
-  color: #a7a1af;
+  color: #bcb7c2;
   font-size: 11px;
 }
 
@@ -927,7 +927,7 @@
 }
 
 .tb-applied-voucher small {
-  color: #aaa7b3;
+  color: #bab7c1;
   font-size: 11px;
 }
 
@@ -997,7 +997,7 @@
 
 .voucher-modal-header p {
   margin: 7px 0 0;
-  color: #a29cab;
+  color: #bcb8c3;
   font-size: 12px;
 }
 
@@ -1136,7 +1136,7 @@
 }
 
 .voucher-option-copy small {
-  color: #a8a2af;
+  color: #bdb8c2;
   font-size: 11px;
 }
 
@@ -1148,7 +1148,7 @@
 
 .voucher-empty,
 .voucher-feedback {
-  color: #aaa4b1;
+  color: #bcb7c1;
   font-size: 11px;
 }
 
@@ -1159,7 +1159,7 @@
   gap: 12px;
   padding: 14px 25px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  color: #aaa5b2;
+  color: #bcb8c2;
   font-size: 11px;
 }
 

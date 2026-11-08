@@ -28,7 +28,7 @@
   width: 100%; box-sizing: border-box; color: #faf7ff; background: #15101e;
   border: 1px solid #63516f; border-radius: 9px; padding: 11px 12px; font: inherit; font-weight: 400;
 }
-.governance-panel input::placeholder, .governance-panel textarea::placeholder { color: #b6a9c4; opacity: 1; }
+.governance-panel input::placeholder, .governance-panel textarea::placeholder { color: #c0b5cc; opacity: 1; }
 .governance-panel select option { background: #211a2d; color: #faf7ff; }
 .governance-panel input[type=file] { min-height: 46px; }
 .governance-panel input::file-selector-button { background: #3c2b50; color: #f4effa; border: 1px solid #776087; border-radius: 6px; padding: 7px 10px; margin-right: 12px; cursor: pointer; }

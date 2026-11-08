@@ -48,7 +48,7 @@
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #7c3aed, #ec4899);
+  background: linear-gradient(135deg, #7c3aed, #d61f6e);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -81,7 +81,7 @@
   font-weight: 700;
   text-transform: uppercase;
   background: rgba(124, 58, 237, 0.25);
-  color: #c084fc;
+  color: #c389fc;
   padding: 2px 6px;
   border-radius: 4px;
   letter-spacing: 0.5px;
@@ -98,7 +98,7 @@
 .tb-toast-close {
   background: none;
   border: none;
-  color: #94a3b8;
+  color: #b0bbca;
   font-size: 16px;
   cursor: pointer;
   padding: 2px 6px;

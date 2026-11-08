@@ -55,7 +55,7 @@
 .btn-back:hover {
   background: #28283c;
   border-color: #ff2d75;
-  color: #ff2d75;
+  color: #ff5b93;
 }
 
 .gate-title-block {
@@ -93,13 +93,13 @@
 
 .event-switch-label {
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: #b0bbca;
   font-weight: 600;
 }
 
 .badge-terminal {
   background: rgba(255, 45, 117, 0.15);
-  color: #ff2d75;
+  color: #ff74a4;
   border: 1px solid rgba(255, 45, 117, 0.35);
   font-size: 0.72rem;
   font-weight: 800;
@@ -140,7 +140,7 @@
 .shift-sub {
   margin: 0.25rem 0 0 0;
   font-size: 0.86rem;
-  color: #94a3b8;
+  color: #b0bbca;
 }
 
 .header-actions {
@@ -261,7 +261,7 @@
 }
 
 .terminal-nav-tab.active {
-  background: #ff2d75;
+  background: #d61f6e;
   color: #ffffff;
   border-color: #ff2d75;
   box-shadow: 0 4px 14px rgba(255, 45, 117, 0.4);
@@ -328,13 +328,13 @@
 .btn-upload-qr:hover {
   background: #2b2b3e;
   border-color: #ff2d75;
-  color: #ff2d75;
+  color: #ff6097;
 }
 
 .btn-upload-cam-file {
   background: #1e1e2c;
   border: 1px solid #ff2d75;
-  color: #ff2d75;
+  color: #ff3c7f;
   padding: 0.45rem 0.95rem;
   border-radius: 6px;
   font-weight: 700;
@@ -346,12 +346,12 @@
 }
 
 .btn-upload-cam-file:hover {
-  background: #ff2d75;
+  background: #d61f6e;
   color: #ffffff;
 }
 
 .btn-toggle-cam {
-  background: #ff2d75;
+  background: #d61f6e;
   border: none;
   color: #ffffff;
   padding: 0.45rem 0.95rem;
@@ -363,7 +363,7 @@
 }
 
 .btn-toggle-cam:hover {
-  background: #e02467;
+  background: #be1862;
 }
 
 .camera-box {
@@ -408,7 +408,7 @@
   position: absolute;
   width: 230px;
   height: 3px;
-  background: linear-gradient(90deg, transparent, #ff2d75, transparent);
+  background: linear-gradient(90deg, transparent, #d61f6e, transparent);
   box-shadow: 0 0 10px #ff2d75;
   animation: laser-scan 2.2s infinite ease-in-out;
   pointer-events: none;
@@ -425,7 +425,7 @@
   bottom: 12px;
   background: rgba(12, 12, 16, 0.85);
   border: 1px solid #232332;
-  color: #94a3b8;
+  color: #b0bbca;
   padding: 0.4rem 0.9rem;
   border-radius: 20px;
   font-size: 0.82rem;
@@ -446,7 +446,7 @@
 
 .camera-off-msg {
   text-align: center;
-  color: #94a3b8;
+  color: #b0bbca;
 }
 
 .camera-off-msg span {
@@ -498,7 +498,7 @@
 
 .feedback-success h2 { color: #10b981; }
 .feedback-warning h2 { color: #fbbf24; }
-.feedback-error h2 { color: #f87171; }
+.feedback-error h2 { color: #f98080; }
 
 .feedback-msg {
   margin: 0 0 0.5rem 0;
@@ -511,7 +511,7 @@
   flex-wrap: wrap;
   gap: 1.25rem;
   font-size: 0.88rem;
-  color: #94a3b8;
+  color: #b0bbca;
 }
 
 .feedback-details strong {
@@ -542,7 +542,7 @@
 .btn-history-view-all {
   background: transparent;
   border: none;
-  color: #ff2d75;
+  color: #ff74a4;
   font-weight: 700;
   font-size: 0.9rem;
   cursor: pointer;
@@ -573,7 +573,7 @@
 
 .card-subtext {
   margin: 0 0 1.5rem 0;
-  color: #94a3b8;
+  color: #b0bbca;
   font-size: 0.92rem;
   line-height: 1.5;
 }
@@ -626,7 +626,7 @@
 .btn-demo-pill:hover {
   background: #27273c;
   border-color: #ff2d75;
-  color: #ff2d75;
+  color: #ff5690;
 }
 
 .manual-form-grid {
@@ -696,7 +696,7 @@
 
 .btn-validate-ticket-pink {
   width: 100%;
-  background: #ff2d75;
+  background: #d61f6e;
   color: #ffffff;
   border: none;
   border-radius: 10px;
@@ -710,7 +710,7 @@
 }
 
 .btn-validate-ticket-pink:hover:not(:disabled) {
-  background: #e02467;
+  background: #be1862;
   transform: translateY(-1px);
 }
 
@@ -764,7 +764,7 @@
 }
 
 .type-chip-dark.active {
-  background: #ff2d75;
+  background: #d61f6e;
   border-color: #ff2d75;
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(255, 45, 117, 0.35);
@@ -793,7 +793,7 @@
 }
 
 .btn-lookup-pink {
-  background: #ff2d75;
+  background: #d61f6e;
   color: #ffffff;
   border: none;
   border-radius: 8px;
@@ -807,7 +807,7 @@
 }
 
 .btn-lookup-pink:hover:not(:disabled) {
-  background: #e02467;
+  background: #be1862;
 }
 
 .btn-lookup-pink:disabled {
@@ -821,7 +821,7 @@
   border-radius: 10px;
   padding: 2.5rem;
   text-align: center;
-  color: #64748b;
+  color: #79899f;
   font-size: 0.95rem;
 }
 
@@ -863,7 +863,7 @@
   display: flex;
   gap: 1.25rem;
   font-size: 0.88rem;
-  color: #94a3b8;
+  color: #b0bbca;
   flex-wrap: wrap;
 }
 
@@ -945,7 +945,7 @@
 }
 
 .btn-checkin-direct-pink {
-  background: #ff2d75;
+  background: #d61f6e;
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -958,11 +958,11 @@
 }
 
 .btn-checkin-direct-pink:hover {
-  background: #e02467;
+  background: #be1862;
 }
 
 .checked-in-timestamp {
-  color: #94a3b8;
+  color: #b0bbca;
   font-size: 0.82rem;
   font-family: monospace;
 }
@@ -1023,7 +1023,7 @@
   font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.8px;
-  color: #94a3b8;
+  color: #b0bbca;
   text-transform: uppercase;
 }
 
@@ -1036,11 +1036,11 @@
 
 .kpi-value.green { color: #10b981; }
 .kpi-value.yellow { color: #fbbf24; }
-.kpi-value.red { color: #f87171; }
+.kpi-value.red { color: #f98080; }
 
 .kpi-sub {
   font-size: 0.8rem;
-  color: #64748b;
+  color: #b2bbc7;
 }
 
 .history-filter-row {
@@ -1076,7 +1076,7 @@
 }
 
 .history-filter-pill.active {
-  background: #ff2d75;
+  background: #d61f6e;
   border-color: #ff2d75;
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(255, 45, 117, 0.35);
@@ -1172,7 +1172,7 @@
 .status-badge-pill.wrong_gate,
 .status-badge-pill.error {
   background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
+  color: #f98080;
   border: 1px solid rgba(239, 68, 68, 0.35);
 }
 
@@ -1212,7 +1212,7 @@
 .offline-card-title {
   font-size: 0.78rem;
   font-weight: 800;
-  color: #94a3b8;
+  color: #b0bbca;
   text-transform: uppercase;
   letter-spacing: 0.8px;
   margin-bottom: 0.5rem;
@@ -1225,7 +1225,7 @@
 }
 
 .btn-offline-action-pink {
-  background: #ff2d75;
+  background: #d61f6e;
   color: #ffffff;
   border: none;
   border-radius: 8px;
@@ -1236,7 +1236,7 @@
 }
 
 .btn-offline-action-pink:hover:not(:disabled) {
-  background: #e02467;
+  background: #be1862;
 }
 
 .btn-offline-action-blue {
@@ -1272,7 +1272,7 @@
    DIALOGS, MODALS & TOASTS
    ========================================================================== */
 .offline-sync-toast {
-  background: #10b981;
+  background: #0b815a;
   color: #ffffff;
   padding: 0.85rem 1.5rem;
   border-radius: 10px;
@@ -1305,7 +1305,7 @@
 }
 
 .shift-inactive-banner .btn-secondary {
-  background: #ef4444;
+  background: #e21313;
   color: #ffffff;
   border: none;
   padding: 0.6rem 1.1rem;
@@ -1359,7 +1359,7 @@
 .terminal-dialog-header .close-btn {
   background: transparent;
   border: none;
-  color: #94a3b8;
+  color: #b0bbca;
   font-size: 1.5rem;
   cursor: pointer;
 }
@@ -1405,11 +1405,11 @@
 }
 
 .btn-dialog-action.btn-primary {
-  background: #ff2d75;
+  background: #d61f6e;
   color: #ffffff;
 }
 
 .btn-dialog-action.btn-success {
-  background: #10b981;
+  background: #0b815a;
   color: #ffffff;
 }

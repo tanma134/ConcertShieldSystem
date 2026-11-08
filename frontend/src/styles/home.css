@@ -1,12 +1,12 @@
 :root {
-  --home-bg: #0d0d0d;
-  --home-card: #161616;
-  --home-line: #2a2a2a;
-  --home-primary: #e84393;
-  --home-primary-dark: #d43585;
+  --home-bg: #0b0816;
+  --home-card: #181228;
+  --home-line: #3d3262;
+  --home-primary: #ff6fb5;
+  --home-primary-dark: #d61f6e;
   --home-text: #ffffff;
-  --home-text-muted: #888888;
-  --home-text-faint: #555555;
+  --home-text-muted: #d3cae6;
+  --home-text-faint: #b8aed0;
   --home-radius: 16px;
 }
 

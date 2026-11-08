@@ -16,7 +16,7 @@
 }
 
 .badge-organizer {
-  background: #ff2d75;
+  background: #d61f6e;
   color: white;
   font-size: 0.7rem;
   font-weight: 700;
@@ -165,7 +165,7 @@
 .upload-hint {
   margin: 0 0 1rem 0;
   font-size: 0.82rem;
-  color: #64748b;
+  color: #b2bbc7;
 }
 
 .upload-grid {
@@ -224,7 +224,7 @@
 .pdf-preview-badge {
   background: #eff6ff;
   border: 1px solid #bfdbfe;
-  color: #e02467;
+  color: #cd1d5c;
   padding: 0.75rem;
   border-radius: 6px;
   font-weight: 700;
@@ -239,7 +239,7 @@
 }
 
 .file-name-text {
-  color: #15803d;
+  color: #1fbd5a;
   font-weight: 700;
   font-size: 0.78rem;
   white-space: nowrap;
@@ -249,7 +249,7 @@
 
 .btn-remove-file {
   background: #fef2f2;
-  color: #dc2626;
+  color: #d12222;
   border: 1px solid #fca5a5;
   border-radius: 4px;
   padding: 0.25rem 0.6rem;
@@ -270,7 +270,7 @@
 }
 
 .btn-submit-verification {
-  background: #ff2d75;
+  background: #d61f6e;
   color: white;
   border: none;
   padding: 0.85rem 1.75rem;

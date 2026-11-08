@@ -11,10 +11,10 @@
   --sc-card-border: #374151;
   
   --sc-text-primary: #f9fafb;
-  --sc-text-secondary: #9ca3af;
-  --sc-text-muted: #6b7280;
+  --sc-text-secondary: #d1d5db;
+  --sc-text-muted: #b4bcc9;
   
-  --sc-primary: #6366f1;
+  --sc-primary: #7c6ff5;
   --sc-primary-hover: #4f46e5;
   --sc-success: #10b981;
   --sc-warning: #f59e0b;
@@ -224,7 +224,7 @@
 .sc-case-number {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-weight: 700;
-  color: #818cf8;
+  color: #949ef9;
 }
 
 /* Status & Priority Badges */
@@ -258,7 +258,7 @@
 
 .sc-status-closed {
   background: rgba(107, 114, 128, 0.2);
-  color: #9ca3af;
+  color: #b5bbc4;
   border: 1px solid rgba(107, 114, 128, 0.4);
 }
 
@@ -273,7 +273,7 @@
 
 .sc-priority-critical {
   background: rgba(239, 68, 68, 0.2);
-  color: #f87171;
+  color: #f98080;
   border: 1px solid rgba(239, 68, 68, 0.4);
 }
 
@@ -291,7 +291,7 @@
 
 .sc-priority-low {
   background: rgba(107, 114, 128, 0.15);
-  color: #9ca3af;
+  color: #b5bbc4;
   border: 1px solid rgba(107, 114, 128, 0.3);
 }
 

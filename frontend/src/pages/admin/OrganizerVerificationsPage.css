@@ -44,7 +44,7 @@
 }
 
 .tab-btn.active {
-  background: #ff2d75;
+  background: #d61f6e;
   color: white;
   border-color: #ff2d75;
 }
@@ -106,7 +106,7 @@
 
 .email-sub {
   font-size: 0.78rem;
-  color: #64748b;
+  color: #b2bbc7;
 }
 
 .contact-cell span {
@@ -127,7 +127,7 @@
 .status-pill.rejected { background: #fee2e2; color: #b91c1c; }
 
 .btn-inspect {
-  background: #ff2d75;
+  background: #d61f6e;
   color: white;
   border: none;
   padding: 0.45rem 0.85rem;
@@ -166,7 +166,7 @@
 .overview-grid .label {
   display: block;
   font-size: 0.75rem;
-  color: #64748b;
+  color: #b2bbc7;
   font-weight: 600;
 }
 
@@ -229,7 +229,7 @@
 
 .doc-file-icon {
   font-size: 1.2rem;
-  color: #64748b;
+  color: #b2bbc7;
 }
 
 .doc-meta {
@@ -239,7 +239,7 @@
 
 .file-name {
   display: block;
-  color: #94a3b8;
+  color: #b0bbca;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -249,7 +249,7 @@
 .btn-view-cloud {
   display: inline-block;
   margin-top: 0.35rem;
-  color: #2563eb;
+  color: #7ea3f3;
   font-weight: 700;
   text-decoration: none;
 }
@@ -375,7 +375,7 @@
   border: none;
   font-size: 1.25rem;
   line-height: 1;
-  color: #64748b;
+  color: #b2bbc7;
   cursor: pointer;
   padding: 0.35rem 0.5rem;
   border-radius: 6px;
@@ -407,7 +407,7 @@
 .btn-cancel {
   background: #ffffff;
   border: 1px solid #2e2e40;
-  color: #94a3b8;
+  color: #5e728d;
   font-weight: 600;
   padding: 0.6rem 1.15rem;
   border-radius: 6px;
@@ -439,7 +439,7 @@
   border: 1px solid #2e2e40;
   border-radius: 6px;
   font-size: 0.88rem;
-  color: #ffffff;
+  color: #181228;
   background: #ffffff;
   box-sizing: border-box;
 }
@@ -481,7 +481,7 @@
 }
 
 .header-success h2 {
-  color: #15803d;
+  color: #1fbd5a;
 }
 
 .header-danger h2 {
@@ -489,7 +489,7 @@
 }
 
 .header-warning h2 {
-  color: #b45309;
+  color: #f5842e;
 }
 
 .dialog-text {
@@ -500,7 +500,7 @@
 }
 
 .btn-confirm-dialog {
-  background: #ff2d75;
+  background: #d61f6e;
   color: white;
   border: none;
   font-weight: 600;
@@ -511,5 +511,5 @@
 }
 
 .btn-confirm-dialog:hover {
-  background: #e02467;
+  background: #be1862;
 }
