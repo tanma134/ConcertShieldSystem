@@ -27,13 +27,13 @@
 
 .my-orders-heading p:last-child {
   margin: 0;
-  color: #a9a5b2;
+  color: #bbb8c2;
 }
 
 .my-orders-eyebrow,
 .my-order-eyebrow {
   margin: 0;
-  color: #db42ef;
+  color: #e576f3;
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.13em;
@@ -65,7 +65,7 @@
   padding: 14px 4px;
   border: 0;
   border-bottom: 2px solid transparent;
-  color: #aaa6b2;
+  color: #bcb9c3;
   background: transparent;
   font: inherit;
   cursor: pointer;
@@ -127,7 +127,7 @@
 .my-order-poster-empty {
   display: grid;
   place-items: center;
-  color: #aaa6b2;
+  color: #bcb9c3;
   font-size: 12px;
 }
 
@@ -184,7 +184,7 @@
 
 .my-order-info span,
 .my-order-amount span {
-  color: #96919f;
+  color: #bbb7c0;
   font-size: 12px;
 }
 
@@ -211,7 +211,7 @@
 }
 
 .my-order-detail-note {
-  color: #96919f;
+  color: #bbb7c0;
   font-size: 13px;
 }
 

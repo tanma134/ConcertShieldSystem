@@ -66,7 +66,7 @@
   content: "";
   display: block;
   height: 3px;
-  background: linear-gradient(90deg, #6ee7d8, #7c3aed 52%, #ec4899);
+  background: linear-gradient(90deg, #6ee7d8, #7c3aed 52%, #d61f6e);
 }
 
 .queue-panel h1,

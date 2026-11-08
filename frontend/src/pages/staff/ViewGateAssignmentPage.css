@@ -35,7 +35,7 @@
 
 .gate-subtitle {
   margin: 0;
-  color: #94a3b8;
+  color: #b0bbca;
   font-size: 0.95rem;
 }
 
@@ -51,7 +51,7 @@
 
 .picker-label {
   font-size: 0.85rem;
-  color: #64748b;
+  color: #b2bbc7;
   font-weight: 600;
 }
 
@@ -85,14 +85,14 @@
 
 .event-name-pink {
   margin: 0 0 0.35rem 0;
-  color: #ff2d75;
+  color: #ff74a4;
   font-size: 2rem;
   font-weight: 800;
   letter-spacing: -0.5px;
 }
 
 .event-date-sub {
-  color: #94a3b8;
+  color: #b0bbca;
   font-size: 0.95rem;
   font-weight: 500;
 }
@@ -127,7 +127,7 @@
 }
 
 .card-label-gray {
-  color: #71717a;
+  color: #b8b8bd;
   font-size: 0.8rem;
   font-weight: 600;
   text-transform: capitalize;
@@ -149,21 +149,21 @@
 }
 
 .card-value-pink {
-  color: #ff2d75;
+  color: #ff74a4;
   font-size: 1.25rem;
   font-weight: 700;
   margin-bottom: 0.45rem;
 }
 
 .card-meta-line {
-  color: #94a3b8;
+  color: #b0bbca;
   font-size: 0.9rem;
   line-height: 1.45;
 }
 
 .card-meta-line.desc-text {
   font-size: 0.88rem;
-  color: #8b8b98;
+  color: #b9b9c1;
 }
 
 /* Bottom Button (Figure 113) */
@@ -174,7 +174,7 @@
 }
 
 .btn-open-terminal-pink {
-  background: #ff2d75;
+  background: #d61f6e;
   color: #ffffff;
   border: none;
   padding: 0.85rem 2.5rem;

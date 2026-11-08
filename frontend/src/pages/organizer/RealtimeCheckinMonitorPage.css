@@ -34,7 +34,7 @@
 .rcm-header-subtitle {
   margin: 4px 0 0;
   font-size: 13px;
-  color: #94a3b8;
+  color: #b0bbca;
 }
 
 .rcm-live-badge {
@@ -93,7 +93,7 @@
 }
 
 .rcm-btn-primary {
-  background: linear-gradient(135deg, #ff2d75, #ec4899);
+  background: linear-gradient(135deg, #d61f6e, #d61f6e);
   border: none;
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
@@ -137,7 +137,7 @@
 .rcm-metric-label {
   font-size: 13px;
   font-weight: 700;
-  color: #94a3b8;
+  color: #b0bbca;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
@@ -177,7 +177,7 @@
 .fill-purple { background: linear-gradient(90deg, #7c3aed, #a855f7); }
 .fill-emerald { background: linear-gradient(90deg, #10b981, #34d399); }
 .fill-amber { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
-.fill-pink { background: linear-gradient(90deg, #ec4899, #f472b6); }
+.fill-pink { background: linear-gradient(90deg, #d61f6e, #f472b6); }
 
 /* Velocity Telemetry Banner */
 .rcm-telemetry-banner {
@@ -204,7 +204,7 @@
   height: 42px;
   border-radius: 12px;
   background: rgba(124, 58, 237, 0.2);
-  color: #c084fc;
+  color: #c389fc;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -213,7 +213,7 @@
 
 .rcm-telemetry-text div:first-child {
   font-size: 12px;
-  color: #94a3b8;
+  color: #b0bbca;
   font-weight: 600;
   text-transform: uppercase;
 }
@@ -294,13 +294,13 @@
 
 .status-normal { background: rgba(16, 185, 129, 0.2); color: #34d399; }
 .status-busy { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-.status-congested { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+.status-congested { background: rgba(239, 68, 68, 0.2); color: #f98080; }
 
 .rcm-gate-stats {
   display: flex;
   justify-content: space-between;
   font-size: 12.5px;
-  color: #94a3b8;
+  color: #b0bbca;
   margin-bottom: 8px;
 }
 
@@ -354,7 +354,7 @@
 }
 
 .tag-success { background: rgba(16, 185, 129, 0.2); color: #34d399; }
-.tag-failed { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+.tag-failed { background: rgba(239, 68, 68, 0.2); color: #f98080; }
 
 /* Filter Controls */
 .rcm-filter-bar {

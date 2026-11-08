@@ -43,14 +43,6 @@ namespace TicketAPI.Controllers
                 if (!eligibility.CanSell)
                     throw new InvalidOperationException(eligibility.Reason);
 
-                if (eligibility.RequiresVirtualQueue)
-                {
-                    await _queueAdmission.EnsureAdmittedAsync(
-                        request.EventId,
-                        Request.Headers.Authorization,
-                        Request.Headers["X-Queue-Token"],
-                        HttpContext.RequestAborted);
-                }
 
                 var session = await _holdService.CreateHoldSessionAsync(
                     userId.Value,

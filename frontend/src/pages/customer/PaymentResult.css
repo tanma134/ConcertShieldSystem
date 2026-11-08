@@ -45,7 +45,7 @@
 
 .payment-result-eyebrow {
   margin: 0 0 10px;
-  color: #c084fc;
+  color: #c389fc;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.16em;
@@ -59,7 +59,7 @@
 }
 
 .payment-result-card > p:not(.payment-result-eyebrow) {
-  color: #b8b2c2;
+  color: #bdb8c7;
   line-height: 1.65;
 }
 
@@ -85,7 +85,7 @@
 }
 
 .payment-result-details dt {
-  color: #928b9d;
+  color: #bcb7c3;
 }
 
 .payment-result-details dd {

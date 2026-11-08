@@ -31,7 +31,7 @@
 
 .admin-tickets-heading p:last-child,
 .admin-tickets-table-heading span {
-  color: #b9aecb;
+  color: #beb4cf;
 }
 
 .admin-tickets-count {
@@ -49,7 +49,7 @@
 }
 
 .admin-tickets-count span {
-  color: #b9aecb;
+  color: #beb4cf;
   font-size: 13px;
 }
 
@@ -133,7 +133,7 @@
 }
 
 .admin-tickets-table th {
-  color: #b9aecb;
+  color: #beb4cf;
   font-size: 12px;
   text-transform: uppercase;
   white-space: nowrap;
@@ -149,7 +149,7 @@
   max-width: 140px;
   overflow: hidden;
   margin-top: 4px;
-  color: #93879e;
+  color: #beb7c5;
   text-overflow: ellipsis;
 }
 
@@ -212,13 +212,13 @@
 
 .admin-tickets-state {
   padding: 40px 20px;
-  color: #b9aecb;
+  color: #beb4cf;
   text-align: center;
 }
 
 .admin-tickets-pagination {
   padding: 16px 20px;
-  color: #b9aecb;
+  color: #beb4cf;
   font-size: 13px;
 }
 

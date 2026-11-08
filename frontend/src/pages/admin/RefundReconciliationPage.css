@@ -24,7 +24,7 @@
 }
 
 .rr-header p {
-  color: #9ca3af;
+  color: #b5bbc4;
   margin: 0;
   font-size: 14px;
 }
@@ -59,7 +59,7 @@
 }
 
 .rr-btn-new-refund {
-  background: linear-gradient(135deg, #ec4899 0%, #a855f7 100%);
+  background: linear-gradient(135deg, #d61f6e 0%, #a855f7 100%);
   border: none;
   color: #ffffff;
   font-weight: 700;
@@ -98,7 +98,7 @@
 
 .rr-kpi-label {
   font-size: 13px;
-  color: #9ca3af;
+  color: #b5bbc4;
   font-weight: 600;
 }
 
@@ -115,7 +115,7 @@
 }
 
 .rr-kpi-val.orange {
-  color: #f97316;
+  color: #fa822f;
 }
 
 .rr-kpi-trend {
@@ -129,7 +129,7 @@
 
 .rr-kpi-sub {
   font-size: 12px;
-  color: #6b7280;
+  color: #b4b8c1;
 }
 
 /* Toolbar: Search and Filter Tabs */
@@ -188,7 +188,7 @@
 }
 
 .rr-event-select:focus {
-  color: #d946ef;
+  color: #e47af3;
 }
 
 .rr-customer-main {
@@ -200,7 +200,7 @@
 .rr-event-subtag {
   margin-top: 4px;
   font-size: 11.5px;
-  color: #c084fc;
+  color: #c389fc;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -224,7 +224,7 @@
   top: 50%;
   transform: translateY(-50%);
   font-size: 14px;
-  color: #9ca3af;
+  color: #b5bbc4;
   pointer-events: none;
 }
 
@@ -252,7 +252,7 @@
   transform: translateY(-50%);
   background: none;
   border: none;
-  color: #6b7280;
+  color: #b4b8c1;
   cursor: pointer;
   padding: 4px;
   font-size: 12px;
@@ -274,7 +274,7 @@
 .rr-filter-btn {
   background: transparent;
   border: none;
-  color: #9ca3af;
+  color: #b5bbc4;
   padding: 8px 18px;
   border-radius: 8px;
   font-size: 13px;
@@ -365,7 +365,7 @@
 .rr-table-empty {
   text-align: center;
   padding: 40px !important;
-  color: #9ca3af;
+  color: #b5bbc4;
   font-size: 14px;
 }
 
@@ -392,7 +392,7 @@
 }
 
 .rr-order-tag {
-  color: #d946ef;
+  color: #e47af3;
   font-weight: 600;
 }
 
@@ -407,7 +407,7 @@
 }
 
 .rr-cell-date {
-  color: #9ca3af;
+  color: #b5bbc4;
   white-space: nowrap;
 }
 
@@ -435,12 +435,12 @@
 
 .rr-badge.status-failed {
   background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
+  color: #f98080;
 }
 
 .rr-badge.match-mismatched {
   background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
+  color: #f98080;
 }
 
 /* Actions */
@@ -468,7 +468,7 @@
 .rr-action-retry-btn {
   background: rgba(239, 68, 68, 0.15);
   border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #f87171;
+  color: #f98080;
   font-weight: 600;
   font-size: 12.5px;
   padding: 5px 12px;

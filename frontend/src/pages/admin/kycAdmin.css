@@ -371,7 +371,7 @@
   transition: transform 160ms ease;
 }
 .kyc-switch input:checked ~ .kyc-switch__track {
-  background: linear-gradient(135deg, #7c3aed 0%, #c026d3 55%, #ec4899 100%);
+  background: linear-gradient(135deg, #7c3aed 0%, #c026d3 55%, #d61f6e 100%);
   border-color: transparent;
 }
 .kyc-switch input:checked ~ .kyc-switch__track::before { transform: translateX(18px); }

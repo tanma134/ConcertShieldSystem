@@ -22,7 +22,7 @@
 .policy-top-badge {
   display: inline-block;
   background: rgba(255, 45, 117, 0.15);
-  color: #ff2d75;
+  color: #ff74a4;
   font-size: 0.75rem;
   font-weight: 800;
   padding: 0.25rem 0.65rem;
@@ -40,13 +40,13 @@
 .policy-gov-header .subtitle {
   margin: 0.5rem 0 0;
   font-size: 0.92rem;
-  color: #64748b;
+  color: #b2bbc7;
   max-width: 800px;
   line-height: 1.5;
 }
 
 .btn-publish-new {
-  background: #ff2d75;
+  background: #d61f6e;
   color: white;
   border: none;
   padding: 0.75rem 1.4rem;
@@ -60,7 +60,7 @@
 }
 
 .btn-publish-new:hover {
-  background: #e02467;
+  background: #be1862;
   transform: translateY(-1px);
 }
 
@@ -204,7 +204,7 @@
 
 .btn-read-doc {
   background: #15151c;
-  color: #312e81;
+  color: #807dd1;
   border: none;
   padding: 0.65rem 1.4rem;
   border-radius: 8px;
@@ -244,13 +244,13 @@
 .history-section-header p {
   margin: 0;
   font-size: 0.85rem;
-  color: #64748b;
+  color: #b2bbc7;
 }
 
 .btn-refresh-history {
   background: #191924;
   border: 1px solid #cbd5e1;
-  color: #334155;
+  color: #7289aa;
   padding: 0.5rem 1rem;
   border-radius: 6px;
   font-weight: 600;
@@ -277,7 +277,7 @@
 
 .policy-table th {
   background: #191924;
-  color: #475569;
+  color: #788aa3;
   font-weight: 700;
   font-size: 0.78rem;
   text-transform: uppercase;
@@ -298,7 +298,7 @@
 
 .sub-date {
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: #b0bbca;
   margin-top: 0.25rem;
 }
 
@@ -309,7 +309,7 @@
 .scope-tag {
   display: inline-block;
   background: #1e1e2e;
-  color: #475569;
+  color: #7e8fa8;
   font-size: 0.78rem;
   font-weight: 600;
   padding: 0.2rem 0.55rem;
@@ -348,11 +348,11 @@
 
 .status-pill.archived {
   background: #1e1e2e;
-  color: #64748b;
+  color: #7f8ea3;
 }
 
 .btn-action-read {
-  background: #ff2d75;
+  background: #d61f6e;
   color: white;
   border: none;
   padding: 0.45rem 0.9rem;
@@ -364,14 +364,14 @@
 }
 
 .btn-action-read:hover {
-  background: #e02467;
+  background: #be1862;
 }
 
 .table-loading,
 .table-empty {
   text-align: center;
   padding: 2.5rem !important;
-  color: #64748b;
+  color: #b2bbc7;
   font-weight: 600;
 }
 
@@ -393,7 +393,7 @@
 
 /* Reading Modal */
 .policy-doc-modal {
-  background: #ffffff;
+  background: #181228;
   border-radius: 14px;
   width: 100%;
   max-width: 900px;
@@ -444,7 +444,7 @@
 
 .doc-status-tag.archived {
   background: #1e1e2e;
-  color: #64748b;
+  color: #7f8ea3;
 }
 
 .doc-modal-header h2 {
@@ -457,7 +457,7 @@
   display: flex;
   gap: 1.5rem;
   font-size: 0.85rem;
-  color: #64748b;
+  color: #b2bbc7;
 }
 
 .btn-close-doc {
@@ -526,7 +526,7 @@
 
 .doc-hash-audit {
   font-size: 0.8rem;
-  color: #64748b;
+  color: #b2bbc7;
 }
 
 .btn-done-read {
@@ -580,7 +580,7 @@
 .create-modal-header p {
   margin: 0.25rem 0 0;
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: #b0bbca;
 }
 
 .create-modal-body {
@@ -662,7 +662,7 @@
 
 .create-note {
   font-size: 0.78rem;
-  color: #64748b;
+  color: #b2bbc7;
   max-width: 450px;
 }
 
@@ -674,7 +674,7 @@
 .btn-modal-cancel {
   background: #1e1e2e;
   border: 1px solid #cbd5e1;
-  color: #475569;
+  color: #7e8fa8;
   padding: 0.6rem 1.1rem;
   border-radius: 6px;
   font-weight: 700;
@@ -682,7 +682,7 @@
 }
 
 .btn-modal-submit {
-  background: #ff2d75;
+  background: #d61f6e;
   border: none;
   color: white;
   padding: 0.6rem 1.4rem;
@@ -692,5 +692,5 @@
 }
 
 .btn-modal-submit:hover {
-  background: #e02467;
+  background: #be1862;
 }

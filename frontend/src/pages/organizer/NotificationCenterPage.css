@@ -23,7 +23,7 @@
 .nc-unread-badge {
   font-size: 13px;
   background: rgba(255, 45, 117, 0.15);
-  color: #ff2d75;
+  color: #ff74a4;
   padding: 4px 10px;
   border-radius: 999px;
 }
@@ -147,7 +147,7 @@
 }
 
 .nc-card-delete:hover {
-  color: #ef4444;
+  color: #f48181;
   opacity: 1;
 }
 

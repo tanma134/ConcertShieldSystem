@@ -1,15 +1,15 @@
 :root {
-  --auth-bg: #0d0d0d;
-  --auth-card: #161616;
-  --auth-line: #2a2a2a;
-  --auth-field-bg: #1e1e1e;
-  --auth-primary: #e84393;
-  --auth-primary-dark: #d43585;
-  --auth-primary-light: rgba(232, 67, 147, 0.12);
+  --auth-bg: #0b0816;
+  --auth-card: #181228;
+  --auth-line: #3d3262;
+  --auth-field-bg: #231b3a;
+  --auth-primary: #ff6fb5;
+  --auth-primary-dark: #d61f6e;
+  --auth-primary-light: rgba(255, 111, 181, 0.16);
   --auth-text: #ffffff;
-  --auth-text-muted: #888888;
-  --auth-text-faint: #555555;
-  --auth-border: #2a2a2a;
+  --auth-text-muted: #d3cae6;
+  --auth-text-faint: #b8aed0;
+  --auth-border: #3d3262;
   --auth-radius: 16px;
 }
 
@@ -276,14 +276,14 @@
 
 .auth-policy-label {
   font-size: 12.5px;
-  color: #a0a0aa;
+  color: #b8b8bf;
   line-height: 1.45;
   cursor: pointer;
   user-select: none;
 }
 
 .auth-policy-link {
-  color: #ff2d75;
+  color: #ff74a4;
   background: none;
   border: none;
   padding: 0;
@@ -296,7 +296,7 @@
 }
 
 .auth-policy-link:hover {
-  color: #ff6097;
+  color: #ff74a4;
 }
 
 .policy-modal-overlay {
@@ -344,13 +344,13 @@
 .policy-modal-close {
   background: transparent;
   border: none;
-  color: #94a3b8;
+  color: #b0bbca;
   font-size: 1.25rem;
   cursor: pointer;
 }
 
 .policy-modal-close:hover {
-  color: #ff2d75;
+  color: #ff74a4;
 }
 
 .policy-modal-body {
@@ -384,7 +384,7 @@
 
 .policy-version-badge {
   background: rgba(255, 45, 117, 0.15);
-  color: #ff2d75;
+  color: #ff74a4;
   border: 1px solid rgba(255, 45, 117, 0.35);
   font-size: 0.75rem;
   padding: 2px 8px;
@@ -393,7 +393,7 @@
 }
 
 .policy-cat-desc {
-  color: #94a3b8;
+  color: #b0bbca;
   font-size: 0.85rem;
   margin: 0 0 6px 0;
 }
@@ -409,7 +409,7 @@
 }
 
 .btn-policy-agree {
-  background: #ff2d75;
+  background: #d61f6e;
   color: #ffffff;
   border: none;
   border-radius: 8px;

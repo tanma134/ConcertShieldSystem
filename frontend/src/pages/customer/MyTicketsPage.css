@@ -35,7 +35,7 @@
 
 .mt-heading p:last-child {
   margin: 9px 0 0;
-  color: #a1a1aa;
+  color: #b9b9bf;
 }
 
 .mt-total {
@@ -61,7 +61,7 @@
   padding: 13px 14px;
   border: 0;
   border-bottom: 2px solid transparent;
-  color: #a1a1aa;
+  color: #b9b9bf;
   background: transparent;
   font: inherit;
   cursor: pointer;
@@ -110,7 +110,7 @@
 
 .mt-order-label {
   margin: 0 0 5px;
-  color: #a1a1aa;
+  color: #b9b9bf;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -128,7 +128,7 @@
   flex-wrap: wrap;
   gap: 7px;
   margin: 7px 0 0;
-  color: #a1a1aa;
+  color: #b9b9bf;
   font-size: 13px;
 }
 
@@ -194,7 +194,7 @@
 .mt-ticket-event {
   overflow: hidden;
   margin: 5px 0 0;
-  color: #a1a1aa;
+  color: #b9b9bf;
   font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -206,7 +206,7 @@
   align-items: center;
   gap: 8px 16px;
   margin-top: 14px;
-  color: #a1a1aa;
+  color: #b9b9bf;
   font-size: 12px;
 }
 
@@ -284,7 +284,7 @@
   padding: 56px 20px;
   border: 1px dashed #3f3f46;
   border-radius: 14px;
-  color: #a1a1aa;
+  color: #b9b9bf;
   text-align: center;
 }
 

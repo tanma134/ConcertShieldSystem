@@ -29,7 +29,7 @@
 
 .cssm-eyebrow {
   margin: 0 40px 6px 0;
-  color: #a78bfa;
+  color: #ae95fa;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: .14em;
@@ -44,7 +44,7 @@
 .cssm-intro {
   max-width: 680px;
   margin: 0;
-  color: #a1a1aa;
+  color: #b9b9bf;
   font-size: 13px;
   line-height: 1.5;
 }
@@ -137,7 +137,7 @@
 }
 
 .cssm-zone-heading span {
-  color: #a1a1aa;
+  color: #b9b9bf;
   font-size: 10px;
 }
 

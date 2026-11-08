@@ -33,7 +33,7 @@
 .pre-heading p:last-child,
 .pre-card-heading p {
   margin: 8px 0 0;
-  color: #aaa3b3;
+  color: #bcb7c3;
 }
 
 .pre-total {
@@ -56,7 +56,7 @@
 
 .pre-total span {
   margin-top: 4px;
-  color: #aaa3b3;
+  color: #bcb7c3;
   font-size: 13px;
 }
 
@@ -153,13 +153,13 @@
 }
 
 .pre-card-heading > span {
-  color: #b9a9ca;
+  color: #c3b6d2;
   font-size: 13px;
 }
 
 .pre-state {
   padding: 48px 20px;
-  color: #aaa3b3;
+  color: #bcb7c3;
   text-align: center;
 }
 
@@ -182,7 +182,7 @@
 }
 
 .pre-table th {
-  color: #aaa3b3;
+  color: #bcb7c3;
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -197,7 +197,7 @@
   max-width: 180px;
   margin-top: 5px;
   overflow-wrap: anywhere;
-  color: #aaa3b3;
+  color: #bcb7c3;
 }
 
 .pre-status {
@@ -238,7 +238,7 @@
 
 .pre-pagination {
   padding: 16px 20px;
-  color: #aaa3b3;
+  color: #bcb7c3;
   font-size: 13px;
 }
 
@@ -335,7 +335,7 @@
 
 .pre-modal-header p:last-child {
   margin: 8px 0 0;
-  color: #aaa3b3;
+  color: #bcb7c3;
   font-size: 13px;
 }
 
@@ -381,7 +381,7 @@
 
 .pre-detail-grid span {
   margin-bottom: 6px;
-  color: #aaa3b3;
+  color: #bcb7c3;
   font-size: 12px;
 }
 
@@ -423,7 +423,7 @@
 }
 
 .pre-selected-action > span {
-  color: #aaa3b3;
+  color: #bcb7c3;
   font-size: 12px;
 }
 
@@ -468,7 +468,7 @@
 }
 
 .pre-resolution-form label > small {
-  color: #8f8798;
+  color: #bbb6c0;
   text-align: right;
 }
 

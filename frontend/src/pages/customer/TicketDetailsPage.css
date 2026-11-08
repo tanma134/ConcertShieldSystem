@@ -103,7 +103,7 @@
 }
 
 .ticket-event-fact > div > span {
-  color: #85858f;
+  color: #babac0;
   font-size: 12px;
 }
 
@@ -116,7 +116,7 @@
 }
 
 .ticket-event-fact small {
-  color: #a1a1aa;
+  color: #b9b9bf;
 }
 
 .ticket-detail-card {
@@ -186,7 +186,7 @@
 }
 
 .ticket-detail-field span {
-  color: #85858f;
+  color: #babac0;
   font-size: 12px;
 }
 
@@ -208,7 +208,7 @@
 
 .ticket-detail-footer p {
   margin: 0;
-  color: #a1a1aa;
+  color: #b9b9bf;
   font-size: 13px;
 }
 
@@ -234,7 +234,7 @@
   padding: 48px 20px;
   border: 1px dashed #3f3f46;
   border-radius: 14px;
-  color: #a1a1aa;
+  color: #b9b9bf;
   text-align: center;
 }
 
@@ -301,7 +301,7 @@
 
 .ticket-qr-event {
   margin: 8px 0 18px;
-  color: #a1a1aa;
+  color: #b9b9bf;
 }
 
 .ticket-qr-image {
@@ -333,7 +333,7 @@
 
 .ticket-qr-instruction {
   margin-bottom: 0;
-  color: #a1a1aa;
+  color: #b9b9bf;
   font-size: 13px;
 }
 
@@ -444,7 +444,7 @@
 .ticket-history-state {
   margin: 0;
   padding: 22px 0 4px;
-  color: #a1a1aa;
+  color: #b9b9bf;
   font-size: 14px;
 }
 
@@ -511,14 +511,14 @@
 
 .ticket-history-main time {
   flex: 0 0 auto;
-  color: #a1a1aa;
+  color: #b9b9bf;
   font-size: 12px;
 }
 
 .ticket-history-status,
 .ticket-history-meta {
   margin: 7px 0 0;
-  color: #a1a1aa;
+  color: #b9b9bf;
   font-size: 12px;
 }
 
