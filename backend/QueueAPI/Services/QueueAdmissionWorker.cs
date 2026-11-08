@@ -33,6 +33,7 @@ public sealed class QueueAdmissionWorker(IServiceScopeFactory scopeFactory, ILog
                         await redis.FinalizeRandomizationAsync(config.EventId, cycleKey, stoppingToken);
                         var admitted = await redis.AdmitNextAsync(config.EventId, config.AdmissionRate, stoppingToken);
                         if (admitted > 0) logger.LogInformation("Queue admitted {Count} users for eventId={EventId}", admitted, config.EventId);
+                        await SyncQueueSessionStatusesAsync(db, redis, config.EventId, stoppingToken);
                     }
 
                     var admittedSessions = await db.QueueSessions
@@ -55,6 +56,52 @@ public sealed class QueueAdmissionWorker(IServiceScopeFactory scopeFactory, ILog
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
             catch (Exception ex) { logger.LogError(ex, "Queue admission cycle failed"); }
             await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+        }
+    }
+
+    private async Task SyncQueueSessionStatusesAsync(
+        QueueDbContext db,
+        IRedisQueueStore redis,
+        int eventId,
+        CancellationToken cancellationToken)
+    {
+        var sessions = await db.QueueSessions
+            .Where(x => x.EventId == eventId && (x.Status == "REGISTERED" || x.Status == "WAITING"))
+            .ToListAsync(cancellationToken);
+
+        var changed = 0;
+        foreach (var session in sessions)
+        {
+            var result = await redis.GetStatusAsync(eventId, session.UserId, session.QueueToken, cancellationToken);
+            if (result.Status == "TOKEN_INVALID")
+            {
+                logger.LogWarning(
+                    "Queue session could not be synchronized because its Redis token is invalid eventId={EventId} userId={UserId}",
+                    eventId, session.UserId);
+                continue;
+            }
+
+            if (result.Status is not ("WAITING" or "ADMITTED"))
+                continue;
+
+            var position = result.Status == "WAITING" && result.Position > 0
+                ? result.Position
+                : (int?)null;
+            if (session.Status == result.Status && session.Position == position)
+                continue;
+
+            session.Status = result.Status;
+            session.Position = position;
+            session.UpdatedAt = QueueTimeZone.Now;
+            changed++;
+        }
+
+        if (changed > 0)
+        {
+            await db.SaveChangesAsync(cancellationToken);
+            logger.LogInformation(
+                "Synchronized {Count} queue session statuses from Redis for eventId={EventId}",
+                changed, eventId);
         }
     }
 

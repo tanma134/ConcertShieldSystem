@@ -63,8 +63,17 @@ builder.Services.AddScoped<IEventSubmissionValidator, EventSubmissionValidator>(
 builder.Services.AddScoped<IPricingRuleService, PricingRuleService>();
 builder.Services.AddScoped<ISeatingTemplateService, SeatingTemplateService>();
 builder.Services.AddScoped<IEventAccessService, EventAccessService>();
+builder.Services.AddHostedService<UpcomingEventReminderWorker>();
 
 var authApiBaseUrl = builder.Configuration["Services:AuthenticationApi"] ?? "http://localhost:5010";
+builder.Services.AddHttpClient("EventReminderEmail", client =>
+{
+    client.BaseAddress = new Uri(authApiBaseUrl.TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(30);
+    var key = builder.Configuration["Services:InternalApiKey"];
+    if (!string.IsNullOrWhiteSpace(key))
+        client.DefaultRequestHeaders.Add("X-Internal-Api-Key", key);
+});
 builder.Services.AddHttpClient<IStaffDirectoryClient, StaffDirectoryClient>(client =>
 {
     client.BaseAddress = new Uri(authApiBaseUrl.TrimEnd('/') + "/");

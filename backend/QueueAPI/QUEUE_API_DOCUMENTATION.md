@@ -149,7 +149,7 @@ builder.Services.AddScoped<IQueueService, QueueService>();
 builder.Services.AddHostedService<QueueAdmissionWorker>();
 ```
 
-Worker chạy nền và định kỳ admit user từ Redis waiting set.
+Worker chạy nền mỗi khoảng 5 giây. Khi `PreQueueEndTime` đã qua, worker finalize randomization đúng một lần cho cycle, admit một batch theo `AdmissionRate`, rồi đồng bộ trạng thái và vị trí của toàn bộ session `REGISTERED`/`WAITING` thuộc event đó từ Redis về PostgreSQL. Vì vậy, người dùng không cần gửi thêm request `Join` để worker xử lý session đã đăng ký.
 
 ### 4.6 JWT
 
@@ -466,10 +466,10 @@ Flow:
 3. Kiểm tra queue token trong Redis.
 4. Nếu user đã admitted, trả `ADMITTED`.
 5. Nếu pre-queue chưa đóng, giữ trạng thái `REGISTERED`.
-6. Khi pre-queue đóng, worker (hoặc request Join đầu tiên sau thời điểm đóng) finalize randomization đúng một lần cho cycle.
+6. Khi pre-queue đóng, worker (hoặc request Join/Status đầu tiên sau thời điểm đóng) finalize randomization đúng một lần cho cycle.
 7. Finalization thêm toàn bộ registration hợp lệ vào Redis waiting/order set với cùng score.
 8. Tính position từ order đã finalize.
-9. Ghi status `WAITING` vào PostgreSQL.
+9. Worker đồng bộ trạng thái `WAITING`/`ADMITTED` và position cho tất cả session của event từ Redis về PostgreSQL. Request Join/Status cũng cập nhật session của người gọi.
 10. Trả queue response.
 
 ---
@@ -597,10 +597,19 @@ Worker lặp khoảng mỗi 5 giây:
 Tìm queue đã qua PreQueueEndTime
   |
   v
+FinalizeRandomizationAsync (idempotent theo event/cycle)
+  |
+  v
 Gọi Redis AdmitNextAsync
   |
   v
 Admit tối đa admissionRate user
+  |
+  v
+Đọc trạng thái/position Redis cho mọi session REGISTERED/WAITING của event
+  |
+  v
+Đồng bộ status/position PostgreSQL; retry ở vòng worker tiếp theo nếu lỗi
 ```
 
 `AdmitNextAsync` dùng Redis Lua script:
@@ -926,7 +935,7 @@ Frontend ánh xạ các code này thành thông báo thân thiện, không hiể
 
 ### 18.1 Randomization timing
 
-Random score hiện được tạo khi user join queue. Chưa có bước gom toàn bộ pre-queue rồi randomize duy nhất tại thời điểm đóng pre-queue.
+Random score được tạo cho toàn bộ registration Redis của event khi worker hoặc request đầu tiên sau giờ đóng finalize cycle. Script Redis bỏ qua cycle đã finalize. Worker sau đó đồng bộ status và position của tất cả session `REGISTERED`/`WAITING` thuộc đúng event, nên không phụ thuộc việc từng user có gửi Join hoặc gọi status hay không.
 
 ### 18.2 Database/Redis transaction
 
@@ -937,6 +946,8 @@ Registration ghi PostgreSQL trước, sau đó dùng thao tác Redis idempotent 
 ### 18.3 DB status sau TTL
 
 Redis tự hết admission TTL sau 300 giây. `QueueAdmissionWorker` và status endpoint cùng dùng cập nhật có điều kiện `ADMITTED -> EXPIRED`, nên xử lý đồng thời là idempotent và không chuyển ngược trạng thái.
+
+300 giây là thời hạn admission/purchase window sau khi user được admit; hiện không có cấu hình hay chuyển trạng thái `WAITING -> EXPIRED` theo thời gian chờ. Session `WAITING` tiếp tục chờ cho tới khi được admit hoặc rời/revoke queue.
 
 ### 18.4 Event validation
 

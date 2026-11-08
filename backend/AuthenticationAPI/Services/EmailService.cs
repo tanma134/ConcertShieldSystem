@@ -95,6 +95,70 @@ namespace AuthenticationAPI.Services
             await client.DisconnectAsync(quit: true);
         }
 
+        public async Task SendEventReminderAsync(
+            string toEmail,
+            string recipientName,
+            string eventTitle,
+            string eventSlug,
+            DateTime startsAt,
+            string timezone,
+            CancellationToken cancellationToken)
+        {
+            var settings = _configuration.GetSection("EmailSettings");
+            var host = settings["Host"]!;
+            var port = int.Parse(settings["Port"]!);
+            var enableSsl = bool.Parse(settings["EnableSsl"]!);
+            var senderEmail = settings["SenderEmail"]!;
+            var senderName = settings["SenderName"]!;
+            var password = settings["Password"]!;
+            var frontendBaseUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:5173";
+            var eventUrl = $"{frontendBaseUrl.TrimEnd('/')}/events/{Uri.EscapeDataString(eventSlug)}";
+            var safeName = System.Net.WebUtility.HtmlEncode(recipientName);
+            var safeTitle = System.Net.WebUtility.HtmlEncode(eventTitle);
+            var safeTimezone = System.Net.WebUtility.HtmlEncode(timezone);
+            var safeEventUrl = System.Net.WebUtility.HtmlEncode(eventUrl);
+            var localStartsAt = FormatEventStart(startsAt, timezone);
+
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress(senderName, senderEmail));
+            message.To.Add(MailboxAddress.Parse(toEmail));
+            message.Subject = $"Nhắc nhở: {eventTitle} sẽ diễn ra sau 1 ngày";
+            message.Body = new TextPart("html")
+            {
+                Text = $@"<div style='font-family: Arial, sans-serif; max-width: 600px; margin: auto; color: #333;'>
+                    <h2>Sự kiện bạn yêu thích sắp diễn ra</h2>
+                    <p>Xin chào {safeName},</p>
+                    <p>Sự kiện <strong>{safeTitle}</strong> trong wishlist của bạn sẽ bắt đầu sau khoảng 1 ngày.</p>
+                    <p>Thời gian: <strong>{localStartsAt} ({safeTimezone})</strong></p>
+                    <p><a href='{safeEventUrl}'>Xem thông tin sự kiện</a></p>
+                </div>"
+            };
+
+            using var client = new SmtpClient();
+            var secureOption = enableSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.None;
+            await client.ConnectAsync(host, port, secureOption, cancellationToken);
+            await client.AuthenticateAsync(senderEmail, password, cancellationToken);
+            await client.SendAsync(message, cancellationToken);
+            await client.DisconnectAsync(quit: true, cancellationToken);
+        }
+
+        private static string FormatEventStart(DateTime startsAt, string timezone)
+        {
+            var utcStartsAt = DateTime.SpecifyKind(startsAt, DateTimeKind.Utc);
+            try
+            {
+                var timeZone = TimeZoneInfo.FindSystemTimeZoneById(timezone);
+                return TimeZoneInfo.ConvertTimeFromUtc(utcStartsAt, timeZone).ToString("dd/MM/yyyy HH:mm");
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                return utcStartsAt.ToString("dd/MM/yyyy HH:mm 'UTC'");
+            }
+            catch (InvalidTimeZoneException)
+            {
+                return utcStartsAt.ToString("dd/MM/yyyy HH:mm 'UTC'");
+            }
+        }
 
         private static string BuildRegisterTemplate(string otp) => $@"
             <div style='font-family: Arial, sans-serif; max-width: 480px; margin: auto;'>

@@ -24,6 +24,7 @@ namespace EventAPI.Data
 
         public virtual DbSet<EventSaleConfirmation> EventSaleConfirmations { get; set; } = null!;
         public virtual DbSet<EventStaff> EventStaff { get; set; } = null!;
+        public virtual DbSet<EventReminderDelivery> EventReminderDeliveries { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -399,6 +400,24 @@ namespace EventAPI.Data
                     .WithMany()
                     .HasForeignKey(x => x.EventId)
                     .HasConstraintName("fk_event_staff_event");
+            });
+
+            modelBuilder.Entity<EventReminderDelivery>(entity =>
+            {
+                entity.ToTable("event_reminder_deliveries");
+                entity.HasKey(x => new { x.EventId, x.UserId, x.ScheduledStartAt });
+
+                entity.Property(x => x.EventId).HasColumnName("event_id");
+                entity.Property(x => x.UserId).HasColumnName("user_id");
+                entity.Property(x => x.ScheduledStartAt).HasColumnName("scheduled_start_at").HasColumnType("timestamp with time zone");
+                entity.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
+                entity.Property(x => x.SentAt).HasColumnName("sent_at");
+                entity.Property(x => x.AttemptCount).HasColumnName("attempt_count").HasDefaultValue(0);
+                entity.Property(x => x.NextAttemptAt).HasColumnName("next_attempt_at").HasDefaultValueSql("now()");
+
+                entity.HasIndex(x => x.NextAttemptAt)
+                    .HasDatabaseName("ix_event_reminder_deliveries_pending")
+                    .HasFilter("sent_at IS NULL");
             });
         }
     }

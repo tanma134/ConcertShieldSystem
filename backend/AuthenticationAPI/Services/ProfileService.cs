@@ -1,10 +1,17 @@
 ﻿using AuthenticationAPI.DTOs;
 using AuthenticationAPI.Repositories;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace AuthenticationAPI.Services
 {
     public class ProfileService : IProfileService
     {
+        private static readonly Regex ValidFullName =
+            new(@"^[\p{L} ]+$", RegexOptions.CultureInvariant | RegexOptions.Compiled);
+        private static readonly Regex ValidPhoneNumber =
+            new(@"^0[35789][0-9]{8,13}$", RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
         private readonly IUserRepository _userRepository;
         private readonly IAvatarStorageService _avatarStorage;
 
@@ -49,6 +56,28 @@ namespace AuthenticationAPI.Services
                 string? userId,
                 UpdateProfileDTO dto)
         {
+            if (dto == null)
+                return (false, "Profile update request is required.", null);
+
+            if (string.IsNullOrWhiteSpace(dto.Email))
+                return (false, "Email is required.", null);
+
+            var normalizedFullName = dto.FullName?.Normalize(NormalizationForm.FormC);
+            if (string.IsNullOrWhiteSpace(normalizedFullName))
+                return (false, "Full name is required.", null);
+
+            var fullName = normalizedFullName.Trim();
+            if (normalizedFullName.Length is < 2 or > 100 ||
+                fullName.Length is < 2 or > 100 ||
+                !ValidFullName.IsMatch(fullName))
+                return (false, "Full name must be 2 to 100 letters and spaces only.", null);
+
+            if (string.IsNullOrWhiteSpace(dto.PhoneNumber))
+                return (false, "Phone number is required.", null);
+
+            if (!ValidPhoneNumber.IsMatch(dto.PhoneNumber))
+                return (false, "Phone number must be 10 to 15 digits and start with 03, 05, 07, 08, or 09.", null);
+
             var user = await GetCurrentUserAsync(email, userId);
 
             if (user == null)
@@ -60,38 +89,18 @@ namespace AuthenticationAPI.Services
                 );
             }
 
-            // ==========================================
-            // CHECK EMAIL
-            // ==========================================
-            if (!string.IsNullOrWhiteSpace(dto.Email))
+            if (!string.Equals(
+                dto.Email.Trim(),
+                user.Email,
+                StringComparison.OrdinalIgnoreCase))
             {
-                var normalizedEmail = dto.Email.Trim().ToLowerInvariant();
-                if (!normalizedEmail.Equals(
-                    user.Email,
-                    StringComparison.OrdinalIgnoreCase))
-                {
-                    var existingEmail =
-                        await _userRepository.GetByEmailAsync(normalizedEmail);
-
-                    if (existingEmail != null &&
-                        existingEmail.UserId != user.UserId)
-                    {
-                        return (
-                            false,
-                            "Email already exists.",
-                            null
-                        );
-                    }
-
-                    user.Email = normalizedEmail;
-                }
+                return (false, "Email cannot be changed.", null);
             }
 
             // ==========================================
             // CHECK PHONE
             // ==========================================
-            if (dto.PhoneNumber != null &&
-                dto.PhoneNumber != user.PhoneNumber)
+            if (dto.PhoneNumber != user.PhoneNumber)
             {
                 var existingPhone =
                     await _userRepository.GetByPhoneAsync(
@@ -110,21 +119,7 @@ namespace AuthenticationAPI.Services
                 user.PhoneNumber = dto.PhoneNumber;
             }
 
-            // ==========================================
-            // UPDATE FULL NAME
-            // ==========================================
-            if (!string.IsNullOrWhiteSpace(dto.FullName))
-            {
-                user.FullName = dto.FullName;
-            }
-
-            // ==========================================
-            // UPDATE AVATAR
-            // ==========================================
-            if (!string.IsNullOrWhiteSpace(dto.AvatarUrl))
-            {
-                user.AvatarUrl = dto.AvatarUrl;
-            }
+            user.FullName = fullName;
 
             await _userRepository.SaveChangesAsync();
 

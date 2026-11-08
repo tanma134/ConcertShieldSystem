@@ -13,10 +13,14 @@ namespace AuthenticationAPI.Controllers
     public class ProfileController : ControllerBase
     {
         private readonly IProfileService _profileService;
+        private readonly ILogger<ProfileController> _logger;
 
-        public ProfileController(IProfileService profileService)
+        public ProfileController(
+            IProfileService profileService,
+            ILogger<ProfileController> logger)
         {
             _profileService = profileService;
+            _logger = logger;
         }
 
         // ==========================================
@@ -61,6 +65,14 @@ namespace AuthenticationAPI.Controllers
         public async Task<IActionResult> UpdateProfile(
             [FromBody] UpdateProfileDTO dto)
         {
+            if (dto == null)
+            {
+                return BadRequest(new
+                {
+                    message = "Profile update request is required."
+                });
+            }
+
             var email =
                 User.FindFirst(JwtRegisteredClaimNames.Email)?.Value
                 ?? User.FindFirst(ClaimTypes.Email)?.Value
@@ -71,30 +83,41 @@ namespace AuthenticationAPI.Controllers
                 ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value
                 ?? User.FindFirst("sub")?.Value;
 
-            var result =
-                await _profileService.UpdateProfileAsync(
-                    email,
-                    userId,
-                    dto
-                );
-
-            if (!result.Success)
+            try
             {
-                if (result.Message == "User not found.")
+                var result =
+                    await _profileService.UpdateProfileAsync(
+                        email,
+                        userId,
+                        dto
+                    );
+
+                if (!result.Success)
                 {
-                    return NotFound(new
+                    if (result.Message == "User not found.")
+                    {
+                        return NotFound(new
+                        {
+                            message = result.Message
+                        });
+                    }
+
+                    return BadRequest(new
                     {
                         message = result.Message
                     });
                 }
 
-                return BadRequest(new
+                return Ok(result.Profile);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error while updating profile");
+                return StatusCode(500, new
                 {
-                    message = result.Message
+                    message = "An unexpected error occurred while updating the profile. Please try again later."
                 });
             }
-
-            return Ok(result.Profile);
         }
 
         [HttpPost("me/avatar")]

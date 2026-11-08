@@ -437,6 +437,19 @@ CREATE TABLE IF NOT EXISTS public.wishlists
 
 CREATE INDEX IF NOT EXISTS ix_wishlists_user_id ON public.wishlists(user_id);
 
+CREATE TABLE IF NOT EXISTS public.event_reminder_deliveries (
+    event_id integer NOT NULL REFERENCES public.events(event_id) ON DELETE CASCADE,
+    user_id integer NOT NULL,
+    scheduled_start_at timestamp with time zone NOT NULL,
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    sent_at timestamp with time zone NULL,
+    attempt_count integer NOT NULL DEFAULT 0,
+    next_attempt_at timestamp with time zone NOT NULL DEFAULT now(),
+    CONSTRAINT pk_event_reminder_deliveries PRIMARY KEY (event_id, user_id, scheduled_start_at)
+);
+CREATE INDEX IF NOT EXISTS ix_event_reminder_deliveries_pending
+    ON public.event_reminder_deliveries(next_attempt_at) WHERE sent_at IS NULL;
+
 -- ------------------------------------------------------------------------------
 -- seating_templates: reusable venue layouts (UC_26.2 Apply Seating Template /
 -- UC_26.3 Save Seating Chart as Template). Added 21/09/2026 — fixes the gap where
