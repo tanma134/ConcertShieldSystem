@@ -129,7 +129,6 @@ export const ADMIN_GROUPS = [
     label: "Organizer Management",
     items: [
       ["/admin/organizer-requests", "Requests"],
-      ["/admin/organizer-verifications", "Verifications"],
     ],
   },
   {

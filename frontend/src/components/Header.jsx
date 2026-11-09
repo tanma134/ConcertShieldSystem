@@ -56,25 +56,48 @@ export default function Header() {
   const fetchHeaderNotifications = () => {
     // Guests and admins have no bell
     if (!isAuthenticated || isAdmin) return;
+
+    const currentUid = user?.userId ?? user?.id;
+
     notificationApi
       .getNotifications()
       .then((res) => {
         const rawItems = res.data?.items || res.data?.Items || res.data?.data?.items || res.data?.data?.Items || [];
-        const rawUnread = res.data?.unreadCount ?? res.data?.UnreadCount ?? res.data?.data?.unreadCount ?? res.data?.data?.UnreadCount ?? 0;
-        setNotifications(
-          rawItems.map((n) => ({
-            notificationId: n.notificationId ?? n.NotificationId ?? n.id ?? 0,
-            title: n.title || n.Title || "",
-            message: n.message || n.Message || n.content || "",
-            category: n.category || n.Category || "event_new",
-            targetUrl: n.targetUrl || n.TargetUrl || "",
-            isRead: n.isRead ?? n.IsRead ?? false,
-            createdAt: n.createdAt || n.CreatedAt,
-          }))
-        );
-        setUnreadCount(rawUnread);
+        let items = rawItems.map((n) => ({
+          notificationId: n.notificationId ?? n.NotificationId ?? n.id ?? 0,
+          title: n.title || n.Title || "",
+          message: n.message || n.Message || n.content || "",
+          category: n.category || n.Category || "event_new",
+          targetUrl: n.targetUrl || n.TargetUrl || "",
+          isRead: n.isRead ?? n.IsRead ?? false,
+          createdAt: n.createdAt || n.CreatedAt,
+        }));
+
+        // Merge locally stored notifications for this user (resilience for cross-tab notifications)
+        if (currentUid) {
+          try {
+            const localSaved = JSON.parse(localStorage.getItem(`cs_user_notifs_${currentUid}`) || "[]");
+            for (const item of localSaved) {
+              if (!items.some((n) => n.title === item.title && n.message === item.message)) {
+                items.unshift(item);
+              }
+            }
+          } catch (_) {}
+        }
+
+        setNotifications(items);
+        setUnreadCount(items.filter((n) => !n.isRead).length);
       })
-      .catch(() => {});
+      .catch(() => {
+        // Fallback when NotificationAPI is offline or starting up
+        if (currentUid) {
+          try {
+            const localSaved = JSON.parse(localStorage.getItem(`cs_user_notifs_${currentUid}`) || "[]");
+            setNotifications(localSaved);
+            setUnreadCount(localSaved.filter((n) => !n.isRead).length);
+          } catch (_) {}
+        }
+      });
   };
 
   useEffect(() => {
@@ -90,7 +113,7 @@ export default function Header() {
     window.addEventListener("focus", handleUpdate);
 
     const handleStorage = (e) => {
-      if (e.key === "cs_latest_notification") {
+      if (e.key === "cs_latest_notification" || e.key?.startsWith("cs_user_notifs_")) {
         fetchHeaderNotifications();
       }
     };
@@ -498,14 +521,9 @@ export default function Header() {
                     )}
 
                     {isOrganizer && (
-                      <>
-                        <Link to="/organizer/dashboard" onClick={closeMenu}>
-                          Organizer Dashboard
-                        </Link>
-                        <Link to="/organizer/verification" onClick={closeMenu}>
-                          Business Verification
-                        </Link>
-                      </>
+                      <Link to="/organizer/dashboard" onClick={closeMenu}>
+                        Organizer Dashboard
+                      </Link>
                     )}
 
                     {(isStaff || isAdmin) && (

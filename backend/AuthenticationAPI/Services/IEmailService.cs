@@ -1,4 +1,4 @@
-﻿namespace AuthenticationAPI.Services
+namespace AuthenticationAPI.Services
 {
     public enum EmailPurpose
     {
@@ -11,5 +11,7 @@
         Task SendOTPAsync(string toEmail, string otp, EmailPurpose purpose);
 
         Task SendKycDeletionResultAsync(string toEmail, bool approved, string? reason);
+
+        Task SendOrganizerRequestResultAsync(string toEmail, string fullName, bool approved, string? rejectionReason, string? reviewNote);
     }
 }

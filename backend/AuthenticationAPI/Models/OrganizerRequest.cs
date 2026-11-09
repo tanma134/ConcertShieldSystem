@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace AuthenticationAPI.Models;
@@ -12,6 +12,10 @@ public partial class OrganizerRequest
     public string Reason { get; set; } = null!;
 
     public string? CompanyName { get; set; }
+
+    public string? TaxCode { get; set; }
+
+    public string? RepresentativeName { get; set; }
 
     public string? Website { get; set; }
 
@@ -44,4 +48,6 @@ public partial class OrganizerRequest
     public virtual User? ReviewedByNavigation { get; set; }
 
     public virtual User User { get; set; } = null!;
+
+    public virtual ICollection<OrganizerRequestDocument> Documents { get; set; } = new List<OrganizerRequestDocument>();
 }

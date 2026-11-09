@@ -26,8 +26,13 @@ const axiosClient = axios.create({
 // Attach the access token to every request, EXCEPT the public endpoints above
 axiosClient.interceptors.request.use((config) => {
   if (config.data instanceof FormData) {
-    delete config.headers["Content-Type"];
-    delete config.headers["content-type"];
+    if (config.headers?.delete) {
+      config.headers.delete("Content-Type");
+      config.headers.delete("content-type");
+    } else if (config.headers) {
+      delete config.headers["Content-Type"];
+      delete config.headers["content-type"];
+    }
   }
   // Risk Engine: gửi tín hiệu thiết bị/phiên kèm mọi request (kể cả login/register)
   Object.assign(config.headers, riskHeaders());

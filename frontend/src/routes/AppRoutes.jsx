@@ -69,8 +69,6 @@ import QueueAbuseAlertDetailPage from "../pages/admin/QueueAbuseAlertDetailPage"
 // --- from feature/scandynamicQRtitket ---
 import TicketGovernancePage from "../pages/admin/TicketGovernancePage";
 import SystemPoliciesPage from "../pages/admin/SystemPoliciesPage";
-import OrganizerVerificationsPage from "../pages/admin/OrganizerVerificationsPage";
-import SubmitOrganizerVerificationPage from "../pages/organizer/SubmitOrganizerVerificationPage";
 import RealtimeCheckinMonitorPage from "../pages/organizer/RealtimeCheckinMonitorPage";
 import ViewGateAssignmentPage from "../pages/staff/ViewGateAssignmentPage";
 import StaffCheckinTerminalPage from "../pages/staff/StaffCheckinTerminalPage";
@@ -410,10 +408,8 @@ export default function AppRoutes() {
       {/* Admin Ticket Governance, Policies & Verifications (UC_8.7, 8.8, 8.10, 11.1, 11.2, 11.4, 11.5) */}
       <Route path="/admin/ticket-governance" element={<AdminRoute><TicketGovernancePage /></AdminRoute>} />
       <Route path="/admin/policies" element={<AdminRoute><SystemPoliciesPage /></AdminRoute>} />
-      <Route path="/admin/organizer-verifications" element={<AdminRoute><OrganizerVerificationsPage /></AdminRoute>} />
 
       {/* Organizer Verification & Real-time Check-in Monitor (UC_11.3, 14.1, 14.7) */}
-      <Route path="/organizer/verification" element={<ProtectedRoute><SubmitOrganizerVerificationPage /></ProtectedRoute>} />
       <Route path="/organizer/events/:eventId/realtime-checkin" element={<ProtectedRoute organizerOnly><RealtimeCheckinMonitorPage /></ProtectedRoute>} />
       <Route path="/organizer/realtime-checkin" element={<ProtectedRoute organizerOnly><RealtimeCheckinMonitorPage /></ProtectedRoute>} />
     </Routes>
