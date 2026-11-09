@@ -245,6 +245,22 @@
 /* Admin table */
 .org-table-wrapper {
   overflow-x: auto;
+  width: 100%;
+}
+
+.admin-org-page .org-container--wide {
+  max-width: 100%;
+}
+
+.admin-org-page .org-table-wrapper {
+  overflow-x: hidden;
+}
+
+.admin-org-page .org-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  table-layout: fixed;
 }
 
 .org-table {
@@ -259,6 +275,14 @@
   padding: 12px 14px;
   border-bottom: 0.5px solid var(--org-line);
   white-space: nowrap;
+}
+
+.admin-org-page .org-table th,
+.admin-org-page .org-table td {
+  white-space: normal;
+  word-break: break-word;
+  padding: 12px 10px;
+  vertical-align: middle;
 }
 
 .org-table th {
