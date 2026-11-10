@@ -568,11 +568,11 @@ export default function RefundReconciliationPage() {
                   </div>
                 )}
                 {inspectRefundItem.errorMessage && (
-                  <div className="rf-card-row" style={{ color: "#ef4444" }}>
-                    <span className="rf-label" style={{ color: "#ef4444" }}>
+                  <div className="rf-card-row" style={{ color: "#d63a3a" }}>
+                    <span className="rf-label" style={{ color: "#d63a3a" }}>
                       Error Details
                     </span>
-                    <span className="rf-value" style={{ color: "#fca5a5" }}>
+                    <span className="rf-value" style={{ color: "#e8a0a0" }}>
                       {inspectRefundItem.errorMessage}
                     </span>
                   </div>

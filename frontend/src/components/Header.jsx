@@ -189,14 +189,19 @@ export default function Header() {
               />
               <defs>
                 <linearGradient id="tb-shield-grad" x1="3" y1="2" x2="21" y2="22">
-                  <stop offset="0" stopColor="#7c3aed" />
+                  <stop offset="0" stopColor="#a855f7" />
                   <stop offset="0.55" stopColor="#c026d3" />
-                  <stop offset="1" stopColor="#ec4899" />
+                  <stop offset="1" stopColor="#e8439c" />
                 </linearGradient>
               </defs>
             </svg>
           </span>
-          Concert<span>Shield</span>
+          <span className="tb-logo-text">
+            <span className="tb-logo-name">
+              Concert<span>Shield</span>
+            </span>
+            <span className="tb-logo-tagline">Fair Ticketing</span>
+          </span>
         </Link>
 
         <div className="tb-search-wrap" ref={searchRef}>
@@ -436,7 +441,7 @@ export default function Header() {
           )}
 
           {isStaff && (
-            <Link to="/staff/gate-assignment" className="tb-header-link" style={{ color: "#34d399", fontWeight: 600 }}>
+            <Link to="/staff/gate-assignment" className="tb-header-link" style={{ color: "#21a87b", fontWeight: 600 }}>
               Staff Portal
             </Link>
           )}
@@ -463,7 +468,33 @@ export default function Header() {
                   aria-expanded={menuOpen}
                   onClick={() => setMenuOpen((v) => !v)}
                 >
-                  {user?.fullName || user?.email || "Account"}
+                  {(() => {
+                    const label = user?.fullName || user?.email || "Account";
+                    const initials = label
+                      .split(/\s+/)
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .map((part) => part[0])
+                      .join("")
+                      .toUpperCase();
+                    return (
+                      <>
+                        <span className="tb-account-avatar" aria-hidden="true">
+                          {initials}
+                        </span>
+                        <span className="tb-account-info">
+                          <span className="tb-account-name">{label}</span>
+                          <span className="tb-account-sub">
+                            <svg viewBox="0 0 20 20" width="11" height="11" fill="none">
+                              <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.5" />
+                              <path d="m6.8 10.2 2 2 4.4-4.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            eKYC Verified
+                          </span>
+                        </span>
+                      </>
+                    );
+                  })()}
                   <svg
                     viewBox="0 0 20 20"
                     width="12"

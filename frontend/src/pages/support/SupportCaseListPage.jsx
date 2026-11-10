@@ -142,15 +142,15 @@ export default function SupportCaseListPage() {
           </div>
           <div className="sc-stat-card">
             <span className="sc-stat-label">Pending / In Progress</span>
-            <span className="sc-stat-value" style={{ color: "#fbbf24" }}>{stats.open}</span>
+            <span className="sc-stat-value" style={{ color: "#d99a16" }}>{stats.open}</span>
           </div>
           <div className="sc-stat-card">
             <span className="sc-stat-label">Critical Priority</span>
-            <span className="sc-stat-value" style={{ color: "#f87171" }}>{stats.critical}</span>
+            <span className="sc-stat-value" style={{ color: "#d64545" }}>{stats.critical}</span>
           </div>
           <div className="sc-stat-card">
             <span className="sc-stat-label">Resolved / Closed</span>
-            <span className="sc-stat-value" style={{ color: "#34d399" }}>{stats.resolved}</span>
+            <span className="sc-stat-value" style={{ color: "#21a87b" }}>{stats.resolved}</span>
           </div>
         </div>
 
@@ -225,7 +225,7 @@ export default function SupportCaseListPage() {
                       <span className="sc-case-number">{c.caseNumber}</span>
                     </td>
                     <td style={{ maxWidth: "260px" }}>
-                      <strong style={{ color: "#f3f4f6" }}>{c.title}</strong>
+                      <strong style={{ color: "#eee9f5" }}>{c.title}</strong>
                     </td>
                     <td>
                       <div>{c.customerName}</div>
@@ -240,7 +240,7 @@ export default function SupportCaseListPage() {
                     <td>{getStatusBadge(c.status)}</td>
                     <td>
                       {c.assignedStaffName ? (
-                        <span style={{ color: "#93c5fd", fontWeight: 500 }}>
+                        <span style={{ color: "#86b6f0", fontWeight: 500 }}>
                           {c.assignedStaffName}
                         </span>
                       ) : (

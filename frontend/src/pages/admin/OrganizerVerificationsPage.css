@@ -3,16 +3,16 @@
   margin: 1.5rem auto;
   padding: 1rem;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  color: #ffffff;
+  color: #3c3552;
 }
 
 .verifications-header {
-  background: #15151c;
-  border: 1px solid #232332;
+  background: #ffffff;
+  border: 1px solid #ece0f8;
   border-radius: 12px;
   padding: 1.25rem 1.5rem;
   margin-bottom: 1.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 6px -1px rgba(80,50,120,0.06);
 }
 
 .verifications-header h1 {
@@ -33,25 +33,25 @@
 }
 
 .tab-btn {
-  background: #15151c;
-  border: 1px solid #2e2e40;
+  background: #ffffff;
+  border: 1px solid #ece1f5;
   padding: 0.55rem 1rem;
   border-radius: 6px;
   font-weight: 600;
   font-size: 0.85rem;
   cursor: pointer;
-  color: #94a3b8;
+  color: #7a7392;
 }
 
 .tab-btn.active {
-  background: #d61f6e;
+  background: linear-gradient(120deg, #a855f7 0%, #c026d3 55%, #ec4899 100%);
   color: white;
-  border-color: #ff2d75;
+  border-color: #d91a63;
 }
 
 .btn-refresh {
-  background: #1e1e2e;
-  border: 1px solid #2e2e40;
+  background: #f4eef9;
+  border: 1px solid #ece1f5;
   padding: 0.5rem 0.85rem;
   border-radius: 6px;
   font-weight: 600;
@@ -60,8 +60,8 @@
 
 /* Requests Table */
 .requests-section {
-  background: #15151c;
-  border: 1px solid #232332;
+  background: #ffffff;
+  border: 1px solid #ece0f8;
   border-radius: 12px;
   padding: 1.25rem;
 }
@@ -80,19 +80,19 @@
 .requests-table td {
   padding: 0.85rem 1rem;
   text-align: left;
-  border-bottom: 1px solid #232332;
+  border-bottom: 1px solid #ece0f8;
 }
 
 .requests-table th {
-  background: #191924;
-  color: #94a3b8;
+  background: #faf5ff;
+  color: #7a7392;
   font-weight: 700;
   font-size: 0.75rem;
   text-transform: uppercase;
 }
 
 .id-tag {
-  background: #1e1e2e;
+  background: #f4eef9;
   font-family: monospace;
   font-weight: 700;
   padding: 0.15rem 0.4rem;
@@ -106,7 +106,7 @@
 
 .email-sub {
   font-size: 0.78rem;
-  color: #b2bbc7;
+  color: #6e6788;
 }
 
 .contact-cell span {
@@ -114,20 +114,20 @@
 }
 
 .doc-count-badge {
-  background: #e0e7ff;
-  color: #3730a3;
+  background: #ffffff;
+  color: #3c3552;
   font-size: 0.75rem;
   font-weight: 700;
   padding: 0.2rem 0.5rem;
   border-radius: 12px;
 }
 
-.status-pill.pending { background: #fef9c3; color: #a16207; }
-.status-pill.approved { background: #dcfce7; color: #15803d; }
-.status-pill.rejected { background: #fee2e2; color: #b91c1c; }
+.status-pill.pending { background: #faf5ff; color: #a16207; }
+.status-pill.approved { background: #faf5ff; color: #198147; }
+.status-pill.rejected { background: #faf5ff; color: #a82424; }
 
 .btn-inspect {
-  background: #d61f6e;
+  background: linear-gradient(120deg, #a855f7 0%, #c026d3 55%, #ec4899 100%);
   color: white;
   border: none;
   padding: 0.45rem 0.85rem;
@@ -143,8 +143,8 @@
 }
 
 .applicant-overview-card {
-  background: #191924;
-  border: 1px solid #232332;
+  background: #faf5ff;
+  border: 1px solid #ece0f8;
   border-radius: 8px;
   padding: 1rem 1.25rem;
   margin-bottom: 1.25rem;
@@ -153,7 +153,7 @@
 .applicant-overview-card h3 {
   margin: 0 0 0.85rem 0;
   font-size: 1.05rem;
-  color: #1e293b;
+  color: #3c3552;
 }
 
 .overview-grid {
@@ -166,14 +166,14 @@
 .overview-grid .label {
   display: block;
   font-size: 0.75rem;
-  color: #b2bbc7;
+  color: #6e6788;
   font-weight: 600;
 }
 
 .exp-block {
   margin-top: 0.85rem;
   padding-top: 0.85rem;
-  border-top: 1px dashed #cbd5e1;
+  border-top: 1px dashed #5f587a;
   font-size: 0.85rem;
 }
 
@@ -190,10 +190,10 @@
 }
 
 .doc-card {
-  border: 1px solid #2e2e40;
+  border: 1px solid #ece1f5;
   border-radius: 8px;
   padding: 0.85rem;
-  background: #15151c;
+  background: #ffffff;
   display: flex;
   flex-direction: column;
 }
@@ -201,12 +201,12 @@
 .doc-type-tag {
   font-size: 0.78rem;
   font-weight: 700;
-  color: #334155;
+  color: #3c3552;
 }
 
 .doc-preview-area {
   height: 140px;
-  background: #1e1e2e;
+  background: #f4eef9;
   border-radius: 6px;
   margin: 0.65rem 0;
   display: flex;
@@ -229,7 +229,7 @@
 
 .doc-file-icon {
   font-size: 1.2rem;
-  color: #b2bbc7;
+  color: #6e6788;
 }
 
 .doc-meta {
@@ -239,7 +239,7 @@
 
 .file-name {
   display: block;
-  color: #b0bbca;
+  color: #6e6788;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -255,9 +255,9 @@
 }
 
 .rejection-reason-banner {
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
-  color: #991b1b;
+  background: #fdeaea;
+  border: 1px solid #e8a0a0;
+  color: #962020;
   padding: 0.85rem;
   border-radius: 6px;
   margin-top: 1rem;
@@ -265,7 +265,7 @@
 }
 
 .btn-approve {
-  background: #10b981;
+  background: #0e9e78;
   color: white;
   border: none;
   padding: 0.6rem 1.25rem;
@@ -275,7 +275,7 @@
 }
 
 .btn-reject {
-  background: #ef4444;
+  background: #d63a3a;
   color: white;
   border: none;
   padding: 0.6rem 1.1rem;
@@ -285,7 +285,7 @@
 }
 
 .btn-confirm-reject {
-  background: #b91c1c;
+  background: #a82424;
   color: white;
   border: none;
   padding: 0.6rem 1.25rem;
@@ -322,15 +322,15 @@
 }
 
 .modal-card {
-  background: #ffffff;
-  border: 1px solid #232332;
+  background: #faf5ff;
+  border: 1px solid #ece0f8;
   border-radius: 14px;
   width: 100%;
   max-width: 650px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.25), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 25px -5px rgba(80,50,120,0.15), 0 10px 10px -5px rgba(80,50,120,0.06);
   overflow: hidden;
   animation: modalFadeIn 0.2s ease-out;
 }
@@ -356,18 +356,18 @@
 
 .modal-header {
   padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid #232332;
+  border-bottom: 1px solid #ece0f8;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #ffffff;
+  background: #faf5ff;
 }
 
 .modal-header h2 {
   margin: 0;
   font-size: 1.15rem;
   font-weight: 700;
-  color: #ffffff;
+  color: #3c3552;
 }
 
 .btn-close {
@@ -375,7 +375,7 @@
   border: none;
   font-size: 1.25rem;
   line-height: 1;
-  color: #b2bbc7;
+  color: #6e6788;
   cursor: pointer;
   padding: 0.35rem 0.5rem;
   border-radius: 6px;
@@ -383,30 +383,30 @@
 }
 
 .btn-close:hover {
-  background: #1e1e2e;
-  color: #ffffff;
+  background: #f4eef9;
+  color: #3c3552;
 }
 
 .modal-body {
   padding: 1.5rem;
   overflow-y: auto;
   flex: 1;
-  color: #1e293b;
+  color: #3c3552;
 }
 
 .modal-footer {
   padding: 1rem 1.5rem;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid #4f4e5f;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 0.75rem;
-  background: #191924;
+  background: #faf5ff;
 }
 
 .btn-cancel {
-  background: #ffffff;
-  border: 1px solid #2e2e40;
+  background: #faf5ff;
+  border: 1px solid #ece1f5;
   color: #5e728d;
   font-weight: 600;
   padding: 0.6rem 1.15rem;
@@ -416,8 +416,8 @@
 }
 
 .btn-cancel:hover {
-  background: #1e1e2e;
-  color: #ffffff;
+  background: #f4eef9;
+  color: #3c3552;
 }
 
 .form-group {
@@ -428,7 +428,7 @@
   display: block;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #334155;
+  color: #3c3552;
   margin-bottom: 0.4rem;
 }
 
@@ -436,26 +436,26 @@
 .form-group textarea {
   width: 100%;
   padding: 0.65rem 0.85rem;
-  border: 1px solid #2e2e40;
+  border: 1px solid #ece1f5;
   border-radius: 6px;
   font-size: 0.88rem;
-  color: #181228;
-  background: #ffffff;
+  color: #1e1b2e;
+  background: #faf5ff;
   box-sizing: border-box;
 }
 
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #ff2d75;
+  border-color: #d91a63;
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
 }
 
 .reject-warning-hint {
   font-size: 0.85rem;
-  color: #b91c1c;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  color: #a82424;
+  background: #fdeaea;
+  border: 1px solid #f3c4c4;
   padding: 0.75rem 1rem;
   border-radius: 6px;
   margin-bottom: 1rem;
@@ -485,7 +485,7 @@
 }
 
 .header-danger h2 {
-  color: #b91c1c;
+  color: #a82424;
 }
 
 .header-warning h2 {
@@ -495,12 +495,12 @@
 .dialog-text {
   font-size: 0.95rem;
   line-height: 1.5;
-  color: #334155;
+  color: #3c3552;
   margin: 0;
 }
 
 .btn-confirm-dialog {
-  background: #d61f6e;
+  background: linear-gradient(120deg, #a855f7 0%, #c026d3 55%, #ec4899 100%);
   color: white;
   border: none;
   font-weight: 600;
@@ -511,5 +511,5 @@
 }
 
 .btn-confirm-dialog:hover {
-  background: #be1862;
+  background: linear-gradient(120deg, #9333ea 0%, #a21caf 55%, #db2777 100%);
 }

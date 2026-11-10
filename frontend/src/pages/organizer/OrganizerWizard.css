@@ -36,19 +36,19 @@
 .ow-banner-rejected {
   background: rgba(248, 113, 113, 0.1);
   border-color: rgba(248, 113, 113, 0.35);
-  color: #fca5a5;
+  color: #a77373;
 }
 
 .ow-banner-pending {
   background: rgba(251, 191, 36, 0.1);
   border-color: rgba(251, 191, 36, 0.35);
-  color: #fbbf24;
+  color: #d99a16;
 }
 
 .ow-banner-published {
   background: rgba(74, 222, 128, 0.1);
   border-color: rgba(74, 222, 128, 0.35);
-  color: #86efac;
+  color: #4fcf82;
 }
 
 /* ---- Step progress ---- */
@@ -100,12 +100,12 @@
 
 .ow-step.active .ow-step-num {
   background: var(--tb-gradient);
-  color: #fff;
+  color: #ffffff;
 }
 
 .ow-step.done .ow-step-num {
   background: rgba(74, 222, 128, 0.18);
-  color: #86efac;
+  color: #4fcf82;
 }
 
 .ow-step-label {
@@ -124,7 +124,7 @@
   border-radius: 999px;
   background: rgba(74, 222, 128, 0.12);
   border: 1px solid rgba(74, 222, 128, 0.3);
-  color: #86efac;
+  color: #4fcf82;
   font-size: 12.5px;
   margin-bottom: 16px;
 }
@@ -149,7 +149,7 @@
   border-radius: 8px;
   background: rgba(248, 113, 113, 0.1);
   border: 1px solid rgba(248, 113, 113, 0.3);
-  color: #fca5a5;
+  color: #a77373;
   font-size: 13px;
   margin-bottom: 16px;
 }
@@ -217,13 +217,13 @@
 .ow-field input[aria-invalid="true"],
 .ow-field select[aria-invalid="true"],
 .ow-field textarea[aria-invalid="true"] {
-  border-color: #ef4444;
+  border-color: #d63a3a;
   background: rgba(239, 68, 68, 0.08);
   box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.45);
 }
 
 .ow-field-error {
-  color: #fca5a5;
+  color: #a77373;
   font-size: 12px;
 }
 
@@ -332,7 +332,7 @@
 .ow-link-danger {
   background: none;
   border: none;
-  color: #f98080;
+  color: #d64545;
   font-size: 12.5px;
   padding: 0;
 }
@@ -367,7 +367,7 @@
   top: 6px;
   left: 6px;
   background: var(--tb-gradient);
-  color: #fff;
+  color: #ffffff;
   font-size: 10px;
   font-weight: 700;
   padding: 3px 7px;
@@ -381,13 +381,13 @@
   justify-content: space-between;
   gap: 4px;
   padding: 6px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.75), transparent);
+  background: linear-gradient(to top, rgba(28,18,52,0.5), transparent);
 }
 
 .ow-gallery-item-actions button {
   background: none;
   border: none;
-  color: #fff;
+  color: #3c3552;
   font-size: 10.5px;
   padding: 0;
 }
@@ -526,7 +526,7 @@
 
 .ow-zonemap-canvas {
   position: relative;
-  background: #0b0d12;
+  background: #faf5ff;
   border: 1px solid var(--tb-border);
   border-radius: 12px;
   aspect-ratio: 16 / 10;
@@ -540,7 +540,7 @@
   left: 30%;
   width: 40%;
   height: 14%;
-  background: #3f3f46;
+  background: #faf5ff;
   border-radius: 6px;
   display: flex;
   align-items: center;
@@ -548,23 +548,23 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.05em;
-  color: #d4d4d8;
+  color: #5a5470;
   pointer-events: none;
 }
 
 .ow-zonemap-zone {
   position: absolute;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(148,110,200,0.23);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
   padding: 4px;
-  color: #0b0d12;
+  color: #3c3552;
   font-weight: 700;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 2px 6px rgba(80,50,120,0.15);
 }
 
 .ow-zonemap-zone-standing {
@@ -594,7 +594,7 @@
   width: 10px;
   height: 10px;
   border-radius: 2px;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(80,50,120,0.15);
   cursor: nwse-resize;
 }
 
@@ -674,7 +674,7 @@
 
 .ow-zone-standing {
   background: rgba(251, 191, 36, 0.15);
-  color: #fbbf24;
+  color: #d99a16;
 }
 
 /* ---- Review step ---- */
@@ -689,7 +689,7 @@
 .ow-validation-ok {
   background: rgba(74, 222, 128, 0.1);
   border-color: rgba(74, 222, 128, 0.3);
-  color: #86efac;
+  color: #4fcf82;
 }
 
 .ow-validation-bad {
@@ -707,7 +707,7 @@
   margin: 0 0 4px;
   padding-left: 20px;
   font-size: 12.5px;
-  color: #fca5a5;
+  color: #a77373;
 }
 
 .ow-validation-warnings {
@@ -717,7 +717,7 @@
 }
 
 .ow-validation-warnings ul {
-  color: #fbbf24;
+  color: #d99a16;
 }
 
 .ow-review-summary {
@@ -773,12 +773,12 @@
 }
 
 .ow-capacity-ok {
-  color: #4ade80;
+  color: #2cb565;
   font-weight: 700;
 }
 
 .ow-capacity-warning {
-  color: #fbbf24;
+  color: #d99a16;
   font-weight: 700;
 }
 
@@ -883,6 +883,6 @@
 }
 
 .ow-zonemap-info.is-warning {
-  border-color: #f87171;
-  color: #fca5a5;
+  border-color: #d64545;
+  color: #a77373;
 }

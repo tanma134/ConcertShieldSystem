@@ -1,19 +1,19 @@
 :root {
-  --org-bg: #0b0816;
-  --org-card: #181228;
-  --org-line: #3d3262;
-  --org-field-bg: #231b3a;
-  --org-primary: #ff6fb5;
-  --org-primary-dark: #d61f6e;
+  --org-bg: #f8f4fc;
+  --org-card: #ffffff;
+  --org-line: #e3d6f0;
+  --org-field-bg: #f4ecfa;
+  --org-primary: #e051a0;
+  --org-primary-dark: #c2185b;
   --org-primary-light: rgba(255, 111, 181, 0.16);
-  --org-text: #ffffff;
-  --org-text-muted: #d3cae6;
+  --org-text: #565462;
+  --org-text-muted: #5a5470;
   --org-text-faint: #b8aed0;
   --org-radius: 16px;
 
-  --org-success: #4ade80;
+  --org-success: #2cb565;
   --org-success-bg: rgba(34, 197, 94, 0.08);
-  --org-warning: #fbbf24;
+  --org-warning: #d99a16;
   --org-warning-bg: rgba(251, 191, 36, 0.1);
   --org-danger: #ff9ccb;
   --org-danger-bg: rgba(232, 67, 147, 0.08);
@@ -49,7 +49,7 @@
   font-weight: 700;
   margin: 0 0 4px;
   letter-spacing: -0.01em;
-  /* index.css set mau h1/h2 mac dinh gan den (#08060d) cho theme sang;
+  /* index.css set mau h1/h2 mac dinh gan den (#faf5ff) cho theme sang;
      phai override o day, khong thi tieu de bi chim mau tren nen toi. */
   color: var(--org-text);
 }
@@ -112,7 +112,7 @@
   border: none;
   border-radius: 8px;
   background: var(--org-primary);
-  color: #fff;
+  color: #3c3552;
   font-size: 14.5px;
   font-weight: 600;
   cursor: pointer;
@@ -128,7 +128,7 @@
 }
 
 .org-button:disabled {
-  background: #333333;
+  background: #faf5ff;
   color: var(--org-text-faint);
   cursor: not-allowed;
 }
@@ -174,7 +174,7 @@
 .org-alert--success {
   background: var(--org-success-bg);
   color: var(--org-success);
-  border-left-color: #22c55e;
+  border-left-color: #1eaa55;
 }
 
 .org-badge {
@@ -299,14 +299,14 @@
 .org-filter-btn.is-active {
   background: var(--org-primary);
   border-color: var(--org-primary);
-  color: #fff;
+  color: #3c3552;
 }
 
 /* Review modal */
 .org-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(28,18,52,0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -365,7 +365,7 @@
 }
 
 .org-status-toggle button.is-approve.is-active {
-  border-color: #22c55e;
+  border-color: #1eaa55;
   color: var(--org-success);
   background: var(--org-success-bg);
 }

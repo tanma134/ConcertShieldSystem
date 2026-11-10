@@ -41,7 +41,7 @@
 }
 
 .rp-num { text-align: right; font-variant-numeric: tabular-nums; }
-.rp-negative { color: #fca5a5; }
+.rp-negative { color: #a77373; }
 
 .rp-toast {
   position: fixed;
@@ -55,10 +55,10 @@
   background: var(--tb-surface-2);
   color: var(--tb-text);
   font-size: 13.5px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 10px 30px rgba(80,50,120,0.22);
 }
-.rp-toast-error { border-color: #f87171; color: #fca5a5; }
-.rp-toast-ok { border-color: #34d399; }
+.rp-toast-error { border-color: #d64545; color: #a77373; }
+.rp-toast-ok { border-color: #21a87b; }
 
 .rp-tabs { display: flex; gap: 8px; margin-bottom: 18px; }
 .rp-tab {
@@ -80,7 +80,7 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(28,18,52,0.5);
 }
 .rp-modal {
   width: min(480px, 100%);
@@ -105,9 +105,9 @@
   background: var(--tb-surface-2);
   color: var(--tb-text-muted);
 }
-.rp-badge-active { background: rgba(52, 211, 153, 0.15); color: #6ee7b7; }
-.rp-badge-pending { background: rgba(251, 191, 36, 0.15); color: #fcd34d; }
-.rp-badge-bad { background: rgba(248, 113, 113, 0.15); color: #fca5a5; }
+.rp-badge-active { background: rgba(52, 211, 153, 0.15); color: #39785f; }
+.rp-badge-pending { background: rgba(251, 191, 36, 0.15); color: #a78421; }
+.rp-badge-bad { background: rgba(248, 113, 113, 0.15); color: #a77373; }
 
 .rp-ticket-list { display: grid; gap: 12px; }
 .rp-ticket {

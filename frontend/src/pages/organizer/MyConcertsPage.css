@@ -12,7 +12,7 @@
 .mc-head h1 {
   font-size: 24px;
   margin: 0;
-  color: #f8fafc;
+  color: #1e1b2e;
 }
 
 .mc-list {
@@ -50,17 +50,17 @@
   align-self: flex-end;
   margin-left: 8px;
   padding: 8px 12px;
-  border: 1px solid #ef4444;
+  border: 1px solid #d63a3a;
   border-radius: 8px;
   background: rgba(220, 38, 38, 0.18);
-  color: #fecaca;
+  color: #3c3552;
   font-weight: 700;
   cursor: pointer;
 }
 
 .mc-delete-draft:hover:not(:disabled) {
-  background: #dc2626;
-  color: #ffffff;
+  background: #c22a2a;
+  color: #3c3552;
 }
 
 .mc-delete-draft:disabled {
@@ -123,27 +123,27 @@
 
 .mc-status-draft {
   background: rgba(168, 168, 168, 0.15);
-  color: #cbd5e1;
+  color: #5f587a;
 }
 
 .mc-status-pending {
   background: rgba(251, 191, 36, 0.15);
-  color: #fbbf24;
+  color: #d99a16;
 }
 
 .mc-status-published {
   background: rgba(74, 222, 128, 0.15);
-  color: #86efac;
+  color: #4fcf82;
 }
 
 .mc-status-rejected {
   background: rgba(248, 113, 113, 0.15);
-  color: #fca5a5;
+  color: #a77373;
 }
 
 .mc-status-cancelled {
   background: rgba(148, 163, 184, 0.15);
-  color: #b0bbca;
+  color: #6e6788;
 }
 
 .mc-card-date,

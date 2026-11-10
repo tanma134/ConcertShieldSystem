@@ -134,7 +134,7 @@ export default function LoginPage() {
           </div>
 
           {/* Platform Policy Reference */}
-          <div style={{ marginTop: "18px", textAlign: "center", fontSize: "0.78rem", color: "#71717a" }}>
+          <div style={{ marginTop: "18px", textAlign: "center", fontSize: "0.78rem", color: "#b6abc9" }}>
             By signing in, you agree to the{" "}
             <button
               type="button"

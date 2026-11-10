@@ -1,6 +1,6 @@
 .concert-orders-page {
   padding: 28px;
-  color: #f5f1fa;
+  color: #545161;
 }
 
 .concert-orders-header {
@@ -13,7 +13,7 @@
 
 .concert-orders-eyebrow {
   margin: 0 0 7px;
-  color: #bd8cff;
+  color: #9a5cf0;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -27,7 +27,7 @@
 
 .concert-orders-description {
   margin: 8px 0 0;
-  color: #beb8c5;
+  color: #89848e;
   font-size: 14px;
 }
 
@@ -45,11 +45,11 @@
   align-items: center;
   justify-content: center;
   min-height: 38px;
-  border: 1px solid #49345f;
+  border: 1px solid #d9cce8;
   border-radius: 8px;
   padding: 8px 13px;
-  color: #f4eff8;
-  background: #21182b;
+  color: #1e1b2e;
+  background: #faf5ff;
   font: inherit;
   font-size: 13px;
   text-decoration: none;
@@ -57,7 +57,7 @@
 }
 
 .co-button:hover:not(:disabled) {
-  background: #32213f;
+  background: #faf5ff;
 }
 
 .co-button:disabled {
@@ -81,15 +81,15 @@
   gap: 13px;
   margin-bottom: 18px;
   padding: 18px;
-  border: 1px solid #382b45;
+  border: 1px solid #d9d2df;
   border-radius: 11px;
-  background: #19151f;
+  background: #f7f1fc;
 }
 
 .co-field {
   display: grid;
   gap: 7px;
-  color: #c8bfd1;
+  color: #5c5473;
   font-size: 13px;
 }
 
@@ -98,12 +98,12 @@
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  border: 1px solid #44374d;
+  border: 1px solid #dad4e0;
   border-radius: 7px;
   padding: 10px 11px;
   outline: none;
-  color: #f4eff8;
-  background: #100d14;
+  color: #1e1b2e;
+  background: #faf5ff;
   font: inherit;
 }
 
@@ -134,9 +134,9 @@
 }
 
 .co-alert-error {
-  border: 1px solid #82464d;
-  color: #ffb9c0;
-  background: #381e27;
+  border: 1px solid #955660;
+  color: #8f5a64;
+  background: #fbe9ec;
 }
 
 .co-alert button {
@@ -150,14 +150,14 @@
 
 .concert-orders-card {
   overflow: hidden;
-  border: 1px solid #382b45;
+  border: 1px solid #d9d2df;
   border-radius: 11px;
-  background: #19151f;
+  background: #f7f1fc;
 }
 
 .concert-orders-card-heading {
   padding: 18px 20px;
-  border-bottom: 1px solid #302637;
+  border-bottom: 1px solid #d7d2dd;
 }
 
 .concert-orders-card-heading h2 {
@@ -167,7 +167,7 @@
 
 .concert-orders-card-heading p {
   margin: 6px 0 0;
-  color: #bdb6c3;
+  color: #6e6788;
   font-size: 13px;
 }
 
@@ -184,13 +184,13 @@
 .co-table th,
 .co-table td {
   padding: 13px 15px;
-  border-bottom: 1px solid #302637;
+  border-bottom: 1px solid #d7d2dd;
   vertical-align: middle;
   font-size: 13px;
 }
 
 .co-table th {
-  color: #c0b6ca;
+  color: #8a8391;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -199,11 +199,11 @@
 }
 
 .co-table td {
-  color: #eee8f3;
+  color: #524e5f;
 }
 
 .co-table tbody tr:hover {
-  background: #211a29;
+  background: #faf5ff;
 }
 
 .co-customer-name {
@@ -212,17 +212,17 @@
 
 .co-customer-email {
   margin-top: 4px;
-  color: #bdb6c3;
+  color: #6e6788;
   font-size: 12px;
 }
 
 .co-status {
   display: inline-flex;
-  border: 1px solid #49345f;
+  border: 1px solid #d9cce8;
   border-radius: 999px;
   padding: 4px 9px;
-  color: #d9c7f0;
-  background: #2a1e36;
+  color: #4d465f;
+  background: #faf5ff;
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
@@ -230,34 +230,34 @@
 
 .co-status-paid {
   border-color: #286c51;
-  color: #8be1b6;
-  background: #153b2d;
+  color: #48745e;
+  background: #faf5ff;
 }
 
 .co-status-pending {
   border-color: #78602b;
-  color: #f5d27d;
-  background: #382d16;
+  color: #544942;
+  background: #faf5ff;
 }
 
 .co-status-cancelled,
 .co-status-expired,
 .co-status-refunded {
-  border-color: #82464d;
-  color: #ffb9c0;
-  background: #381e27;
+  border-color: #955660;
+  color: #8f5a64;
+  background: #fbe9ec;
 }
 
 .co-state {
   padding: 40px 20px;
-  color: #bcb6c7;
+  color: #87838f;
   text-align: center;
 }
 
 .co-pagination {
   justify-content: space-between;
   padding: 15px 20px;
-  color: #c8bfd1;
+  color: #5c5473;
   font-size: 13px;
 }
 

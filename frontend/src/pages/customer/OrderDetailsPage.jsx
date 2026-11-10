@@ -430,7 +430,7 @@ export default function OrderDetailsPage() {
                   <button
                     type="button"
                     onClick={() => setShowSupportModal(false)}
-                    style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: "18px" }}
+                    style={{ background: "none", border: "none", color: "#7e7694", cursor: "pointer", fontSize: "18px" }}
                   >
                     ✕
                   </button>

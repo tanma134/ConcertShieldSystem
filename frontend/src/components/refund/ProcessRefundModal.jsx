@@ -163,7 +163,7 @@ export default function ProcessRefundModal({
               {maxRefundable < originalAmount && (
                 <div className="rf-card-row">
                   <span className="rf-label">Max Refundable Balance</span>
-                  <span className="rf-value" style={{ color: "#38bdf8" }}>
+                  <span className="rf-value" style={{ color: "#2fa4e0" }}>
                     {formatPrice(maxRefundable)}
                   </span>
                 </div>

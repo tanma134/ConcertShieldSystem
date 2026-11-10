@@ -174,7 +174,7 @@ export default function ViewGateAssignmentPage() {
                 </div>
                 <div className="card-meta-line">
                   Shift Status:{" "}
-                  <strong style={{ color: assignment?.isShiftActive !== false ? "#10b981" : "#ef4444" }}>
+                  <strong style={{ color: assignment?.isShiftActive !== false ? "#0e9e78" : "#d63a3a" }}>
                     {assignment?.isShiftActive !== false ? "Active / In Progress" : "Inactive"}
                   </strong>
                 </div>
@@ -191,7 +191,7 @@ export default function ViewGateAssignmentPage() {
                 </div>
                 <div className="card-meta-line">
                   Scanned in Shift:{" "}
-                  <strong style={{ color: "#ff2d75" }}>
+                  <strong style={{ color: "#d91a63" }}>
                     {assignment?.totalScannedInShift ?? 0} scans
                   </strong>
                 </div>

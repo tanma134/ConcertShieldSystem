@@ -180,7 +180,7 @@ export default function NotificationCenterPage() {
                   <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
                     <path
                       d="M19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3ZM19 19H5V8H19V19ZM7 10H17V12H7V10ZM7 14H14V16H7V14Z"
-                      fill="var(--tb-pink, #ec4899)"
+                      fill="var(--tb-pink, #e8439c)"
                     />
                   </svg>
                 </div>

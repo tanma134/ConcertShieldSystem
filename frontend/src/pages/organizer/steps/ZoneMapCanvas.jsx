@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Stage, Layer, Rect, Text, Transformer, Group, Circle, Line } from "react-konva";
 import { formatPrice } from "../../../utils/format";
 
-const PALETTE = ["#f59e0b", "#14b8a6", "#a855f7", "#3b82f6", "#ef4444", "#22c55e", "#ec4899", "#84cc16", "#06b6d4", "#f97316"];
+const PALETTE = ["#d98f14", "#14a89a", "#a855f7", "#3b82f6", "#d63a3a", "#1eaa55", "#e8439c", "#78b014", "#1da8c8", "#e06a1a"];
 const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
 const MIN_W_PCT = 6;
 const MIN_H_PCT = 6;
@@ -28,7 +28,7 @@ function readableTextColor(hex) {
   const g = parseInt(h.substring(2, 4), 16);
   const b = parseInt(h.substring(4, 6), 16);
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.6 ? "#14151a" : "#f8fafc";
+  return luminance > 0.6 ? "#14151a" : "#ffffff";
 }
 
 // Vẽ nền "sàn sân khấu" mờ + lưới nhẹ phía sau các zone, để canvas không bị trống trải.
@@ -269,7 +269,7 @@ function DrawingOverlay({ points, cursor, stageWidth, stageHeight, color, seatPo
     {points.map((p, i) => {
       const [x, y] = toPx(p);
       const isFirst = i === 0;
-      return <Circle key={i} x={x} y={y} radius={isFirst && canClose ? (nearFirst ? 8 : 6.5) : 5} fill={isFirst && canClose ? (nearFirst ? "#22c55e" : "#fff") : "#fff"} stroke="#111827" strokeWidth={2} listening={false} />;
+      return <Circle key={i} x={x} y={y} radius={isFirst && canClose ? (nearFirst ? 8 : 6.5) : 5} fill={isFirst && canClose ? (nearFirst ? "#1eaa55" : "#fff") : "#fff"} stroke="#1e1b2e" strokeWidth={2} listening={false} />;
     })}
   </>;
 }
@@ -414,7 +414,7 @@ export default function ZoneMapCanvas({ zones, ticketTypes, readOnly, onZoneMove
         <div className="ow-zonemap-shape-tools">
           <span className="ow-hint">Zone shape:</span>
           {selected.zone.zoneType === "Seated" ? (
-            <span className="ow-hint" style={{ color: "#38bdf8", fontWeight: 500 }}>
+            <span className="ow-hint" style={{ color: "#2fa4e0", fontWeight: 500 }}>
               ▭ Seated zone: Fixed rectangular block (drag to position, use corners to resize or rotate).
             </span>
           ) : (
@@ -465,12 +465,12 @@ export default function ZoneMapCanvas({ zones, ticketTypes, readOnly, onZoneMove
                 x={stageWidth * 0.3} y={stageHeight * 0.04} width={stageWidth * 0.4} height={stageHeight * 0.14}
                 cornerRadius={10}
                 fillLinearGradientStartPoint={{ x: 0, y: 0 }} fillLinearGradientEndPoint={{ x: 0, y: stageHeight * 0.14 }}
-                fillLinearGradientColorStops={[0, "#52525b", 1, "#27272a"]}
+                fillLinearGradientColorStops={[0, "#cfc4de", 1, "#f1ecfa"]}
                 stroke="rgba(255,255,255,.12)" strokeWidth={1}
                 shadowColor="#000" shadowBlur={14} shadowOpacity={0.5} shadowOffset={{ x: 0, y: 4 }}
                 listening={false}
               />
-              <Text text="S T A G E" x={stageWidth * 0.3} y={stageHeight * 0.04} width={stageWidth * 0.4} height={stageHeight * 0.14} align="center" verticalAlign="middle" fontSize={11} fontStyle="bold" fill="#e4e4e7" listening={false} />
+              <Text text="S T A G E" x={stageWidth * 0.3} y={stageHeight * 0.04} width={stageWidth * 0.4} height={stageHeight * 0.14} align="center" verticalAlign="middle" fontSize={11} fontStyle="bold" fill="#4a4458" listening={false} />
 
               {shapes.filter(({ zone }) => !(draw && draw.seatZoneId === zone.seatZoneId)).map(({ zone, shape }) => shape.type === "polygon" ? (
                 <PolygonZoneShape key={zone.seatZoneId} zone={zone} shape={shape} stageWidth={stageWidth} stageHeight={stageHeight} color={colorForTicketType(zone.ticketTypeId)} ticketType={ticketTypeById(zone.ticketTypeId)} readOnly={readOnly || !!draw} selected={selectedId === zone.seatZoneId} onSelect={() => setSelectedId(zone.seatZoneId)} onChange={(next) => commitShape(zone.seatZoneId, next)} />
@@ -576,7 +576,7 @@ function RectangleZoneShape({ zone, shape, stageWidth, stageHeight, color, ticke
       <Text text={label} width={pw} height={ph} align="center" verticalAlign="middle" fontSize={labelFontSize} fontStyle="bold" fill="#ffffff" listening={false} padding={8} shadowColor="#000" shadowBlur={3} shadowOpacity={0.8} />
       {renderPhysicalSeats(zone, pw, ph, color)}
     </Group>
-    {selected && !readOnly && <Transformer ref={trRef} rotateEnabled keepRatio={false} borderStroke="#fff" borderStrokeWidth={1.5} anchorStroke="#fff" anchorFill="#111827" anchorCornerRadius={4} anchorSize={9} boundBoxFunc={(oldBox, newBox) => newBox.width < 20 || newBox.height < 20 ? oldBox : newBox} />}
+    {selected && !readOnly && <Transformer ref={trRef} rotateEnabled keepRatio={false} borderStroke="#fff" borderStrokeWidth={1.5} anchorStroke="#fff" anchorFill="#1e1b2e" anchorCornerRadius={4} anchorSize={9} boundBoxFunc={(oldBox, newBox) => newBox.width < 20 || newBox.height < 20 ? oldBox : newBox} />}
   </>;
 }
 
@@ -650,7 +650,7 @@ function PolygonZoneShape({ zone, shape, stageWidth, stageHeight, color, ticketT
         key={`vertex-${index}`}
         x={(p.x / 100) * stageWidth} y={(p.y / 100) * stageHeight}
         radius={hoverVertex === index ? 7.5 : 6}
-        fill="#fff" stroke="#111827" strokeWidth={2}
+        fill="#fff" stroke="#1e1b2e" strokeWidth={2}
         shadowColor="#000" shadowBlur={6} shadowOpacity={0.4}
         draggable
         onDragStart={(e) => { e.target.getStage().container().style.cursor = "grabbing"; }}

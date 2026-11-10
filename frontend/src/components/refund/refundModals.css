@@ -1,7 +1,7 @@
 .rf-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.75);
+  background: rgba(28,18,52,0.5);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -17,13 +17,13 @@
 }
 
 .rf-modal {
-  background: #111418;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #f7f2fc;
+  border: 1px solid rgba(148,110,200,0.14);
   border-radius: 16px;
   width: 100%;
   max-width: 480px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
-  color: #f3f4f6;
+  box-shadow: 0 20px 40px rgba(28,18,52,0.5), 0 0 0 1px rgba(148,110,200,0.11);
+  color: #1e1b2e;
   overflow: hidden;
 }
 
@@ -32,7 +32,7 @@
   align-items: flex-start;
   justify-content: space-between;
   padding: 20px 24px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid rgba(148,110,200,0.14);
 }
 
 .rf-header-title {
@@ -51,20 +51,20 @@
   margin: 0;
   font-size: 19px;
   font-weight: 700;
-  color: #fff;
+  color: #3c3552;
   letter-spacing: -0.01em;
 }
 
 .rf-header p {
   margin: 4px 0 0;
   font-size: 13px;
-  color: #b5bbc4;
+  color: #6b6480;
 }
 
 .rf-close {
   background: none;
   border: none;
-  color: #b4b8c1;
+  color: #82848b;
   font-size: 18px;
   cursor: pointer;
   padding: 4px 8px;
@@ -73,8 +73,8 @@
 }
 
 .rf-close:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.1);
+  color: #3c3552;
+  background: rgba(148,110,200,0.14);
 }
 
 .rf-form {
@@ -87,14 +87,14 @@
 .rf-loading {
   padding: 40px;
   text-align: center;
-  color: #b5bbc4;
+  color: #6b6480;
   font-size: 14px;
 }
 
 /* Card details (Figure 142 & 143) */
 .rf-card {
-  background: #181b20;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: #f0e9f6;
+  border: 1px solid rgba(148,110,200,0.14);
   border-radius: 12px;
   padding: 16px 18px;
   display: flex;
@@ -104,7 +104,7 @@
 
 .rf-order-id {
   font-weight: 700;
-  color: #e47af3;
+  color: #cc6fe0;
   font-size: 14px;
   margin-bottom: 2px;
 }
@@ -117,17 +117,17 @@
 }
 
 .rf-label {
-  color: #b5bbc4;
+  color: #6b6480;
 }
 
 .rf-value {
-  color: #e5e7eb;
+  color: #4a4458;
   font-weight: 500;
 }
 
 .rf-value.highlight {
   font-weight: 700;
-  color: #ffffff;
+  color: #3c3552;
   font-size: 15px;
 }
 
@@ -139,7 +139,7 @@
 .rf-card-badge-failed {
   font-size: 12px;
   font-weight: 700;
-  color: #f48181;
+  color: #d64545;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 2px;
@@ -151,7 +151,7 @@
 }
 
 .rf-error-header {
-  color: #f48181;
+  color: #d64545;
   font-weight: 700;
   font-size: 13px;
   margin-bottom: 2px;
@@ -159,12 +159,12 @@
 
 .rf-error-code {
   font-size: 13px;
-  color: #fca5a5;
+  color: #a77373;
 }
 
 .rf-error-message {
   font-size: 12.5px;
-  color: #e5e7eb;
+  color: #4a4458;
   line-height: 1.45;
   font-style: italic;
 }
@@ -179,7 +179,7 @@
 .rf-group label {
   font-size: 13px;
   font-weight: 600;
-  color: #e5e7eb;
+  color: #4a4458;
 }
 
 .rf-tab-group,
@@ -191,9 +191,9 @@
 
 .rf-tab-btn,
 .rf-strategy-btn {
-  background: #181b20;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #9ca3af;
+  background: #f0e9f6;
+  border: 1px solid rgba(148,110,200,0.14);
+  color: #6a637c;
   padding: 12px 14px;
   border-radius: 10px;
   font-size: 13.5px;
@@ -205,25 +205,25 @@
 
 .rf-tab-btn:hover,
 .rf-strategy-btn:hover {
-  background: #1f2329;
-  color: #e5e7eb;
+  background: #faf5ff;
+  color: #4a4458;
 }
 
 .rf-tab-btn.active,
 .rf-strategy-btn.active {
-  background: #252a32;
+  background: #faf5ff;
   border-color: #d946ef;
-  color: #ffffff;
+  color: #3c3552;
   box-shadow: 0 0 12px rgba(217, 70, 239, 0.25);
 }
 
 .rf-input,
 .rf-select {
-  background: #181b20;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #f0e9f6;
+  border: 1px solid rgba(148,110,200,0.14);
   border-radius: 10px;
   padding: 12px 14px;
-  color: #ffffff;
+  color: #3c3552;
   font-size: 14px;
   outline: none;
   transition: border-color 0.15s;
@@ -237,22 +237,22 @@
 }
 
 .rf-input.locked {
-  background: #14171c;
-  color: #9ca3af;
+  background: #f5eefb;
+  color: #6f6882;
   cursor: not-allowed;
-  border-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(148,110,200,0.11);
 }
 
 .rf-hint {
   margin: 2px 0 0;
   font-size: 12px;
-  color: #b5bbc4;
+  color: #6b6480;
 }
 
 .rf-error {
   background: rgba(239, 68, 68, 0.12);
   border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #fca5a5;
+  color: #a77373;
   padding: 10px 14px;
   border-radius: 8px;
   font-size: 13px;
@@ -269,9 +269,9 @@
 }
 
 .rf-btn-cancel {
-  background: #23272f;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #d1d5db;
+  background: #faf5ff;
+  border: 1px solid rgba(148,110,200,0.14);
+  color: #756e86;
   padding: 10px 20px;
   border-radius: 8px;
   font-size: 13.5px;
@@ -281,12 +281,12 @@
 }
 
 .rf-btn-cancel:hover {
-  background: #2c313a;
-  color: #fff;
+  background: #faf5ff;
+  color: #3c3552;
 }
 
 .rf-btn-submit {
-  background: linear-gradient(135deg, #d61f6e 0%, #a855f7 100%);
+  background: linear-gradient(135deg, #c2185b 0%, #a855f7 100%);
   border: none;
   color: #ffffff;
   padding: 10px 22px;

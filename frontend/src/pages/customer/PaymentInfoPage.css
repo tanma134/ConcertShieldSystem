@@ -1,10 +1,10 @@
 .tb-payment-page {
   min-height: 100vh;
   padding-bottom: 56px;
-  color: #f5f5f7;
+  color: #545260;
   background:
     radial-gradient(ellipse at 15% 0%, rgba(113, 54, 159, 0.2), transparent 38%),
-    #0b0b10;
+    #d2ced7;
 }
 
 .tb-page-container {
@@ -14,34 +14,34 @@
 
 .tb-payment-header {
   padding: 24px 0 34px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(148,110,200,0.14);
   background: rgba(11, 11, 16, 0.84);
 }
 
 .tb-header-content h1 {
   margin: 24px 0 6px;
-  color: #ffffff;
+  color: #3c3552;
   font-size: clamp(28px, 4vw, 40px);
   letter-spacing: -0.04em;
 }
 
 .tb-header-content > p {
   margin: 0;
-  color: #bab8c2;
+  color: #86848c;
 }
 
 .tb-back-link {
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  color: #d8b4fe;
+  color: #a06ce8;
   text-decoration: none;
   font-size: 14px;
   font-weight: 650;
 }
 
 .tb-back-link:hover {
-  color: #f0d9ff;
+  color: #534b62;
 }
 
 .tb-checkout-progress {
@@ -49,14 +49,14 @@
   align-items: center;
   gap: 12px;
   margin-top: 26px;
-  color: #b8b7be;
+  color: #6e6788;
   font-size: 12px;
 }
 
 .tb-checkout-progress i {
   width: 42px;
   height: 1px;
-  background: #3c3946;
+  background: #faf5ff;
 }
 
 .tb-progress-step {
@@ -71,13 +71,13 @@
   width: 23px;
   height: 23px;
   place-items: center;
-  border: 1px solid #494653;
+  border: 1px solid #a7a1b2;
   border-radius: 50%;
   font-size: 11px;
 }
 
 .tb-progress-done {
-  color: #c4b5fd;
+  color: #9a7ce8;
 }
 
 .tb-progress-done b,
@@ -88,7 +88,7 @@
 }
 
 .tb-progress-current {
-  color: #fff;
+  color: #3c3552;
 }
 
 .tb-payment-layout {
@@ -107,10 +107,10 @@
 .tb-panel {
   margin-bottom: 18px;
   padding: 23px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(148,110,200,0.14);
   border-radius: 18px;
-  background: linear-gradient(145deg, #17161e, #111117 72%);
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(145deg, #f5eefb, #f6f0fb 72%);
+  box-shadow: 0 18px 48px rgba(80,50,120,0.10);
 }
 
 .tb-panel-heading {
@@ -132,7 +132,7 @@
 
 .tb-panel-heading h2 {
   margin: 0;
-  color: #fff;
+  color: #3c3552;
   font-size: 19px;
   letter-spacing: -0.02em;
 }
@@ -144,7 +144,7 @@
   border: 1px solid rgb(56 189 248 / 38%);
   border-radius: 9px;
   background: rgb(14 165 233 / 8%);
-  color: #7dd3fc;
+  color: #5fb8e8;
   font: inherit;
   font-size: 12px;
   font-weight: 750;
@@ -152,7 +152,7 @@
 }
 
 .tb-change-seats:hover:not(:disabled) {
-  border-color: #38bdf8;
+  border-color: #2fa4e0;
   background: rgb(14 165 233 / 16%);
 }
 
@@ -166,7 +166,7 @@
   padding: 7px 10px;
   border: 1px solid rgba(192, 132, 252, 0.24);
   border-radius: 999px;
-  color: #d8b4fe;
+  color: #a06ce8;
   background: rgba(168, 85, 247, 0.09);
   font-size: 10px;
   font-weight: 750;
@@ -185,27 +185,27 @@
   display: block;
   width: 132px;
   height: 154px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(148,110,200,0.17);
   border-radius: 12px;
   object-fit: cover;
-  background: #24212d;
+  background: #faf5ff;
 }
 
 .tb-poster-fallback {
   display: grid;
   place-items: center;
-  color: #d8b4fe;
+  color: #a06ce8;
   font-size: 13px;
   font-weight: 850;
   letter-spacing: 0.16em;
   background:
     radial-gradient(circle at 70% 20%, rgba(232, 121, 249, 0.35), transparent 40%),
-    linear-gradient(145deg, #30203d, #17151e);
+    linear-gradient(145deg, #d7d1de, #f5eefb);
 }
 
 .tb-event-copy h3 {
   margin: 0 0 15px;
-  color: #fff;
+  color: #3c3552;
   font-size: 21px;
   line-height: 1.25;
 }
@@ -218,12 +218,12 @@
 .tb-event-meta span {
   display: grid;
   gap: 3px;
-  color: #c4c1cc;
+  color: #5c5473;
   font-size: 13px;
 }
 
 .tb-event-meta b {
-  color: #b8b7be;
+  color: #6e6788;
   font-size: 10px;
   font-weight: 750;
   letter-spacing: 0.1em;
@@ -232,12 +232,12 @@
 
 .tb-event-loading {
   padding: 28px 0;
-  color: #bab7c1;
+  color: #86848b;
   font-size: 13px;
 }
 
 .tb-muted {
-  color: #bab7c1;
+  color: #86848b;
   font-size: 12px;
 }
 
@@ -250,22 +250,22 @@
 .tb-contact-item {
   min-width: 0;
   padding: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(148,110,200,0.14);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.025);
+  background: rgba(148,110,200,0.06);
 }
 
 .tb-contact-item span {
   display: block;
   margin-bottom: 7px;
-  color: #b8b7be;
+  color: #6e6788;
   font-size: 11px;
 }
 
 .tb-contact-item strong {
   display: block;
   overflow-wrap: anywhere;
-  color: #f3f0f7;
+  color: #535060;
   font-size: 13px;
   font-weight: 650;
 }
@@ -282,9 +282,9 @@
   gap: 13px;
   min-height: 76px;
   padding: 12px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(148,110,200,0.14);
   border-radius: 13px;
-  background: rgba(255, 255, 255, 0.025);
+  background: rgba(148,110,200,0.06);
   transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
 }
 
@@ -298,7 +298,7 @@
 }
 
 .tb-method-card.is-selected {
-  border-color: #b66bea;
+  border-color: #9a4cd8;
   background: linear-gradient(90deg, rgba(126, 34, 206, 0.2), rgba(168, 85, 247, 0.06));
   box-shadow: 0 0 0 1px rgba(182, 107, 234, 0.14);
 }
@@ -311,7 +311,7 @@
   width: 16px;
   height: 16px;
   margin: 0;
-  accent-color: #b66bea;
+  accent-color: #9a4cd8;
 }
 
 .tb-method-mark {
@@ -320,36 +320,36 @@
   height: 38px;
   place-items: center;
   border-radius: 9px;
-  color: #fff;
-  background: #25232e;
+  color: #3c3552;
+  background: #faf5ff;
   font-size: 10px;
   font-weight: 900;
   letter-spacing: -0.03em;
 }
 
 .tb-mark-vnpay {
-  color: #fff;
-  background: linear-gradient(135deg, #0877c9, #06428c);
+  color: #ffffff;
+  background: linear-gradient(135deg, #2f7ec0, #2a5fa0);
   font-size: 11px;
   letter-spacing: 0.02em;
 }
 
 .tb-mark-momo {
   color: white;
-  background: linear-gradient(135deg, #d946a8, #9d174d);
+  background: linear-gradient(135deg, #d946a8, #e8cfe0);
   font-size: 12px;
 }
 
 .tb-mark-zalopay {
   color: white;
-  background: linear-gradient(135deg, #3287f6, #1454bd);
+  background: linear-gradient(135deg, #3287f6, #3568c0);
   font-size: 9px;
 }
 
 .tb-mark-card {
-  color: #d8b4fe;
+  color: #865bc3;
   border: 1px solid rgba(216, 180, 254, 0.24);
-  background: #211b2a;
+  background: #faf5ff;
 }
 
 .tb-method-copy {
@@ -359,21 +359,21 @@
 }
 
 .tb-method-copy strong {
-  color: #f4f1f8;
+  color: #2a2438;
   font-size: 14px;
 }
 
 .tb-method-copy small {
-  color: #b8b7bf;
+  color: #84848a;
   font-size: 11px;
   line-height: 1.4;
 }
 
 .tb-method-badge {
   padding: 6px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(148,110,200,0.14);
   border-radius: 999px;
-  color: #b8b7bf;
+  color: #84848a;
   font-size: 9px;
   font-weight: 750;
   white-space: nowrap;
@@ -381,20 +381,20 @@
 
 .tb-method-badge.is-ready {
   border-color: rgba(74, 222, 128, 0.2);
-  color: #86efac;
+  color: #4fcf82;
   background: rgba(34, 197, 94, 0.08);
 }
 
 .tb-voucher-box {
   margin-top: 20px;
   padding-top: 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(148,110,200,0.14);
 }
 
 .tb-voucher-box label {
   display: block;
   margin-bottom: 8px;
-  color: #e9e5ef;
+  color: #514e5e;
   font-size: 12px;
   font-weight: 700;
 }
@@ -403,11 +403,11 @@
   width: 100%;
   box-sizing: border-box;
   padding: 12px 13px;
-  border: 1px solid rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(148,110,200,0.18);
   border-radius: 10px;
   outline: none;
   color: white;
-  background: #0d0c12;
+  background: #faf5ff;
   font: inherit;
 }
 
@@ -419,7 +419,7 @@
 .tb-voucher-box > small {
   display: block;
   margin-top: 7px;
-  color: #b8b7be;
+  color: #6e6788;
   font-size: 10px;
 }
 
@@ -428,11 +428,11 @@
   border-color: rgba(192, 132, 252, 0.27);
   background:
     radial-gradient(ellipse at top, rgba(126, 34, 206, 0.19), transparent 70%),
-    #17151d;
+    #d4cfd9;
 }
 
 .tb-countdown-label {
-  color: #bab7c1;
+  color: #86848b;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -440,7 +440,7 @@
 
 .tb-countdown {
   margin: 10px 0 4px;
-  color: #e9c8ff;
+  color: #514662;
   font-size: 40px;
   font-weight: 850;
   font-variant-numeric: tabular-nums;
@@ -448,7 +448,7 @@
 }
 
 .tb-countdown.is-urgent {
-  color: #fb7b8e;
+  color: #e0567a;
   animation: tb-countdown-pulse 1s ease-in-out infinite;
 }
 
@@ -460,7 +460,7 @@
 
 .tb-countdown-panel p {
   margin: 0;
-  color: #bbb9c1;
+  color: #87858b;
   font-size: 11px;
   line-height: 1.5;
 }
@@ -476,13 +476,13 @@
   gap: 10px;
   margin: 3px 0 16px;
   padding: 10px 0 13px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  color: #b8b7be;
+  border-bottom: 1px solid rgba(148,110,200,0.14);
+  color: #6e6788;
   font-size: 11px;
 }
 
 .tb-hold-reference code {
-  color: #d8b4fe;
+  color: #a06ce8;
   font-size: 10px;
 }
 
@@ -504,17 +504,17 @@
 }
 
 .tb-summary-item strong {
-  color: #eeeaf3;
+  color: #524f5f;
   font-size: 12px;
 }
 
 .tb-summary-item span {
-  color: #b8b7be;
+  color: #6e6788;
   font-size: 10px;
 }
 
 .tb-summary-item > b {
-  color: #d8d4df;
+  color: #4d495a;
   font-size: 11px;
   white-space: nowrap;
 }
@@ -526,17 +526,17 @@
   gap: 12px;
   margin-top: 18px;
   padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(148,110,200,0.14);
 }
 
 .tb-summary-total span {
-  color: #d0ccd6;
+  color: #4b4758;
   font-size: 13px;
   font-weight: 700;
 }
 
 .tb-summary-total strong {
-  color: #e6b8ff;
+  color: #796187;
   font-size: 22px;
   font-weight: 850;
   white-space: nowrap;
@@ -552,7 +552,7 @@
   padding: 15px;
   border: 0;
   border-radius: 11px;
-  color: #fff;
+  color: #ffffff;
   background: linear-gradient(110deg, #9333ea, #c026d3);
   box-shadow: 0 10px 24px rgba(147, 51, 234, 0.22);
   font: inherit;
@@ -578,7 +578,7 @@
   align-items: center;
   gap: 6px;
   margin-top: 13px;
-  color: #b9b7bf;
+  color: #85848a;
   font-size: 10px;
   text-align: center;
 }
@@ -589,15 +589,15 @@
   place-content: center;
   justify-items: center;
   gap: 12px;
-  color: #bdb8c5;
-  background: #0b0b10;
+  color: #726f77;
+  background: #faf5ff;
 }
 
 .tb-loading-spinner {
   width: 30px;
   height: 30px;
-  border: 3px solid rgba(255, 255, 255, 0.13);
-  border-top-color: #c084fc;
+  border: 3px solid rgba(148,110,200,0.18);
+  border-top-color: #a855f7;
   border-radius: 50%;
   animation: tb-spin 0.8s linear infinite;
 }
@@ -614,7 +614,7 @@
   padding: 34px;
   border: 1px solid rgba(251, 113, 133, 0.25);
   border-radius: 18px;
-  background: #17121a;
+  background: #f5eefb;
   text-align: center;
 }
 
@@ -625,7 +625,7 @@
   place-items: center;
   margin: 0 auto 15px;
   border-radius: 50%;
-  color: #fecdd3;
+  color: #3c3552;
   background: rgba(244, 63, 94, 0.18);
   font-size: 22px;
   font-weight: 800;
@@ -634,12 +634,12 @@
 .tb-expired-card h1 {
   margin: 0 0 7px;
   font-size: 23px;
-  color: #fff;
+  color: #3c3552;
 }
 
 .tb-expired-card p {
   margin: 0 0 20px;
-  color: #bcb7c1;
+  color: #6e6788;
   font-size: 13px;
 }
 
@@ -759,7 +759,7 @@
   border: 1px solid rgba(192, 38, 211, 0.25);
   border-radius: 18px;
   background: rgba(23, 18, 35, 0.92);
-  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 18px 60px rgba(80,50,120,0.15);
 }
 
 .qf-spinner {
@@ -779,19 +779,19 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #f0abfc;
+  background: #d78ef0;
   box-shadow: 0 0 18px #d946ef;
 }
 
 .qf-loading-card h2 {
   margin: 0 0 8px;
-  color: #fff;
+  color: #3c3552;
   font-size: 21px;
 }
 
 .qf-loading-card p {
   margin: 0;
-  color: #bab6c2;
+  color: #6e6788;
   font-size: 14px;
 }
 
@@ -806,9 +806,9 @@
   border-radius: 999px;
   background: linear-gradient(
     90deg,
-    #211a30 25%,
-    #38264e 50%,
-    #211a30 75%
+    #f3ebfa 25%,
+    #e0d2ee 50%,
+    #f3ebfa 75%
   );
   background-size: 200% 100%;
   animation: qf-shimmer 1.5s ease-in-out infinite;
@@ -856,11 +856,11 @@
   padding: 16px;
   border: 1px solid rgba(192, 132, 252, 0.28);
   border-radius: 14px;
-  color: #f5f3f8;
+  color: #545161;
   background: linear-gradient(
     110deg,
     rgba(126, 34, 206, 0.14),
-    rgba(255, 255, 255, 0.025)
+    rgba(148,110,200,0.06)
   );
   text-align: left;
   cursor: pointer;
@@ -879,7 +879,7 @@
   place-items: center;
   border: 1px solid rgba(216, 180, 254, 0.2);
   border-radius: 12px;
-  color: #e9c8ff;
+  color: #514662;
   background: rgba(168, 85, 247, 0.12);
   font-size: 18px;
   font-weight: 900;
@@ -891,17 +891,17 @@
 }
 
 .tb-voucher-open-copy strong {
-  color: #fff;
+  color: #3c3552;
   font-size: 13px;
 }
 
 .tb-voucher-open-copy small {
-  color: #bcb7c2;
+  color: #87848c;
   font-size: 11px;
 }
 
 .tb-voucher-open-arrow {
-  color: #d8b4fe;
+  color: #a06ce8;
   font-size: 20px;
 }
 
@@ -922,12 +922,12 @@
 }
 
 .tb-applied-voucher strong {
-  color: #bbf7d0;
+  color: #47745a;
   font-size: 13px;
 }
 
 .tb-applied-voucher small {
-  color: #bab7c1;
+  color: #86848b;
   font-size: 11px;
 }
 
@@ -935,19 +935,19 @@
   padding: 9px 12px;
   border: 1px solid rgba(251, 113, 133, 0.25);
   border-radius: 9px;
-  color: #fda4af;
+  color: #aa7882;
   background: rgba(244, 63, 94, 0.07);
   cursor: pointer;
 }
 
 .tb-voucher-inline-error,
 .voucher-feedback.is-error {
-  color: #fda4af;
+  color: #aa7882;
 }
 
 .tb-summary-discount strong,
 .voucher-feedback.is-success {
-  color: #86efac;
+  color: #4fcf82;
 }
 
 .voucher-modal-backdrop {
@@ -969,15 +969,15 @@
   overflow: hidden;
   border: 1px solid rgba(216, 180, 254, 0.2);
   border-radius: 20px;
-  color: #f5f3f8;
+  color: #545161;
   background:
     radial-gradient(
       ellipse at 12% 0%,
       rgba(126, 34, 206, 0.18),
       transparent 43%
     ),
-    #14121a;
-  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.58);
+    #f5eefb;
+  box-shadow: 0 28px 90px rgba(28,18,52,0.5);
 }
 
 .voucher-modal-header {
@@ -986,41 +986,41 @@
   justify-content: space-between;
   gap: 18px;
   padding: 23px 25px 19px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(148,110,200,0.14);
 }
 
 .voucher-modal-header h2 {
   margin: 0;
-  color: #fff;
+  color: #3c3552;
   font-size: 22px;
 }
 
 .voucher-modal-header p {
   margin: 7px 0 0;
-  color: #bcb8c3;
+  color: #87848c;
   font-size: 12px;
 }
 
 .voucher-modal-close {
   width: 38px;
   height: 38px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(148,110,200,0.14);
   border-radius: 11px;
-  color: #ddd7e5;
-  background: rgba(255, 255, 255, 0.04);
+  color: #4e4a5c;
+  background: rgba(148,110,200,0.09);
   font-size: 22px;
   cursor: pointer;
 }
 
 .voucher-manual-form {
   padding: 18px 25px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid rgba(148,110,200,0.14);
 }
 
 .voucher-manual-form label {
   display: block;
   margin-bottom: 8px;
-  color: #e5e0ea;
+  color: #504c5d;
   font-size: 12px;
   font-weight: 700;
 }
@@ -1034,15 +1034,15 @@
 .voucher-manual-control input {
   min-width: 0;
   padding: 13px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(148,110,200,0.20);
   border-radius: 11px;
   outline: none;
-  color: #fff;
-  background: #0d0c12;
+  color: #3c3552;
+  background: #faf5ff;
 }
 
 .voucher-manual-control input:focus {
-  border-color: #b66bea;
+  border-color: #9a4cd8;
   box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.12);
 }
 
@@ -1050,7 +1050,7 @@
 .voucher-modal-footer button {
   border: 0;
   border-radius: 10px;
-  color: #fff;
+  color: #ffffff;
   background: linear-gradient(110deg, #9333ea, #c026d3);
   font-weight: 800;
   cursor: pointer;
@@ -1065,7 +1065,7 @@
   min-height: 0;
   overflow-y: auto;
   padding: 0 25px 22px;
-  scrollbar-color: #5a5265 transparent;
+  scrollbar-color: #aea6ba transparent;
   scrollbar-width: thin;
 }
 
@@ -1082,7 +1082,7 @@
 
 .voucher-group-heading h3 {
   margin: 0;
-  color: #f2eafa;
+  color: #534f61;
   font-size: 13px;
 }
 
@@ -1094,7 +1094,7 @@
   padding: 0 7px;
   border: 1px solid rgba(216, 180, 254, 0.18);
   border-radius: 999px;
-  color: #d8b4fe;
+  color: #a06ce8;
   background: rgba(168, 85, 247, 0.09);
   font-size: 10px;
 }
@@ -1111,10 +1111,10 @@
   align-items: center;
   gap: 12px;
   padding: 13px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(148,110,200,0.14);
   border-radius: 13px;
-  color: #f5f3f8;
-  background: rgba(255, 255, 255, 0.028);
+  color: #545161;
+  background: rgba(148,110,200,0.06);
   text-align: left;
   cursor: pointer;
 }
@@ -1131,24 +1131,24 @@
 }
 
 .voucher-option-copy strong {
-  color: #fff;
+  color: #3c3552;
   font-size: 12px;
 }
 
 .voucher-option-copy small {
-  color: #bdb8c2;
+  color: #88848c;
   font-size: 11px;
 }
 
 .voucher-option-action {
-  color: #d8b4fe;
+  color: #a06ce8;
   font-size: 10px;
   font-weight: 800;
 }
 
 .voucher-empty,
 .voucher-feedback {
-  color: #bcb7c1;
+  color: #6e6788;
   font-size: 11px;
 }
 
@@ -1158,8 +1158,8 @@
   justify-content: space-between;
   gap: 12px;
   padding: 14px 25px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  color: #bcb8c2;
+  border-top: 1px solid rgba(148,110,200,0.14);
+  color: #87848c;
   font-size: 11px;
 }
 

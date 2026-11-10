@@ -1,16 +1,17 @@
 :root {
-  --auth-bg: #0b0816;
-  --auth-card: #181228;
-  --auth-line: #3d3262;
-  --auth-field-bg: #231b3a;
-  --auth-primary: #ff6fb5;
-  --auth-primary-dark: #d61f6e;
-  --auth-primary-light: rgba(255, 111, 181, 0.16);
-  --auth-text: #ffffff;
-  --auth-text-muted: #d3cae6;
-  --auth-text-faint: #b8aed0;
-  --auth-border: #3d3262;
-  --auth-radius: 16px;
+  --auth-bg: #faf5ff;
+  --auth-card: #ffffff;
+  --auth-line: #ece0f8;
+  --auth-field-bg: #fbf8ff;
+  --auth-primary: #a855f7;
+  --auth-primary-dark: #7e22ce;
+  --auth-primary-light: rgba(168, 85, 247, 0.14);
+  --auth-text: #1d1730;
+  --auth-text-muted: #6b6284;
+  --auth-text-faint: #9a91b0;
+  --auth-border: #ece0f8;
+  --auth-radius: 20px;
+  --auth-gradient: linear-gradient(120deg, #a855f7, #c026d3 55%, #ec4899);
 }
 
 .auth-wrapper {
@@ -20,7 +21,10 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: var(--auth-bg);
+  background:
+    radial-gradient(700px 420px at 15% 0%, rgba(168, 85, 247, 0.14), transparent 62%),
+    radial-gradient(620px 420px at 88% 100%, rgba(236, 72, 153, 0.11), transparent 60%),
+    var(--auth-bg);
   font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
   position: relative;
   overflow: hidden;
@@ -29,26 +33,28 @@
 .auth-wrapper::before {
   content: '';
   position: absolute;
-  top: -120px;
-  right: -80px;
-  width: 380px;
-  height: 380px;
-  background: #7c3aed;
-  opacity: 0.07;
+  top: -140px;
+  right: -90px;
+  width: 400px;
+  height: 400px;
+  background: #a855f7;
+  opacity: 0.10;
   border-radius: 50%;
+  filter: blur(20px);
   pointer-events: none;
 }
 
 .auth-wrapper::after {
   content: '';
   position: absolute;
-  bottom: -100px;
-  left: -80px;
-  width: 320px;
-  height: 320px;
+  bottom: -120px;
+  left: -90px;
+  width: 350px;
+  height: 350px;
   background: var(--auth-primary);
-  opacity: 0.06;
+  opacity: 0.08;
   border-radius: 50%;
+  filter: blur(20px);
   pointer-events: none;
 }
 
@@ -78,10 +84,10 @@
   width: 100%;
   max-width: 380px;
   background: var(--auth-card);
-  border: 0.5px solid var(--auth-line);
+  border: 1px solid var(--auth-line);
   padding: 36px 32px;
   border-radius: var(--auth-radius);
-  box-shadow: none;
+  box-shadow: 0 28px 60px -34px rgba(76, 45, 120, 0.4), 0 2px 8px rgba(76, 45, 120, 0.05);
   position: relative;
   z-index: 1;
   animation: auth-card-in 0.35s ease;
@@ -102,7 +108,7 @@
 .auth-card h2 {
   margin: 0 0 4px;
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 800;
   text-align: center;
   color: var(--auth-text);
   letter-spacing: -0.01em;
@@ -125,21 +131,21 @@
   font-size: 13px;
   margin-bottom: 6px;
   color: var(--auth-text-muted);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .auth-field input {
   width: 100%;
-  height: 42px;
-  padding: 0 12px;
-  border: 0.5px solid var(--auth-line);
-  border-radius: 8px;
+  height: 44px;
+  padding: 0 13px;
+  border: 1.5px solid var(--auth-line);
+  border-radius: 11px;
   font-size: 14.5px;
   color: var(--auth-text);
   background: var(--auth-field-bg);
   box-sizing: border-box;
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .auth-field input::placeholder {
@@ -148,31 +154,30 @@
 
 .auth-field input:focus {
   border-color: var(--auth-primary);
-  background: var(--auth-field-bg);
-  box-shadow: 0 0 0 3px var(--auth-primary-light);
+  background: #fff;
+  box-shadow: 0 0 0 4px var(--auth-primary-light);
 }
 
 .auth-button {
   width: 100%;
-  height: 44px;
+  height: 46px;
   padding: 0;
-  background: var(--auth-primary);
-  color: #fff;
+  background: var(--auth-gradient);
+  color: #ffffff;
   border: none;
-  border-radius: 9px;
+  border-radius: 12px;
   font-size: 14.5px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.01em;
   cursor: pointer;
   margin-top: 4px;
-  box-shadow: none;
-  transition: background 0.2s ease, transform 0.1s ease;
+  box-shadow: 0 10px 22px -12px rgba(192, 38, 211, 0.8);
+  transition: filter 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
 }
 
 .auth-button:hover:not(:disabled) {
-  background: var(--auth-primary-dark);
-  filter: none;
-  box-shadow: none;
+  filter: brightness(1.05);
+  box-shadow: 0 14px 26px -12px rgba(192, 38, 211, 0.9);
 }
 
 .auth-button:active:not(:disabled) {
@@ -185,11 +190,10 @@
 }
 
 .auth-button:disabled {
-  background: #333333;
-  color: var(--auth-text-faint);
+  background: #efe6f8;
+  color: #6c6476;
   box-shadow: none;
   cursor: not-allowed;
-  color: var(--auth-text-muted);
 }
 
 .auth-error,
@@ -198,22 +202,22 @@
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 13px;
   margin-bottom: 16px;
   border-left: 3px solid transparent;
 }
 
 .auth-error {
-  background: rgba(232, 67, 147, 0.08);
-  color: #ff7fb0;
-  border-left-color: var(--auth-primary);
+  background: #fdeaea;
+  color: #b52d2d;
+  border-left-color: #d63a3a;
 }
 
 .auth-success {
-  background: rgba(34, 197, 94, 0.08);
-  color: #4ade80;
-  border-left-color: #22c55e;
+  background: #e8faf1;
+  color: #0b7a5a;
+  border-left-color: #0e9e78;
 }
 
 .auth-links {
@@ -224,8 +228,8 @@
 }
 
 .auth-links a {
-  color: var(--auth-primary-2);
-  font-weight: 600;
+  color: var(--auth-primary-dark);
+  font-weight: 700;
   text-decoration: none;
 }
 
@@ -256,7 +260,6 @@
   height: 100vh;
 }
 
-
 /* Policy Agreement Checkbox & Modal (UC 11.1 & 11.2) */
 .auth-policy-group {
   margin: 16px 0;
@@ -268,7 +271,7 @@
 
 .auth-policy-checkbox {
   margin-top: 3px;
-  accent-color: #ff2d75;
+  accent-color: #a855f7;
   width: 16px;
   height: 16px;
   cursor: pointer;
@@ -276,33 +279,33 @@
 
 .auth-policy-label {
   font-size: 12.5px;
-  color: #b8b8bf;
+  color: #6b6284;
   line-height: 1.45;
   cursor: pointer;
   user-select: none;
 }
 
 .auth-policy-link {
-  color: #ff74a4;
+  color: #c2185b;
   background: none;
   border: none;
   padding: 0;
   margin-left: 4px;
   font-size: 12.5px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   text-decoration: underline;
   display: inline;
 }
 
 .auth-policy-link:hover {
-  color: #ff74a4;
+  color: #a81550;
 }
 
 .policy-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.85);
+  background: rgba(28, 18, 52, 0.5);
   backdrop-filter: blur(6px);
   z-index: 9999;
   display: flex;
@@ -312,21 +315,21 @@
 }
 
 .policy-modal-card {
-  background: #15151c;
-  border: 1px solid #2a2b36;
-  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid #ece0f8;
+  border-radius: 20px;
   width: 100%;
   max-width: 650px;
   max-height: 85vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 32px 64px -28px rgba(76, 45, 120, 0.45);
   overflow: hidden;
 }
 
 .policy-modal-header {
   padding: 18px 24px;
-  border-bottom: 1px solid #262734;
+  border-bottom: 1px solid #f1e7fc;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -335,7 +338,7 @@
 .policy-modal-header h3 {
   margin: 0;
   font-size: 1.15rem;
-  color: #ffffff;
+  color: #1d1730;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -344,27 +347,27 @@
 .policy-modal-close {
   background: transparent;
   border: none;
-  color: #b0bbca;
+  color: #8d84a6;
   font-size: 1.25rem;
   cursor: pointer;
 }
 
 .policy-modal-close:hover {
-  color: #ff74a4;
+  color: #c2185b;
 }
 
 .policy-modal-body {
   padding: 20px 24px;
   overflow-y: auto;
-  color: #cbd5e1;
+  color: #4a4458;
   font-size: 0.9rem;
   line-height: 1.6;
 }
 
 .policy-category-block {
-  background: #0c0c10;
-  border: 1px solid #232430;
-  border-radius: 8px;
+  background: #fbf8ff;
+  border: 1px solid #f1e7fc;
+  border-radius: 12px;
   padding: 14px 16px;
   margin-bottom: 14px;
 }
@@ -378,48 +381,48 @@
 
 .policy-cat-name {
   font-weight: 700;
-  color: #f1f5f9;
+  color: #1d1730;
   font-size: 0.95rem;
 }
 
 .policy-version-badge {
-  background: rgba(255, 45, 117, 0.15);
-  color: #ff74a4;
-  border: 1px solid rgba(255, 45, 117, 0.35);
+  background: rgba(236, 72, 153, 0.10);
+  color: #c2185b;
+  border: 1px solid rgba(236, 72, 153, 0.28);
   font-size: 0.75rem;
   padding: 2px 8px;
   border-radius: 12px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .policy-cat-desc {
-  color: #b0bbca;
+  color: #6b6284;
   font-size: 0.85rem;
   margin: 0 0 6px 0;
 }
 
 .policy-modal-footer {
   padding: 16px 24px;
-  border-top: 1px solid #262734;
+  border-top: 1px solid #f1e7fc;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
-  background: #111117;
+  background: #fbf8ff;
 }
 
 .btn-policy-agree {
-  background: #d61f6e;
+  background: linear-gradient(120deg, #a855f7, #ec4899);
   color: #ffffff;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 10px 20px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: 0.2s ease;
 }
 
 .btn-policy-agree:hover {
-  background: #e02667;
+  filter: brightness(1.05);
   transform: translateY(-1px);
 }

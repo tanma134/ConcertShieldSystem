@@ -8,16 +8,16 @@ import Footer from "../../components/Footer";
 import { useToast } from "../../components/ToastProvider";
 
 const ZONE_PALETTE = [
-  "#f59e0b",
-  "#14b8a6",
+  "#d98f14",
+  "#14a89a",
   "#a855f7",
   "#3b82f6",
-  "#ef4444",
-  "#22c55e",
-  "#ec4899",
-  "#84cc16",
-  "#06b6d4",
-  "#f97316",
+  "#d63a3a",
+  "#1eaa55",
+  "#e8439c",
+  "#78b014",
+  "#1da8c8",
+  "#e06a1a",
 ];
 
 const formatPrice = (price) =>
@@ -680,7 +680,7 @@ export default function SelectTicketPage() {
                         } ${soldOut ? "tb-zone-sold-out" : ""}`}
                         style={{
                           ...getZonePosition(zone.shapeJson),
-                          "--zone-color": soldOut ? "#71717a" : color,
+                          "--zone-color": soldOut ? "#b6abc9" : color,
                         }}
                         disabled={soldOut}
                         onClick={() => openZonePicker(zone)}

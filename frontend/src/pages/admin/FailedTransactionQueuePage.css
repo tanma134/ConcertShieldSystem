@@ -1,6 +1,6 @@
 .failed-queue-page {
   padding: 28px;
-  color: #f4eff8;
+  color: #1e1b2e;
 }
 
 .failed-queue-header {
@@ -27,18 +27,18 @@
 
 .failed-queue-description {
   margin: 8px 0 0;
-  color: #beb8c5;
+  color: #89848e;
   font-size: 14px;
 }
 
 .failed-queue-refresh,
 .failed-queue-filter-actions button,
 .failed-queue-pagination button {
-  border: 1px solid #49345f;
+  border: 1px solid #d9cce8;
   border-radius: 8px;
   padding: 10px 14px;
-  color: #f4eff8;
-  background: #21182b;
+  color: #1e1b2e;
+  background: #faf5ff;
   font: inherit;
   cursor: pointer;
 }
@@ -46,7 +46,7 @@
 .failed-queue-refresh:hover,
 .failed-queue-filter-actions button:hover,
 .failed-queue-pagination button:hover:not(:disabled) {
-  background: #32213f;
+  background: #faf5ff;
 }
 
 .failed-queue-refresh:disabled,
@@ -62,27 +62,27 @@
   gap: 14px;
   margin-bottom: 18px;
   padding: 18px;
-  border: 1px solid #35283e;
+  border: 1px solid #d8d2de;
   border-radius: 10px;
-  background: #19151f;
+  background: #f7f1fc;
 }
 
 .failed-queue-filters label {
   display: grid;
   gap: 7px;
-  color: #c8bfd1;
+  color: #5c5473;
   font-size: 13px;
 }
 
 .failed-queue-filters input {
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid #44374d;
+  border: 1px solid #dad4e0;
   border-radius: 7px;
   padding: 10px 11px;
   outline: none;
-  color: #f4eff8;
-  background: #100d14;
+  color: #1e1b2e;
+  background: #faf5ff;
   font: inherit;
 }
 
@@ -112,23 +112,23 @@
 
 .failed-queue-alert {
   margin-bottom: 16px;
-  border: 1px solid #82464d;
+  border: 1px solid #955660;
   border-radius: 8px;
   padding: 12px 15px;
-  color: #ffb9c0;
-  background: #381e27;
+  color: #8f5a64;
+  background: #fbe9ec;
 }
 
 .failed-queue-card {
   overflow: hidden;
-  border: 1px solid #35283e;
+  border: 1px solid #d8d2de;
   border-radius: 11px;
-  background: #19151f;
+  background: #f7f1fc;
 }
 
 .failed-queue-card-heading {
   padding: 18px 20px;
-  border-bottom: 1px solid #302637;
+  border-bottom: 1px solid #d7d2dd;
 }
 
 .failed-queue-card-heading h2 {
@@ -138,7 +138,7 @@
 
 .failed-queue-card-heading p {
   margin: 6px 0 0;
-  color: #bdb6c3;
+  color: #6e6788;
   font-size: 13px;
 }
 
@@ -155,13 +155,13 @@
 .failed-queue-table th,
 .failed-queue-table td {
   padding: 13px 15px;
-  border-bottom: 1px solid #302637;
+  border-bottom: 1px solid #d7d2dd;
   vertical-align: top;
   font-size: 13px;
 }
 
 .failed-queue-table th {
-  color: #c0b6ca;
+  color: #8a8391;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -170,11 +170,11 @@
 }
 
 .failed-queue-table td {
-  color: #eee8f3;
+  color: #524e5f;
 }
 
 .failed-queue-table tbody tr:hover {
-  background: #211a29;
+  background: #faf5ff;
 }
 
 .failed-queue-status {
@@ -182,8 +182,8 @@
   border: 1px solid #286c51;
   border-radius: 999px;
   padding: 4px 9px;
-  color: #8be1b6;
-  background: #153b2d;
+  color: #48745e;
+  background: #faf5ff;
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
@@ -191,7 +191,7 @@
 
 .failed-queue-state {
   padding: 40px 20px;
-  color: #bcb6c7;
+  color: #87838f;
   text-align: center;
 }
 
@@ -201,7 +201,7 @@
   justify-content: flex-end;
   gap: 14px;
   padding: 15px 20px;
-  color: #c8bfd1;
+  color: #5c5473;
   font-size: 13px;
 }
 

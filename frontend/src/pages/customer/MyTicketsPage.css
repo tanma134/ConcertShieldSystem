@@ -1,8 +1,8 @@
 .mt-page {
   min-height: 68vh;
   padding: 44px 24px 72px;
-  color: #f4f4f5;
-  background: #09090b;
+  color: #2a2438;
+  background: #faf5ff;
 }
 
 .mt-container {
@@ -20,7 +20,7 @@
 
 .mt-eyebrow {
   margin: 0 0 8px;
-  color: #e879f9;
+  color: #c26ee0;
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -29,20 +29,20 @@
 
 .mt-heading h1 {
   margin: 0;
-  color: #fafafa;
+  color: #1e1b2e;
   font-size: clamp(32px, 4vw, 42px);
 }
 
 .mt-heading p:last-child {
   margin: 9px 0 0;
-  color: #b9b9bf;
+  color: #6b6480;
 }
 
 .mt-total {
   padding: 9px 14px;
-  border: 1px solid #3f3f46;
+  border: 1px solid #ddd4e9;
   border-radius: 999px;
-  color: #d4d4d8;
+  color: #5a5470;
   white-space: nowrap;
 }
 
@@ -51,7 +51,7 @@
   gap: 8px;
   overflow-x: auto;
   margin-bottom: 22px;
-  border-bottom: 1px solid #27272a;
+  border-bottom: 1px solid #f1ecfa;
 }
 
 .mt-tabs button {
@@ -61,7 +61,7 @@
   padding: 13px 14px;
   border: 0;
   border-bottom: 2px solid transparent;
-  color: #b9b9bf;
+  color: #6b6480;
   background: transparent;
   font: inherit;
   cursor: pointer;
@@ -69,20 +69,20 @@
 }
 
 .mt-tabs button:hover {
-  color: #f4f4f5;
+  color: #2a2438;
 }
 
 .mt-tabs button.is-active {
   border-bottom-color: #d946ef;
-  color: #fafafa;
+  color: #1e1b2e;
 }
 
 .mt-tabs button span {
   min-width: 22px;
   padding: 2px 6px;
   border-radius: 999px;
-  color: #d4d4d8;
-  background: #27272a;
+  color: #5a5470;
+  background: #f1ecfa;
   font-size: 12px;
   text-align: center;
 }
@@ -94,9 +94,9 @@
 
 .mt-order {
   overflow: hidden;
-  border: 1px solid #27272a;
+  border: 1px solid #f1ecfa;
   border-radius: 16px;
-  background: #111113;
+  background: #f7f2fc;
 }
 
 .mt-order-header {
@@ -105,12 +105,12 @@
   justify-content: space-between;
   gap: 16px;
   padding: 18px 20px;
-  border-bottom: 1px solid #27272a;
+  border-bottom: 1px solid #f1ecfa;
 }
 
 .mt-order-label {
   margin: 0 0 5px;
-  color: #b9b9bf;
+  color: #6b6480;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -119,7 +119,7 @@
 
 .mt-order-header h2 {
   margin: 0;
-  color: #fafafa;
+  color: #1e1b2e;
   font-size: 18px;
 }
 
@@ -128,13 +128,13 @@
   flex-wrap: wrap;
   gap: 7px;
   margin: 7px 0 0;
-  color: #b9b9bf;
+  color: #6b6480;
   font-size: 13px;
 }
 
 .mt-order-count {
   flex: 0 0 auto;
-  color: #d4d4d8;
+  color: #5a5470;
   font-size: 13px;
 }
 
@@ -151,9 +151,9 @@
   align-items: center;
   gap: 18px;
   padding: 14px;
-  border: 1px solid #27272a;
+  border: 1px solid #f1ecfa;
   border-radius: 12px;
-  background: #18181b;
+  background: #f5f0fa;
 }
 
 .mt-ticket-poster {
@@ -165,8 +165,8 @@
   overflow: hidden;
   place-items: center;
   border-radius: 9px;
-  color: #e879f9;
-  background: linear-gradient(145deg, #272033, #101014);
+  color: #c26ee0;
+  background: linear-gradient(145deg, #d6d1dc, #f5effb);
   text-align: center;
   font-size: 11px;
   font-weight: 900;
@@ -187,14 +187,14 @@
 
 .mt-ticket-content h3 {
   margin: 0;
-  color: #f4f4f5;
+  color: #2a2438;
   font-size: 16px;
 }
 
 .mt-ticket-event {
   overflow: hidden;
   margin: 5px 0 0;
-  color: #b9b9bf;
+  color: #6b6480;
   font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -206,12 +206,12 @@
   align-items: center;
   gap: 8px 16px;
   margin-top: 14px;
-  color: #b9b9bf;
+  color: #6b6480;
   font-size: 12px;
 }
 
 .mt-ticket-info strong {
-  color: #f4f4f5;
+  color: #2a2438;
   white-space: nowrap;
 }
 
@@ -235,23 +235,23 @@
 }
 
 .mt-status.success {
-  color: #86efac;
+  color: #4fcf82;
   background: #14532d55;
 }
 
 .mt-status.processing {
-  color: #fcd34d;
+  color: #e8b82e;
   background: #713f1255;
 }
 
 .mt-status.cancelled {
-  color: #fca5a5;
-  background: #7f1d1d55;
+  color: #e8a0a0;
+  background: #7a2a2a;
 }
 
 .mt-status.other {
-  color: #d4d4d8;
-  background: #3f3f4655;
+  color: #5a5470;
+  background: #f1e9f7;
 }
 
 .mt-details-link {
@@ -260,10 +260,10 @@
   justify-content: center;
   min-height: 38px;
   padding: 8px 11px;
-  border: 1px solid #3f3f46;
+  border: 1px solid #ddd4e9;
   border-radius: 8px;
-  color: #f0abfc;
-  background: #18181b;
+  color: #8a5b9a;
+  background: #f5f0fa;
   font-size: 12px;
   text-decoration: none;
   white-space: nowrap;
@@ -276,21 +276,21 @@
 
 .mt-details-link:focus-visible,
 .mt-tabs button:focus-visible {
-  outline: 2px solid #e879f9;
+  outline: 2px solid #c26ee0;
   outline-offset: 3px;
 }
 
 .mt-state {
   padding: 56px 20px;
-  border: 1px dashed #3f3f46;
+  border: 1px dashed #ddd4e9;
   border-radius: 14px;
-  color: #b9b9bf;
+  color: #6b6480;
   text-align: center;
 }
 
 .mt-state strong {
   display: block;
-  color: #e4e4e7;
+  color: #4a4458;
   font-size: 18px;
 }
 
@@ -299,8 +299,8 @@
 }
 
 .mt-state.is-error {
-  border-color: #7f1d1d;
-  color: #fca5a5;
+  border-color: #7a2a2a;
+  color: #a77373;
 }
 
 @media (max-width: 900px) {

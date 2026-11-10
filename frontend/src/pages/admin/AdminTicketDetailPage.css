@@ -2,18 +2,18 @@
   max-width: 1100px;
   margin: 0 auto;
   padding: 28px;
-  color: #f4efff;
+  color: #2a2438;
 }
 
 .admin-ticket-back {
   display: inline-block;
   margin-bottom: 24px;
-  color: #c9a6ff;
+  color: #9178b8;
   text-decoration: none;
 }
 
 .admin-ticket-back:hover {
-  color: #e0c9ff;
+  color: #4f4762;
 }
 
 .admin-ticket-detail-heading {
@@ -26,7 +26,7 @@
 
 .admin-ticket-detail-eyebrow {
   margin: 0 0 8px;
-  color: #bd8cff;
+  color: #9a5cf0;
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -41,19 +41,19 @@
   display: inline-block;
   padding: 6px 10px;
   border-radius: 999px;
-  background: #302738;
+  background: #faf5ff;
   font-size: 13px;
 }
 
 .admin-ticket-detail-status.status-active {
-  background: #173b2b;
-  color: #8ce2ae;
+  background: #faf5ff;
+  color: #48745a;
 }
 
 .admin-ticket-detail-status.status-revoked,
 .admin-ticket-detail-status.status-returned {
-  background: #3b2027;
-  color: #ffabb5;
+  background: #faf5ff;
+  color: #985f6a;
 }
 
 .admin-ticket-detail-actions {
@@ -65,7 +65,7 @@
   padding: 10px 14px;
   border: 0;
   border-radius: 8px;
-  color: #fff;
+  color: #3c3552;
   font-weight: 700;
   cursor: pointer;
 }
@@ -86,9 +86,9 @@
 .admin-ticket-detail-card {
   margin-bottom: 18px;
   padding: 22px;
-  border: 1px solid #453453;
+  border: 1px solid #dbd4e1;
   border-radius: 14px;
-  background: #19151f;
+  background: #f7f1fc;
 }
 
 .admin-ticket-detail-card h2 {
@@ -108,11 +108,11 @@
   justify-content: space-between;
   gap: 20px;
   padding: 13px 0;
-  border-bottom: 1px solid #302738;
+  border-bottom: 1px solid #d7d2dd;
 }
 
 .admin-ticket-detail-card dt {
-  color: #beb4cf;
+  color: #7a7390;
 }
 
 .admin-ticket-detail-card dd {
@@ -131,25 +131,25 @@
 
 .admin-ticket-detail-warning {
   border: 1px solid #735a28;
-  background: #322a1b;
-  color: #f3d48c;
+  background: #faf5ff;
+  color: #534946;
 }
 
 .admin-ticket-detail-notice {
   border: 1px solid #286548;
-  background: #173328;
-  color: #9be2b7;
+  background: #faf5ff;
+  color: #3d4d50;
 }
 
 .admin-ticket-detail-error {
-  border: 1px solid #713b46;
-  background: #351e27;
-  color: #ffb4bc;
+  border: 1px solid #8a4a58;
+  background: #fbe9ec;
+  color: #8f5a64;
 }
 
 .admin-ticket-detail-state {
   padding: 50px 20px;
-  color: #beb4cf;
+  color: #7a7390;
   text-align: center;
 }
 

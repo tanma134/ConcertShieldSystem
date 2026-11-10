@@ -12,11 +12,11 @@
   position: relative;
   width: min(100%, 520px);
   padding: 28px;
-  border: 1px solid #493653;
+  border: 1px solid #a79bb2;
   border-radius: 16px;
-  background: #19151f;
-  color: #f4efff;
-  box-shadow: 0 24px 80px rgb(0 0 0 / 45%);
+  background: #f7f1fc;
+  color: #2a2438;
+  box-shadow: 0 24px 80px rgba(80, 50, 120, 0.32);
 }
 
 .ticket-action-close {
@@ -25,7 +25,7 @@
   right: 16px;
   border: 0;
   background: transparent;
-  color: #c9bbd5;
+  color: #5c5473;
   font-size: 28px;
   cursor: pointer;
 }
@@ -48,7 +48,7 @@
 
 .ticket-action-description {
   margin: 0 0 22px;
-  color: #beb4cf;
+  color: #7a7390;
   line-height: 1.6;
 }
 
@@ -67,12 +67,12 @@
   width: 100%;
   min-height: 120px;
   padding: 12px;
-  border: 1px solid #493b55;
+  border: 1px solid #a79db3;
   border-radius: 8px;
   outline: none;
   resize: vertical;
-  background: #100d15;
-  color: #f4efff;
+  background: #faf5ff;
+  color: #2a2438;
   font: inherit;
 }
 
@@ -84,10 +84,10 @@
 .ticket-action-error {
   margin-bottom: 16px;
   padding: 12px;
-  border: 1px solid #713b46;
+  border: 1px solid #8a4a58;
   border-radius: 8px;
-  background: #351e27;
-  color: #ffb4bc;
+  background: #fbe9ec;
+  color: #8f5a64;
 }
 
 .ticket-action-buttons {
@@ -112,8 +112,8 @@
 }
 
 .ticket-action-cancel {
-  border: 1px solid #51465d;
-  background: #292330;
+  border: 1px solid #aaa1b6;
+  background: #faf5ff;
 }
 
 .ticket-action-confirm-revoke {

@@ -1,15 +1,15 @@
 /* ===== Tokens (giữ nguyên màu chủ đạo) ===== */
 .profile-page {
-  --bg: #0a0812;
-  --card: #171223;
-  --card-2: #1e1830;
-  --border: #2a2340;
-  --border-2: #3a3153;
-  --text: #f5f3fb;
-  --muted: #a89db8;
-  --pink: #ec4899;
-  --pink-strong: #e84393;
-  --purple: #7c3aed;
+  --bg: #faf5ff;
+  --card: #ffffff;
+  --card-2: #f8f2fd;
+  --border: #e4daef;
+  --border-2: #d9cbe9;
+  --text: #221d33;
+  --muted: #7a7392;
+  --pink: #e8439c;
+  --pink-strong: #d63384;
+  --purple: #9333ea;
 
   min-height: 100vh;
   padding: 44px 20px;
@@ -59,7 +59,7 @@
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--card);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 10px 30px rgba(80,50,120,0.15);
 }
 
 .profile-overview { display: flex; gap: 28px; }
@@ -74,7 +74,7 @@
   border-radius: 50%;
   background: linear-gradient(135deg, var(--purple), var(--pink));
   box-shadow: 0 0 0 3px var(--card), 0 0 0 5px rgba(236, 72, 153, 0.45);
-  color: #fff;
+  color: #ffffff;
   font-size: 34px;
   font-weight: 700;
 }
@@ -83,7 +83,7 @@
 
 .profile-details { min-width: 0; flex: 1; }
 .profile-details h2,
-.profile-section-heading h2 { margin: 0; color: #fff; }
+.profile-section-heading h2 { margin: 0; color: #3c3552; }
 
 .profile-detail-grid {
   display: grid;
@@ -124,17 +124,17 @@
 }
 .profile-button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.1); }
 
-.profile-button.primary { background: var(--pink-strong); color: #fff; }
+.profile-button.primary { background: var(--pink-strong); color: #3c3552; }
 .profile-button.secondary { border-color: var(--border-2); background: var(--card-2); color: var(--text); }
 .profile-button.secondary:hover:not(:disabled) { border-color: var(--pink); }
-.profile-button.danger { background: #c2413a; color: #fff; }
+.profile-button.danger { background: #b03c36; color: #3c3552; }
 .profile-button.small { min-height: 32px; padding: 7px 10px; font-size: 11px; }
 .profile-button:disabled { cursor: not-allowed; opacity: 0.55; }
 
 /* Nút xác thực eKYC */
 .profile-button.kyc {
   background: linear-gradient(135deg, var(--purple), var(--pink));
-  color: #fff;
+  color: #ffffff;
   box-shadow: 0 6px 18px rgba(236, 72, 153, 0.28);
 }
 
@@ -149,7 +149,7 @@
   border-radius: 12px;
   background: linear-gradient(135deg, rgba(124, 58, 237, 0.16), rgba(236, 72, 153, 0.12));
 }
-.kyc-banner h3 { margin: 0 0 4px; color: #fff; font-size: 15px; }
+.kyc-banner h3 { margin: 0 0 4px; color: #3c3552; font-size: 15px; }
 .kyc-banner p { margin: 0; color: var(--muted); font-size: 12px; }
 
 /* Nhãn trạng thái eKYC */
@@ -162,9 +162,9 @@
   background: var(--card-2);
   color: var(--muted);
 }
-.kyc-badge.verified { background: #183728; color: #9ae6b4; }
-.kyc-badge.pending { background: #3a2f12; color: #f6d77a; }
-.kyc-badge.rejected { background: #3b1d25; color: #ffaaa5; }
+.kyc-badge.verified { background: #faf5ff; color: #3d4e50; }
+.kyc-badge.pending { background: #faf5ff; color: #78693c; }
+.kyc-badge.rejected { background: #fbe9ec; color: #8f5a64; }
 
 /* ===== Section / Wishlist ===== */
 .profile-section-heading { align-items: center; margin-bottom: 20px; }
@@ -193,7 +193,7 @@
   flex: 0 0 132px;
   display: grid;
   place-items: center;
-  background: #120e1c;
+  background: #f5eefb;
   color: var(--muted);
   font-size: 11px;
 }
@@ -203,7 +203,7 @@
 .wishlist-content h3 {
   overflow: hidden;
   margin: 0 0 9px;
-  color: #fff;
+  color: #3c3552;
   font-size: 15px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -223,8 +223,8 @@
 
 /* ===== Alerts ===== */
 .profile-alert { margin-bottom: 18px; padding: 12px 14px; border-radius: 8px; font-size: 13px; }
-.profile-alert.error { background: #3b1d25; color: #ffaaa5; }
-.profile-alert.success { background: #183728; color: #9ae6b4; }
+.profile-alert.error { background: #fbe9ec; color: #8f5a64; }
+.profile-alert.success { background: #faf5ff; color: #3d4e50; }
 
 /* ===== Edit form ===== */
 .edit-profile-form { display: grid; gap: 18px; }
@@ -236,7 +236,7 @@
   border-radius: 8px;
   outline: 0;
   background: var(--card-2);
-  color: #fff;
+  color: #3c3552;
   font: inherit;
 }
 .edit-profile-form input:focus {
@@ -266,7 +266,7 @@
   border-radius: 12px;
   background: var(--card);
 }
-.profile-modal h2 { margin: 0 0 12px; font-size: 19px; color: #ffffff; }
+.profile-modal h2 { margin: 0 0 12px; font-size: 19px; color: #3c3552; }
 .profile-modal p { color: var(--muted); font-size: 13px; line-height: 1.6; }
 .profile-modal-actions { justify-content: flex-end; margin-top: 20px; }
 
@@ -294,7 +294,7 @@
   margin: 16px 0;
   padding: 14px 16px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(148,110,200,0.17);
 }
 
 .deletion-status-row {
@@ -318,24 +318,24 @@
 
 .deletion-status-badge.pending {
   background: rgba(245, 158, 11, 0.18);
-  color: #f59e0b;
+  color: #d98f14;
 }
 
 .deletion-status-badge.approved {
   background: rgba(34, 197, 94, 0.18);
-  color: #22c55e;
+  color: #1eaa55;
 }
 
 .deletion-status-badge.rejected {
   background: rgba(239, 68, 68, 0.18);
-  color: #f48181;
+  color: #d64545;
 }
 
 /* Account restrictions (risk decisions + appeal) */
 .restriction-list { display: grid; gap: 12px; }
 .restriction-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border: 1px solid var(--border-2); border-radius: 10px; background: var(--card-2); }
 .restriction-info { min-width: 0; }
-.restriction-info h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 6px; color: #fff; font-size: 14px; }
+.restriction-info h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 6px; color: #3c3552; font-size: 14px; }
 .restriction-info p { margin: 4px 0; color: var(--muted); font-size: 12px; }
-.restriction-status { padding: 2px 8px; border-radius: 999px; background: #3b1d25; color: #ffaaa5; font-size: 11px; font-weight: 700; }
+.restriction-status { padding: 2px 8px; border-radius: 999px; background: #fbe9ec; color: #8f5a64; font-size: 11px; font-weight: 700; }
 @media (max-width: 640px) { .restriction-item { flex-direction: column; align-items: flex-start; } }

@@ -294,7 +294,7 @@ export default function IncidentListPage() {
             <option value="Other">Other</option>
           </select>
 
-          <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer", color: "#e5e7eb" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer", color: "#4a4458" }}>
             <input
               type="checkbox"
               checked={onlyEscalated}
@@ -348,39 +348,39 @@ export default function IncidentListPage() {
                 {filteredIncidents.map((inc) => (
                   <tr key={inc.id}>
                     <td>
-                      <strong style={{ color: "#94a3b8", fontFamily: "ui-monospace, monospace" }}>
+                      <strong style={{ color: "#7a7392", fontFamily: "ui-monospace, monospace" }}>
                         #{inc.id}
                       </strong>
                     </td>
                     <td>
-                      <div style={{ fontWeight: 700, color: "#fff", marginBottom: "4px" }}>
+                      <div style={{ fontWeight: 700, color: "#1d1730", marginBottom: "4px" }}>
                         {inc.title}
                       </div>
                       <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                         <span className="inc-cat-badge">{inc.category}</span>
                         {inc.evidenceCount > 0 && (
-                          <span style={{ fontSize: "11px", color: "#9ca3af", display: "inline-flex", alignItems: "center" }}>
+                          <span style={{ fontSize: "11px", color: "#7e7694", display: "inline-flex", alignItems: "center" }}>
                             {inc.evidenceCount} {inc.evidenceCount === 1 ? "file" : "files"}
                           </span>
                         )}
                       </div>
                     </td>
                     <td>
-                      <div style={{ color: "#e2e8f0", fontWeight: 600 }}>
+                      <div style={{ color: "#dcd2ea", fontWeight: 600 }}>
                         {inc.eventName || `Event #${inc.eventId}`}
                       </div>
-                      <div style={{ fontSize: "12px", color: "#d1d5db", marginTop: "2px" }}>
+                      <div style={{ fontSize: "12px", color: "#8b83a0", marginTop: "2px" }}>
                         {inc.location}
                       </div>
                     </td>
                     <td>{getSeverityBadge(inc.severity)}</td>
                     <td>{getStatusBadge(inc.status, inc.isEscalated)}</td>
                     <td>
-                      <div style={{ color: "#f1f5f9", fontWeight: 600 }}>{inc.reporterName}</div>
+                      <div style={{ color: "#1e1b2e", fontWeight: 600 }}>{inc.reporterName}</div>
                       <div style={{ fontSize: "11px", color: "var(--inc-text-muted)" }}>ID: {inc.reporterId}</div>
                     </td>
                     <td>
-                      <div style={{ fontSize: "12px", color: "#cbd5e1" }}>
+                      <div style={{ fontSize: "12px", color: "#5f587a" }}>
                         {new Date(inc.createdAt).toLocaleString("en-US", {
                           hour: "2-digit",
                           minute: "2-digit",
@@ -445,17 +445,17 @@ export default function IncidentListPage() {
                 <div className="inc-modal-body">
                   <div
                     style={{
-                      background: "#2d1519",
-                      border: "1px solid #7f1d1d",
+                      background: "#fbe9ec",
+                      border: "1px solid #7a2a2a",
                       borderRadius: "6px",
                       padding: "12px 14px",
                       marginBottom: "16px",
-                      color: "#fecdd3",
+                      color: "#f6cdd6",
                       fontSize: "13px",
                       lineHeight: "1.5",
                     }}
                   >
-                    <strong style={{ color: "#fda4af" }}>Notice:</strong> Incident <strong>#{escalateTarget.id} - "{escalateTarget.title}"</strong> will be forwarded to administrator command for review.
+                    <strong style={{ color: "#eca6b4" }}>Notice:</strong> Incident <strong>#{escalateTarget.id} - "{escalateTarget.title}"</strong> will be forwarded to administrator command for review.
                   </div>
 
                   <div className="inc-form-group">

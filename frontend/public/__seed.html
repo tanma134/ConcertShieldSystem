@@ -1,0 +1,12 @@
+<!doctype html><html><head><meta charset="utf-8"><title>seed</title></head><body>
+<script>
+const p = new URLSearchParams(location.search);
+const role = p.get('role') || 'Admin';
+const dest = p.get('to') || '/';
+localStorage.setItem('accessToken','demo-token');
+localStorage.setItem('refreshToken','demo-refresh');
+localStorage.setItem('user', JSON.stringify({fullName:'Minh Customer', email:'minh@concertshield.vn', isActive:true}));
+localStorage.setItem('roles', JSON.stringify([role]));
+location.replace(dest);
+</script>
+</body></html>

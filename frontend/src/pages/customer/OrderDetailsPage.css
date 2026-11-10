@@ -1,8 +1,8 @@
 .order-details-page {
   min-height: 70vh;
   padding: 36px 24px 80px;
-  color: #f7f5fa;
-  background: #09090c;
+  color: #545261;
+  background: #faf5ff;
 }
 
 .order-details-container {
@@ -13,7 +13,7 @@
 .order-details-back {
   display: inline-block;
   margin-bottom: 22px;
-  color: #c9c3d0;
+  color: #5c5473;
   text-decoration: none;
 }
 
@@ -29,9 +29,9 @@
   overflow: hidden;
   margin-bottom: 20px;
   padding: 22px;
-  border: 1px solid #29272f;
+  border: 1px solid #e5ddf0;
   border-radius: 16px;
-  background: #121216;
+  background: #faf5ff;
 }
 
 .order-details-poster {
@@ -40,7 +40,7 @@
   flex: 0 0 auto;
   border-radius: 12px;
   object-fit: cover;
-  background: #211e27;
+  background: #faf5ff;
 }
 
 .order-details-event {
@@ -58,7 +58,7 @@
 
 .order-details-event h1 {
   margin: 0 0 16px;
-  color: #fff;
+  color: #3c3552;
   font-size: clamp(26px, 4vw, 38px);
 }
 
@@ -71,36 +71,36 @@
 }
 
 .order-details-status.paid {
-  color: #68e5a2;
-  background: #123323;
+  color: #267d52;
+  background: #faf5ff;
 }
 
 .order-details-status.pending {
-  color: #ffd27a;
-  background: #382b12;
+  color: #876d32;
+  background: #faf5ff;
 }
 
 .order-details-status.cancelled,
 .order-details-status.other {
-  color: #ffaaaa;
-  background: #3b2024;
+  color: #985f6a;
+  background: #faf5ff;
 }
 
 .order-details-card {
   overflow: hidden;
-  border: 1px solid #29272f;
+  border: 1px solid #e5ddf0;
   border-radius: 16px;
-  background: #121216;
+  background: #faf5ff;
 }
 
 .order-details-section-heading {
   padding: 22px 24px;
-  border-bottom: 1px solid #29272f;
+  border-bottom: 1px solid #e5ddf0;
 }
 
 .order-details-section-heading h2 {
   margin: 0;
-  color: #fff;
+  color: #3c3552;
   font-size: 22px;
 }
 
@@ -109,7 +109,7 @@
   flex-wrap: wrap;
   gap: 28px 52px;
   padding: 20px 24px;
-  border-bottom: 1px solid #29272f;
+  border-bottom: 1px solid #e5ddf0;
 }
 
 .order-details-meta div {
@@ -120,12 +120,12 @@
 .order-details-meta span,
 .order-details-seats > span,
 .order-details-unit-price {
-  color: #bbb7c0;
+  color: #6e6788;
   font-size: 13px;
 }
 
 .order-details-meta strong {
-  color: #eeeaf3;
+  color: #524f5f;
   font-size: 14px;
 }
 
@@ -136,7 +136,7 @@
 
 .order-details-ticket {
   padding: 18px 0;
-  border-bottom: 1px solid #29272f;
+  border-bottom: 1px solid #e5ddf0;
 }
 
 .order-details-ticket:last-child {
@@ -152,18 +152,18 @@
 
 .order-details-ticket-main h3 {
   margin: 0 0 6px;
-  color: #fff;
+  color: #3c3552;
   font-size: 16px;
 }
 
 .order-details-ticket-main p {
   margin: 0;
-  color: #bcb9c3;
+  color: #87858c;
   font-size: 14px;
 }
 
 .order-details-ticket-main > strong {
-  color: #fff;
+  color: #3c3552;
   white-space: nowrap;
 }
 
@@ -183,9 +183,9 @@
 
 .order-details-seat {
   padding: 5px 9px;
-  border: 1px solid #393541;
+  border: 1px solid #d9d4de;
   border-radius: 7px;
-  color: #e9c5f1;
+  color: #51465f;
   font-size: 12px;
 }
 
@@ -197,33 +197,33 @@
   display: grid;
   gap: 14px;
   padding: 20px 24px 24px;
-  border-top: 1px solid #29272f;
+  border-top: 1px solid #e5ddf0;
 }
 
 .order-details-totals > div {
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  color: #bcb9c3;
+  color: #87858c;
 }
 
 .order-details-totals strong {
-  color: #eeeaf3;
+  color: #524f5f;
 }
 
 .order-details-totals .order-details-discount {
-  color: #68e5a2;
+  color: #3cc480;
 }
 
 .order-details-totals .order-details-grand-total {
   padding-top: 14px;
-  border-top: 1px solid #393541;
-  color: #fff;
+  border-top: 1px solid #d9d4de;
+  color: #3c3552;
   font-size: 17px;
 }
 
 .order-details-grand-total strong {
-  color: #fff;
+  color: #3c3552;
   font-size: 19px;
 }
 
@@ -237,7 +237,7 @@
   display: inline-flex;
   padding: 12px 18px;
   border-radius: 9px;
-  color: #fff;
+  color: #3c3552;
   background: #b51cc5;
   font-weight: 700;
   text-decoration: none;
@@ -253,9 +253,9 @@
   gap: 8px;
   padding: 12px 18px;
   border-radius: 9px;
-  color: #cbd5e1;
-  background: #1e293b;
-  border: 1px solid #334155;
+  color: #5f587a;
+  background: #faf5ff;
+  border: 1px solid #dcd3e8;
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
@@ -264,22 +264,22 @@
 }
 
 .order-details-support-btn:hover {
-  background: #334155;
-  color: #fff;
-  border-color: #64748b;
+  background: #faf5ff;
+  color: #3c3552;
+  border-color: #6b6480;
 }
 
 .order-details-state {
   padding: 44px 24px;
-  border: 1px solid #29272f;
+  border: 1px solid #e5ddf0;
   border-radius: 16px;
-  color: #aaa6b2;
-  background: #121216;
+  color: #6d6a72;
+  background: #faf5ff;
   text-align: center;
 }
 
 .order-details-error {
-  color: #ffaaaa;
+  color: #e08c9c;
 }
 
 @media (max-width: 600px) {
@@ -346,12 +346,12 @@
 
 .order-support-banner.in-progress .order-support-icon {
   background: rgba(59, 130, 246, 0.2);
-  color: #60a5fa;
+  color: #4f8fe0;
 }
 
 .order-support-banner.resolved .order-support-icon {
   background: rgba(16, 185, 129, 0.2);
-  color: #34d399;
+  color: #21a87b;
 }
 
 .order-support-content {
@@ -370,7 +370,7 @@
 .order-support-title {
   font-size: 15px;
   font-weight: 700;
-  color: #fff;
+  color: #3c3552;
   margin: 0;
 }
 
@@ -384,17 +384,17 @@
 
 .order-support-badge.in-progress {
   background: rgba(59, 130, 246, 0.3);
-  color: #93c5fd;
+  color: #516d8c;
 }
 
 .order-support-badge.resolved {
   background: rgba(16, 185, 129, 0.3);
-  color: #a7f3d0;
+  color: #3c7859;
 }
 
 .order-support-desc {
   font-size: 13px;
-  color: #d1d5db;
+  color: #8b83a0;
   margin: 0 0 8px;
 }
 
@@ -402,15 +402,15 @@
   margin-top: 8px;
   padding: 10px 14px;
   background: rgba(16, 185, 129, 0.12);
-  border-left: 3px solid #10b981;
+  border-left: 3px solid #0e9e78;
   border-radius: 6px;
-  color: #e5e7eb;
+  color: #4a4458;
   font-size: 13px;
 }
 
 .order-support-meta {
   font-size: 12px;
-  color: #b5bbc4;
+  color: #6b6480;
   margin-top: 6px;
 }
 

@@ -3,20 +3,20 @@
   margin: 1.5rem auto;
   padding: 1rem;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  color: #ffffff;
+  color: #3c3552;
 }
 
 .verification-header {
-  background: #15151c;
-  border: 1px solid #232332;
+  background: #ffffff;
+  border: 1px solid #ece0f8;
   border-radius: 12px;
   padding: 1.25rem 1.5rem;
   margin-bottom: 1.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 6px -1px rgba(80,50,120,0.06);
 }
 
 .badge-organizer {
-  background: #d61f6e;
+  background: linear-gradient(120deg, #a855f7 0%, #c026d3 55%, #ec4899 100%);
   color: white;
   font-size: 0.7rem;
   font-weight: 700;
@@ -27,7 +27,7 @@
 .verification-header h1 {
   margin: 0.25rem 0;
   font-size: 1.5rem;
-  color: #ffffff;
+  color: #3c3552;
 }
 
 /* Status Tracker Card */
@@ -35,25 +35,25 @@
   border-radius: 12px;
   padding: 1.25rem 1.5rem;
   margin-bottom: 1.5rem;
-  border: 1px solid #2e2e40;
+  border: 1px solid #ece1f5;
 }
 
 .status-tracker-card.pending {
-  background: #fefce8;
-  border-color: #fde047;
+  background: #faf5ff;
+  border-color: #e0be28;
   color: #854d0e;
 }
 
 .status-tracker-card.approved {
-  background: #f0fdf4;
-  border-color: #86efac;
-  color: #166534;
+  background: #faf5ff;
+  border-color: #4fcf82;
+  color: #1f8a50;
 }
 
 .status-tracker-card.rejected {
-  background: #fef2f2;
-  border-color: #fca5a5;
-  color: #991b1b;
+  background: #fdeaea;
+  border-color: #e8a0a0;
+  color: #962020;
 }
 
 .tracker-top {
@@ -78,8 +78,8 @@
 }
 
 .reason-text {
-  background: rgba(255, 255, 255, 0.6);
-  border-left: 4px solid #ef4444;
+  background: rgba(255,255,255,0.6);
+  border-left: 4px solid #d63a3a;
   padding: 0.6rem;
   border-radius: 4px;
   margin: 0.5rem 0;
@@ -93,17 +93,17 @@
 
 /* Form Card */
 .form-card {
-  background: #15151c;
-  border: 1px solid #232332;
+  background: #ffffff;
+  border: 1px solid #ece0f8;
   border-radius: 12px;
   padding: 1.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 6px -1px rgba(80,50,120,0.06);
 }
 
 .form-card h3 {
   margin: 0 0 1.25rem 0;
   font-size: 1.15rem;
-  color: #ffffff;
+  color: #3c3552;
 }
 
 .form-row-2 {
@@ -121,36 +121,36 @@
   font-weight: 700;
   font-size: 0.85rem;
   margin-bottom: 0.35rem;
-  color: #334155;
+  color: #3c3552;
 }
 
 /* High Contrast Form Input Fields */
 .custom-form-input {
   width: 100%;
   padding: 0.75rem 0.9rem !important;
-  border: 1px solid #94a3b8 !important;
+  border: 1px solid #7a7392 !important;
   border-radius: 8px !important;
   font-size: 0.95rem !important;
-  background-color: #ffffff !important;
-  color: #0f172a !important;
+  background-color: #faf5ff !important;
+  color: #3c3552 !important;
   box-sizing: border-box !important;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05) !important;
+  box-shadow: inset 0 1px 2px rgba(80,50,120,0.06) !important;
 }
 
 .custom-form-input:focus {
   outline: none !important;
-  border-color: #ff2d75 !important;
+  border-color: #d91a63 !important;
   box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.2) !important;
 }
 
 .custom-form-input::placeholder {
-  color: #94a3b8 !important;
+  color: #7a7392 !important;
 }
 
 /* Upload Documents Section */
 .upload-documents-section {
-  background: #191924;
-  border: 1px dashed #94a3b8;
+  background: #faf5ff;
+  border: 1px dashed #7a7392;
   border-radius: 10px;
   padding: 1.25rem;
   margin: 1.25rem 0;
@@ -159,13 +159,13 @@
 .upload-documents-section h4 {
   margin: 0 0 0.25rem 0;
   font-size: 1rem;
-  color: #ffffff;
+  color: #3c3552;
 }
 
 .upload-hint {
   margin: 0 0 1rem 0;
   font-size: 0.82rem;
-  color: #b2bbc7;
+  color: #6e6788;
 }
 
 .upload-grid {
@@ -175,25 +175,25 @@
 }
 
 .upload-box {
-  background: #15151c;
-  border: 1px solid #2e2e40;
+  background: #ffffff;
+  border: 1px solid #ece1f5;
   border-radius: 8px;
   padding: 1rem;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  box-shadow: 0 1px 3px rgba(80,50,120,0.06);
 }
 
 .box-title {
   font-weight: 700;
   font-size: 0.85rem;
   margin-bottom: 0.6rem;
-  color: #1e293b;
+  color: #3c3552;
 }
 
 .custom-file-input {
   font-size: 0.85rem;
-  color: #334155;
+  color: #3c3552;
 }
 
 /* Image Preview Thumbnail Card */
@@ -208,8 +208,8 @@
   height: 140px;
   border-radius: 6px;
   overflow: hidden;
-  background: #1e1e2e;
-  border: 1px solid #232332;
+  background: #f4eef9;
+  border: 1px solid #ece0f8;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -222,8 +222,8 @@
 }
 
 .pdf-preview-badge {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  background: #faf5ff;
+  border: 1px solid #464b62;
   color: #cd1d5c;
   padding: 0.75rem;
   border-radius: 6px;
@@ -248,9 +248,9 @@
 }
 
 .btn-remove-file {
-  background: #fef2f2;
+  background: #fdeaea;
   color: #d12222;
-  border: 1px solid #fca5a5;
+  border: 1px solid #e8a0a0;
   border-radius: 4px;
   padding: 0.25rem 0.6rem;
   font-size: 0.75rem;
@@ -260,7 +260,7 @@
 }
 
 .btn-remove-file:hover {
-  background: #dc2626;
+  background: #c22a2a;
   color: white;
 }
 
@@ -270,7 +270,7 @@
 }
 
 .btn-submit-verification {
-  background: #d61f6e;
+  background: linear-gradient(120deg, #a855f7 0%, #c026d3 55%, #ec4899 100%);
   color: white;
   border: none;
   padding: 0.85rem 1.75rem;
@@ -283,6 +283,6 @@
 }
 
 .btn-submit-verification:hover {
-  background: #0f766e;
+  background: #15806e;
   transform: translateY(-1px);
 }

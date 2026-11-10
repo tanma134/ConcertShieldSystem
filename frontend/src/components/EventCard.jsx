@@ -5,7 +5,7 @@ import "./EventCard.css";
 const FALLBACK_IMG =
   "data:image/svg+xml;utf8," +
   encodeURIComponent(
-    `<svg xmlns='http://www.w3.org/2000/svg' width='400' height='260'><rect width='100%' height='100%' fill='#201a2b'/></svg>`
+    `<svg xmlns='http://www.w3.org/2000/svg' width='400' height='260'><rect width='100%' height='100%' fill='#f1e7fc'/></svg>`
   );
 
 export default function EventCard({ event }) {

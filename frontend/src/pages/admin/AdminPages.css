@@ -12,11 +12,11 @@
 .queue-alert-summary span, .queue-alert-summary small { color: var(--admin-muted); font-size: 12px; }
 .queue-alert-summary strong { color: var(--admin-ink); font-size: 30px; line-height: 1; }
 .queue-alert-summary .is-danger { background: linear-gradient(145deg, rgba(248, 113, 113, .16), var(--admin-surface)); }
-.queue-alert-summary .is-danger strong { color: #fca5a5; }
+.queue-alert-summary .is-danger strong { color: #a77373; }
 .queue-alert-summary .is-warning { background: linear-gradient(145deg, rgba(251, 191, 36, .14), var(--admin-surface)); }
-.queue-alert-summary .is-warning strong { color: #fbbf24; }
+.queue-alert-summary .is-warning strong { color: #d99a16; }
 .queue-alert-summary .is-success { background: linear-gradient(145deg, rgba(74, 222, 128, .13), var(--admin-surface)); }
-.queue-alert-summary .is-success strong { color: #86efac; }
+.queue-alert-summary .is-success strong { color: #4fcf82; }
 .queue-alert-panel { margin-top: 22px; }
 .queue-alert-toolbar { align-items: flex-start; }
 .queue-alert-toolbar h2 { margin: 0 0 6px; color: var(--admin-ink); font-size: 19px; }
@@ -26,15 +26,15 @@
 .queue-alert-table td small { margin-top: 5px; color: var(--admin-muted); font-size: 11px; }
 .queue-session-id { max-width: 145px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .queue-risk-badge { display: inline-flex; align-items: center; width: fit-content; padding: 5px 9px; border-radius: 6px; font-size: 10px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; }
-.risk-critical, .risk-high { color: #fecaca; background: rgba(239, 68, 68, .18); border: 1px solid rgba(248, 113, 113, .28); }
-.risk-medium { color: #fde68a; background: rgba(245, 158, 11, .16); border: 1px solid rgba(251, 191, 36, .25); }
-.risk-low { color: #bae6fd; background: rgba(14, 165, 233, .14); border: 1px solid rgba(56, 189, 248, .22); }
-.status-open { color: #fde68a; background: rgba(251, 191, 36, .15); }
-.status-flagged { color: #c4b5fd; background: rgba(139, 92, 246, .16); }
-.status-blocked { color: #fca5a5; background: rgba(248, 113, 113, .15); }
+.risk-critical, .risk-high { color: #3c3552; background: rgba(239, 68, 68, .18); border: 1px solid rgba(248, 113, 113, .28); }
+.risk-medium { color: #77693c; background: rgba(245, 158, 11, .16); border: 1px solid rgba(251, 191, 36, .25); }
+.risk-low { color: #454e62; background: rgba(14, 165, 233, .14); border: 1px solid rgba(56, 189, 248, .22); }
+.status-open { color: #77693c; background: rgba(251, 191, 36, .15); }
+.status-flagged { color: #9a7ce8; background: rgba(139, 92, 246, .16); }
+.status-blocked { color: #a77373; background: rgba(248, 113, 113, .15); }
 .queue-behavior { display: block; max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.queue-view-link { color: #6ee7d8; font-weight: 700; font-size: 12px; white-space: nowrap; }
-.queue-view-link:hover { color: #a7efc1; }
+.queue-view-link { color: #32958a; font-weight: 700; font-size: 12px; white-space: nowrap; }
+.queue-view-link:hover { color: #3c7859; }
 .queue-alert-empty { padding: 42px !important; color: var(--admin-muted); text-align: center; }
 .queue-alert-detail-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, .75fr); gap: 20px; }
 .queue-detail-main, .queue-detail-meta { margin-top: 0; padding: 25px; }
@@ -116,7 +116,7 @@
 }
 .queue-management-page .queue-status-waiting,
 .queue-management-page .queue-status-prequeue {
-  color: #fbbf24;
+  color: #d99a16;
   background: rgba(251, 191, 36, 0.12);
 }
 .queue-management-page .queue-status-registered {
@@ -129,7 +129,7 @@
 .queue-config-panel .queue-event-select { min-width: 260px; }
 .queue-session-actions { display: flex; align-items: center; gap: 10px; }
 .queue-session-actions select { min-width: 220px; }
-.queue-filter-caption { margin: 4px 0 0; color: var(--admin-muted, #a89db8); font-size: 12px; }
+.queue-filter-caption { margin: 4px 0 0; color: var(--admin-muted, #7a7392); font-size: 12px; }
 
 .admin-queue-thumb {
   width: 56px;
@@ -163,27 +163,27 @@
 
 .admin-status-pending {
   background: rgba(251, 191, 36, 0.15);
-  color: #fbbf24;
+  color: #d99a16;
 }
 
 .admin-status-published {
   background: rgba(74, 222, 128, 0.15);
-  color: #86efac;
+  color: #4fcf82;
 }
 
 .admin-status-rejected {
   background: rgba(248, 113, 113, 0.15);
-  color: #fca5a5;
+  color: #a77373;
 }
 
 .admin-status-draft {
   background: rgba(148, 163, 184, 0.15);
-  color: #cbd5e1;
+  color: #5f587a;
 }
 
 .admin-status-cancelled {
   background: rgba(148, 163, 184, 0.15);
-  color: #b0bbca;
+  color: #6e6788;
 }
 
 .admin-filter-bar {
@@ -197,15 +197,15 @@
 .admin-filter-bar select,
 .admin-filter-bar input,
 .queue-session-actions select {
-  background: var(--tb-surface-2, #1e1830);
+  background: var(--tb-surface-2, #f8f2fd);
   border: 1px solid var(--tb-border);
   border-radius: 8px;
   padding: 7px 10px;
-  color: var(--admin-ink, #f5f3fb);
+  color: var(--admin-ink, #221d33);
   font-size: 13px;
 }
 .admin-filter-bar select option,
-.queue-session-actions select option { background: var(--tb-surface-2, #1e1830); color: var(--admin-ink, #f5f3fb); }
+.queue-session-actions select option { background: var(--tb-surface-2, #f8f2fd); color: var(--admin-ink, #221d33); }
 @media (max-width: 760px) {
   .queue-management-page .queue-config-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .queue-management-page .queue-management-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -235,32 +235,32 @@
 
 .admin-btn-danger {
   color: #ffffff !important;
-  background: #dc2626 !important;
-  border-color: #b91c1c !important;
+  background: #c22a2a !important;
+  border-color: #a82424 !important;
   box-shadow: 0 5px 16px rgba(220, 38, 38, 0.3);
 }
 
 .admin-btn-danger:hover:not(:disabled) {
-  background: #b91c1c !important;
+  background: #a82424 !important;
 }
 
 .admin-btn-danger:disabled {
-  color: #fee2e2 !important;
-  background: #991b1b !important;
+  color: #564d5b !important;
+  background: #962020 !important;
   opacity: 0.65;
 }
 
 .ow-actions .tb-btn-primary:not(.admin-btn-danger) {
   color: #ffffff !important;
-  background: linear-gradient(135deg, #7c3aed, #db2777) !important;
-  border-color: #7c3aed !important;
+  background: linear-gradient(135deg, #9333ea, #db2777) !important;
+  border-color: #9333ea !important;
   box-shadow: 0 6px 18px rgba(124, 58, 237, 0.35);
 }
 .admin-event-banner { width: 100%; max-height: 360px; object-fit: cover; border-radius: 12px; }
 .admin-event-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-top: 12px; }
 .admin-event-gallery img { width: 100%; height: 130px; object-fit: cover; border-radius: 10px; }
 .admin-template-layout { display: grid; grid-template-columns: minmax(280px, .8fr) minmax(420px, 1.2fr); gap: 20px; }
-.admin-template-row { display: flex; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,.1); }
+.admin-template-row { display: flex; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid rgba(148,110,200,0.14); }
 @media (max-width: 900px) { .admin-template-layout { grid-template-columns: 1fr; } }
 
 /* Trang Organizer Requests giờ được lồng trong AdminShell (có sidebar riêng),

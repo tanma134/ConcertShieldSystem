@@ -2,15 +2,15 @@
 
 .rcm-container {
   min-height: 100vh;
-  background-color: #0c0c10;
-  color: #f8fafc;
+  background-color: #f3e8ff;
+  color: #1e1b2e;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   padding-bottom: 60px;
 }
 
 .rcm-header-bar {
-  background: #15151c;
-  border-bottom: 1px solid #232332;
+  background: #ffffff;
+  border-bottom: 1px solid #ece0f8;
   padding: 16px 28px;
   display: flex;
   justify-content: space-between;
@@ -18,14 +18,14 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 20px rgba(80,50,120,0.15);
 }
 
 .rcm-header-title h1 {
   margin: 0;
   font-size: 20px;
   font-weight: 800;
-  color: #ffffff;
+  color: #3c3552;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -34,7 +34,7 @@
 .rcm-header-subtitle {
   margin: 4px 0 0;
   font-size: 13px;
-  color: #b0bbca;
+  color: #6e6788;
 }
 
 .rcm-live-badge {
@@ -42,7 +42,7 @@
   align-items: center;
   gap: 6px;
   background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
+  color: #0e9e78;
   border: 1px solid rgba(16, 185, 129, 0.3);
   padding: 3px 10px;
   border-radius: 20px;
@@ -55,7 +55,7 @@
 .rcm-pulse-dot {
   width: 8px;
   height: 8px;
-  background-color: #10b981;
+  background-color: #0e9e78;
   border-radius: 50%;
   animation: rcm-pulse 1.8s infinite;
 }
@@ -73,9 +73,9 @@
 }
 
 .rcm-btn {
-  background: #232332;
-  color: #f8fafc;
-  border: 1px solid #2e2e42;
+  background: #ffffff;
+  color: #1e1b2e;
+  border: 1px solid #e2daef;
   border-radius: 8px;
   padding: 8px 14px;
   font-size: 13px;
@@ -88,12 +88,12 @@
 }
 
 .rcm-btn:hover {
-  background: #2e2e42;
-  color: #ffffff;
+  background: #ffffff;
+  color: #3c3552;
 }
 
 .rcm-btn-primary {
-  background: linear-gradient(135deg, #d61f6e, #d61f6e);
+  background: linear-gradient(135deg, #c2185b, #c2185b);
   border: none;
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
@@ -120,8 +120,8 @@
 }
 
 .rcm-metric-card {
-  background: #15151c;
-  border: 1px solid #232332;
+  background: #ffffff;
+  border: 1px solid #ece0f8;
   border-radius: 16px;
   padding: 20px;
   position: relative;
@@ -131,13 +131,13 @@
 
 .rcm-metric-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 10px 25px rgba(80,50,120,0.22);
 }
 
 .rcm-metric-label {
   font-size: 13px;
   font-weight: 700;
-  color: #b0bbca;
+  color: #6e6788;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
@@ -149,7 +149,7 @@
 .rcm-metric-value {
   font-size: 32px;
   font-weight: 900;
-  color: #ffffff;
+  color: #3c3552;
   line-height: 1.1;
   margin-bottom: 10px;
 }
@@ -162,7 +162,7 @@
 .rcm-progress-bar-bg {
   width: 100%;
   height: 8px;
-  background: #232332;
+  background: #ffffff;
   border-radius: 10px;
   overflow: hidden;
   margin-top: 10px;
@@ -174,15 +174,15 @@
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.fill-purple { background: linear-gradient(90deg, #7c3aed, #a855f7); }
-.fill-emerald { background: linear-gradient(90deg, #10b981, #34d399); }
-.fill-amber { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
-.fill-pink { background: linear-gradient(90deg, #d61f6e, #f472b6); }
+.fill-purple { background: linear-gradient(90deg, #9333ea, #a855f7); }
+.fill-emerald { background: linear-gradient(90deg, #0e9e78, #21a87b); }
+.fill-amber { background: linear-gradient(90deg, #d98f14, #d99a16); }
+.fill-pink { background: linear-gradient(90deg, #c2185b, #f472b6); }
 
 /* Velocity Telemetry Banner */
 .rcm-telemetry-banner {
   background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
-  border: 1px solid #232332;
+  border: 1px solid #ffffff;
   border-radius: 14px;
   padding: 16px 24px;
   margin-bottom: 28px;
@@ -204,7 +204,7 @@
   height: 42px;
   border-radius: 12px;
   background: rgba(124, 58, 237, 0.2);
-  color: #c389fc;
+  color: #a066f0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -213,7 +213,7 @@
 
 .rcm-telemetry-text div:first-child {
   font-size: 12px;
-  color: #b0bbca;
+  color: #6e6788;
   font-weight: 600;
   text-transform: uppercase;
 }
@@ -221,7 +221,7 @@
 .rcm-telemetry-text div:last-child {
   font-size: 18px;
   font-weight: 800;
-  color: #f8fafc;
+  color: #1e1b2e;
 }
 
 /* Sections Grid for Gate & Zone Breakdown (BR-396) */
@@ -239,11 +239,11 @@
 }
 
 .rcm-card {
-  background: #15151c;
-  border: 1px solid #232332;
+  background: #ffffff;
+  border: 1px solid #ece0f8;
   border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 20px rgba(80,50,120,0.10);
 }
 
 .rcm-card-header {
@@ -256,7 +256,7 @@
 .rcm-card-title {
   font-size: 16px;
   font-weight: 800;
-  color: #ffffff;
+  color: #3c3552;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -264,8 +264,8 @@
 
 /* Gate Item Rows */
 .rcm-gate-item {
-  background: #0c0c10;
-  border: 1px solid #232332;
+  background: #f3e8ff;
+  border: 1px solid #ece0f8;
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 12px;
@@ -281,7 +281,7 @@
 .rcm-gate-name {
   font-size: 14px;
   font-weight: 700;
-  color: #f8fafc;
+  color: #1e1b2e;
 }
 
 .rcm-gate-badge {
@@ -292,22 +292,22 @@
   text-transform: uppercase;
 }
 
-.status-normal { background: rgba(16, 185, 129, 0.2); color: #34d399; }
-.status-busy { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-.status-congested { background: rgba(239, 68, 68, 0.2); color: #f98080; }
+.status-normal { background: rgba(16, 185, 129, 0.2); color: #21a87b; }
+.status-busy { background: rgba(245, 158, 11, 0.2); color: #d99a16; }
+.status-congested { background: rgba(239, 68, 68, 0.2); color: #d64545; }
 
 .rcm-gate-stats {
   display: flex;
   justify-content: space-between;
   font-size: 12.5px;
-  color: #b0bbca;
+  color: #6e6788;
   margin-bottom: 8px;
 }
 
 /* Zone Item Rows */
 .rcm-zone-item {
-  background: #0c0c10;
-  border: 1px solid #232332;
+  background: #f3e8ff;
+  border: 1px solid #ece0f8;
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 12px;
@@ -326,23 +326,23 @@
 }
 
 .rcm-table th {
-  background: #0c0c10;
-  color: #94a3b8;
+  background: #f3e8ff;
+  color: #6b6580;
   font-weight: 700;
   padding: 12px 14px;
-  border-bottom: 1px solid #232332;
+  border-bottom: 1px solid #ece0f8;
   text-transform: uppercase;
   font-size: 11px;
 }
 
 .rcm-table td {
   padding: 12px 14px;
-  border-bottom: 1px solid #232332;
-  color: #e2e8f0;
+  border-bottom: 1px solid #ece0f8;
+  color: #4f4e5f;
 }
 
 .rcm-table tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(148,110,200,0.04);
 }
 
 .rcm-status-tag {
@@ -353,8 +353,8 @@
   font-weight: 700;
 }
 
-.tag-success { background: rgba(16, 185, 129, 0.2); color: #34d399; }
-.tag-failed { background: rgba(239, 68, 68, 0.2); color: #f98080; }
+.tag-success { background: rgba(16, 185, 129, 0.2); color: #21a87b; }
+.tag-failed { background: rgba(239, 68, 68, 0.2); color: #d64545; }
 
 /* Filter Controls */
 .rcm-filter-bar {
@@ -364,9 +364,9 @@
 }
 
 .rcm-select {
-  background: #0c0c10;
-  color: #f8fafc;
-  border: 1px solid #232332;
+  background: #f3e8ff;
+  color: #1e1b2e;
+  border: 1px solid #ece0f8;
   border-radius: 8px;
   padding: 8px 12px;
   font-size: 13px;

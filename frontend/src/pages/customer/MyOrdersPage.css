@@ -1,8 +1,8 @@
 .my-orders-page {
   min-height: 70vh;
   padding: 48px 24px 80px;
-  color: #f7f5fa;
-  background: #09090c;
+  color: #545261;
+  background: #faf5ff;
 }
 
 .my-orders-container {
@@ -22,12 +22,12 @@
   margin: 7px 0 8px;
   font-size: clamp(30px, 4vw, 42px);
   line-height: 1.1;
-  color: #fff;
+  color: #3c3552;
 }
 
 .my-orders-heading p:last-child {
   margin: 0;
-  color: #bbb8c2;
+  color: #87848c;
 }
 
 .my-orders-eyebrow,
@@ -43,9 +43,9 @@
 .my-orders-total {
   flex: 0 0 auto;
   padding: 10px 16px;
-  border: 1px solid #34313b;
+  border: 1px solid #d8d3dd;
   border-radius: 999px;
-  color: #e8e4ed;
+  color: #514d5e;
   font-size: 14px;
 }
 
@@ -54,7 +54,7 @@
   gap: 26px;
   overflow-x: auto;
   margin-bottom: 24px;
-  border-bottom: 1px solid #26242b;
+  border-bottom: 1px solid #d6d1db;
 }
 
 .my-orders-tabs button {
@@ -65,7 +65,7 @@
   padding: 14px 4px;
   border: 0;
   border-bottom: 2px solid transparent;
-  color: #bcb9c3;
+  color: #87858c;
   background: transparent;
   font: inherit;
   cursor: pointer;
@@ -73,7 +73,7 @@
 
 .my-orders-tabs button.is-active {
   border-bottom-color: #d333e8;
-  color: #fff;
+  color: #3c3552;
 }
 
 .my-orders-tabs button span {
@@ -83,8 +83,8 @@
   padding: 0 6px;
   place-items: center;
   border-radius: 999px;
-  color: #d8d3de;
-  background: #28262e;
+  color: #4d495a;
+  background: #faf5ff;
   font-size: 12px;
 }
 
@@ -95,9 +95,9 @@
 
 .my-order-card {
   overflow: hidden;
-  border: 1px solid #29272f;
+  border: 1px solid #e5ddf0;
   border-radius: 16px;
-  background: #121216;
+  background: #faf5ff;
 }
 
 .my-order-header {
@@ -121,13 +121,13 @@
   flex: 0 0 auto;
   border-radius: 10px;
   object-fit: cover;
-  background: #211e27;
+  background: #faf5ff;
 }
 
 .my-order-poster-empty {
   display: grid;
   place-items: center;
-  color: #bcb9c3;
+  color: #87858c;
   font-size: 12px;
 }
 
@@ -138,7 +138,7 @@
 .my-order-title-block h2 {
   overflow: hidden;
   margin: 7px 0 0;
-  color: #fff;
+  color: #3c3552;
   font-size: 19px;
   text-overflow: ellipsis;
 }
@@ -152,19 +152,19 @@
 }
 
 .my-order-status.paid {
-  color: #68e5a2;
-  background: #123323;
+  color: #267d52;
+  background: #faf5ff;
 }
 
 .my-order-status.pending {
-  color: #ffd27a;
-  background: #382b12;
+  color: #876d32;
+  background: #faf5ff;
 }
 
 .my-order-status.cancelled,
 .my-order-status.other {
-  color: #ff9d9d;
-  background: #3b2024;
+  color: #9b5f5f;
+  background: #faf5ff;
 }
 
 .my-order-info {
@@ -172,7 +172,7 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 20px;
   padding: 18px 22px;
-  border-top: 1px solid #29272f;
+  border-top: 1px solid #e5ddf0;
 }
 
 .my-order-info div,
@@ -184,13 +184,13 @@
 
 .my-order-info span,
 .my-order-amount span {
-  color: #bbb7c0;
+  color: #6e6788;
   font-size: 12px;
 }
 
 .my-order-info strong {
   overflow-wrap: anywhere;
-  color: #eeeaf3;
+  color: #524f5f;
   font-size: 13px;
   font-weight: 600;
 }
@@ -201,32 +201,32 @@
   justify-content: space-between;
   gap: 18px;
   padding: 16px 22px;
-  border-top: 1px solid #29272f;
-  background: #151519;
+  border-top: 1px solid #e5ddf0;
+  background: #faf5ff;
 }
 
 .my-order-amount strong {
-  color: #fff;
+  color: #3c3552;
   font-size: 17px;
 }
 
 .my-order-detail-note {
-  color: #bbb7c0;
+  color: #6e6788;
   font-size: 13px;
 }
 
 .my-orders-state {
   padding: 48px 24px;
-  border: 1px solid #29272f;
+  border: 1px solid #e5ddf0;
   border-radius: 16px;
-  color: #aaa6b2;
-  background: #121216;
+  color: #6d6a72;
+  background: #faf5ff;
   text-align: center;
 }
 
 .my-orders-state h2 {
   margin: 0 0 8px;
-  color: #fff;
+  color: #3c3552;
 }
 
 .my-orders-state p {
@@ -234,7 +234,7 @@
 }
 
 .my-orders-error {
-  color: #ffaaaa;
+  color: #e08c9c;
 }
 
 .my-orders-browse-link {
@@ -242,7 +242,7 @@
   margin-top: 20px;
   padding: 11px 17px;
   border-radius: 9px;
-  color: #fff;
+  color: #3c3552;
   background: #b51cc5;
   text-decoration: none;
 }
@@ -288,14 +288,14 @@
 
 .my-order-details-link {
   padding: 10px 14px;
-  border: 1px solid #393541;
+  border: 1px solid #d9d4de;
   border-radius: 8px;
-  color: #e9b5f2;
+  color: #7d6181;
   font-size: 13px;
   text-decoration: none;
 }
 
 .my-order-details-link:hover {
   border-color: #c62bd8;
-  color: #fff;
+  color: #3c3552;
 }

@@ -1260,18 +1260,18 @@ export default function StaffCheckinTerminalPage() {
                 <tbody>
                   {scanFeed.length === 0 ? (
                     <tr>
-                      <td colSpan="6" style={{ textAlign: "center", padding: "2rem", color: "#64748b" }}>
+                      <td colSpan="6" style={{ textAlign: "center", padding: "2rem", color: "#6b6480" }}>
                         No admissions recorded yet for this shift.
                       </td>
                     </tr>
                   ) : (
                     scanFeed.slice(0, 10).map((item, idx) => (
                       <tr key={item.scanId || idx}>
-                        <td style={{ color: "#94a3b8", fontFamily: "monospace" }}>
+                        <td style={{ color: "#7a7392", fontFamily: "monospace" }}>
                           {new Date(item.scannedAt).toLocaleTimeString()}
                         </td>
                         <td>
-                          <strong style={{ color: "#f8fafc", fontFamily: "monospace" }}>{item.ticketCode}</strong>
+                          <strong style={{ color: "#1e1b2e", fontFamily: "monospace" }}>{item.ticketCode}</strong>
                         </td>
                         <td>{item.customerName || "N/A"}</td>
                         <td>{item.zoneName || "General Admission"}</td>
@@ -1351,7 +1351,7 @@ export default function StaffCheckinTerminalPage() {
 
               {/* Real-time DB lookup results for this CCCD */}
               {searchingManualTickets && (
-                <div className="cccd-box-full" style={{ color: "#38bdf8", padding: "0.5rem 0", fontStyle: "italic" }}>
+                <div className="cccd-box-full" style={{ color: "#2fa4e0", padding: "0.5rem 0", fontStyle: "italic" }}>
                   Đang tra cứu vé từ cơ sở dữ liệu...
                 </div>
               )}
@@ -1364,7 +1364,7 @@ export default function StaffCheckinTerminalPage() {
 
               {manualLookupTickets.length > 0 && (
                 <div className="cccd-box-full manual-tickets-preview-box" style={{ margin: "0.5rem 0" }}>
-                  <label style={{ fontSize: "0.875rem", color: "#94a3b8", display: "block", marginBottom: "0.5rem" }}>
+                  <label style={{ fontSize: "0.875rem", color: "#7a7392", display: "block", marginBottom: "0.5rem" }}>
                     Vé tìm thấy trong Database ({manualLookupTickets.length} vé) - Chọn vé cần check-in:
                   </label>
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -1387,7 +1387,7 @@ export default function StaffCheckinTerminalPage() {
                             padding: "0.75rem 1rem",
                             borderRadius: "8px",
                             background: isSelected ? "rgba(255, 45, 117, 0.15)" : "rgba(30, 41, 59, 0.7)",
-                            border: isSelected ? "2px solid #ff2d75" : "1px solid #334155",
+                            border: isSelected ? "2px solid #d91a63" : "1px solid #dcd3e8",
                             cursor: isAvailable ? "pointer" : "not-allowed",
                             opacity: isAvailable ? 1 : 0.65,
                             transition: "all 0.2s ease",
@@ -1403,15 +1403,15 @@ export default function StaffCheckinTerminalPage() {
                                 setSelectedManualTicket(t);
                                 setManualForm((prev) => ({ ...prev, ticketCode: t.ticketCode }));
                               }}
-                              style={{ accentColor: "#ff2d75", width: "18px", height: "18px", cursor: isAvailable ? "pointer" : "default" }}
+                              style={{ accentColor: "#d91a63", width: "18px", height: "18px", cursor: isAvailable ? "pointer" : "default" }}
                             />
                             <div>
                               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
                                 <span className="t-code-badge" style={{ fontSize: "0.85rem" }}>{t.ticketCode}</span>
-                                <strong style={{ color: "#f8fafc" }}>{t.customerName || "Khán giả"}</strong>
+                                <strong style={{ color: "#1e1b2e" }}>{t.customerName || "Khán giả"}</strong>
                               </div>
-                              <div style={{ fontSize: "0.8rem", color: "#94a3b8", marginTop: "0.2rem" }}>
-                                Khu vực: <span style={{ color: "#fbbf24" }}>{t.zoneName}</span> • Ghế: {t.seatNumber || "General"}
+                              <div style={{ fontSize: "0.8rem", color: "#7a7392", marginTop: "0.2rem" }}>
+                                Khu vực: <span style={{ color: "#d99a16" }}>{t.zoneName}</span> • Ghế: {t.seatNumber || "General"}
                               </div>
                             </div>
                           </div>
@@ -1584,9 +1584,9 @@ export default function StaffCheckinTerminalPage() {
                       <div>
                         <h3>{lookupResults.tickets[0]?.customerName || "Nguyen Thanh"}</h3>
                         <div className="attendee-meta-pills">
-                          <span>Phone: <strong style={{ color: "#fbbf24" }}>{lookupResults.tickets[0]?.maskedPhone}</strong></span>
-                          <span>CCCD: <strong style={{ color: "#fbbf24" }}>{lookupResults.tickets[0]?.maskedCccd}</strong></span>
-                          <span>Order: <strong style={{ color: "#ff2d75" }}>{lookupResults.tickets[0]?.orderId || "#AC-1847"}</strong></span>
+                          <span>Phone: <strong style={{ color: "#d99a16" }}>{lookupResults.tickets[0]?.maskedPhone}</strong></span>
+                          <span>CCCD: <strong style={{ color: "#d99a16" }}>{lookupResults.tickets[0]?.maskedCccd}</strong></span>
+                          <span>Order: <strong style={{ color: "#d91a63" }}>{lookupResults.tickets[0]?.orderId || "#AC-1847"}</strong></span>
                         </div>
                       </div>
                     </div>
@@ -1713,22 +1713,22 @@ export default function StaffCheckinTerminalPage() {
                 <tbody>
                   {scanFeed.length === 0 ? (
                     <tr>
-                      <td colSpan="6" style={{ textAlign: "center", padding: "2rem", color: "#64748b" }}>
+                      <td colSpan="6" style={{ textAlign: "center", padding: "2rem", color: "#6b6480" }}>
                         No scan records found matching this filter.
                       </td>
                     </tr>
                   ) : (
                     scanFeed.map((item, idx) => (
                       <tr key={item.scanId || idx}>
-                        <td style={{ color: "#94a3b8", fontFamily: "monospace" }}>
+                        <td style={{ color: "#7a7392", fontFamily: "monospace" }}>
                           {new Date(item.scannedAt).toLocaleTimeString()}
                         </td>
                         <td>
-                          <strong style={{ color: "#f8fafc", fontFamily: "monospace" }}>{item.ticketCode}</strong>
+                          <strong style={{ color: "#1e1b2e", fontFamily: "monospace" }}>{item.ticketCode}</strong>
                         </td>
                         <td>{item.customerName || "N/A"}</td>
                         <td>
-                          <span style={{ color: "#94a3b8" }}>{item.gateName || gateAssignment?.gateName || "Gate A"}</span>
+                          <span style={{ color: "#7a7392" }}>{item.gateName || gateAssignment?.gateName || "Gate A"}</span>
                         </td>
                         <td>
                           <span className="method-tag-dark">{item.scanMethod || "Dynamic QR"}</span>
@@ -1766,30 +1766,30 @@ export default function StaffCheckinTerminalPage() {
             <div className="offline-status-grid">
               <div className="offline-info-card">
                 <span className="offline-card-title">Network Connectivity</span>
-                <strong style={{ fontSize: "1.3rem", color: isNetworkOnline ? "#10b981" : "#ef4444" }}>
+                <strong style={{ fontSize: "1.3rem", color: isNetworkOnline ? "#0e9e78" : "#d63a3a" }}>
                   {isNetworkOnline ? "Online (Server Reachable)" : "Offline (Network Disconnected)"}
                 </strong>
-                <p style={{ margin: "0.5rem 0 0", color: "#94a3b8", fontSize: "0.85rem" }}>
-                  Current Mode: <strong style={{ color: isOfflineMode ? "#f59e0b" : "#10b981" }}>{isOfflineMode ? "Offline Verification Active" : "Cloud Online"}</strong>
+                <p style={{ margin: "0.5rem 0 0", color: "#7a7392", fontSize: "0.85rem" }}>
+                  Current Mode: <strong style={{ color: isOfflineMode ? "#d98f14" : "#0e9e78" }}>{isOfflineMode ? "Offline Verification Active" : "Cloud Online"}</strong>
                 </p>
               </div>
 
               <div className="offline-info-card">
                 <span className="offline-card-title">Cached Offline Package</span>
-                <strong style={{ fontSize: "1.3rem", color: offlinePackageMeta ? "#ff2d75" : "#94a3b8" }}>
+                <strong style={{ fontSize: "1.3rem", color: offlinePackageMeta ? "#d91a63" : "#7a7392" }}>
                   {offlinePackageMeta ? `${offlinePackageMeta.totalTickets || 3} Preloaded Tickets` : "No Package Loaded"}
                 </strong>
-                <p style={{ margin: "0.5rem 0 0", color: "#94a3b8", fontSize: "0.85rem" }}>
+                <p style={{ margin: "0.5rem 0 0", color: "#7a7392", fontSize: "0.85rem" }}>
                   Event: <strong>{offlinePackageMeta?.eventTitle || "Assigned Concert"}</strong>
                 </p>
               </div>
 
               <div className="offline-info-card">
                 <span className="offline-card-title">Pending Sync Queue</span>
-                <strong style={{ fontSize: "1.3rem", color: offlineQueueCount > 0 ? "#fbbf24" : "#10b981" }}>
+                <strong style={{ fontSize: "1.3rem", color: offlineQueueCount > 0 ? "#d99a16" : "#0e9e78" }}>
                   {offlineQueueCount} Scans Waiting
                 </strong>
-                <p style={{ margin: "0.5rem 0 0", color: "#94a3b8", fontSize: "0.85rem" }}>
+                <p style={{ margin: "0.5rem 0 0", color: "#7a7392", fontSize: "0.85rem" }}>
                   Stored safely in local IndexedDB until connection restores.
                 </p>
               </div>
@@ -1874,7 +1874,7 @@ export default function StaffCheckinTerminalPage() {
                     <strong>{terminalDialog.syncDetails.alreadyUsedCount} tickets</strong>
                   </div>
                   {terminalDialog.syncDetails.conflictCount > 0 && (
-                    <div className="sync-stat-row" style={{ color: "#f87171", fontWeight: 700 }}>
+                    <div className="sync-stat-row" style={{ color: "#d64545", fontWeight: 700 }}>
                       <span>Duplicate scan conflicts detected:</span>
                       <strong>{terminalDialog.syncDetails.conflictCount} tickets</strong>
                     </div>
@@ -1892,7 +1892,7 @@ export default function StaffCheckinTerminalPage() {
                 <button
                   type="button"
                   className="btn btn-dialog-action"
-                  style={{ background: "#d97706", borderColor: "#b45309", color: "#fff", marginRight: "10px" }}
+                  style={{ background: "#c06a0a", borderColor: "#b45309", color: "#fff", marginRight: "10px" }}
                   onClick={() => {
                     setTerminalDialog(null);
                     setShowConflictModal(true);

@@ -315,7 +315,7 @@ export default function IncidentReportPage() {
 
               {/* Assignment or Selection Details Info Bar */}
               {!isAdmin && assignments.length === 0 && (
-                <div style={{ marginTop: "6px", fontSize: "12px", color: "#f87171" }}>
+                <div style={{ marginTop: "6px", fontSize: "12px", color: "#d64545" }}>
                   Note: You currently have no active concert assignments. An organizer must assign you to an event gate before you can report incidents.
                 </div>
               )}
@@ -331,7 +331,7 @@ export default function IncidentReportPage() {
                         Assigned Duty
                       </span>
                       <span>
-                        Assigned Post: <strong style={{ color: "#38bdf8" }}>{matched.gateName}</strong> • Venue: {matched.city || matched.locationName || "On-site Venue"}
+                        Assigned Post: <strong style={{ color: "#2fa4e0" }}>{matched.gateName}</strong> • Venue: {matched.city || matched.locationName || "On-site Venue"}
                       </span>
                     </div>
                   );
@@ -400,16 +400,16 @@ export default function IncidentReportPage() {
             {severity === "Critical" && (
               <div
                 style={{
-                  background: "#2d1519",
+                  background: "#fbe9ec",
                   border: "1px solid #e11d48",
                   borderRadius: "8px",
                   padding: "12px 16px",
                   marginBottom: "18px",
-                  color: "#fecdd3",
+                  color: "#f6cdd6",
                   fontSize: "13px",
                 }}
               >
-                <strong style={{ color: "#fda4af" }}>Critical Severity:</strong> Immediate escalation to executive administration is recommended.
+                <strong style={{ color: "#eca6b4" }}>Critical Severity:</strong> Immediate escalation to executive administration is recommended.
               </div>
             )}
 
@@ -448,7 +448,7 @@ export default function IncidentReportPage() {
               <div className="inc-card-title-left">
                 <span>Evidence Vault Attachments</span>
               </div>
-              <span style={{ fontSize: "11px", background: "#374151", color: "#e5e7eb", padding: "2px 8px", borderRadius: "4px", fontWeight: 600 }}>
+              <span style={{ fontSize: "11px", background: "#d8d0e6", color: "#4a4458", padding: "2px 8px", borderRadius: "4px", fontWeight: 600 }}>
                 Cloudinary Storage
               </span>
             </div>
@@ -474,7 +474,7 @@ export default function IncidentReportPage() {
 
             {selectedFiles.length > 0 && (
               <div style={{ marginTop: "20px" }}>
-                <h4 style={{ fontSize: "13px", color: "#fff", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
+                <h4 style={{ fontSize: "13px", color: "#1d1730", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
                   Selected Files ({selectedFiles.length}):
                 </h4>
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -482,8 +482,8 @@ export default function IncidentReportPage() {
                     <div
                       key={idx}
                       style={{
-                        background: "rgba(10, 14, 23, 0.7)",
-                        border: "1px solid rgba(255, 255, 255, 0.08)",
+                        background: "#f8f1fe",
+                        border: "1px solid #ece0f8",
                         borderRadius: "10px",
                         padding: "12px",
                         display: "flex",
@@ -520,7 +520,7 @@ export default function IncidentReportPage() {
                       )}
 
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: "13px", fontWeight: 700, color: "#fff" }}>
+                        <div style={{ fontSize: "13px", fontWeight: 700, color: "#1d1730" }}>
                           {item.file.name}
                         </div>
                         <div style={{ fontSize: "11px", color: "var(--inc-text-muted)", marginBottom: "6px" }}>

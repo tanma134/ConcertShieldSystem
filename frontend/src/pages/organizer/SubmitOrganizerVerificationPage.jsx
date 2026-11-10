@@ -137,8 +137,8 @@ export default function SubmitOrganizerVerificationPage() {
           justifyContent: "space-between",
           alignItems: "center",
           background: notice.type === "success" ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
-          border: notice.type === "success" ? "1px solid #10b981" : "1px solid #ef4444",
-          color: notice.type === "success" ? "#10b981" : "#ef4444",
+          border: notice.type === "success" ? "1px solid #0e9e78" : "1px solid #d63a3a",
+          color: notice.type === "success" ? "#0e9e78" : "#d63a3a",
           fontWeight: "600",
         }}>
           <span>{notice.message}</span>

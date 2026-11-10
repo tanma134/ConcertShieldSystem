@@ -1,8 +1,8 @@
 .ticket-detail-page {
   min-height: 68vh;
   padding: 38px 24px 72px;
-  color: #f4f4f5;
-  background: #09090b;
+  color: #2a2438;
+  background: #faf5ff;
 }
 
 .ticket-detail-container {
@@ -17,20 +17,20 @@
   align-items: center;
   gap: 8px;
   width: fit-content;
-  color: #d4d4d8;
+  color: #5a5470;
   text-decoration: none;
 }
 
 .ticket-detail-back:hover {
-  color: #f0abfc;
+  color: #d78ef0;
 }
 
 .ticket-event-card,
 .ticket-detail-card {
   overflow: hidden;
-  border: 1px solid #27272a;
+  border: 1px solid #f1ecfa;
   border-radius: 16px;
-  background: #131316;
+  background: #faf5ff;
 }
 
 .ticket-event-card {
@@ -45,7 +45,7 @@
   overflow: hidden;
   aspect-ratio: 4 / 3;
   border-radius: 12px;
-  background: #18181b;
+  background: #f5f0fa;
 }
 
 .ticket-event-poster img {
@@ -61,7 +61,7 @@
 
 .ticket-detail-eyebrow {
   margin: 0 0 8px;
-  color: #e879f9;
+  color: #c26ee0;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.13em;
@@ -70,7 +70,7 @@
 
 .ticket-event-info h1 {
   margin: 0;
-  color: #fafafa;
+  color: #1e1b2e;
   font-size: clamp(25px, 3vw, 34px);
   line-height: 1.2;
   overflow-wrap: anywhere;
@@ -92,7 +92,7 @@
 
 .ticket-fact-icon {
   flex: 0 0 auto;
-  color: #e879f9;
+  color: #c26ee0;
   font-size: 19px;
 }
 
@@ -103,20 +103,20 @@
 }
 
 .ticket-event-fact > div > span {
-  color: #babac0;
+  color: #86868a;
   font-size: 12px;
 }
 
 .ticket-event-fact strong,
 .ticket-event-fact small {
   overflow-wrap: anywhere;
-  color: #e4e4e7;
+  color: #4a4458;
   font-size: 13px;
   font-weight: 500;
 }
 
 .ticket-event-fact small {
-  color: #b9b9bf;
+  color: #6b6480;
 }
 
 .ticket-detail-card {
@@ -129,12 +129,12 @@
   justify-content: space-between;
   gap: 16px;
   padding-bottom: 18px;
-  border-bottom: 1px solid #27272a;
+  border-bottom: 1px solid #f1ecfa;
 }
 
 .ticket-detail-header h2 {
   margin: 0;
-  color: #fafafa;
+  color: #1e1b2e;
   font-size: 20px;
 }
 
@@ -147,28 +147,28 @@
 }
 
 .ticket-status.active {
-  color: #86efac;
+  color: #4fcf82;
   background: #14532d55;
 }
 
 .ticket-status.processing {
-  color: #fcd34d;
+  color: #e8b82e;
   background: #713f1255;
 }
 
 .ticket-status.cancelled {
-  color: #fca5a5;
-  background: #7f1d1d55;
+  color: #e8a0a0;
+  background: #7a2a2a;
 }
 
 .ticket-status.checked-in {
-  color: #93c5fd;
-  background: #1e3a8a55;
+  color: #516d8c;
+  background: #faf5ff;
 }
 
 .ticket-status.other {
-  color: #d4d4d8;
-  background: #3f3f4655;
+  color: #5a5470;
+  background: #f1e9f7;
 }
 
 .ticket-detail-grid {
@@ -186,13 +186,13 @@
 }
 
 .ticket-detail-field span {
-  color: #babac0;
+  color: #86868a;
   font-size: 12px;
 }
 
 .ticket-detail-field strong {
   overflow-wrap: anywhere;
-  color: #e4e4e7;
+  color: #4a4458;
   font-size: 14px;
   font-weight: 600;
 }
@@ -203,12 +203,12 @@
   justify-content: space-between;
   gap: 18px;
   padding-top: 18px;
-  border-top: 1px solid #27272a;
+  border-top: 1px solid #f1ecfa;
 }
 
 .ticket-detail-footer p {
   margin: 0;
-  color: #b9b9bf;
+  color: #6b6480;
   font-size: 13px;
 }
 
@@ -217,7 +217,7 @@
   padding: 10px 18px;
   border: 0;
   border-radius: 9px;
-  color: #fff;
+  color: #3c3552;
   background: #a21caf;
   font: inherit;
   font-weight: 700;
@@ -225,21 +225,21 @@
 }
 
 .ticket-show-qr-button:hover {
-  background: #c026d3;
+  background: linear-gradient(120deg, #9333ea 0%, #a21caf 55%, #db2777 100%);
 }
 
 .ticket-detail-state {
   width: min(700px, 100%);
   margin: 40px auto;
   padding: 48px 20px;
-  border: 1px dashed #3f3f46;
+  border: 1px dashed #ddd4e9;
   border-radius: 14px;
-  color: #b9b9bf;
+  color: #6b6480;
   text-align: center;
 }
 
 .ticket-detail-state strong {
-  color: #f4f4f5;
+  color: #2a2438;
   font-size: 18px;
 }
 
@@ -250,12 +250,12 @@
 .ticket-detail-state a {
   display: inline-block;
   margin-top: 8px;
-  color: #f0abfc;
+  color: #d78ef0;
 }
 
 .ticket-detail-state.is-error {
-  border-color: #7f1d1d;
-  color: #fca5a5;
+  border-color: #7a2a2a;
+  color: #a77373;
 }
 
 .ticket-qr-overlay {
@@ -272,10 +272,10 @@
   position: relative;
   width: min(440px, 100%);
   padding: 30px 24px;
-  border: 1px solid #3f3f46;
+  border: 1px solid #ddd4e9;
   border-radius: 18px;
-  color: #f4f4f5;
-  background: #18181b;
+  color: #2a2438;
+  background: #f5f0fa;
   text-align: center;
 }
 
@@ -287,21 +287,21 @@
   height: 36px;
   border: 0;
   border-radius: 50%;
-  color: #d4d4d8;
-  background: #27272a;
+  color: #5a5470;
+  background: #f1ecfa;
   font-size: 24px;
   cursor: pointer;
 }
 
 .ticket-qr-dialog h2 {
   margin: 0;
-  color: #fafafa;
+  color: #1e1b2e;
   font-size: 22px;
 }
 
 .ticket-qr-event {
   margin: 8px 0 18px;
-  color: #b9b9bf;
+  color: #6b6480;
 }
 
 .ticket-qr-image {
@@ -311,7 +311,7 @@
   margin: 0 auto;
   padding: 10px;
   border-radius: 12px;
-  background: #fff;
+  background: #faf5ff;
 }
 
 .ticket-qr-placeholder {
@@ -321,24 +321,24 @@
   margin: 0 auto;
   place-items: center;
   border-radius: 12px;
-  color: #71717a;
-  background: #fff;
+  color: #736c80;
+  background: #faf5ff;
 }
 
 .ticket-qr-countdown {
   margin: 14px 0 0;
-  color: #fcd34d;
+  color: #a78421;
   font-size: 13px;
 }
 
 .ticket-qr-instruction {
   margin-bottom: 0;
-  color: #b9b9bf;
+  color: #6b6480;
   font-size: 13px;
 }
 
 .ticket-qr-error {
-  color: #fca5a5;
+  color: #a77373;
   font-size: 13px;
 }
 
@@ -399,14 +399,14 @@
 .ticket-purchase-panel {
   margin-top: 8px;
   padding: 18px;
-  border: 1px solid #27272a;
+  border: 1px solid #f1ecfa;
   border-radius: 12px;
-  background: #18181b;
+  background: #f5f0fa;
 }
 
 .ticket-purchase-panel h3 {
   margin: 0 0 16px;
-  color: #e4e4e7;
+  color: #4a4458;
   font-size: 14px;
 }
 
@@ -425,31 +425,31 @@
 .ticket-history-card {
   overflow: hidden;
   padding: 22px;
-  border: 1px solid #27272a;
+  border: 1px solid #f1ecfa;
   border-radius: 16px;
-  background: #131316;
+  background: #faf5ff;
 }
 
 .ticket-history-header {
   padding-bottom: 16px;
-  border-bottom: 1px solid #27272a;
+  border-bottom: 1px solid #f1ecfa;
 }
 
 .ticket-history-header h2 {
   margin: 0;
-  color: #fafafa;
+  color: #1e1b2e;
   font-size: 20px;
 }
 
 .ticket-history-state {
   margin: 0;
   padding: 22px 0 4px;
-  color: #b9b9bf;
+  color: #6b6480;
   font-size: 14px;
 }
 
 .ticket-history-state.is-error {
-  color: #fca5a5;
+  color: #a77373;
 }
 
 .ticket-history-list {
@@ -467,7 +467,7 @@
   bottom: 18px;
   left: 7px;
   width: 1px;
-  background: #3f3f46;
+  background: #faf5ff;
   content: "";
 }
 
@@ -490,7 +490,7 @@
   margin-top: 2px;
   border: 3px solid #a21caf;
   border-radius: 50%;
-  background: #131316;
+  background: #faf5ff;
 }
 
 .ticket-history-content {
@@ -505,20 +505,20 @@
 }
 
 .ticket-history-main strong {
-  color: #f4f4f5;
+  color: #2a2438;
   font-size: 14px;
 }
 
 .ticket-history-main time {
   flex: 0 0 auto;
-  color: #b9b9bf;
+  color: #6b6480;
   font-size: 12px;
 }
 
 .ticket-history-status,
 .ticket-history-meta {
   margin: 7px 0 0;
-  color: #b9b9bf;
+  color: #6b6480;
   font-size: 12px;
 }
 

@@ -1,10 +1,10 @@
 .qf-page {
   min-height: 100vh;
   padding-bottom: 56px;
-  color: #f5f3f8;
+  color: #545161;
   background:
     radial-gradient(ellipse at 14% 0%, rgba(130, 45, 180, 0.2), transparent 42%),
-    #0b0b10;
+    #d2ced7;
 }
 
 .qf-container {
@@ -14,12 +14,12 @@
 
 .qf-header {
   padding: 28px 0 30px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(148,110,200,0.14);
   background: rgba(11, 11, 16, 0.72);
 }
 
 .qf-back-link {
-  color: #d8b4fe;
+  color: #a06ce8;
   text-decoration: none;
   font-size: 14px;
   font-weight: 650;
@@ -27,7 +27,7 @@
 
 .qf-eyebrow {
   margin: 0;
-  color: #c389fc;
+  color: #a066f0;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.15em;
@@ -39,14 +39,14 @@
 
 .qf-header h1 {
   margin: 8px 0 6px;
-  color: #fff;
+  color: #3c3552;
   font-size: clamp(30px, 4vw, 42px);
   letter-spacing: -0.04em;
 }
 
 .qf-header-subtitle {
   margin: 0;
-  color: #bab6c2;
+  color: #6e6788;
 }
 
 .qf-layout {
@@ -72,7 +72,7 @@
 .qf-section-heading h2,
 .qf-panel h2 {
   margin: 7px 0 0;
-  color: #fff;
+  color: #3c3552;
   font-size: 21px;
 }
 
@@ -80,7 +80,7 @@
   padding: 7px 11px;
   border: 1px solid rgba(192, 132, 252, 0.25);
   border-radius: 999px;
-  color: #dfc1ff;
+  color: #736383;
   background: rgba(168, 85, 247, 0.08);
   font-size: 12px;
   white-space: nowrap;
@@ -88,10 +88,10 @@
 
 .qf-attendee-card,
 .qf-panel {
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(148,110,200,0.14);
   border-radius: 18px;
   background: linear-gradient(145deg, rgba(24, 22, 29, 0.96), rgba(17, 16, 22, 0.96));
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.14);
+  box-shadow: 0 14px 36px rgba(80,50,120,0.10);
 }
 
 .qf-attendee-card {
@@ -105,7 +105,7 @@
   gap: 12px;
   margin-bottom: 20px;
   padding-bottom: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid rgba(148,110,200,0.14);
 }
 
 .qf-ticket-index {
@@ -115,7 +115,7 @@
   flex: 0 0 38px;
   place-items: center;
   border-radius: 12px;
-  color: #e9d5ff;
+  color: #514a62;
   background: rgba(147, 51, 234, 0.2);
   font-weight: 800;
 }
@@ -127,13 +127,13 @@
 
 .qf-ticket-label,
 .qf-seat span {
-  color: #bbb6c3;
+  color: #87838c;
   font-size: 12px;
 }
 
 .qf-ticket-copy strong,
 .qf-seat strong {
-  color: #f5effb;
+  color: #545061;
   font-size: 14px;
 }
 
@@ -149,8 +149,8 @@
 }
 
 .qf-no-seat {
-  border-color: rgba(255, 255, 255, 0.09);
-  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(148,110,200,0.14);
+  background: rgba(148,110,200,0.07);
 }
 
 .qf-form-grid {
@@ -162,13 +162,13 @@
 .qf-field {
   display: grid;
   gap: 8px;
-  color: #c9c3d0;
+  color: #5c5473;
   font-size: 13px;
   font-weight: 650;
 }
 
 .qf-field b {
-  color: #f0abbd;
+  color: #ad7b88;
 }
 
 .qf-field input {
@@ -176,18 +176,18 @@
   min-height: 46px;
   box-sizing: border-box;
   padding: 0 13px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(148,110,200,0.14);
   border-radius: 11px;
   outline: none;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.035);
+  color: #3c3552;
+  background: rgba(148,110,200,0.08);
   font: inherit;
   font-weight: 450;
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .qf-field input::placeholder {
-  color: #bab7c0;
+  color: #86848a;
 }
 
 .qf-field input:focus {
@@ -213,18 +213,18 @@
 .qf-countdown-panel > strong {
   display: block;
   margin: 8px 0 2px;
-  color: #d8b4fe;
+  color: #a06ce8;
   font-size: 42px;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
 
 .qf-countdown-panel > strong.is-urgent {
-  color: #fb7b8e;
+  color: #e0567a;
 }
 
 .qf-countdown-panel > span {
-  color: #bbb8c0;
+  color: #87848a;
   font-size: 12px;
 }
 
@@ -238,16 +238,16 @@
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  color: #d5cfdb;
+  color: #4c4859;
   font-size: 13px;
 }
 
 .qf-summary-item small {
-  color: #bdb8c3;
+  color: #88848c;
 }
 
 .qf-summary-item strong {
-  color: #e9e3ed;
+  color: #514d5e;
   white-space: nowrap;
 }
 
@@ -257,13 +257,13 @@
   gap: 12px;
   margin-top: 20px;
   padding-top: 17px;
-  border-top: 1px solid rgba(255, 255, 255, 0.09);
-  color: #d8d1df;
+  border-top: 1px solid rgba(148,110,200,0.14);
+  color: #4d495a;
   font-weight: 700;
 }
 
 .qf-total strong {
-  color: #e4b5ff;
+  color: #7a6188;
   font-size: 20px;
   white-space: nowrap;
 }
@@ -277,7 +277,7 @@
   padding: 0 18px;
   border: 0;
   border-radius: 12px;
-  color: #fff;
+  color: #ffffff;
   background: linear-gradient(100deg, #9333ea, #c026d3);
   text-decoration: none;
   font: inherit;
@@ -312,19 +312,19 @@
 .qf-message-card {
   width: min(100%, 520px);
   padding: 32px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(148,110,200,0.14);
   border-radius: 20px;
-  background: #17141d;
+  background: #f5eefb;
 }
 
 .qf-message-card h1 {
   margin: 8px 0;
-  color: #fff !important;
+  color: #3c3552 !important;
 }
 
 .qf-message-card p {
   margin: 0 0 22px;
-  color: #bab6c2;
+  color: #6e6788;
 }
 
 .qf-status-icon {
@@ -334,7 +334,7 @@
   place-items: center;
   margin: 0 auto 14px;
   border-radius: 50%;
-  color: #fb7b8e;
+  color: #e0567a;
   background: rgba(244, 63, 94, 0.15);
   font-size: 24px;
   font-weight: 800;
@@ -344,7 +344,7 @@
   width: 34px;
   height: 34px;
   border: 3px solid rgba(192, 132, 252, 0.2);
-  border-top-color: #c084fc;
+  border-top-color: #a855f7;
   border-radius: 50%;
   animation: qf-spin 0.8s linear infinite;
 }
@@ -400,7 +400,7 @@
 
 .qf-primary-hint {
   margin: 0 0 14px;
-  color: #bab6c2;
+  color: #6e6788;
   font-size: 13px;
   line-height: 1.5;
 }
@@ -410,7 +410,7 @@
   align-items: center;
   gap: 9px;
   margin: 0 0 18px;
-  color: #d8b4fe;
+  color: #a06ce8;
   font-size: 13px;
   font-weight: 650;
   cursor: pointer;
@@ -440,7 +440,7 @@
   border: 1px solid rgba(192, 38, 211, 0.25);
   border-radius: 18px;
   background: rgba(23, 18, 35, 0.92);
-  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 18px 60px rgba(80,50,120,0.15);
 }
 
 .qf-spinner {
@@ -460,19 +460,19 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #f0abfc;
+  background: #d78ef0;
   box-shadow: 0 0 18px #d946ef;
 }
 
 .qf-loading-card h2 {
   margin: 0 0 8px;
-  color: #fff;
+  color: #3c3552;
   font-size: 21px;
 }
 
 .qf-loading-card p {
   margin: 0;
-  color: #bab6c2;
+  color: #6e6788;
   font-size: 14px;
 }
 
@@ -487,9 +487,9 @@
   border-radius: 999px;
   background: linear-gradient(
     90deg,
-    #211a30 25%,
-    #38264e 50%,
-    #211a30 75%
+    #f3ebfa 25%,
+    #e0d2ee 50%,
+    #f3ebfa 75%
   );
   background-size: 200% 100%;
   animation: qf-shimmer 1.5s ease-in-out infinite;
@@ -531,7 +531,7 @@
   padding: 10px 12px;
   border: 1px solid rgba(192, 132, 252, 0.32);
   border-radius: 9px;
-  color: #e3b8fa;
+  color: #786285;
   background: rgba(168, 85, 247, 0.06);
   font: inherit;
   font-size: 12px;
@@ -542,7 +542,7 @@
 
 .qf-change-tickets:hover,
 .tb-change-tickets:hover {
-  border-color: #c084fc;
+  border-color: #a855f7;
   background: rgba(168, 85, 247, 0.14);
 }
 
@@ -553,35 +553,35 @@
   display: grid;
   place-items: center;
   padding: 20px;
-  background: rgba(0, 0, 0, 0.72);
+  background: rgba(28,18,52,0.5);
 }
 
 .hold-cancel-dialog {
   width: min(440px, 100%);
   padding: 26px;
-  border: 1px solid #393341;
+  border: 1px solid #d9d4de;
   border-radius: 16px;
-  color: #f5f2f8;
-  background: #17151d;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+  color: #545161;
+  background: #faf5ff;
+  box-shadow: 0 24px 80px rgba(80,50,120,0.22);
 }
 
 .hold-cancel-dialog h2 {
   margin: 0 0 9px;
-  color: #fff;
+  color: #3c3552;
   font-size: 21px;
 }
 
 .hold-cancel-dialog > p {
   margin: 0;
-  color: #bcb8c2;
+  color: #87848c;
   font-size: 13px;
   line-height: 1.6;
 }
 
 .hold-cancel-dialog .hold-cancel-error {
   margin-top: 14px;
-  color: #ff9b9b;
+  color: #b87070;
 }
 
 .hold-cancel-actions {
@@ -607,14 +607,14 @@
 }
 
 .hold-cancel-stay {
-  border: 1px solid #47414f;
-  color: #e8e2ed;
+  border: 1px solid #a69fb1;
+  color: #514d5e;
   background: transparent;
 }
 
 .hold-cancel-confirm {
   border: 1px solid #a82d48;
-  color: #fff;
+  color: #3c3552;
   background: #a92340;
 }
 

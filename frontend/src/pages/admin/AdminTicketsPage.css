@@ -1,6 +1,6 @@
 .admin-tickets-page {
   padding: 28px;
-  color: #f4efff;
+  color: #2a2438;
 }
 
 .admin-tickets-heading,
@@ -18,7 +18,7 @@
 
 .admin-tickets-eyebrow {
   margin: 0 0 8px;
-  color: #bd8cff;
+  color: #9a5cf0;
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -31,16 +31,16 @@
 
 .admin-tickets-heading p:last-child,
 .admin-tickets-table-heading span {
-  color: #beb4cf;
+  color: #7a7390;
 }
 
 .admin-tickets-count {
   display: grid;
   min-width: 100px;
   padding: 14px 18px;
-  border: 1px solid #453453;
+  border: 1px solid #dbd4e1;
   border-radius: 12px;
-  background: #19151f;
+  background: #f7f1fc;
   text-align: center;
 }
 
@@ -49,7 +49,7 @@
 }
 
 .admin-tickets-count span {
-  color: #beb4cf;
+  color: #7a7390;
   font-size: 13px;
 }
 
@@ -59,15 +59,15 @@
   gap: 16px;
   margin-bottom: 22px;
   padding: 20px;
-  border: 1px solid #453453;
+  border: 1px solid #dbd4e1;
   border-radius: 14px;
-  background: #19151f;
+  background: #f7f1fc;
 }
 
 .admin-tickets-filters label {
   display: grid;
   gap: 8px;
-  color: #d9cfe5;
+  color: #4d485c;
   font-size: 13px;
   font-weight: 600;
 }
@@ -76,11 +76,11 @@
 .admin-tickets-filters select {
   min-width: 0;
   padding: 10px 12px;
-  border: 1px solid #493b55;
+  border: 1px solid #a79db3;
   border-radius: 8px;
   outline: none;
-  background: #100d15;
-  color: #f4efff;
+  background: #faf5ff;
+  color: #2a2438;
 }
 
 .admin-tickets-filters input:focus,
@@ -100,14 +100,14 @@
 
 .admin-tickets-table-card {
   overflow: hidden;
-  border: 1px solid #453453;
+  border: 1px solid #dbd4e1;
   border-radius: 14px;
-  background: #19151f;
+  background: #f7f1fc;
 }
 
 .admin-tickets-table-heading {
   padding: 18px 20px;
-  border-bottom: 1px solid #342a3d;
+  border-bottom: 1px solid #d8d2de;
 }
 
 .admin-tickets-table-heading h2 {
@@ -128,19 +128,19 @@
 .admin-tickets-table th,
 .admin-tickets-table td {
   padding: 14px 16px;
-  border-bottom: 1px solid #302738;
+  border-bottom: 1px solid #d7d2dd;
   vertical-align: middle;
 }
 
 .admin-tickets-table th {
-  color: #beb4cf;
+  color: #7a7390;
   font-size: 12px;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
 .admin-tickets-table td {
-  color: #eee8f5;
+  color: #524e60;
   font-size: 13px;
 }
 
@@ -149,7 +149,7 @@
   max-width: 140px;
   overflow: hidden;
   margin-top: 4px;
-  color: #beb7c5;
+  color: #89848e;
   text-overflow: ellipsis;
 }
 
@@ -157,19 +157,19 @@
   display: inline-block;
   padding: 5px 9px;
   border-radius: 999px;
-  background: #302738;
+  background: #faf5ff;
   font-size: 12px;
 }
 
 .admin-ticket-status.status-active {
-  background: #173b2b;
-  color: #8ce2ae;
+  background: #faf5ff;
+  color: #48745a;
 }
 
 .admin-ticket-status.status-returned,
 .admin-ticket-status.status-revoked {
-  background: #3b2027;
-  color: #ffabb5;
+  background: #faf5ff;
+  color: #985f6a;
 }
 
 .admin-ticket-row-actions {
@@ -181,7 +181,7 @@
   padding: 8px 11px;
   border: 0;
   border-radius: 7px;
-  color: #fff;
+  color: #3c3552;
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
@@ -198,8 +198,8 @@
 }
 
 .admin-ticket-button.secondary {
-  border: 1px solid #51465d;
-  background: #292330;
+  border: 1px solid #aaa1b6;
+  background: #faf5ff;
 }
 
 .admin-ticket-button.revoke {
@@ -212,13 +212,13 @@
 
 .admin-tickets-state {
   padding: 40px 20px;
-  color: #beb4cf;
+  color: #7a7390;
   text-align: center;
 }
 
 .admin-tickets-pagination {
   padding: 16px 20px;
-  color: #beb4cf;
+  color: #7a7390;
   font-size: 13px;
 }
 
@@ -236,14 +236,14 @@
 
 .admin-tickets-notice {
   border: 1px solid #286548;
-  background: #173328;
-  color: #9be2b7;
+  background: #faf5ff;
+  color: #3d4d50;
 }
 
 .admin-tickets-error {
-  border: 1px solid #713b46;
-  background: #351e27;
-  color: #ffb4bc;
+  border: 1px solid #8a4a58;
+  background: #fbe9ec;
+  color: #8f5a64;
 }
 
 @media (max-width: 900px) {

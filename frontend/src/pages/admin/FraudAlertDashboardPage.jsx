@@ -148,9 +148,9 @@ export default function FraudAlertDashboardPage() {
         {summary && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
             <SummaryCard label="Total alerts" value={summary.total} />
-            <SummaryCard label="Open High/Critical" value={summary.openHighOrCritical} tone="#fca5a5" />
-            <SummaryCard label="SLA overdue" value={summary.overdueSla} tone="#fbbf24" />
-            <SummaryCard label="Critical" value={countOf(summary.byLevel, "Critical")} tone="#fca5a5" />
+            <SummaryCard label="Open High/Critical" value={summary.openHighOrCritical} tone="#e8a0a0" />
+            <SummaryCard label="SLA overdue" value={summary.overdueSla} tone="#d99a16" />
+            <SummaryCard label="Critical" value={countOf(summary.byLevel, "Critical")} tone="#e8a0a0" />
             <SummaryCard label="High" value={countOf(summary.byLevel, "High")} tone="#fb923c" />
             <SummaryCard label="Bot" value={countOf(summary.byType, "Bot")} />
             <SummaryCard label="Fraud" value={countOf(summary.byType, "Fraud")} />

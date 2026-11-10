@@ -279,7 +279,7 @@ export default function SupportCaseDetailPage() {
                 style={{
                   fontSize: "14px",
                   lineHeight: 1.7,
-                  color: "#f3f4f6",
+                  color: "#eee9f5",
                   whiteSpace: "pre-wrap",
                   background: "var(--sc-bg-surface)",
                   padding: "16px 20px",
@@ -308,13 +308,13 @@ export default function SupportCaseDetailPage() {
                       <div className="sc-timeline-dot" />
                       <div className="sc-timeline-meta">
                         <div>
-                          <strong style={{ color: "#fff" }}>{n.authorName}</strong>{" "}
+                          <strong style={{ color: "#1d1730" }}>{n.authorName}</strong>{" "}
                           <span style={{ color: "var(--sc-text-muted)" }}>({n.authorRole})</span>
                           {n.noteType && n.noteType !== "Comment" && (
                             <span
                               style={{
                                 marginLeft: "8px",
-                                background: "#334155",
+                                background: "#dcd3e8",
                                 padding: "2px 6px",
                                 borderRadius: "4px",
                                 fontSize: "11px",
@@ -363,7 +363,7 @@ export default function SupportCaseDetailPage() {
           <div>
             {/* Customer Information Card */}
             <div className="sc-meta-card">
-              <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 12px 0", color: "#fff" }}>
+              <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 12px 0", color: "#1d1730" }}>
                 Customer Information
               </h3>
               <div className="sc-meta-row">
@@ -388,7 +388,7 @@ export default function SupportCaseDetailPage() {
 
             {/* Related Context Card */}
             <div className="sc-meta-card">
-              <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 12px 0", color: "#fff" }}>
+              <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 12px 0", color: "#1d1730" }}>
                 Context References
               </h3>
               <div className="sc-meta-row">
@@ -401,7 +401,7 @@ export default function SupportCaseDetailPage() {
                       rel="noopener noreferrer"
                       title="Open order details in a new tab"
                       style={{
-                        color: "#60a5fa",
+                        color: "#4f8fe0",
                         textDecoration: "underline",
                         display: "inline-flex",
                         alignItems: "center",
@@ -425,7 +425,7 @@ export default function SupportCaseDetailPage() {
                     marginTop: "8px",
                     marginBottom: "12px",
                     width: "100%",
-                    background: "linear-gradient(135deg, #ec4899 0%, #a855f7 100%)",
+                    background: "linear-gradient(135deg, #e8439c 0%, #a855f7 100%)",
                     border: "none",
                     color: "#fff",
                     padding: "7px 12px",
@@ -453,7 +453,7 @@ export default function SupportCaseDetailPage() {
                       rel="noopener noreferrer"
                       title="Open ticket details in a new tab"
                       style={{
-                        color: "#60a5fa",
+                        color: "#4f8fe0",
                         textDecoration: "underline",
                         display: "inline-flex",
                         alignItems: "center",
@@ -483,12 +483,12 @@ export default function SupportCaseDetailPage() {
 
             {/* Assignment & Timestamps Card */}
             <div className="sc-meta-card">
-              <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 12px 0", color: "#fff" }}>
+              <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 12px 0", color: "#1d1730" }}>
                 Assignment & Timestamps
               </h3>
               <div className="sc-meta-row">
                 <span className="sc-meta-label">Assigned Staff</span>
-                <span className="sc-meta-val" style={{ color: detail.assignedStaffName ? "#93c5fd" : "#9ca3af" }}>
+                <span className="sc-meta-val" style={{ color: detail.assignedStaffName ? "#86b6f0" : "#7e7694" }}>
                   {detail.assignedStaffName || "Unassigned"}
                 </span>
               </div>
@@ -519,7 +519,7 @@ export default function SupportCaseDetailPage() {
                 <button
                   type="button"
                   onClick={() => setShowAssignModal(false)}
-                  style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: "18px" }}
+                  style={{ background: "none", border: "none", color: "#7e7694", cursor: "pointer", fontSize: "18px" }}
                 >
                   ✕
                 </button>
@@ -596,7 +596,7 @@ export default function SupportCaseDetailPage() {
                 <button
                   type="button"
                   onClick={() => setShowResolveModal(false)}
-                  style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: "18px" }}
+                  style={{ background: "none", border: "none", color: "#7e7694", cursor: "pointer", fontSize: "18px" }}
                 >
                   ✕
                 </button>
@@ -604,7 +604,7 @@ export default function SupportCaseDetailPage() {
 
               <form onSubmit={handleResolveCase}>
                 <div className="sc-modal-body">
-                  <div style={{ background: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245, 158, 11, 0.3)", padding: "12px", borderRadius: "8px", fontSize: "12px", color: "#fcd34d" }}>
+                  <div style={{ background: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245, 158, 11, 0.3)", padding: "12px", borderRadius: "8px", fontSize: "12px", color: "#e8b82e" }}>
                     <strong>Notice:</strong> Closing this case strictly requires a detailed resolution to be recorded. Closed cases cannot be reopened or reassigned.
                   </div>
 
