@@ -26,7 +26,7 @@
   place-items: center;
   margin: 0 auto 20px;
   border-radius: 50%;
-  color: #a06ce8;
+  color: #7e22ce;
   background: rgba(168, 85, 247, 0.16);
   font-size: 34px;
   font-weight: 800;
@@ -39,13 +39,13 @@
 
 .payment-result-card.is-failed .payment-result-icon,
 .payment-result-card.is-error .payment-result-icon {
-  color: #ff8795;
+  color: #be123c;
   background: rgba(244, 63, 94, 0.14);
 }
 
 .payment-result-eyebrow {
   margin: 0 0 10px;
-  color: #a066f0;
+  color: #7e22ce;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.16em;
@@ -59,7 +59,7 @@
 }
 
 .payment-result-card > p:not(.payment-result-eyebrow) {
-  color: #88848f;
+  color: #524b68;
   line-height: 1.65;
 }
 

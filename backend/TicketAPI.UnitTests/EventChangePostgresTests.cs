@@ -26,12 +26,17 @@ public class TicketChangeFixture : IDisposable
     public TicketDbContext NewContext()=>new(new DbContextOptionsBuilder<TicketDbContext>().UseNpgsql(Connection).Options);
     public async Task<Order> SeedAsync(int eventId=1,string status="Paid",int quantity=2)
     {
-        var order=new Order {EventId=eventId,CustomerId=7,Status=status,FinalAmount=500000,TotalAmount=500000,OrderDate=DateTime.UtcNow.AddDays(-1),StartsAt=DateTime.UtcNow.AddDays(10),EndsAt=DateTime.UtcNow.AddDays(10).AddHours(2)};
+        var now = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.UtcNow.Day, DateTime.UtcNow.Hour, DateTime.UtcNow.Minute, DateTime.UtcNow.Second, DateTimeKind.Utc);
+        var order=new Order {EventId=eventId,CustomerId=7,Status=status,FinalAmount=500000,TotalAmount=500000,OrderDate=now.AddDays(-1),StartsAt=now.AddDays(10),EndsAt=now.AddDays(10).AddHours(2)};
         Db.Orders.Add(order);await Db.SaveChangesAsync();
         if(status=="Paid") {for(int i=0;i<quantity;i++) Db.Tickets.Add(new Ticket {OrderId=order.OrderId,EventId=eventId,TicketTypeId=1,OwnerUserId=7,TicketCode=Guid.NewGuid(),Status="Active"});await Db.SaveChangesAsync();}
         return order;
     }
-    public ApplyChangeInput Change(long id=1,string type="Reschedule")=>new(id,1,type,type=="Reschedule"?DateTime.UtcNow.AddDays(20):null,type=="Reschedule"?DateTime.UtcNow.AddDays(20).AddHours(2):null,(int)id,"Venue unavailable","Demo concert","demo-concert");
+    public ApplyChangeInput Change(long id=1,string type="Reschedule")
+    {
+        var now = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.UtcNow.Day, DateTime.UtcNow.Hour, DateTime.UtcNow.Minute, DateTime.UtcNow.Second, DateTimeKind.Utc);
+        return new(id,1,type,type=="Reschedule"?now.AddDays(20):null,type=="Reschedule"?now.AddDays(20).AddHours(2):null,(int)id,"Venue unavailable","Demo concert","demo-concert");
+    }
     public void Dispose(){Db.Dispose();NpgsqlConnection.ClearAllPools();using var connection=new NpgsqlConnection(adminConnection);connection.Open();using var command=new NpgsqlCommand("DROP DATABASE "+databaseName+" WITH (FORCE)",connection);command.ExecuteNonQuery();}
 }
 public class EventChangePostgresTests

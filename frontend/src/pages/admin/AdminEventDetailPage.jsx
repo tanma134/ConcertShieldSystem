@@ -75,20 +75,34 @@ export default function AdminEventDetailPage() {
     }
   };
 
-  const canDecide = event?.status === "Pending";
+  const isPending = event?.status === "Pending";
+
+  const pageTitle = isPending
+    ? "Review Event"
+    : `Event Details (${event?.status || ""})`;
+
+  const pageSubtitle = isPending
+    ? "Check everything below, then approve or reject this submission."
+    : "Review the event overview, seating chart, and compliance information.";
+
+  const activeSubnav = isPending ? "/admin/events" : "/admin/events/all";
+
+  const canDecide = isPending;
 
   return (
-    <AdminShell title="Review Event">
+    <AdminShell title={pageTitle} activeSubnavPath={activeSubnav}>
       <div className="ow-wrap">
         <div className="ow-head">
           <div>
-            <h1>Review Event</h1>
-            <p className="ow-sub">
-              Check everything below, then approve or reject this submission.
-            </p>
+            <h1>{pageTitle}</h1>
+            <p className="ow-sub">{pageSubtitle}</p>
           </div>
-          <Link to="/admin/events" className="tb-btn tb-btn-outline">
-            ← Back to queue
+          <Link
+            to={isPending ? "/admin/events" : "/admin/events/all"}
+            className="tb-btn tb-btn-outline"
+            style={{ textDecoration: "none" }}
+          >
+            {isPending ? "← Back to queue" : "← Back to all events"}
           </Link>
         </div>
 
@@ -153,9 +167,23 @@ export default function AdminEventDetailPage() {
             {(event.bannerUrl || event.images?.length > 0) && (
               <section className="ow-section">
                 <h3>Organizer Images</h3>
-                {event.bannerUrl && <img className="admin-event-banner" src={event.bannerUrl} alt="Event banner" />}
+                {event.bannerUrl && (
+                  <img
+                    className="admin-event-banner"
+                    src={event.bannerUrl}
+                    alt=""
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                )}
                 <div className="admin-event-gallery">
-                  {(event.images || []).map((image) => <img key={image.imageId} src={image.imageUrl} alt="Organizer upload" />)}
+                  {(event.images || []).map((image) => (
+                    <img
+                      key={image.imageId}
+                      src={image.imageUrl}
+                      alt=""
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  ))}
                 </div>
               </section>
             )}
@@ -163,16 +191,12 @@ export default function AdminEventDetailPage() {
             <section className="ow-section admin-seating-editor">
               <h3>Seating Chart, Tickets &amp; Pricing</h3>
               <p className="ow-hint">
-                Full editor — build/edit the seating chart on the canvas,
-                apply or save templates, and configure ticket classes,
-                dynamic pricing and refund policy, the same tools the
-                organizer uses. As Admin you can adjust these regardless of
-                the event's current status.
+                Review the seating chart, ticket classes, dynamic pricing and refund policy configured by the organizer.
               </p>
               <StepTicketsSeating
                 eventId={Number(id)}
                 event={event}
-                forceEditable
+                readOnly
                 standalone
                 onRefresh={load}
                 onSaved={load}

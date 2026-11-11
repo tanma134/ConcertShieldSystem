@@ -11,12 +11,12 @@
 .queue-alert-summary > div { display: grid; gap: 6px; min-height: 116px; padding: 19px 20px; background: linear-gradient(145deg, rgba(124, 58, 237, .15), var(--admin-surface)); border: 1px solid var(--admin-line); border-radius: 10px; }
 .queue-alert-summary span, .queue-alert-summary small { color: var(--admin-muted); font-size: 12px; }
 .queue-alert-summary strong { color: var(--admin-ink); font-size: 30px; line-height: 1; }
-.queue-alert-summary .is-danger { background: linear-gradient(145deg, rgba(248, 113, 113, .16), var(--admin-surface)); }
-.queue-alert-summary .is-danger strong { color: #a77373; }
-.queue-alert-summary .is-warning { background: linear-gradient(145deg, rgba(251, 191, 36, .14), var(--admin-surface)); }
-.queue-alert-summary .is-warning strong { color: #d99a16; }
-.queue-alert-summary .is-success { background: linear-gradient(145deg, rgba(74, 222, 128, .13), var(--admin-surface)); }
-.queue-alert-summary .is-success strong { color: #4fcf82; }
+.queue-alert-summary .is-danger { background: #fef2f2; border: 1px solid #fecaca; }
+.queue-alert-summary .is-danger strong { color: #b91c1c; }
+.queue-alert-summary .is-warning { background: #fefce8; border: 1px solid #fef08a; }
+.queue-alert-summary .is-warning strong { color: #854d0e; }
+.queue-alert-summary .is-success { background: #ecfdf5; border: 1px solid #a7f3d0; }
+.queue-alert-summary .is-success strong { color: #047857; }
 .queue-alert-panel { margin-top: 22px; }
 .queue-alert-toolbar { align-items: flex-start; }
 .queue-alert-toolbar h2 { margin: 0 0 6px; color: var(--admin-ink); font-size: 19px; }
@@ -26,12 +26,12 @@
 .queue-alert-table td small { margin-top: 5px; color: var(--admin-muted); font-size: 11px; }
 .queue-session-id { max-width: 145px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .queue-risk-badge { display: inline-flex; align-items: center; width: fit-content; padding: 5px 9px; border-radius: 6px; font-size: 10px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; }
-.risk-critical, .risk-high { color: #3c3552; background: rgba(239, 68, 68, .18); border: 1px solid rgba(248, 113, 113, .28); }
-.risk-medium { color: #77693c; background: rgba(245, 158, 11, .16); border: 1px solid rgba(251, 191, 36, .25); }
-.risk-low { color: #454e62; background: rgba(14, 165, 233, .14); border: 1px solid rgba(56, 189, 248, .22); }
-.status-open { color: #77693c; background: rgba(251, 191, 36, .15); }
-.status-flagged { color: #9a7ce8; background: rgba(139, 92, 246, .16); }
-.status-blocked { color: #a77373; background: rgba(248, 113, 113, .15); }
+.risk-critical, .risk-high { color: #b91c1c; background: #fef2f2; border: 1px solid #fecaca; }
+.risk-medium { color: #854d0e; background: #fefce8; border: 1px solid #fef08a; }
+.risk-low { color: #0369a1; background: #f0f9ff; border: 1px solid #bae6fd; }
+.status-open { color: #854d0e; background: #fefce8; border: 1px solid #fef08a; }
+.status-flagged { color: #6d28d9; background: #f3e8ff; border: 1px solid #d8b4fe; }
+.status-blocked { color: #b91c1c; background: #fef2f2; border: 1px solid #fecaca; }
 .queue-behavior { display: block; max-width: 230px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .queue-view-link { color: #32958a; font-weight: 700; font-size: 12px; white-space: nowrap; }
 .queue-view-link:hover { color: #3c7859; }
@@ -162,23 +162,27 @@
 }
 
 .admin-status-pending {
-  background: rgba(251, 191, 36, 0.15);
-  color: #d99a16;
+  background: #fefce8;
+  color: #854d0e;
+  border: 1px solid #fef08a;
 }
 
 .admin-status-published {
-  background: rgba(74, 222, 128, 0.15);
-  color: #4fcf82;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
 }
 
 .admin-status-rejected {
-  background: rgba(248, 113, 113, 0.15);
-  color: #a77373;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
 }
 
 .admin-status-draft {
-  background: rgba(148, 163, 184, 0.15);
-  color: #5f587a;
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
 }
 
 .admin-status-cancelled {
@@ -260,7 +264,39 @@
 .admin-event-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-top: 12px; }
 .admin-event-gallery img { width: 100%; height: 130px; object-fit: cover; border-radius: 10px; }
 .admin-template-layout { display: grid; grid-template-columns: minmax(280px, .8fr) minmax(420px, 1.2fr); gap: 20px; }
-.admin-template-row { display: flex; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid rgba(148,110,200,0.14); }
+.admin-template-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid rgba(148,110,200,0.14); }
+.admin-template-actions { display: flex; gap: 8px; align-items: center; }
+.admin-template-actions .tb-btn-outline {
+  padding: 6px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 8px;
+  border-color: #d8b4fe;
+  background: #ffffff;
+  color: #7e22ce !important;
+  text-decoration: none !important;
+  box-shadow: 0 1px 3px rgba(124, 58, 237, 0.08);
+}
+.admin-template-actions .tb-btn-outline:hover {
+  background: #7e22ce !important;
+  color: #ffffff !important;
+  border-color: #7e22ce !important;
+}
+.admin-template-actions .ow-link-danger {
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid #fecaca;
+  background: #fff;
+  color: #dc2626 !important;
+  text-decoration: none !important;
+}
+.admin-template-actions .ow-link-danger:hover {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  border-color: #dc2626 !important;
+}
 @media (max-width: 900px) { .admin-template-layout { grid-template-columns: 1fr; } }
 
 /* Trang Organizer Requests giờ được lồng trong AdminShell (có sidebar riêng),
@@ -269,4 +305,30 @@
   min-height: auto;
   padding: 32px 0 0;
   background: transparent;
+}
+
+
+/* Admin View Event Action Button */
+.admin-view-event-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid #d8b4fe;
+  background: #ffffff;
+  color: #7e22ce !important;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: none !important;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(124, 58, 237, 0.08);
+}
+.admin-view-event-btn:hover {
+  background: #7e22ce;
+  color: #ffffff !important;
+  border-color: #7e22ce;
+  box-shadow: 0 4px 12px rgba(126, 34, 206, 0.25);
+  text-decoration: none !important;
 }

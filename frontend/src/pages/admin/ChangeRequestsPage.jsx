@@ -20,7 +20,7 @@ const errorText = err => {
 
 function Row({label,current,requested}) {
   const changed = requested !== undefined && requested !== null && requested !== current;
-  return <tr><td>{label}</td><td>{changed?<s>{current}</s>:current}</td><td>{changed?<strong style={{color:'#21a87b'}}>{requested}</strong>:'No change'}</td></tr>;
+  return <tr><td>{label}</td><td>{changed?<s>{current}</s>:current}</td><td>{changed?<strong style={{color:'#047857'}}>{requested}</strong>:'No change'}</td></tr>;
 }
 
 export default function ChangeRequestsPage() {

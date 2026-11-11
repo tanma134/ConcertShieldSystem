@@ -71,6 +71,10 @@ namespace EventAPI.DTOs
         [MaxLength(500)]
         public string? Description { get; set; }
 
+        public List<SeatingTemplateZoneDTO>? Zones { get; set; }
+
+        public string? LayoutJson { get; set; }
+
         /// <summary>Only honored when the caller is an Admin.</summary>
         public bool? IsPublic { get; set; }
     }

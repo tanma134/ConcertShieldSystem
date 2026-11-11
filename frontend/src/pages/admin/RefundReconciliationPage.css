@@ -124,12 +124,12 @@
 }
 
 .rr-kpi-trend.up {
-  color: #21a87b;
+  color: #047857;
 }
 
 .rr-kpi-sub {
   font-size: 12px;
-  color: #82848b;
+  color: #524b68;
 }
 
 /* Toolbar: Search and Filter Tabs */
@@ -200,18 +200,19 @@
 .rr-event-subtag {
   margin-top: 4px;
   font-size: 11.5px;
-  color: #a066f0;
+  color: #6d28d9;
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: rgba(192, 132, 252, 0.1);
+  background: #f3e8ff;
   padding: 2px 8px;
   border-radius: 6px;
-  border: 1px solid rgba(192, 132, 252, 0.2);
+  border: 1px solid #d8b4fe;
   max-width: 280px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-weight: 600;
 }
 
 .rr-event-tag-icon {
@@ -388,26 +389,27 @@
 }
 
 .rr-cell-customer {
-  color: #8b83a0;
+  color: #4b4564;
 }
 
 .rr-order-tag {
-  color: #cc6fe0;
-  font-weight: 600;
+  color: #7e22ce;
+  font-weight: 700;
 }
 
 .rr-name {
   color: #1e1b2e;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .rr-cell-amount {
-  color: #3c3552;
+  color: #1d1730;
   font-size: 14px;
+  font-weight: 700;
 }
 
 .rr-cell-date {
-  color: #6b6480;
+  color: #524b68;
   white-space: nowrap;
 }
 
@@ -423,24 +425,28 @@
 
 .rr-badge.status-completed,
 .rr-badge.match-completed {
-  background: rgba(16, 185, 129, 0.15);
-  color: #21a87b;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
 }
 
 .rr-badge.status-pending,
 .rr-badge.match-pending {
-  background: rgba(245, 158, 11, 0.15);
-  color: #d99a16;
+  background: #fefce8;
+  color: #854d0e;
+  border: 1px solid #fef08a;
 }
 
 .rr-badge.status-failed {
-  background: rgba(239, 68, 68, 0.15);
-  color: #d64545;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
 }
 
 .rr-badge.match-mismatched {
-  background: rgba(239, 68, 68, 0.15);
-  color: #d64545;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
 }
 
 /* Actions */

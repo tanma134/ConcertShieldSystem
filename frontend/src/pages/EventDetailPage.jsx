@@ -162,7 +162,11 @@ export default function EventDetailPage() {
             <img
               className="tb-detail-banner-img"
               src={gallery[activeImg] || event.bannerUrl || event.posterUrl}
-              alt={event.title}
+              alt=""
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='400' viewBox='0 0 1200 400'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%234a154b'/%3E%3Cstop offset='100%25' stop-color='%231e1035'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100%25' height='100%25' fill='url(%23g)'/%3E%3C/svg%3E";
+              }}
             />
             <div className="tb-detail-banner-overlay" />
             <div className="tb-container tb-detail-banner-content">
@@ -186,7 +190,15 @@ export default function EventDetailPage() {
                   }
                   onClick={() => setActiveImg(idx)}
                 >
-                  <img src={url} alt={`${event.title} ${idx + 1}`} />
+                  <img
+                    src={url}
+                    alt=""
+                    onError={(e) => {
+                      if (e.currentTarget.parentElement) {
+                        e.currentTarget.parentElement.style.display = 'none';
+                      }
+                    }}
+                  />
                 </button>
               ))}
             </div>

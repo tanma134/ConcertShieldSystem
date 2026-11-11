@@ -44,8 +44,32 @@ function parseShape(shapeJson) {
   }
 }
 
-function getZonePosition(shapeJson) {
-  const shape = parseShape(shapeJson);
+function autoRectangle(index, total) {
+  const cols = Math.min(4, Math.max(total, 1));
+  const col = index % cols;
+  const row = Math.floor(index / cols);
+  const w = 90 / cols - 3;
+  return { type: "rectangle", x: 5 + col * (90 / cols), y: 28 + row * 22, w, h: 16, rot: 0 };
+}
+
+function getZonePosition(shapeJson, index = 0, total = 1) {
+  let shape = parseShape(shapeJson);
+
+  // If no valid shape found in shapeJson, fallback to autoRectangle so zones don't pile up at (0, 0)
+  const hasPolygon =
+    shape?.type === "polygon" &&
+    Array.isArray(shape.points) &&
+    shape.points.length > 2;
+  const hasRect =
+    shape &&
+    typeof shape.x === "number" &&
+    typeof shape.y === "number" &&
+    typeof shape.w === "number" &&
+    typeof shape.h === "number";
+
+  if (!hasPolygon && !hasRect) {
+    shape = autoRectangle(index, total);
+  }
 
   if (
     shape.type === "polygon" &&
@@ -82,7 +106,7 @@ function getZonePosition(shapeJson) {
     left: `${Number(shape.x) || 0}%`,
     top: `${Number(shape.y) || 0}%`,
     width: `${Number(shape.w) || 20}%`,
-    height: `${Number(shape.h) || 18}%`,
+    height: `${Number(shape.h) || 16}%`,
     transform: `rotate(${Number(shape.rot) || 0}deg)`,
   };
 }
@@ -619,6 +643,22 @@ export default function SelectTicketPage() {
     <div className="tb-select-ticket-page">
       <div className="tb-container tb-select-layout">
         <main className="tb-col-7">
+          <div className="tb-select-back-bar" style={{ marginBottom: "14px" }}>
+            <Link
+              to={event?.slug ? `/events/${event.slug}` : "/"}
+              className="tb-section-link"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                fontSize: "13.5px",
+                fontWeight: "700",
+                textDecoration: "none"
+              }}
+            >
+              ← Back to Event Details
+            </Link>
+          </div>
           <div className="tb-section-header">
             <h2 className="tb-section-title">
               {isStandingZones
@@ -663,7 +703,7 @@ export default function SelectTicketPage() {
                 <div className="tb-zone-map">
                   <div className="tb-map-stage">STAGE</div>
 
-                  {zones.map((zone) => {
+                  {zones.map((zone, index) => {
                     const ticket = getTicket(zone.ticketTypeId);
                     const color = getTicketColor(zone.ticketTypeId);
                     const soldOut = getZoneAvailable(zone) <= 0;
@@ -679,7 +719,7 @@ export default function SelectTicketPage() {
                           quantity > 0 ? "tb-zone-selected" : ""
                         } ${soldOut ? "tb-zone-sold-out" : ""}`}
                         style={{
-                          ...getZonePosition(zone.shapeJson),
+                          ...getZonePosition(zone.shapeJson, index, zones.length),
                           "--zone-color": soldOut ? "#b6abc9" : color,
                         }}
                         disabled={soldOut}
@@ -711,7 +751,7 @@ export default function SelectTicketPage() {
               <div className="tb-seat-canvas">
                 <div className="tb-seat-stage">STAGE</div>
 
-                {zones.map((zone) => {
+                {zones.map((zone, index) => {
                   const color = getTicketColor(zone.ticketTypeId);
                   const seats = zone.seats ?? [];
                   const columns = Math.max(
@@ -732,7 +772,7 @@ export default function SelectTicketPage() {
                       key={zone.seatZoneId}
                       className="tb-seat-zone"
                       style={{
-                        ...getZonePosition(zone.shapeJson),
+                        ...getZonePosition(zone.shapeJson, index, zones.length),
                         "--zone-color": color,
                         "--seat-columns": columns,
                         "--seat-rows": rows,

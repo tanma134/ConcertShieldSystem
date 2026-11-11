@@ -191,7 +191,7 @@
 .tb-btn-clear {
   background: transparent;
   border: 1px solid #d63a3a;
-  color: #d64545;
+  color: #b91c1c;
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 13px;
@@ -359,7 +359,7 @@
   border: 1px solid #cfc4de;
   border-radius: 12px;
   background: linear-gradient(180deg, #cfc4de, #f1ecfa);
-  color: #ffffff;
+  color: #3c3552;
   text-align: center;
   font-size: 13px;
   font-weight: 800;
@@ -432,17 +432,18 @@
 
 .tb-seat-dot.is-sold,
 .tb-seat-dot:disabled {
-  border-color: #d64545;
+  border-color: #b91c1c;
   cursor: not-allowed;
 }
 
 .tb-availability-error {
   margin-bottom: 14px;
   padding: 12px;
-  border: 1px solid #d63a3a;
+  border: 1px solid #fecaca;
   border-radius: 8px;
-  background: #7a2a2a;
-  color: #3c3552;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-weight: 600;
 }
 
 .tb-seat-summary {
@@ -663,7 +664,7 @@
 
 .tb-seat-dot.is-sold {
   background: #d63a3a;
-  border-color: #d64545;
+  border-color: #b91c1c;
   cursor: not-allowed;
 }
 

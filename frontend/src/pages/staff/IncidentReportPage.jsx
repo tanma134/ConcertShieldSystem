@@ -269,7 +269,7 @@ export default function IncidentReportPage() {
                 <span>Incident Particulars</span>
               </div>
               <span style={{ fontSize: "12px", color: "var(--inc-text-muted)" }}>
-                Reporting Officer: <strong style={{ color: "#fff" }}>{user?.fullName || user?.email || "On-site Staff"}</strong>
+                Reporting Officer: <strong style={{ color: "#1d1730" }}>{user?.fullName || user?.email || "On-site Staff"}</strong>
               </span>
             </div>
 
@@ -400,16 +400,17 @@ export default function IncidentReportPage() {
             {severity === "Critical" && (
               <div
                 style={{
-                  background: "#fbe9ec",
-                  border: "1px solid #e11d48",
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
                   borderRadius: "8px",
                   padding: "12px 16px",
                   marginBottom: "18px",
-                  color: "#f6cdd6",
+                  color: "#991b1b",
                   fontSize: "13px",
+                  fontWeight: 500,
                 }}
               >
-                <strong style={{ color: "#eca6b4" }}>Critical Severity:</strong> Immediate escalation to executive administration is recommended.
+                <strong style={{ color: "#7f1d1d" }}>Critical Severity:</strong> Immediate escalation to executive administration is recommended.
               </div>
             )}
 

@@ -34,21 +34,24 @@
 }
 
 .ow-banner-rejected {
-  background: rgba(248, 113, 113, 0.1);
-  border-color: rgba(248, 113, 113, 0.35);
-  color: #a77373;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  font-weight: 600;
 }
 
 .ow-banner-pending {
-  background: rgba(251, 191, 36, 0.1);
-  border-color: rgba(251, 191, 36, 0.35);
-  color: #d99a16;
+  background: #fefce8;
+  border: 1px solid #fef08a;
+  color: #854d0e;
+  font-weight: 600;
 }
 
 .ow-banner-published {
-  background: rgba(74, 222, 128, 0.1);
-  border-color: rgba(74, 222, 128, 0.35);
-  color: #4fcf82;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #047857;
+  font-weight: 600;
 }
 
 /* ---- Step progress ---- */
@@ -105,7 +108,7 @@
 
 .ow-step.done .ow-step-num {
   background: rgba(74, 222, 128, 0.18);
-  color: #4fcf82;
+  color: #047857;
 }
 
 .ow-step-label {
@@ -124,7 +127,7 @@
   border-radius: 999px;
   background: rgba(74, 222, 128, 0.12);
   border: 1px solid rgba(74, 222, 128, 0.3);
-  color: #4fcf82;
+  color: #047857;
   font-size: 12.5px;
   margin-bottom: 16px;
 }
@@ -147,11 +150,12 @@
 .ow-error {
   padding: 10px 14px;
   border-radius: 8px;
-  background: rgba(248, 113, 113, 0.1);
-  border: 1px solid rgba(248, 113, 113, 0.3);
-  color: #a77373;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
   font-size: 13px;
   margin-bottom: 16px;
+  font-weight: 600;
 }
 
 .ow-hint {
@@ -223,8 +227,9 @@
 }
 
 .ow-field-error {
-  color: #a77373;
+  color: #b91c1c;
   font-size: 12px;
+  font-weight: 600;
 }
 
 .ow-inline-2 {
@@ -329,12 +334,61 @@
   cursor: pointer;
 }
 
-.ow-link-danger {
-  background: none;
-  border: none;
-  color: #d64545;
+.ow-action-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.ow-link,
+.ow-table-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 12px;
   font-size: 12.5px;
-  padding: 0;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid #d8b4fe;
+  background: #fdfcff;
+  color: #7e22ce;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+.ow-link:hover,
+.ow-table-btn:hover {
+  background: #7e22ce;
+  color: #ffffff;
+  border-color: #7e22ce;
+  box-shadow: 0 2px 8px rgba(126, 34, 206, 0.2);
+}
+
+.ow-link-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid #fecdd3;
+  background: #fff5f5;
+  color: #e11d48;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+.ow-link-danger:hover {
+  background: #e11d48;
+  color: #ffffff;
+  border-color: #e11d48;
+  box-shadow: 0 2px 8px rgba(225, 29, 72, 0.25);
 }
 
 .ow-gallery-section h3 {
@@ -673,8 +727,9 @@
 }
 
 .ow-zone-standing {
-  background: rgba(251, 191, 36, 0.15);
-  color: #d99a16;
+  background: #fefce8;
+  color: #854d0e;
+  border: 1px solid #fef08a;
 }
 
 /* ---- Review step ---- */
@@ -687,14 +742,14 @@
 }
 
 .ow-validation-ok {
-  background: rgba(74, 222, 128, 0.1);
-  border-color: rgba(74, 222, 128, 0.3);
-  color: #4fcf82;
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #047857;
 }
 
 .ow-validation-bad {
-  background: rgba(248, 113, 113, 0.08);
-  border-color: rgba(248, 113, 113, 0.3);
+  background: #fef2f2;
+  border-color: #fecaca;
 }
 
 .ow-validation-title {
@@ -707,7 +762,8 @@
   margin: 0 0 4px;
   padding-left: 20px;
   font-size: 12.5px;
-  color: #a77373;
+  color: #b91c1c;
+  font-weight: 500;
 }
 
 .ow-validation-warnings {
@@ -717,7 +773,8 @@
 }
 
 .ow-validation-warnings ul {
-  color: #d99a16;
+  color: #854d0e;
+  font-weight: 500;
 }
 
 .ow-review-summary {
@@ -773,12 +830,12 @@
 }
 
 .ow-capacity-ok {
-  color: #2cb565;
+  color: #047857;
   font-weight: 700;
 }
 
 .ow-capacity-warning {
-  color: #d99a16;
+  color: #854d0e;
   font-weight: 700;
 }
 
@@ -883,6 +940,72 @@
 }
 
 .ow-zonemap-info.is-warning {
-  border-color: #d64545;
-  color: #a77373;
+  border-color: #fca5a5;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+/* Global button reset inside wizard / admin / organizer */
+a.tb-btn, a.ow-btn, a.co-button, a[class*="-btn"] {
+  text-decoration: none !important;
+}
+
+/* Modern Select Styling across Wizard */
+.ow-field select,
+select.modern-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: #ffffff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237e22ce' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 14px 14px;
+  border: 1.5px solid #d8b4fe;
+  border-radius: 10px;
+  padding: 8px 38px 8px 14px;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1e1b2e;
+  box-shadow: 0 2px 6px -2px rgba(126, 34, 206, 0.12);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  outline: none;
+}
+
+.ow-field select:hover,
+select.modern-select:hover {
+  border-color: #9333ea;
+  box-shadow: 0 4px 12px -2px rgba(126, 34, 206, 0.22);
+}
+
+.ow-field select:focus,
+select.modern-select:focus {
+  border-color: #7e22ce;
+  box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.18);
+}
+
+.ow-field select option,
+select.modern-select option {
+  background-color: #ffffff;
+  color: #1e1b2e;
+  padding: 10px;
+  font-weight: 500;
+}
+
+/* Safeguard for white-background buttons: NEVER have white text */
+.tb-btn-outline,
+button.tb-btn-outline,
+a.tb-btn-outline,
+.ow-step-label {
+  color: #1e1b2e !important;
+}
+.tb-btn-outline:hover,
+button.tb-btn-outline:hover,
+a.tb-btn-outline:hover {
+  color: #7e22ce !important;
+  background: #faf5ff !important;
+  border-color: #a855f7 !important;
 }

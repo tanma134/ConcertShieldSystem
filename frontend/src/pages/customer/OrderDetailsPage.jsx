@@ -399,7 +399,7 @@ export default function OrderDetailsPage() {
                     type="button"
                     className="order-details-support-btn"
                     onClick={handleOpenSupport}
-                    style={{ background: "#1e3a8a", borderColor: "#3b82f6" }}
+                    style={{ background: "#1d4ed8", borderColor: "#1e40af", color: "#ffffff" }}
                   >
                     Support Request Active (#{supportCase.caseNumber})
                   </button>
@@ -443,16 +443,16 @@ export default function OrderDetailsPage() {
                         style={{
                           padding: "14px 16px",
                           borderRadius: "8px",
-                          background: "rgba(59, 130, 246, 0.15)",
-                          border: "1px solid rgba(59, 130, 246, 0.4)",
-                          color: "#bfdbfe",
+                          background: "#eff6ff",
+                          border: "1px solid #bfdbfe",
+                          color: "#1e40af",
                           fontSize: "13px",
                           lineHeight: 1.5,
                           marginBottom: "16px",
                         }}
                       >
-                        <strong>Case In Progress:</strong> You already have an active support request (
-                        <strong>#{supportCase.caseNumber}</strong>) open for this order. Our support team is actively reviewing your request. Duplicate submissions for the same order are blocked to prevent delays.
+                        <strong style={{ color: "#1e3a8a" }}>Case In Progress:</strong> You already have an active support request (
+                        <strong style={{ color: "#1e3a8a" }}>#{supportCase.caseNumber}</strong>) open for this order. Our support team is actively reviewing your request. Duplicate submissions for the same order are blocked to prevent delays.
                       </div>
                     ) : (
                       <p style={{ margin: 0, fontSize: "13px", color: "var(--sc-text-secondary)" }}>

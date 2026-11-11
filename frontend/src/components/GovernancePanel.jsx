@@ -62,13 +62,31 @@ export default function GovernancePanel({event,admin=false,onUpdated,onComplianc
       {current.length===0?<p>No documents submitted.</p>:<ul>{current.map(doc=><li key={doc.id}>{doc.documentType}: {doc.fileName} · {date(doc.submittedAt)} <button disabled={busy} onClick={()=>download(doc)}>Download</button></li>)}</ul>}
       {editable&&<form onSubmit={e=>{e.preventDefault();run(async()=>{const problem=fileError(file,record.maxBytes);if(problem)throw new Error(problem);await api.upload(id,type,file);setFile(null);setFileKey(k=>k+1);setNotice('Document saved. Submit the concert when the required set is complete.');});}}>
         <label>Document type<select value={type} onChange={e=>setType(e.target.value)}>{record.requiredTypes.map(t=><option key={t}>{t}</option>)}</select></label>
-        <label>File<input key={fileKey} type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={e=>setFile(e.target.files[0]||null)}/></label>
+        <div className="gov-file-field">
+          <span className="gov-file-label">File</span>
+          <div className="gov-file-picker">
+            <label className="gov-file-btn" htmlFor="gov-file-input">
+              Choose File
+            </label>
+            <span className="gov-file-name">
+              {file ? file.name : "No file chosen"}
+            </span>
+            <input
+              id="gov-file-input"
+              key={fileKey}
+              type="file"
+              accept=".pdf,.png,.jpg,.jpeg"
+              style={{ display: "none" }}
+              onChange={e => setFile(e.target.files[0] || null)}
+            />
+          </div>
+        </div>
         <button className="tb-btn tb-btn-primary" disabled={busy||!file}>{busy?'Uploading document…':'Upload document'}</button>
       </form>}
       {!editable&&!admin&&<p>Documents are read-only while this concert is {event.status}.</p>}
-      {admin&&event.status==='Pending'&&record.status==='PendingReview'&&<form onSubmit={e=>{e.preventDefault();run(async()=>{const problem=validateReview(decision,notes);if(problem)throw new Error(problem);await api.reviewCompliance(id,{version:record.version,decision,notes:notes.trim()});setNotes('');setNotice('Compliance decision saved. Concert approval is a separate action.');onUpdated?.();});}}>
+      {admin&&event.status==='Pending'&&record.status==='PendingReview'&&<form className="gov-admin-review-form" onSubmit={e=>{e.preventDefault();run(async()=>{const problem=validateReview(decision,notes);if(problem)throw new Error(problem);await api.reviewCompliance(id,{version:record.version,decision,notes:notes.trim()});setNotes('');setNotice('Compliance decision saved. Concert approval is a separate action.');onUpdated?.();});}}>
         <label>Compliance decision<select value={decision} onChange={e=>setDecision(e.target.value)}>{['Approved','Rejected','RequestMoreInfo'].map(d=><option key={d}>{d}</option>)}</select></label>
-        <label>Review notes<textarea required maxLength={2000} value={notes} onChange={e=>setNotes(e.target.value)}/></label>
+        <label style={{ flex: 2 }}>Review notes<input type="text" placeholder="Enter review notes or compliance feedback..." maxLength={2000} value={notes} onChange={e=>setNotes(e.target.value)}/></label>
         <button className="tb-btn tb-btn-primary" disabled={busy}>Submit review</button>
       </form>}
       <details><summary>Document and review history</summary>

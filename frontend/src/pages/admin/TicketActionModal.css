@@ -114,14 +114,29 @@
 .ticket-action-cancel {
   border: 1px solid #aaa1b6;
   background: #faf5ff;
+  color: #2a2438;
+}
+
+.ticket-action-cancel:hover:not(:disabled) {
+  border-color: #7e22ce;
+  background: #f3e8ff;
+}
+
+.ticket-action-cancel:focus-visible {
+  outline: 3px solid #a855f7;
+  outline-offset: 3px;
 }
 
 .ticket-action-confirm-revoke {
   background: #c43c54;
+
+  color: #ffffff !important;
 }
 
 .ticket-action-confirm-reissue {
   background: #843de8;
+
+  color: #ffffff !important;
 }
 
 @media (max-width: 520px) {

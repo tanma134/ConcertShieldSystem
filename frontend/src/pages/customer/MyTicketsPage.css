@@ -20,7 +20,7 @@
 
 .mt-eyebrow {
   margin: 0 0 8px;
-  color: #c26ee0;
+  color: #7e22ce;
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -165,7 +165,7 @@
   overflow: hidden;
   place-items: center;
   border-radius: 9px;
-  color: #c26ee0;
+  color: #7e22ce;
   background: linear-gradient(145deg, #d6d1dc, #f5effb);
   text-align: center;
   font-size: 11px;
@@ -235,23 +235,21 @@
 }
 
 .mt-status.success {
-  color: #4fcf82;
-  background: #14532d55;
+  color: #065f46;
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
+  font-weight: 700;
 }
 
-.mt-status.processing {
-  color: #e8b82e;
-  background: #713f1255;
-}
+.mt-status.processing { color: #ffffff; background: #92400e; }
 
-.mt-status.cancelled {
-  color: #e8a0a0;
-  background: #7a2a2a;
-}
+.mt-status.cancelled { color: #ffffff; background: #991b1b; }
 
 .mt-status.other {
-  color: #5a5470;
-  background: #f1e9f7;
+  color: #374151;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  font-weight: 700;
 }
 
 .mt-details-link {
@@ -262,7 +260,7 @@
   padding: 8px 11px;
   border: 1px solid #ddd4e9;
   border-radius: 8px;
-  color: #8a5b9a;
+  color: #6d28d9;
   background: #f5f0fa;
   font-size: 12px;
   text-decoration: none;
@@ -298,10 +296,7 @@
   margin-bottom: 0;
 }
 
-.mt-state.is-error {
-  border-color: #7a2a2a;
-  color: #a77373;
-}
+.mt-state.is-error { border-color: #fecaca; color: #b91c1c; }
 
 @media (max-width: 900px) {
   .mt-ticket {

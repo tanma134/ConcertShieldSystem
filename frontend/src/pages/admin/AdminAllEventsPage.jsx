@@ -10,7 +10,6 @@ const PAGE_SIZE = 12;
 
 const STATUS_OPTIONS = [
   ["", "All statuses"],
-  ["Draft", "Draft"],
   ["Pending", "Pending"],
   ["Published", "Published"],
   ["Rejected", "Rejected"],
@@ -41,8 +40,9 @@ export default function AdminAllEventsPage() {
       .getAllAdmin({ ...filter, page: p, pageSize: PAGE_SIZE })
       .then((res) => {
         const data = res.data?.data;
-        setItems(data?.items || []);
-        setTotalCount(data?.totalCount ?? data?.items?.length ?? 0);
+        const list = (data?.items || []).filter((ev) => ev.status !== "Draft");
+        setItems(list);
+        setTotalCount(list.length);
         setPage(p);
       })
       .catch((err) =>
@@ -86,12 +86,15 @@ export default function AdminAllEventsPage() {
           <div>
             <h1>All Events</h1>
             <p className="ow-sub">
-              Every concert regardless of status — Draft, Pending, Published,
-              Rejected, or Cancelled. For approvals specifically, use the
-              Pending queue.
+              Every submitted or moderated concert — Pending, Published,
+              Rejected, or Cancelled. Organizers' private drafts are not listed.
             </p>
           </div>
-          <Link to="/admin/events" className="tb-btn tb-btn-outline">
+          <Link
+            to="/admin/events"
+            className="tb-btn tb-btn-outline"
+            style={{ textDecoration: "none", whiteSpace: "nowrap" }}
+          >
             Pending queue →
           </Link>
         </div>
@@ -193,12 +196,12 @@ export default function AdminAllEventsPage() {
                     <td>
                       {ev.minPrice != null ? formatPrice(ev.minPrice) : "—"}
                     </td>
-                    <td>
+                    <td style={{ whiteSpace: "nowrap", textAlign: "right" }}>
                       <Link
                         to={`/admin/events/${ev.eventId}`}
-                        className="tb-btn tb-btn-outline ow-btn-sm"
+                        className="admin-view-event-btn"
                       >
-                        View →
+                        View Details →
                       </Link>
                     </td>
                   </tr>

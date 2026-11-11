@@ -99,7 +99,11 @@ function ReturnQueue({ isAdmin }) {
                 : " Only requests of concerts where the organizer assigned you to review returns are listed. Approving releases the seat back to sale and pays the refund; rejecting needs a reason."}
             </p>
           </div>
-          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+          <select
+            className="modern-select"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+          >
             <option>Pending</option>
             <option>Approved</option>
             <option>Refunded</option>

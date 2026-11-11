@@ -13,7 +13,7 @@
 
 .failed-queue-eyebrow {
   margin: 0 0 6px;
-  color: #b98cff;
+  color: #7e22ce;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -27,7 +27,7 @@
 
 .failed-queue-description {
   margin: 8px 0 0;
-  color: #89848e;
+  color: #524b68;
   font-size: 14px;
 }
 
@@ -115,7 +115,7 @@
   border: 1px solid #955660;
   border-radius: 8px;
   padding: 12px 15px;
-  color: #8f5a64;
+  color: #b91c1c;
   background: #fbe9ec;
 }
 
@@ -161,7 +161,7 @@
 }
 
 .failed-queue-table th {
-  color: #8a8391;
+  color: #524b68;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -191,7 +191,7 @@
 
 .failed-queue-state {
   padding: 40px 20px;
-  color: #87838f;
+  color: #524b68;
   text-align: center;
 }
 

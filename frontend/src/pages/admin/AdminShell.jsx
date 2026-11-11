@@ -229,7 +229,7 @@ function findGroup(pathname) {
   return best;
 }
 
-export default function AdminShell({ children, title = "Admin Panel" }) {
+export default function AdminShell({ children, title = "Admin Panel", activeSubnavPath }) {
   const { pathname } = useLocation();
   // Badge đỏ để admin biết còn việc chờ duyệt.
   const pending = useAdminPending();
@@ -261,7 +261,7 @@ export default function AdminShell({ children, title = "Admin Panel" }) {
       title={title}
       links={links}
       subnav={activeGroup ? activeGroup.items : null}
-      subnavActivePath={found?.path}
+      subnavActivePath={activeSubnavPath || found?.path}
       subnavLabel={activeGroup?.label}
       subnavIcon={activeGroup ? ICONS[activeGroup.key] : null}
       roleLabel="Admin"

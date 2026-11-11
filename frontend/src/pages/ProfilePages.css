@@ -127,7 +127,7 @@
 .profile-button.primary { background: var(--pink-strong); color: #3c3552; }
 .profile-button.secondary { border-color: var(--border-2); background: var(--card-2); color: var(--text); }
 .profile-button.secondary:hover:not(:disabled) { border-color: var(--pink); }
-.profile-button.danger { background: #b03c36; color: #3c3552; }
+.profile-button.danger { background: #b03c36; color: #ffffff; }
 .profile-button.small { min-height: 32px; padding: 7px 10px; font-size: 11px; }
 .profile-button:disabled { cursor: not-allowed; opacity: 0.55; }
 

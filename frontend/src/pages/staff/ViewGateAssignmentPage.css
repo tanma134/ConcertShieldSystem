@@ -85,7 +85,7 @@
 
 .event-name-pink {
   margin: 0 0 0.35rem 0;
-  color: #d63e8c;
+  color: #9d174d;
   font-size: 2rem;
   font-weight: 800;
   letter-spacing: -0.5px;
@@ -127,7 +127,7 @@
 }
 
 .card-label-gray {
-  color: #848488;
+  color: #524b68;
   font-size: 0.8rem;
   font-weight: 600;
   text-transform: capitalize;
@@ -142,14 +142,14 @@
 }
 
 .card-value-gold {
-  color: #d98f14;
+  color: #92400e;
   font-size: 1.25rem;
   font-weight: 700;
   margin-bottom: 0.45rem;
 }
 
 .card-value-pink {
-  color: #d63e8c;
+  color: #9d174d;
   font-size: 1.25rem;
   font-weight: 700;
   margin-bottom: 0.45rem;
@@ -163,7 +163,7 @@
 
 .card-meta-line.desc-text {
   font-size: 0.88rem;
-  color: #85858b;
+  color: #524b68;
 }
 
 /* Bottom Button (Figure 113) */
@@ -224,7 +224,7 @@
 .gate-error-banner {
   background: rgba(239, 68, 68, 0.12);
   border: 1px solid #d63a3a;
-  color: #a77373;
+  color: #b91c1c;
   padding: 1.25rem;
   border-radius: 10px;
   display: flex;

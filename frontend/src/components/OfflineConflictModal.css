@@ -56,7 +56,7 @@
   margin: 0;
   font-size: 19px;
   font-weight: 800;
-  color: #d98f14;
+  color: #92400e;
 }
 
 .header-title-area p {
@@ -83,8 +83,8 @@
 
 .pending-badge.has-pending {
   background: rgba(245, 158, 11, 0.2);
-  color: #d98f14;
-  border-color: #d98f14;
+  color: #92400e;
+  border-color: #92400e;
   animation: pulseWarning 2s infinite;
 }
 
@@ -128,7 +128,7 @@
 .conflict-toast-banner.error {
   background: rgba(239, 68, 68, 0.2);
   border-bottom: 1px solid #d63a3a;
-  color: #d64545;
+  color: #b91c1c;
 }
 
 .conflict-toolbar {
@@ -162,9 +162,9 @@
 }
 
 .filter-tab.active {
-  background: #3b82f6;
-  border-color: #3b82f6;
-  color: #3c3552;
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff !important;
   font-weight: 700;
 }
 
@@ -282,8 +282,8 @@
 
 .status-pill.pending {
   background: rgba(245, 158, 11, 0.15);
-  color: #d99a16;
-  border-color: #d98f14;
+  color: #854d0e;
+  border-color: #92400e;
 }
 
 .status-pill.resolved_earlier_valid {
@@ -294,7 +294,7 @@
 
 .status-pill.revoked_both_helpdesk {
   background: rgba(239, 68, 68, 0.15);
-  color: #d64545;
+  color: #b91c1c;
   border-color: #d63a3a;
 }
 
@@ -352,7 +352,7 @@
 }
 
 .earlier-badge { color: #21a87b; }
-.later-badge { color: #d64545; }
+.later-badge { color: #b91c1c; }
 
 .tag-recommended {
   font-size: 11px;
@@ -365,7 +365,7 @@
 .tag-warning {
   font-size: 11px;
   background: rgba(239, 68, 68, 0.2);
-  color: #a77373;
+  color: #b91c1c;
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -395,7 +395,7 @@
 }
 
 .detail-row .highlight.warning {
-  color: #d64545;
+  color: #b91c1c;
   font-weight: 700;
 }
 
@@ -408,7 +408,7 @@
 
 .time-delta-pill {
   background: #faf5ff;
-  color: #866a1a;
+  color: #854d0e;
   font-size: 11.5px;
   font-weight: 700;
   padding: 6px 10px;
@@ -477,9 +477,9 @@
 }
 
 .btn-accept-earlier {
-  background: #17856a;
-  border-color: #059669;
-  color: #1e1b2e;
+  background: #059669;
+  border-color: #047857;
+  color: #ffffff !important;
 }
 
 .btn-accept-earlier:hover:not(:disabled) {
@@ -487,9 +487,9 @@
 }
 
 .btn-revoke-both {
-  background: #7a2a2a;
-  border-color: #a82424;
-  color: #1e1b2e;
+  background: #dc2626;
+  border-color: #b91c1c;
+  color: #ffffff !important;
 }
 
 .btn-revoke-both:hover:not(:disabled) {

@@ -366,10 +366,10 @@ export default function IncidentListPage() {
                       </div>
                     </td>
                     <td>
-                      <div style={{ color: "#dcd2ea", fontWeight: 600 }}>
+                      <div style={{ color: "#1d1730", fontWeight: 700 }}>
                         {inc.eventName || `Event #${inc.eventId}`}
                       </div>
-                      <div style={{ fontSize: "12px", color: "#8b83a0", marginTop: "2px" }}>
+                      <div style={{ fontSize: "12px", color: "#524b68", marginTop: "2px", fontWeight: 500 }}>
                         {inc.location}
                       </div>
                     </td>
@@ -445,17 +445,18 @@ export default function IncidentListPage() {
                 <div className="inc-modal-body">
                   <div
                     style={{
-                      background: "#fbe9ec",
-                      border: "1px solid #7a2a2a",
+                      background: "#fef2f2",
+                      border: "1px solid #fecaca",
                       borderRadius: "6px",
                       padding: "12px 14px",
                       marginBottom: "16px",
-                      color: "#f6cdd6",
+                      color: "#991b1b",
                       fontSize: "13px",
                       lineHeight: "1.5",
+                      fontWeight: 500,
                     }}
                   >
-                    <strong style={{ color: "#eca6b4" }}>Notice:</strong> Incident <strong>#{escalateTarget.id} - "{escalateTarget.title}"</strong> will be forwarded to administrator command for review.
+                    <strong style={{ color: "#7f1d1d" }}>Notice:</strong> Incident <strong style={{ color: "#7f1d1d" }}>#{escalateTarget.id} - "{escalateTarget.title}"</strong> will be forwarded to administrator command for review.
                   </div>
 
                   <div className="inc-form-group">

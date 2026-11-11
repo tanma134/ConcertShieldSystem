@@ -27,13 +27,13 @@
 
 .my-orders-heading p:last-child {
   margin: 0;
-  color: #87848c;
+  color: #524b68;
 }
 
 .my-orders-eyebrow,
 .my-order-eyebrow {
   margin: 0;
-  color: #e576f3;
+  color: #9333ea;
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.13em;
@@ -65,7 +65,7 @@
   padding: 14px 4px;
   border: 0;
   border-bottom: 2px solid transparent;
-  color: #87858c;
+  color: #524b68;
   background: transparent;
   font: inherit;
   cursor: pointer;
@@ -127,7 +127,7 @@
 .my-order-poster-empty {
   display: grid;
   place-items: center;
-  color: #87858c;
+  color: #524b68;
   font-size: 12px;
 }
 
@@ -157,13 +157,13 @@
 }
 
 .my-order-status.pending {
-  color: #876d32;
+  color: #854d0e;
   background: #faf5ff;
 }
 
 .my-order-status.cancelled,
 .my-order-status.other {
-  color: #9b5f5f;
+  color: #b91c1c;
   background: #faf5ff;
 }
 
@@ -234,7 +234,7 @@
 }
 
 .my-orders-error {
-  color: #e08c9c;
+  color: #be123c;
 }
 
 .my-orders-browse-link {
@@ -242,7 +242,7 @@
   margin-top: 20px;
   padding: 11px 17px;
   border-radius: 9px;
-  color: #3c3552;
+  color: #ffffff;
   background: #b51cc5;
   text-decoration: none;
 }
@@ -287,15 +287,25 @@
 }
 
 .my-order-details-link {
-  padding: 10px 14px;
-  border: 1px solid #d9d4de;
-  border-radius: 8px;
-  color: #7d6181;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 18px;
+  border: 1.5px solid #d8b4fe;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #7e22ce;
   font-size: 13px;
-  text-decoration: none;
+  font-weight: 700;
+  text-decoration: none !important;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(168, 85, 247, 0.08);
 }
 
 .my-order-details-link:hover {
-  border-color: #c62bd8;
-  color: #3c3552;
+  background: #7e22ce;
+  color: #ffffff !important;
+  border-color: #7e22ce;
+  box-shadow: 0 4px 12px rgba(126, 34, 206, 0.25);
+  transform: translateY(-1px);
 }

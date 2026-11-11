@@ -414,7 +414,7 @@ export default function ZoneMapCanvas({ zones, ticketTypes, readOnly, onZoneMove
         <div className="ow-zonemap-shape-tools">
           <span className="ow-hint">Zone shape:</span>
           {selected.zone.zoneType === "Seated" ? (
-            <span className="ow-hint" style={{ color: "#2fa4e0", fontWeight: 500 }}>
+            <span className="ow-hint" style={{ color: "#0369a1", fontWeight: 500 }}>
               ▭ Seated zone: Fixed rectangular block (drag to position, use corners to resize or rotate).
             </span>
           ) : (

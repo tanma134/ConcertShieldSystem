@@ -18,10 +18,13 @@ export default function StepTicketsSeating({
   onBack,
   onNext,
   forceEditable = false,
+  readOnly: explicitReadOnly,
   only = null,
   standalone = false,
 }) {
-  const readOnly = !forceEditable && event && !["Draft", "Rejected"].includes(event.status);
+  const readOnly = explicitReadOnly !== undefined
+    ? explicitReadOnly
+    : (!forceEditable && event && !["Draft", "Rejected"].includes(event.status));
 
   const [ticketTypes, setTicketTypes] = useState([]);
   const [chart, setChart] = useState(null); // null = general admission
@@ -78,6 +81,7 @@ export default function StepTicketsSeating({
         <>
           {(!only || only === "tickets") && <TicketTypesSection
             eventId={eventId}
+            event={event}
             ticketTypes={ticketTypes}
             chart={chart}
             hasLayout={hasLayout}
@@ -214,8 +218,20 @@ const emptyTicket = {
   maxPerOrder: 10,
 };
 
-function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, onChanged }) {
-  const [form, setForm] = useState(emptyTicket);
+function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, readOnly, onChanged }) {
+  const accountMax = event?.maxTicketsPerAccount ? Number(event.maxTicketsPerAccount) : null;
+
+  const getInitialForm = () => ({
+    typeName: "",
+    description: "",
+    price: "",
+    originalPrice: "",
+    quantity: "",
+    minPerOrder: 1,
+    maxPerOrder: accountMax || 10,
+  });
+
+  const [form, setForm] = useState(getInitialForm);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null); // null = adding, else TicketTypeId being edited
   const [saving, setSaving] = useState(false);
@@ -244,8 +260,8 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
       price: t.price ?? "",
       originalPrice: t.originalPrice ?? "",
       quantity: t.quantity ?? "",
-      minPerOrder: t.minPerOrder ?? 1,
-      maxPerOrder: t.maxPerOrder ?? 10,
+      minPerOrder: 1,
+      maxPerOrder: t.maxPerOrder ?? (accountMax || 10),
     });
     setError("");
     setTouched({});
@@ -254,7 +270,7 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
 
   const cancelEdit = () => {
     setEditingId(null);
-    setForm(emptyTicket);
+    setForm(getInitialForm());
     setShowForm(false);
     setError("");
     setTouched({});
@@ -304,17 +320,14 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
     if (form.quantity === "") errors.quantity = "Please enter a ticket quantity.";
     else if (Number(form.quantity) <= 0) errors.quantity = "Quantity must be greater than 0.";
 
-    if (form.minPerOrder === "" || Number(form.minPerOrder) < 1) {
-      errors.minPerOrder = "Min per order must be at least 1.";
-    }
     if (form.maxPerOrder === "" || Number(form.maxPerOrder) < 1) {
       errors.maxPerOrder = "Max per order must be at least 1.";
-    } else if (Number(form.maxPerOrder) < Number(form.minPerOrder)) {
-      errors.maxPerOrder = "Max per order must be at least Min per order.";
+    } else if (accountMax != null && Number(form.maxPerOrder) > accountMax) {
+      errors.maxPerOrder = `Max per order cannot exceed event account limit (${accountMax} tickets).`;
     }
 
     return errors;
-  }, [form, duplicateName]);
+  }, [form, duplicateName, accountMax]);
 
   const hasBlockingErrors = Object.keys(fieldErrors).length > 0;
 
@@ -327,7 +340,6 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
       price: true,
       originalPrice: true,
       quantity: true,
-      minPerOrder: true,
       maxPerOrder: true,
     });
     if (hasBlockingErrors) {
@@ -343,7 +355,7 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
         price: Number(form.price) || 0,
         originalPrice: form.originalPrice === "" ? null : Number(form.originalPrice),
         quantity: Number(form.quantity),
-        minPerOrder: Number(form.minPerOrder) || 1,
+        minPerOrder: 1,
         maxPerOrder: Number(form.maxPerOrder) || 10,
       };
 
@@ -414,20 +426,12 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
               <th>Name</th>
               <th>Price</th>
               <th>Quantity</th>
-              {hasLayout && <th>Assigned to zones</th>}
-              {hasLayout && <th>Remaining</th>}
-              <th>Sold</th>
-              <th>Per-order limit</th>
+              <th>Max / order</th>
               {!readOnly && <th></th>}
             </tr>
           </thead>
           <tbody>
-            {ticketTypes.map((t) => {
-              const assigned = (chart?.zones || [])
-                .filter((z) => z.ticketTypeId === t.ticketTypeId)
-                .reduce((sum, z) => sum + (z.capacity || z.totalSeats || 0), 0);
-              const remaining = t.quantity - assigned;
-              return (
+            {ticketTypes.map((t) => (
               <tr key={t.ticketTypeId}>
                 <td>
                   <div className="ow-td-title">{t.typeName}</div>
@@ -442,39 +446,33 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
                   )}
                 </td>
                 <td>{t.quantity}</td>
-                {hasLayout && <td>{assigned}</td>}
-                {hasLayout && (
-                  <td className={remaining === 0 ? "ow-capacity-ok" : "ow-capacity-warning"}>
-                    {remaining === 0 ? "✓ 0" : remaining}
-                  </td>
-                )}
-                <td>{t.soldQuantity}</td>
                 <td>
-                  {t.minPerOrder}–{t.maxPerOrder}
+                  {t.maxPerOrder ?? "—"}
                 </td>
                 {!readOnly && (
                   <td>
-                    <button
-                      type="button"
-                      className="ow-link"
-                      onClick={() => startEdit(t)}
-                    >
-                      Edit
-                    </button>
-                    {t.soldQuantity === 0 && (
+                    <div className="ow-action-cell">
                       <button
                         type="button"
-                        className="ow-link-danger"
-                        onClick={() => handleDelete(t.ticketTypeId)}
+                        className="ow-link"
+                        onClick={() => startEdit(t)}
                       >
-                        Delete
+                        Edit
                       </button>
-                    )}
+                      {t.soldQuantity === 0 && (
+                        <button
+                          type="button"
+                          className="ow-link-danger"
+                          onClick={() => handleDelete(t.ticketTypeId)}
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
                   </td>
                 )}
               </tr>
-              );
-            })}
+            ))}
           </tbody>
         </table>
       )}
@@ -544,22 +542,7 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
               )}
             </label>
             <label className="ow-field">
-              <span>Min per order</span>
-              <input
-                type="number"
-                min={1}
-                name="minPerOrder"
-                value={form.minPerOrder}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                aria-invalid={!!(touched.minPerOrder && fieldErrors.minPerOrder)}
-              />
-              {touched.minPerOrder && fieldErrors.minPerOrder && (
-                <span className="ow-field-error">{fieldErrors.minPerOrder}</span>
-              )}
-            </label>
-            <label className="ow-field">
-              <span>Max per order</span>
+              <span>Max per order *</span>
               <input
                 type="number"
                 min={1}
@@ -567,10 +550,16 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
                 value={form.maxPerOrder}
                 onChange={handleChange}
                 onBlur={handleBlur}
+                placeholder="e.g. 4"
                 aria-invalid={!!(touched.maxPerOrder && fieldErrors.maxPerOrder)}
               />
               {touched.maxPerOrder && fieldErrors.maxPerOrder && (
                 <span className="ow-field-error">{fieldErrors.maxPerOrder}</span>
+              )}
+              {accountMax != null && (
+                <span className="ow-hint" style={{ color: "#7e22ce", fontWeight: 600 }}>
+                  Event account ceiling: max {accountMax} tickets / account.
+                </span>
               )}
             </label>
             <label className="ow-field ow-span-2">
@@ -943,16 +932,18 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
                       </td>
                       {!readOnly && (
                         <td>
-                          <button type="button" className="ow-link" onClick={() => startEditZone(z)}>
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            className="ow-link-danger"
-                            onClick={() => handleDeleteZone(z.seatZoneId)}
-                          >
-                            Delete
-                          </button>
+                          <div className="ow-action-cell">
+                            <button type="button" className="ow-link" onClick={() => startEditZone(z)}>
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="ow-link-danger"
+                              onClick={() => handleDeleteZone(z.seatZoneId)}
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </td>
                       )}
                     </tr>
@@ -1619,14 +1610,16 @@ function RefundPolicySection({ eventId, refundPolicies, readOnly, onChanged }) {
                 <td>{p.deadlineBeforeEventHours} hours before</td>
                 {!readOnly && (
                   <td>
-                    <button type="button" className="ow-link" onClick={() => startEdit(p)}>Edit</button>
-                    <button
-                      type="button"
-                      className="ow-link-danger"
-                      onClick={() => handleDelete(p.refundPolicyId)}
-                    >
-                      Delete
-                    </button>
+                    <div className="ow-action-cell">
+                      <button type="button" className="ow-link" onClick={() => startEdit(p)}>Edit</button>
+                      <button
+                        type="button"
+                        className="ow-link-danger"
+                        onClick={() => handleDelete(p.refundPolicyId)}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 )}
               </tr>

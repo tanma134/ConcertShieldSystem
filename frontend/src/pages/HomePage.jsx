@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import EventCard from "../components/EventCard";
@@ -119,6 +119,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [city, setCity] = useState("");
+  const [saleStatus, setSaleStatus] = useState("all"); // "all" | "on_sale" | "upcoming_sale"
 
   // "Trending Concerts" - lấy sự kiện nổi bật
   useEffect(() => {
@@ -157,6 +158,27 @@ export default function HomePage() {
     () => (q ? `Search results for "${q}"` : "🎵 Upcoming Concerts"),
     [q]
   );
+
+  // Lọc theo trạng thái mở bán (Đang mở bán / Sắp mở bán)
+  const filteredEvents = useMemo(() => {
+    return events.filter((ev) => {
+      const isEnded = new Date(ev.endsAt || ev.startsAt) < new Date();
+      if (isEnded) return false;
+
+      if (saleStatus === "on_sale") {
+        return ev.availableTickets === undefined || ev.availableTickets > 0;
+      }
+      if (saleStatus === "upcoming_sale") {
+        return ev.availableTickets === 0 || ev.canSell === false;
+      }
+      return true;
+    });
+  }, [events, saleStatus]);
+
+  // Giới hạn 6 sự kiện ở trang chủ theo yêu cầu
+  const displayedEvents = useMemo(() => {
+    return filteredEvents.slice(0, 6);
+  }, [filteredEvents]);
 
   // Sự kiện nổi bật nhất dùng cho thẻ preview trong hero
   const spotlight = useMemo(
@@ -263,45 +285,96 @@ export default function HomePage() {
       )}
 
       <section
-        className="tb-container tb-list-section"
+        className="tb-container tb-list-section tb-upcoming-section"
         ref={upcomingRef}
         id="upcoming"
       >
         <div className="tb-list-header">
-          <h2>{sectionTitle}</h2>
-          <div className="tb-city-filter">
-            <button
-              type="button"
-              className={city === "" ? "active" : ""}
-              onClick={() => setCity("")}
-            >
-              All Cities
-            </button>
-            {CITIES.map((c) => (
+          <div className="tb-list-header-left">
+            <h2>{sectionTitle}</h2>
+            {/* Sale status pills */}
+            <div className="tb-status-filter">
               <button
-                key={c.value}
                 type="button"
-                className={city === c.value ? "active" : ""}
-                onClick={() => setCity(c.value)}
+                className={saleStatus === "all" ? "active" : ""}
+                onClick={() => setSaleStatus("all")}
               >
-                {c.label}
+                All
               </button>
-            ))}
+              <button
+                type="button"
+                className={saleStatus === "on_sale" ? "active" : ""}
+                onClick={() => setSaleStatus("on_sale")}
+              >
+                🔥 On Sale
+              </button>
+              <button
+                type="button"
+                className={saleStatus === "upcoming_sale" ? "active" : ""}
+                onClick={() => setSaleStatus("upcoming_sale")}
+              >
+                ⏰ Coming Soon
+              </button>
+            </div>
+          </div>
+
+          <div className="tb-list-header-right">
+            <div className="tb-city-filter">
+              <button
+                type="button"
+                className={city === "" ? "active" : ""}
+                onClick={() => setCity("")}
+              >
+                All Cities
+              </button>
+              {CITIES.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  className={city === c.value ? "active" : ""}
+                  onClick={() => setCity(c.value)}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+
+            <Link to="/events" className="tb-view-all-link">
+              View all ({filteredEvents.length}) →
+            </Link>
           </div>
         </div>
 
         {loading && <div className="tb-loading">Loading events...</div>}
         {!loading && error && <div className="tb-error">{error}</div>}
-        {!loading && !error && events.length === 0 && (
-          <div className="tb-empty">No matching events yet.</div>
+        {!loading && !error && displayedEvents.length === 0 && (
+          <div className="tb-empty">No matching events found.</div>
         )}
 
-        {!loading && !error && events.length > 0 && (
-          <div className="tb-grid">
-            {events.map((ev) => (
-              <EventCard key={ev.eventId} event={ev} />
-            ))}
-          </div>
+        {!loading && !error && displayedEvents.length > 0 && (
+          <>
+            <div className="tb-grid">
+              {displayedEvents.map((ev) => (
+                <EventCard key={ev.eventId} event={ev} />
+              ))}
+            </div>
+
+            {/* View all events CTA button */}
+            <div className="tb-view-more-container">
+              <Link to="/events" className="tb-view-more-btn">
+                <span>View all {filteredEvents.length} concerts</span>
+                <svg viewBox="0 0 20 20" width="18" height="18" fill="none">
+                  <path
+                    d="M4 10h12M11 5l5 5-5 5"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </Link>
+            </div>
+          </>
         )}
       </section>
 

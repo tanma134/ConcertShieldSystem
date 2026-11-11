@@ -6,6 +6,7 @@ import ForgotPasswordPage from "../pages/ForgotPasswordPage";
 import VerifyResetOtpPage from "../pages/VerifyResetOtpPage";
 import ResetPasswordPage from "../pages/ResetPasswordPage";
 import HomePage from "../pages/HomePage";
+import EventsListPage from "../pages/EventsListPage";
 import EventDetailPage from "../pages/EventDetailPage";
 import MyConcertsPage from "../pages/organizer/MyConcertsPage";
 import OrganizerDashboardPage from "../pages/organizer/OrganizerDashboardPage";
@@ -106,6 +107,7 @@ export default function AppRoutes() {
       {/* Home page and event detail are public, just like the real Ticketbox -
           the matching EventAPI endpoints are all [AllowAnonymous]. */}
       <Route path="/" element={<HomePage />} />
+      <Route path="/events" element={<EventsListPage />} />
       <Route path="/events/:slug" element={<EventDetailPage />} />
       <Route path="/events/:eventId/queue" element={<ProtectedRoute><VirtualQueuePage /></ProtectedRoute>} />
       <Route path="/events/:eventId/tickets" element={<ProtectedRoute><TicketPlaceholderPage /></ProtectedRoute>} />

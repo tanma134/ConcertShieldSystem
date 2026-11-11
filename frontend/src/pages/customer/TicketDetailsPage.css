@@ -1,3 +1,4 @@
+/* TicketDetailsPage style */
 .ticket-detail-page {
   min-height: 68vh;
   padding: 38px 24px 72px;
@@ -22,7 +23,7 @@
 }
 
 .ticket-detail-back:hover {
-  color: #d78ef0;
+  color: #9333ea;
 }
 
 .ticket-event-card,
@@ -61,7 +62,7 @@
 
 .ticket-detail-eyebrow {
   margin: 0 0 8px;
-  color: #c26ee0;
+  color: #7e22ce;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.13em;
@@ -92,7 +93,7 @@
 
 .ticket-fact-icon {
   flex: 0 0 auto;
-  color: #c26ee0;
+  color: #7e22ce;
   font-size: 19px;
 }
 
@@ -103,7 +104,7 @@
 }
 
 .ticket-event-fact > div > span {
-  color: #86868a;
+  color: #524b68;
   font-size: 12px;
 }
 
@@ -147,28 +148,28 @@
 }
 
 .ticket-status.active {
-  color: #4fcf82;
-  background: #14532d55;
+  color: #065f46;
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
+  font-weight: 700;
 }
 
-.ticket-status.processing {
-  color: #e8b82e;
-  background: #713f1255;
-}
+.ticket-status.processing { color: #ffffff; background: #92400e; }
 
-.ticket-status.cancelled {
-  color: #e8a0a0;
-  background: #7a2a2a;
-}
+.ticket-status.cancelled { color: #ffffff; background: #991b1b; }
 
 .ticket-status.checked-in {
-  color: #516d8c;
-  background: #faf5ff;
+  color: #1e40af;
+  background: #dbeafe;
+  border: 1px solid #93c5fd;
+  font-weight: 700;
 }
 
 .ticket-status.other {
-  color: #5a5470;
-  background: #f1e9f7;
+  color: #374151;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  font-weight: 700;
 }
 
 .ticket-detail-grid {
@@ -186,7 +187,7 @@
 }
 
 .ticket-detail-field span {
-  color: #86868a;
+  color: #524b68;
   font-size: 12px;
 }
 
@@ -217,15 +218,18 @@
   padding: 10px 18px;
   border: 0;
   border-radius: 9px;
-  color: #3c3552;
-  background: #a21caf;
+  color: #ffffff;
+  background: linear-gradient(120deg, #9333ea 0%, #c026d3 55%, #ec4899 100%);
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.35);
 }
 
 .ticket-show-qr-button:hover {
-  background: linear-gradient(120deg, #9333ea 0%, #a21caf 55%, #db2777 100%);
+  background: linear-gradient(120deg, #7e22ce 0%, #a21caf 55%, #db2777 100%);
+  color: #ffffff;
 }
 
 .ticket-detail-state {
@@ -250,13 +254,10 @@
 .ticket-detail-state a {
   display: inline-block;
   margin-top: 8px;
-  color: #d78ef0;
+  color: #9333ea;
 }
 
-.ticket-detail-state.is-error {
-  border-color: #7a2a2a;
-  color: #a77373;
-}
+.ticket-detail-state.is-error { border-color: #fecaca; color: #b91c1c; }
 
 .ticket-qr-overlay {
   position: fixed;
@@ -327,7 +328,7 @@
 
 .ticket-qr-countdown {
   margin: 14px 0 0;
-  color: #a78421;
+  color: #854d0e;
   font-size: 13px;
 }
 
@@ -338,7 +339,7 @@
 }
 
 .ticket-qr-error {
-  color: #a77373;
+  color: #b91c1c;
   font-size: 13px;
 }
 
@@ -449,7 +450,7 @@
 }
 
 .ticket-history-state.is-error {
-  color: #a77373;
+  color: #b91c1c;
 }
 
 .ticket-history-list {

@@ -89,10 +89,24 @@ export default function CreateEventWizard() {
               can save a draft at any step and come back later.
             </p>
           </div>
-          {eventId && <Link to={`/organizer/events/${eventId}/compliance`} className="tb-btn tb-btn-outline">Compliance documents</Link>}
-          <Link to="/organizer/events" className="tb-btn tb-btn-outline">
-            ← My Events
-          </Link>
+          <div className="ow-head-actions" style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+            {eventId && (
+              <Link
+                to={`/organizer/events/${eventId}/compliance?fromStep=${step}`}
+                className="tb-btn tb-btn-outline"
+                style={{ textDecoration: "none" }}
+              >
+                Compliance documents
+              </Link>
+            )}
+            <Link
+              to="/organizer/events"
+              className="tb-btn tb-btn-outline"
+              style={{ textDecoration: "none" }}
+            >
+              ← My Events
+            </Link>
+          </div>
         </div>
 
         {event?.status === "Rejected" && (

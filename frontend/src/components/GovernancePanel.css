@@ -22,6 +22,31 @@
   display: flex; flex-wrap: wrap; gap: 18px; margin: 20px 0;
   padding: 20px; align-items: end; background: #faf5ff; border: 1px solid #d5c8e7; border-radius: 12px;
 }
+.gov-admin-review-form {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 16px !important;
+  align-items: flex-end !important;
+}
+
+.gov-admin-review-form input,
+.gov-admin-review-form select {
+  height: 42px !important;
+  min-height: 42px !important;
+  padding: 0 14px !important;
+  box-sizing: border-box !important;
+  border-radius: 9px !important;
+}
+
+.gov-admin-review-form button {
+  height: 42px !important;
+  min-height: 42px !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
 .governance-panel label { display: flex; flex-direction: column; gap: 8px; min-width: 180px; flex: 1; font-size: 14px; font-weight: 600; color: #504b5e; }
 .governance-panel textarea { min-height: 96px; resize: vertical; }
 .governance-panel input, .governance-panel select, .governance-panel textarea {
@@ -34,16 +59,36 @@
 .governance-panel input::file-selector-button { background: #faf5ff; color: #2a2438; border: 1px solid #baacc7; border-radius: 6px; padding: 7px 10px; margin-right: 12px; cursor: pointer; }
 .governance-panel button { cursor: pointer; margin: 4px; padding: 10px 16px; border: 1px solid #b9acc7; border-radius: 9px; color: #2a2438; background: #ffffff; font: inherit; font-size: 14px; font-weight: 600; min-height: 42px; }
 .governance-panel button:hover:not(:disabled) { background: #faf5ff; border-color: #b19bc7; }
-.governance-panel button.tb-btn-primary { background: #9333ea; color: #3c3552; border-color: #a78bfa; box-shadow: none; }
-.governance-panel button.tb-btn-primary:hover:not(:disabled) { background: #7c3aed; }
-.governance-panel button:disabled { cursor: not-allowed; color: #746d7b; background: #faf5ff; border-color: #aaa2b5; opacity: 1; }
+.governance-panel button.tb-btn-primary {
+  background: linear-gradient(135deg, #9333ea 0%, #db2777 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid #9333ea !important;
+  box-shadow: 0 4px 12px rgba(147, 51, 234, 0.25) !important;
+  font-weight: 700 !important;
+  min-height: 42px;
+}
+.governance-panel button.tb-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #7c3aed 0%, #be185d 100%) !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+}
+.governance-panel button.tb-btn-primary:disabled {
+  background: #ede9fe !important;
+  color: #7e22ce !important;
+  border: 1.5px solid #c4b5fd !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  opacity: 0.9 !important;
+  font-weight: 700 !important;
+}
+.governance-panel button:disabled:not(.tb-btn-primary) { cursor: not-allowed; color: #746d7b !important; background: #faf5ff !important; border-color: #aaa2b5 !important; opacity: 1; }
 .governance-panel :is(button,input,select,textarea,summary):focus-visible { outline: 3px solid #9a7ce8; outline-offset: 3px; }
 .governance-panel details { margin: 20px 0; border: 1px solid #d5c8e7; border-radius: 10px; padding: 14px 18px; background: #faf5ff; }
 .governance-panel summary { cursor: pointer; font-weight: 600; color: #504a61; }
 .governance-panel ul { padding-left: 22px; }
 .governance-panel li { margin: 8px 0; overflow-wrap: anywhere; }
-.governance-panel [role=status] { background: #ffffff; color: #3c7859; border: 1px solid #357962; border-radius: 9px; padding: 12px 16px; }
-.governance-panel .ow-error { background: #faf5ff; color: #3c3552; border: 1px solid #a25268; font-family: inherit; }
+.governance-panel [role=status] { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; border-radius: 9px; padding: 12px 16px; font-weight: 600; }
+.governance-panel .ow-error { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; font-family: inherit; font-weight: 600; }
 .governance-change { border: 1px solid #d5c8e7; border-radius: 12px; padding: 18px; margin: 14px 0; background: #faf5ff; }
 .governance-table { overflow-x: auto; border: 1px solid #d5c8e7; border-radius: 10px; }
 .governance-table table { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -54,4 +99,62 @@
   .governance-panel form { padding: 14px; }
   .governance-panel label { min-width: 100%; }
   .governance-panel form > button { width: 100%; margin: 0; }
+}
+
+/* Custom English File Picker */
+.gov-file-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 240px;
+}
+
+.gov-file-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tb-text, #221d33);
+}
+
+.gov-file-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--tb-surface-2, #f8f2fd);
+  border: 1px solid var(--tb-border, #e4daef);
+  border-radius: 8px;
+  padding: 6px 12px;
+  min-height: 40px;
+}
+
+.gov-file-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 14px;
+  border-radius: 6px;
+  background: #ffffff;
+  border: 1px solid #d8b4fe;
+  color: #7e22ce;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(124, 58, 237, 0.08);
+}
+
+.gov-file-btn:hover {
+  background: #7e22ce;
+  color: #ffffff;
+  border-color: #7e22ce;
+}
+
+.gov-file-name {
+  font-size: 13px;
+  color: var(--tb-text-muted, #7a7392);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
 }

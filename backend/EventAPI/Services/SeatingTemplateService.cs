@@ -119,6 +119,14 @@ namespace EventAPI.Services
             if (dto.Name != null) entity.Name = dto.Name;
             if (dto.Description != null) entity.Description = dto.Description;
             if (dto.IsPublic.HasValue && isAdmin) entity.IsPublic = dto.IsPublic.Value;
+            if (dto.Zones != null && dto.Zones.Count > 0)
+            {
+                foreach (var z in dto.Zones)
+                    ValidateTemplateZone(z);
+                entity.ZonesJson = JsonSerializer.Serialize(dto.Zones);
+            }
+            if (dto.LayoutJson != null) entity.LayoutJson = dto.LayoutJson;
+            entity.UpdatedAt = DateTime.UtcNow;
 
             await _templateRepository.UpdateAsync(entity);
             return MapToResponse(entity);

@@ -468,10 +468,10 @@ export default function IncidentDetailPage() {
               <div
                 style={{
                   fontSize: "12px",
-                  fontWeight: 600,
-                  color: "#e8a0a0",
-                  background: "#fbe9ec",
-                  border: "1px solid #7a2a2a",
+                  fontWeight: 700,
+                  color: "#991b1b",
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
                   borderRadius: "6px",
                   padding: "6px 12px",
                   display: "inline-flex",
@@ -517,7 +517,7 @@ export default function IncidentDetailPage() {
                 <h3>Incident Resolution Documentation</h3>
                 <div className="inc-resolution-meta">
                   Resolved By:{" "}
-                  <strong style={{ color: "#fff" }}>
+                  <strong style={{ color: "#065f46" }}>
                     {incident.resolvedByName || resolution?.resolvedByName || "System Administrator"}
                   </strong>
                   {" • "}
@@ -590,7 +590,7 @@ export default function IncidentDetailPage() {
                   <div className="inc-info-label">
                     Venue Location
                   </div>
-                  <div className="inc-info-val" style={{ color: "#e8b82e" }}>
+                  <div className="inc-info-val" style={{ color: "#92400e", fontWeight: 600 }}>
                     {incident.location}
                   </div>
                 </div>
@@ -778,7 +778,7 @@ export default function IncidentDetailPage() {
                             })}
                           </span>
                         </div>
-                        <div style={{ fontSize: "11px", fontWeight: 700, color: "#818cf8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "4px" }}>
+                        <div style={{ fontSize: "11px", fontWeight: 700, color: "#4f46e5", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "4px" }}>
                           {item.actionType}
                           {item.newStatus && ` ➔ ${item.newStatus}`}
                         </div>
@@ -1024,17 +1024,18 @@ export default function IncidentDetailPage() {
                 <div className="inc-modal-body">
                   <div
                     style={{
-                      background: "#fbe9ec",
-                      border: "1px solid #7a2a2a",
+                      background: "#fef2f2",
+                      border: "1px solid #fecaca",
                       borderRadius: "6px",
                       padding: "12px 14px",
                       marginBottom: "16px",
-                      color: "#f6cdd6",
+                      color: "#991b1b",
                       fontSize: "13px",
                       lineHeight: "1.5",
+                      fontWeight: 500,
                     }}
                   >
-                    <strong style={{ color: "#eca6b4" }}>Notice:</strong> Escalating notifies administration and requests intervention for this incident.
+                    <strong style={{ color: "#7f1d1d" }}>Notice:</strong> Escalating notifies administration and requests intervention for this incident.
                   </div>
 
                   <div className="inc-form-group">

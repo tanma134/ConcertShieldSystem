@@ -135,6 +135,9 @@ namespace EventAPI.Services
                 if (t.MaxPerOrder < t.MinPerOrder)
                     result.Errors.Add($"{label}: MaxPerOrder must be greater than or equal to MinPerOrder.");
 
+                if (ev.MaxTicketsPerAccount.HasValue && t.MaxPerOrder > ev.MaxTicketsPerAccount.Value)
+                    result.Errors.Add($"{label}: MaxPerOrder ({t.MaxPerOrder}) cannot exceed event MaxTicketsPerAccount ({ev.MaxTicketsPerAccount.Value}).");
+
                 // Sale window
                 if (t.SalesStartsAt.HasValue && t.SalesEndsAt.HasValue && t.SalesEndsAt <= t.SalesStartsAt)
                     result.Errors.Add($"{label}: SalesEndsAt must be after SalesStartsAt.");

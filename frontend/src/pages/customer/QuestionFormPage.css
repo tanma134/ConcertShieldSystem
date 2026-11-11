@@ -19,7 +19,7 @@
 }
 
 .qf-back-link {
-  color: #a06ce8;
+  color: #7e22ce;
   text-decoration: none;
   font-size: 14px;
   font-weight: 650;
@@ -27,7 +27,7 @@
 
 .qf-eyebrow {
   margin: 0;
-  color: #a066f0;
+  color: #7e22ce;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.15em;
@@ -127,7 +127,7 @@
 
 .qf-ticket-label,
 .qf-seat span {
-  color: #87838c;
+  color: #524b68;
   font-size: 12px;
 }
 
@@ -168,7 +168,7 @@
 }
 
 .qf-field b {
-  color: #ad7b88;
+  color: #9f1239;
 }
 
 .qf-field input {
@@ -187,7 +187,7 @@
 }
 
 .qf-field input::placeholder {
-  color: #86848a;
+  color: #524b68;
 }
 
 .qf-field input:focus {
@@ -213,18 +213,18 @@
 .qf-countdown-panel > strong {
   display: block;
   margin: 8px 0 2px;
-  color: #a06ce8;
+  color: #7e22ce;
   font-size: 42px;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
 
 .qf-countdown-panel > strong.is-urgent {
-  color: #e0567a;
+  color: #be123c;
 }
 
 .qf-countdown-panel > span {
-  color: #87848a;
+  color: #524b68;
   font-size: 12px;
 }
 
@@ -243,7 +243,7 @@
 }
 
 .qf-summary-item small {
-  color: #88848c;
+  color: #524b68;
 }
 
 .qf-summary-item strong {
@@ -334,7 +334,7 @@
   place-items: center;
   margin: 0 auto 14px;
   border-radius: 50%;
-  color: #e0567a;
+  color: #be123c;
   background: rgba(244, 63, 94, 0.15);
   font-size: 24px;
   font-weight: 800;
@@ -410,7 +410,7 @@
   align-items: center;
   gap: 9px;
   margin: 0 0 18px;
-  color: #a06ce8;
+  color: #7e22ce;
   font-size: 13px;
   font-weight: 650;
   cursor: pointer;
@@ -574,14 +574,14 @@
 
 .hold-cancel-dialog > p {
   margin: 0;
-  color: #87848c;
+  color: #524b68;
   font-size: 13px;
   line-height: 1.6;
 }
 
 .hold-cancel-dialog .hold-cancel-error {
   margin-top: 14px;
-  color: #b87070;
+  color: #b91c1c;
 }
 
 .hold-cancel-actions {

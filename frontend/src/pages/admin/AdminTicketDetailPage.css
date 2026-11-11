@@ -8,7 +8,7 @@
 .admin-ticket-back {
   display: inline-block;
   margin-bottom: 24px;
-  color: #9178b8;
+  color: #6d28d9;
   text-decoration: none;
 }
 
@@ -26,7 +26,7 @@
 
 .admin-ticket-detail-eyebrow {
   margin: 0 0 8px;
-  color: #9a5cf0;
+  color: #7e22ce;
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -45,16 +45,9 @@
   font-size: 13px;
 }
 
-.admin-ticket-detail-status.status-active {
-  background: #faf5ff;
-  color: #48745a;
-}
+.admin-ticket-detail-status.status-active { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
 
-.admin-ticket-detail-status.status-revoked,
-.admin-ticket-detail-status.status-returned {
-  background: #faf5ff;
-  color: #985f6a;
-}
+.admin-ticket-detail-status.status-revoked, .admin-ticket-detail-status.status-returned { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
 
 .admin-ticket-detail-actions {
   display: flex;
@@ -65,9 +58,7 @@
   padding: 10px 14px;
   border: 0;
   border-radius: 8px;
-  color: #3c3552;
-  font-weight: 700;
-  cursor: pointer;
+  color: #ffffff; font-weight: 700; cursor: pointer;
 }
 
 .admin-ticket-detail-button:disabled {
@@ -76,11 +67,13 @@
 }
 
 .admin-ticket-detail-button.revoke {
-  background: #b83950;
+  background: #be123c;
+  color: #ffffff !important;
 }
 
 .admin-ticket-detail-button.reissue {
-  background: #7040c4;
+  background: #7e22ce;
+  color: #ffffff !important;
 }
 
 .admin-ticket-detail-card {
@@ -132,20 +125,16 @@
 .admin-ticket-detail-warning {
   border: 1px solid #735a28;
   background: #faf5ff;
-  color: #534946;
+  color: #92400e;
 }
 
 .admin-ticket-detail-notice {
   border: 1px solid #286548;
   background: #faf5ff;
-  color: #3d4d50;
+  color: #047857;
 }
 
-.admin-ticket-detail-error {
-  border: 1px solid #8a4a58;
-  background: #fbe9ec;
-  color: #8f5a64;
-}
+.admin-ticket-detail-error { border: 1px solid #fecaca; background: #fef2f2; color: #b91c1c; }
 
 .admin-ticket-detail-state {
   padding: 50px 20px;

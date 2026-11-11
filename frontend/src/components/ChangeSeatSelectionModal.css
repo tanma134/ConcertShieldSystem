@@ -29,8 +29,8 @@
 
 .cssm-eyebrow {
   margin: 0 40px 6px 0;
-  color: #ae95fa;
-  font-size: 10px;
+  color: #7e22ce;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: .14em;
 }
@@ -207,9 +207,10 @@
 .cssm-error {
   max-width: 400px;
   margin: 5px 0 0;
-  color: #a77373;
+  color: #b91c1c;
   font-size: 11px;
   line-height: 1.45;
+  font-weight: 600;
 }
 
 .cssm-actions {
@@ -236,7 +237,7 @@
 .cssm-save {
   border: 1px solid #9333ea;
   background: #9333ea;
-  color: #3c3552;
+  color: #ffffff;
 }
 
 .cssm-save:disabled {
