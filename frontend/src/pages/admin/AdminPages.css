@@ -332,3 +332,110 @@
   box-shadow: 0 4px 12px rgba(126, 34, 206, 0.25);
   text-decoration: none !important;
 }
+
+/* Approval Result Banners */
+.admin-result-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+.admin-result-banner.is-success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+.admin-result-banner.is-warning {
+  background: #fefce8;
+  border: 1px solid #fef08a;
+  color: #854d0e;
+}
+.admin-result-banner.is-danger {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+.admin-result-icon {
+  font-size: 20px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.admin-result-content strong {
+  display: block;
+  font-size: 14.5px;
+  margin-bottom: 3px;
+}
+
+/* Custom Approval Confirm Modal */
+.admin-confirm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 10, 30, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+  animation: adminFadeIn 0.15s ease-out;
+}
+.admin-confirm-modal {
+  width: 100%;
+  max-width: 440px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(124, 58, 237, 0.15);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: adminScaleIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.admin-confirm-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.admin-confirm-modal-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #f3e8ff;
+  color: #7e22ce;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.admin-confirm-modal-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #1e1b2e;
+}
+.admin-confirm-modal-body {
+  font-size: 13.5px;
+  color: #555169;
+  line-height: 1.55;
+  margin: 0;
+}
+.admin-confirm-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+@keyframes adminFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes adminScaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}

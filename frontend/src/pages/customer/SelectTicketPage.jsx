@@ -247,6 +247,37 @@ export default function SelectTicketPage() {
     return ticket?.colorCode || ZONE_PALETTE[paletteIndex];
   }
 
+  function getTicketSalesStatus(ticket) {
+    if (!ticket) return { isOnSale: true };
+    const now = Date.now();
+    if (ticket.salesStartsAt) {
+      const start = new Date(ticket.salesStartsAt).getTime();
+      if (start > now) {
+        const d = new Date(start);
+        const pad = (n) => String(n).padStart(2, "0");
+        const dateStr = `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        return {
+          isOnSale: false,
+          isUpcoming: true,
+          label: `Opens ${dateStr}`,
+          fullLabel: `Opens at ${d.toLocaleString()}`,
+        };
+      }
+    }
+    if (ticket.salesEndsAt) {
+      const end = new Date(ticket.salesEndsAt).getTime();
+      if (end <= now) {
+        return {
+          isOnSale: false,
+          isClosed: true,
+          label: "Sales closed",
+          fullLabel: "Sales closed",
+        };
+      }
+    }
+    return { isOnSale: true };
+  }
+
   function getTicketAvailable(ticket) {
     return Math.max(
       0,
@@ -378,6 +409,8 @@ export default function SelectTicketPage() {
 
   function getZoneMax(zone) {
     const ticket = getTicket(zone.ticketTypeId);
+    const status = getTicketSalesStatus(ticket);
+    if (!status.isOnSale) return 0;
 
     return Math.min(
       getZoneAvailable(zone),
@@ -387,6 +420,9 @@ export default function SelectTicketPage() {
   }
 
   function getTicketMax(ticket) {
+    const status = getTicketSalesStatus(ticket);
+    if (!status.isOnSale) return 0;
+
     return Math.min(
       getTicketAvailable(ticket),
       Number(ticket?.maxPerOrder || maxPerAccount),
@@ -702,10 +738,13 @@ export default function SelectTicketPage() {
               <div className="tb-zone-map-wrapper">
                 <div className="tb-zone-map">
                   <div className="tb-map-stage">STAGE</div>
+                  <div className="tb-map-foh">FOH</div>
 
                   {zones.map((zone, index) => {
                     const ticket = getTicket(zone.ticketTypeId);
                     const color = getTicketColor(zone.ticketTypeId);
+                    const salesStatus = getTicketSalesStatus(ticket);
+                    const notOnSale = !salesStatus.isOnSale;
                     const soldOut = getZoneAvailable(zone) <= 0;
                     const quantity = Number(
                       zoneQuantities[zone.seatZoneId] || 0
@@ -717,17 +756,18 @@ export default function SelectTicketPage() {
                         key={zone.seatZoneId}
                         className={`tb-zone ${
                           quantity > 0 ? "tb-zone-selected" : ""
-                        } ${soldOut ? "tb-zone-sold-out" : ""}`}
+                        } ${soldOut ? "tb-zone-sold-out" : ""} ${notOnSale ? "tb-zone-locked" : ""}`}
                         style={{
                           ...getZonePosition(zone.shapeJson, index, zones.length),
-                          "--zone-color": soldOut ? "#b6abc9" : color,
+                          "--zone-color": soldOut || notOnSale ? "#94a3b8" : color,
                         }}
-                        disabled={soldOut}
+                        disabled={soldOut || notOnSale}
+                        title={notOnSale ? `${zone.zoneName} (${salesStatus.fullLabel})` : undefined}
                         onClick={() => openZonePicker(zone)}
                       >
                         <span className="tb-zone-name">{zone.zoneName}</span>
                         <span className="tb-zone-price">
-                          {soldOut ? "Sold out" : formatPrice(ticket?.price)}
+                          {soldOut ? "Sold out" : notOnSale ? salesStatus.label : formatPrice(ticket?.price)}
                         </span>
                         {quantity > 0 && (
                           <span className="tb-zone-selected-count">
@@ -795,6 +835,9 @@ export default function SelectTicketPage() {
                           const held = heldSeatIds.includes(seatId);
                           const selected =
                             selectedSeatIds.includes(seatId);
+                          const zoneTicket = getTicket(zone.ticketTypeId);
+                          const zoneSalesStatus = getTicketSalesStatus(zoneTicket);
+                          const notOnSale = !zoneSalesStatus.isOnSale;
 
                           const statusClass = sold
                             ? "is-sold"
@@ -802,7 +845,9 @@ export default function SelectTicketPage() {
                               ? "is-held"
                               : selected
                                 ? "is-selected"
-                                : "is-available";
+                                : notOnSale
+                                  ? "is-locked"
+                                  : "is-available";
 
                           const statusText = sold
                             ? "sold"
@@ -810,7 +855,9 @@ export default function SelectTicketPage() {
                               ? "on hold"
                               : selected
                                 ? "selected"
-                                : "available";
+                                : notOnSale
+                                  ? zoneSalesStatus.label
+                                  : "available";
 
                           return (
                             <button
@@ -828,6 +875,7 @@ export default function SelectTicketPage() {
                               disabled={
                                 sold ||
                                 held ||
+                                notOnSale ||
                                 Boolean(availabilityError) ||
                                 isHolding
                               }
@@ -849,16 +897,24 @@ export default function SelectTicketPage() {
                 const quantity = Number(
                   ticketQuantities[ticket.ticketTypeId] || 0
                 );
+                const salesStatus = getTicketSalesStatus(ticket);
+                const notOnSale = !salesStatus.isOnSale;
                 const available = getTicketAvailable(ticket);
                 const max = getTicketMax(ticket);
 
                 return (
-                  <div className="tb-ticket-row" key={ticket.ticketTypeId}>
+                  <div className={`tb-ticket-row ${notOnSale ? "is-not-on-sale" : ""}`} key={ticket.ticketTypeId}>
                     <div className="tb-ticket-info">
                       <div className="tb-ticket-name">{ticket.typeName}</div>
-                      <div className="tb-ticket-avail">
-                        {available} ticket(s) available
-                      </div>
+                      {notOnSale ? (
+                        <div className="tb-ticket-avail" style={{ color: salesStatus.isUpcoming ? "#d97706" : "#dc2626", fontWeight: 600 }}>
+                          {salesStatus.isUpcoming ? `⏳ ${salesStatus.label}` : `🔒 ${salesStatus.label}`}
+                        </div>
+                      ) : (
+                        <div className="tb-ticket-avail">
+                          {available} ticket(s) available
+                        </div>
+                      )}
                     </div>
 
                     <div className="tb-ticket-price">
@@ -871,7 +927,7 @@ export default function SelectTicketPage() {
                         onClick={() =>
                           updateTicketQuantity(ticket, quantity - 1)
                         }
-                        disabled={quantity <= 0}
+                        disabled={notOnSale || quantity <= 0}
                       >
                         −
                       </button>
@@ -880,6 +936,7 @@ export default function SelectTicketPage() {
                         min="0"
                         max={max}
                         value={quantity}
+                        disabled={notOnSale}
                         onChange={(e) =>
                           updateTicketQuantity(
                             ticket,
@@ -892,7 +949,7 @@ export default function SelectTicketPage() {
                         onClick={() =>
                           updateTicketQuantity(ticket, quantity + 1)
                         }
-                        disabled={quantity >= max}
+                        disabled={notOnSale || quantity >= max}
                       >
                         +
                       </button>

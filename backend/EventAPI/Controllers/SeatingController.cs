@@ -132,6 +132,19 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
+        /// <summary>Updates the layout metadata (stage shape, FOH technical booth, canvas dimensions) of the seating chart.</summary>
+        [HttpPut("event/{eventId:int}/layout")]
+        [Authorize(Policy = "RequireOrganizer")]
+        public async Task<IActionResult> UpdateLayout(int eventId, [FromBody] UpdateLayoutDTO dto)
+        {
+            try
+            {
+                var result = await _seatingService.UpdateLayoutAsync(eventId, dto.LayoutJson ?? "{}", CurrentUserId, IsAdmin);
+                return Ok(ApiResponseDTO<SeatingChartResponseDTO>.SuccessResponse(result, "Layout updated"));
+            }
+            catch (Exception ex) { return HandleException(ex); }
+        }
+
         /// <summary>Deletes a zone and all of its seats. Refused if any seat is taken.</summary>
         [HttpDelete("zones/{seatZoneId:int}")]
         [Authorize(Policy = "RequireOrganizer")]

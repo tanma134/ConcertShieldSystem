@@ -3140,6 +3140,24 @@
             }
         },
         {
+            "Key": "seating-layout",
+            "DownstreamPathTemplate": "/api/seating/event/{eventId}/layout",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7289
+                }
+            ],
+            "UpstreamPathTemplate": "/api/seating/event/{eventId}/layout",
+            "UpstreamHttpMethod": [
+                "Put"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
             "Key": "seating-delete",
             "DownstreamPathTemplate": "/api/seating/event/{eventId}",
             "DownstreamScheme": "https",

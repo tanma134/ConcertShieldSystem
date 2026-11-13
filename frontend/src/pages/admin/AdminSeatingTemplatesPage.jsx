@@ -337,6 +337,7 @@ export default function AdminSeatingTemplatesPage() {
                     zones={viewCanvasZones}
                     ticketTypes={[]}
                     readOnly={true}
+                    layoutJson={viewTemplate.layoutJson}
                   />
                 </div>
 
@@ -461,7 +462,14 @@ export default function AdminSeatingTemplatesPage() {
             key={form.zones.map((z) => z._id).join("-")}
             zones={canvasZones}
             ticketTypes={[]}
+            layoutJson={form.layoutJson}
             onZoneMove={handleZoneMove}
+            onLayoutChange={(next) =>
+              setForm((f) => ({
+                ...f,
+                layoutJson: typeof next === "string" ? next : JSON.stringify(next),
+              }))
+            }
           />
 
           <h4>Zones</h4>

@@ -50,6 +50,441 @@ function StageFloor({ width, height }) {
   </>;
 }
 
+function renderStageVisual(stageType, pw, ph, stageWidthM, stageHeightM, stageName, selected, hovered) {
+  const gradientStops = [0, "#cfc4de", 0.6, "#e9d5ff", 1, "#f3e8ff"];
+  const title = stageName || "S T A G E";
+
+  if (stageType === "t-stage") {
+    // Sân khấu chữ T chuẩn concert: Main stage ở trên, Catwalk dài ở giữa, Sub-stage ở mũi
+    // KHÔNG CÓ KHUNG HỘP RỖNG Ở 2 BÊN -> 2 bên là sân trống để đặt Zone khán giả sát mép sàn
+    const mainH = ph * 0.44;
+    const runwayW = pw * 0.18;
+    const runwayH = ph * 0.36;
+    const runwayX = (pw - runwayW) / 2;
+    const subW = pw * 0.44;
+    const subH = ph * 0.20;
+    const subX = (pw - subW) / 2;
+    const subY = mainH + runwayH;
+
+    // Đường viền đa giác ôm sát khít 100% hình chữ T
+    const tPoints = [
+      0, 0,                      // Top-Left Main Stage
+      pw, 0,                     // Top-Right Main Stage
+      pw, mainH,                 // Bottom-Right Main Stage
+      runwayX + runwayW, mainH,  // Runway Top-Right
+      runwayX + runwayW, subY,   // Runway Bottom-Right / Sub-Stage Top
+      subX + subW, subY,         // Sub-Stage Top-Right
+      subX + subW, ph,           // Sub-Stage Bottom-Right
+      subX, ph,                  // Sub-Stage Bottom-Left
+      subX, subY,                // Sub-Stage Top-Left
+      runwayX, subY,             // Runway Bottom-Left
+      runwayX, mainH,            // Runway Top-Left
+      0, mainH,                  // Bottom-Left Main Stage
+    ];
+
+    return (
+      <>
+        {/* Khối nền chữ T khép kín ôm khít sàn diễn */}
+        <Line
+          points={tPoints}
+          closed
+          fillLinearGradientStartPoint={{ x: 0, y: 0 }}
+          fillLinearGradientEndPoint={{ x: 0, y: ph }}
+          fillLinearGradientColorStops={gradientStops}
+          stroke={selected ? "#7e22ce" : hovered ? "rgba(126,34,206,.8)" : "#9333ea"}
+          strokeWidth={selected ? 2.5 : 1.5}
+          shadowColor="#000"
+          shadowBlur={selected ? 16 : 8}
+          shadowOpacity={selected ? 0.4 : 0.2}
+          shadowOffset={{ x: 0, y: 3 }}
+        />
+
+        {/* Vạch kẻ sàn phân chia Runway */}
+        <Line
+          points={[runwayX, mainH, runwayX + runwayW, mainH]}
+          stroke="rgba(126, 34, 206, 0.35)"
+          strokeWidth={1.2}
+          dash={[3, 3]}
+        />
+        <Line
+          points={[subX, subY, subX + subW, subY]}
+          stroke="rgba(126, 34, 206, 0.35)"
+          strokeWidth={1.2}
+          dash={[3, 3]}
+        />
+
+        {/* Nhãn Main Stage */}
+        <Text
+          text={`🎤 ${title}\n(MAIN STAGE)`}
+          x={0}
+          y={0}
+          width={pw}
+          height={mainH}
+          align="center"
+          verticalAlign="middle"
+          fontSize={clamp(Math.min(pw, mainH) * 0.22, 10, 14)}
+          fontStyle="bold"
+          fill="#3b0764"
+          listening={false}
+        />
+
+        {/* Nhãn Runway Catwalk */}
+        <Text
+          text={"R\nU\nN\nW\nA\nY"}
+          x={runwayX}
+          y={mainH}
+          width={runwayW}
+          height={runwayH}
+          align="center"
+          verticalAlign="middle"
+          fontSize={8.5}
+          fontStyle="bold"
+          fill="#7e22ce"
+          listening={false}
+          lineHeight={1.15}
+        />
+
+        {/* Nhãn B-Stage */}
+        <Text
+          text={`STAGE B\n(${stageWidthM}m × ${stageHeightM}m)`}
+          x={subX}
+          y={subY}
+          width={subW}
+          height={subH}
+          align="center"
+          verticalAlign="middle"
+          fontSize={9}
+          fontStyle="bold"
+          fill="#3b0764"
+          listening={false}
+        />
+      </>
+    );
+  }
+
+  if (stageType === "wings") {
+    // Sân khấu chữ U / Wings mở rộng 2 bên
+    const mainW = pw * 0.6;
+    const mainX = (pw - mainW) / 2;
+    const wingW = pw * 0.18;
+    const wingH = ph * 0.85;
+
+    return (
+      <>
+        {/* Main Center */}
+        <Rect
+          x={mainX}
+          y={0}
+          width={mainW}
+          height={ph * 0.55}
+          cornerRadius={8}
+          fillLinearGradientStartPoint={{ x: 0, y: 0 }}
+          fillLinearGradientEndPoint={{ x: 0, y: ph * 0.55 }}
+          fillLinearGradientColorStops={gradientStops}
+          stroke={selected ? "#7e22ce" : "#9333ea"}
+          strokeWidth={selected ? 2.5 : 1.5}
+        />
+        {/* Left Wing */}
+        <Rect
+          x={0}
+          y={0}
+          width={wingW}
+          height={wingH}
+          cornerRadius={6}
+          fill="#d8b4fe"
+          stroke={selected ? "#7e22ce" : "#9333ea"}
+          strokeWidth={1.5}
+        />
+        {/* Right Wing */}
+        <Rect
+          x={pw - wingW}
+          y={0}
+          width={wingW}
+          height={wingH}
+          cornerRadius={6}
+          fill="#d8b4fe"
+          stroke={selected ? "#7e22ce" : "#9333ea"}
+          strokeWidth={1.5}
+        />
+        <Text
+          text={`🎤 ${title}\n(${stageWidthM}m × ${stageHeightM}m)`}
+          x={mainX}
+          y={0}
+          width={mainW}
+          height={ph * 0.55}
+          align="center"
+          verticalAlign="middle"
+          fontSize={clamp(Math.min(mainW, ph) * 0.18, 9, 13)}
+          fontStyle="bold"
+          fill="#3b0764"
+          listening={false}
+        />
+        <Text text="WING L" x={0} y={wingH * 0.4} width={wingW} align="center" fontSize={8} fontStyle="bold" fill="#6b21a8" listening={false} />
+        <Text text="WING R" x={pw - wingW} y={wingH * 0.4} width={wingW} align="center" fontSize={8} fontStyle="bold" fill="#6b21a8" listening={false} />
+      </>
+    );
+  }
+
+  if (stageType === "center") {
+    // Sân khấu 360 Trung tâm (Arena Center / Diamond Stage)
+    return (
+      <>
+        <Rect
+          width={pw}
+          height={ph}
+          cornerRadius={Math.min(pw, ph) * 0.45}
+          fillLinearGradientStartPoint={{ x: 0, y: 0 }}
+          fillLinearGradientEndPoint={{ x: pw, y: ph }}
+          fillLinearGradientColorStops={gradientStops}
+          stroke={selected ? "#7e22ce" : hovered ? "rgba(126,34,206,.7)" : "rgba(126,34,206,.3)"}
+          strokeWidth={selected ? 2.5 : 1.4}
+        />
+        <Text
+          text={`🌐 ${title}\n(360° CENTER STAGE)\n${stageWidthM}m × ${stageHeightM}m`}
+          width={pw}
+          height={ph}
+          align="center"
+          verticalAlign="middle"
+          fontSize={clamp(Math.min(pw, ph) * 0.2, 9, 13)}
+          fontStyle="bold"
+          fill="#3b0764"
+          listening={false}
+          lineHeight={1.25}
+        />
+      </>
+    );
+  }
+
+  // Standard rectangle
+  return (
+    <>
+      <Rect
+        width={pw}
+        height={ph}
+        cornerRadius={10}
+        fillLinearGradientStartPoint={{ x: 0, y: 0 }}
+        fillLinearGradientEndPoint={{ x: 0, y: ph }}
+        fillLinearGradientColorStops={gradientStops}
+        stroke={selected ? "#7e22ce" : hovered ? "rgba(126,34,206,.7)" : "rgba(126,34,206,.3)"}
+        strokeWidth={selected ? 2.5 : 1.4}
+        shadowColor="#000"
+        shadowBlur={selected ? 16 : 8}
+        shadowOpacity={selected ? 0.45 : 0.22}
+        shadowOffset={{ x: 0, y: 3 }}
+      />
+      <Text
+        text={`🎤 ${title}\n(${stageWidthM} m × ${stageHeightM} m)`}
+        width={pw}
+        height={ph}
+        align="center"
+        verticalAlign="middle"
+        fontSize={clamp(Math.min(pw, ph) * 0.22, 10, 14)}
+        fontStyle="bold"
+        fill="#3b0764"
+        listening={false}
+        lineHeight={1.3}
+      />
+    </>
+  );
+}
+
+function StageItem({ shape, stageWidth, stageHeight, readOnly, selected, onSelect, onChange }) {
+  const groupRef = useRef(null);
+  const trRef = useRef(null);
+  const [hovered, setHovered] = useState(false);
+
+  useEffect(() => {
+    if (selected && !readOnly && trRef.current && groupRef.current) {
+      trRef.current.nodes([groupRef.current]);
+      trRef.current.getLayer()?.batchDraw();
+    }
+  }, [selected, readOnly]);
+
+  const px = (shape.x / 100) * stageWidth;
+  const py = (shape.y / 100) * stageHeight;
+  const pw = (shape.w / 100) * stageWidth;
+  const ph = (shape.h / 100) * stageHeight;
+  const stageWidthM = ((shape.w / 100) * 160).toFixed(0);
+  const stageHeightM = ((shape.h / 100) * 100).toFixed(0);
+
+  return (
+    <>
+      <Group
+        ref={groupRef}
+        x={px}
+        y={py}
+        rotation={shape.rot || 0}
+        draggable={!readOnly}
+        onClick={onSelect}
+        onTap={onSelect}
+        onMouseEnter={(e) => {
+          setHovered(true);
+          if (!readOnly) e.target.getStage().container().style.cursor = "grab";
+        }}
+        onMouseLeave={(e) => {
+          setHovered(false);
+          e.target.getStage().container().style.cursor = "default";
+        }}
+        onDragStart={(e) => {
+          e.target.getStage().container().style.cursor = "grabbing";
+        }}
+        onDragEnd={(e) => {
+          e.target.getStage().container().style.cursor = "grab";
+          onChange({
+            ...shape,
+            x: clamp((e.target.x() / stageWidth) * 100, 0, 95),
+            y: clamp((e.target.y() / stageHeight) * 100, 0, 95),
+          });
+        }}
+        onTransformEnd={() => {
+          const node = groupRef.current;
+          if (!node) return;
+          const nextW = Math.max(40, pw * node.scaleX());
+          const nextH = Math.max(20, ph * node.scaleY());
+          node.scaleX(1);
+          node.scaleY(1);
+          onChange({
+            ...shape,
+            x: clamp((node.x() / stageWidth) * 100, 0, 100),
+            y: clamp((node.y() / stageHeight) * 100, 0, 100),
+            w: clamp((nextW / stageWidth) * 100, 5, 95),
+            h: clamp((nextH / stageHeight) * 100, 3, 60),
+            rot: node.rotation(),
+          });
+        }}
+      >
+        {renderStageVisual(shape.stageType || "standard", pw, ph, stageWidthM, stageHeightM, shape.name, selected, hovered)}
+      </Group>
+      {selected && !readOnly && (
+        <Transformer
+          ref={trRef}
+          rotateEnabled
+          keepRatio={false}
+          borderStroke="#7e22ce"
+          borderStrokeWidth={1.5}
+          anchorStroke="#7e22ce"
+          anchorFill="#ffffff"
+          anchorCornerRadius={4}
+          anchorSize={9}
+          boundBoxFunc={(oldBox, newBox) =>
+            newBox.width < 40 || newBox.height < 20 ? oldBox : newBox
+          }
+        />
+      )}
+    </>
+  );
+}
+
+function FohItem({ shape, stageWidth, stageHeight, readOnly, selected, onSelect, onChange }) {
+  const groupRef = useRef(null);
+  const trRef = useRef(null);
+  const [hovered, setHovered] = useState(false);
+
+  useEffect(() => {
+    if (selected && !readOnly && trRef.current && groupRef.current) {
+      trRef.current.nodes([groupRef.current]);
+      trRef.current.getLayer()?.batchDraw();
+    }
+  }, [selected, readOnly]);
+
+  const px = (shape.x / 100) * stageWidth;
+  const py = (shape.y / 100) * stageHeight;
+  const pw = (shape.w / 100) * stageWidth;
+  const ph = (shape.h / 100) * stageHeight;
+  const fohWidthM = ((shape.w / 100) * 160).toFixed(0);
+  const fohHeightM = ((shape.h / 100) * 100).toFixed(0);
+
+  return (
+    <>
+      <Group
+        ref={groupRef}
+        x={px}
+        y={py}
+        rotation={shape.rot || 0}
+        draggable={!readOnly}
+        onClick={onSelect}
+        onTap={onSelect}
+        onMouseEnter={(e) => {
+          setHovered(true);
+          if (!readOnly) e.target.getStage().container().style.cursor = "grab";
+        }}
+        onMouseLeave={(e) => {
+          setHovered(false);
+          e.target.getStage().container().style.cursor = "default";
+        }}
+        onDragStart={(e) => {
+          e.target.getStage().container().style.cursor = "grabbing";
+        }}
+        onDragEnd={(e) => {
+          e.target.getStage().container().style.cursor = "grab";
+          onChange({
+            ...shape,
+            x: clamp((e.target.x() / stageWidth) * 100, 0, 95),
+            y: clamp((e.target.y() / stageHeight) * 100, 0, 95),
+          });
+        }}
+        onTransformEnd={() => {
+          const node = groupRef.current;
+          if (!node) return;
+          const nextW = Math.max(30, pw * node.scaleX());
+          const nextH = Math.max(16, ph * node.scaleY());
+          node.scaleX(1);
+          node.scaleY(1);
+          onChange({
+            x: clamp((node.x() / stageWidth) * 100, 0, 100),
+            y: clamp((node.y() / stageHeight) * 100, 0, 100),
+            w: clamp((nextW / stageWidth) * 100, 4, 60),
+            h: clamp((nextH / stageHeight) * 100, 2, 40),
+            rot: node.rotation(),
+          });
+        }}
+      >
+        <Rect
+          width={pw}
+          height={ph}
+          cornerRadius={6}
+          fill="#f8fafc"
+          stroke={selected ? "#2563eb" : hovered ? "#3b82f6" : "#475569"}
+          strokeWidth={selected ? 2.5 : 1.5}
+          dash={[5, 4]}
+          shadowColor="#000"
+          shadowBlur={selected ? 12 : 6}
+          shadowOpacity={selected ? 0.35 : 0.18}
+          shadowOffset={{ x: 0, y: 2 }}
+        />
+        <Text
+          text={`🎛️ F O H\n(Sound & Light)\n${fohWidthM} m × ${fohHeightM} m`}
+          width={pw}
+          height={ph}
+          align="center"
+          verticalAlign="middle"
+          fontSize={clamp(Math.min(pw, ph) * 0.22, 9, 12)}
+          fontStyle="bold"
+          fill="#1e293b"
+          listening={false}
+          lineHeight={1.25}
+        />
+      </Group>
+      {selected && !readOnly && (
+        <Transformer
+          ref={trRef}
+          rotateEnabled
+          keepRatio={false}
+          borderStroke="#2563eb"
+          borderStrokeWidth={1.5}
+          anchorStroke="#2563eb"
+          anchorFill="#ffffff"
+          anchorCornerRadius={4}
+          anchorSize={9}
+          boundBoxFunc={(oldBox, newBox) =>
+            newBox.width < 30 || newBox.height < 16 ? oldBox : newBox
+          }
+        />
+      )}
+    </>
+  );
+}
+
 // Đọc cả JSON rectangle cũ và polygon mới để các sơ đồ đã lưu trước đây vẫn dùng được.
 function parseZoneShape(shapeJson) {
   if (!shapeJson) return null;
@@ -274,10 +709,93 @@ function DrawingOverlay({ points, cursor, stageWidth, stageHeight, color, seatPo
   </>;
 }
 
-export default function ZoneMapCanvas({ zones, ticketTypes, readOnly, onZoneMove, onZoneShapeChange }) {
+export default function ZoneMapCanvas({
+  zones,
+  ticketTypes,
+  readOnly,
+  layoutJson,
+  onZoneMove,
+  onZoneShapeChange,
+  onLayoutChange,
+}) {
   const wrapperRef = useRef(null);
   const [stageSize, setStageSize] = useState({ width: 800, height: 500 });
   const [selectedId, setSelectedId] = useState(null);
+  const [selectedSpecial, setSelectedSpecial] = useState(null); // 'stage' | 'foh' | null
+
+  const defaultStage = { x: 30, y: 4, w: 40, h: 14, rot: 0 };
+  const defaultFoh = { x: 42, y: 82, w: 16, h: 8, rot: 0 };
+
+  const parsedLayout = useMemo(() => {
+    if (!layoutJson) return null;
+    if (typeof layoutJson === "object") return layoutJson;
+    try {
+      return JSON.parse(layoutJson);
+    } catch {
+      return null;
+    }
+  }, [layoutJson]);
+
+  const [stageShape, setStageShape] = useState(() => {
+    if (parsedLayout?.stageShape) return parsedLayout.stageShape;
+    try {
+      const saved = localStorage.getItem("concertshield_venue_stage");
+      return saved ? JSON.parse(saved) : defaultStage;
+    } catch {
+      return defaultStage;
+    }
+  });
+
+  const [fohShape, setFohShape] = useState(() => {
+    if (parsedLayout?.fohShape) return parsedLayout.fohShape;
+    try {
+      const saved = localStorage.getItem("concertshield_venue_foh");
+      return saved ? JSON.parse(saved) : defaultFoh;
+    } catch {
+      return defaultFoh;
+    }
+  });
+
+  // Sync state whenever parsedLayout updates (e.g. API fetch / template switch)
+  useEffect(() => {
+    if (parsedLayout?.stageShape) {
+      setStageShape(parsedLayout.stageShape);
+    }
+    if (parsedLayout?.fohShape) {
+      setFohShape(parsedLayout.fohShape);
+    }
+  }, [parsedLayout]);
+
+  const handleStageChange = (next) => {
+    setStageShape(next);
+    try {
+      localStorage.setItem("concertshield_venue_stage", JSON.stringify(next));
+    } catch {}
+    if (onLayoutChange) {
+      const curr = parsedLayout || {};
+      onLayoutChange({
+        ...curr,
+        stageShape: next,
+        fohShape,
+      });
+    }
+  };
+
+  const handleFohChange = (next) => {
+    setFohShape(next);
+    try {
+      localStorage.setItem("concertshield_venue_foh", JSON.stringify(next));
+    } catch {}
+    if (onLayoutChange) {
+      const curr = parsedLayout || {};
+      onLayoutChange({
+        ...curr,
+        stageShape,
+        fohShape: next,
+      });
+    }
+  };
+
   const [liveShapes, setLiveShapes] = useState({});
   // Chế độ vẽ tự do: draw = { seatZoneId, points: [{x,y}] } theo %; cursorPos = vị trí
   // chuột hiện tại (theo %) để vẽ đường "rubber band" xem trước cạnh sắp thêm.
@@ -378,7 +896,10 @@ export default function ZoneMapCanvas({ zones, ticketTypes, readOnly, onZoneMove
 
   const handleStageClick = (e) => {
     if (!draw) {
-      if (e.target === e.target.getStage()) setSelectedId(null);
+      if (e.target === e.target.getStage()) {
+        setSelectedId(null);
+        setSelectedSpecial(null);
+      }
       return;
     }
     const pt = stagePointToPercent(e.target.getStage());
@@ -397,28 +918,131 @@ export default function ZoneMapCanvas({ zones, ticketTypes, readOnly, onZoneMove
 
   const drawingZone = draw ? zones.find((z) => z.seatZoneId === draw.seatZoneId) : null;
   const drawingColor = drawingZone ? colorForTicketType(drawingZone.ticketTypeId) : "#fff";
-  // Ghế xem trước trong lúc đang vẽ: dùng đúng số ghế thật của zone (đã sinh
-  // sẵn từ rows/seatsPerRow lúc tạo zone), xếp lại theo hình đa giác đang vẽ
-  // dở — cập nhật ngay mỗi khi thêm một đỉnh, không cần đợi bấm "Done".
   const drawSeatPositions = draw
     ? seatPositionsForPoints(drawingZone?.seats || [], draw.points)
     : [];
 
   return (
     <div className="ow-zonemap-wrap">
-      <div className="ow-zonemap-shape-tools" style={{ marginBottom: 10 }}>
-        <strong>Scale convention:</strong>
-        <span className="ow-hint">1 px = 0.1 m · venue 160 m × 100 m · positions are saved as % so Organizer, Admin and buyer see the same layout.</span>
+      <div className="ow-zonemap-scale-bar">
+        <span className="ow-scale-badge">📏 Scale convention:</span>
+        <span className="ow-scale-desc">
+          1 px = 0.1 m · venue 160 m × 100 m · positions are saved as %
+        </span>
+        {!readOnly && (
+          <div style={{ marginLeft: "auto", display: "flex", gap: "8px", alignItems: "center" }}>
+            <button
+              type="button"
+              className={"ow-shape-pill" + (selectedSpecial === "stage" ? " active" : "")}
+              onClick={() => {
+                setSelectedId(null);
+                setSelectedSpecial((curr) => (curr === "stage" ? null : "stage"));
+              }}
+              title="Select STAGE to drag or resize"
+            >
+              🎤 STAGE
+            </button>
+            <button
+              type="button"
+              className={"ow-shape-pill" + (selectedSpecial === "foh" ? " active" : "")}
+              onClick={() => {
+                setSelectedId(null);
+                setSelectedSpecial((curr) => (curr === "foh" ? null : "foh"));
+              }}
+              title="Select FOH (Front of House) console booth to drag or resize"
+            >
+              🎛️ FOH
+            </button>
+            <button
+              type="button"
+              className="ow-shape-pill"
+              onClick={() => {
+                handleStageChange(defaultStage);
+                handleFohChange(defaultFoh);
+              }}
+              title="Reset STAGE and FOH to default positions"
+            >
+              ↺ Reset
+            </button>
+          </div>
+        )}
       </div>
+
+      {!readOnly && selectedSpecial === "stage" && (
+        <div className="ow-zonemap-shape-tools" style={{ background: "#faf5ff", borderColor: "#d8b4fe", flexDirection: "column", alignItems: "stretch", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", width: "100%" }}>
+            <span className="ow-shape-label" style={{ color: "#7e22ce" }}>🎤 Stage Style:</span>
+            <button
+              type="button"
+              className={"ow-shape-pill" + (!stageShape.stageType || stageShape.stageType === "standard" ? " active" : "")}
+              onClick={() => handleStageChange({ ...stageShape, stageType: "standard" })}
+            >
+              ▭ Standard Box
+            </button>
+            <button
+              type="button"
+              className={"ow-shape-pill" + (stageShape.stageType === "t-stage" ? " active" : "")}
+              onClick={() => handleStageChange({ ...stageShape, stageType: "t-stage", h: Math.max(stageShape.h, 24) })}
+            >
+              🔲 T-Stage (Runway + Catwalk)
+            </button>
+            <button
+              type="button"
+              className={"ow-shape-pill" + (stageShape.stageType === "wings" ? " active" : "")}
+              onClick={() => handleStageChange({ ...stageShape, stageType: "wings", h: Math.max(stageShape.h, 20) })}
+            >
+              👐 U-Stage (Extended Wings)
+            </button>
+            <button
+              type="button"
+              className={"ow-shape-pill" + (stageShape.stageType === "center" ? " active" : "")}
+              onClick={() => handleStageChange({ ...stageShape, stageType: "center" })}
+            >
+              🌐 360° Arena Center
+            </button>
+            <button
+              type="button"
+              className="ow-shape-pill"
+              style={{ marginLeft: "auto" }}
+              onClick={() => handleStageChange(defaultStage)}
+            >
+              ↺ Center Stage
+            </button>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", width: "100%", fontSize: "12px" }}>
+            <span className="ow-hint" style={{ color: "#581c87" }}>
+              💡 Drag to move anywhere. Drag handles to resize runway depth or stage width. Non-ticketing landmark.
+            </span>
+          </div>
+        </div>
+      )}
+
+      {!readOnly && selectedSpecial === "foh" && (
+        <div className="ow-zonemap-shape-tools" style={{ background: "#f8fafc", borderColor: "#94a3b8" }}>
+          <span className="ow-shape-label" style={{ color: "#0f172a" }}>🎛️ FOH (Front of House):</span>
+          <span className="ow-hint" style={{ color: "#334155" }}>
+            Sound & lighting technical booth. Click & drag to place between audience zones, or resize.
+          </span>
+          <button
+            type="button"
+            className="ow-shape-pill"
+            style={{ marginLeft: "auto" }}
+            onClick={() => handleFohChange(defaultFoh)}
+          >
+            ↺ Center FOH
+          </button>
+        </div>
+      )}
+
       {!readOnly && selected && !draw && (
         <div className="ow-zonemap-shape-tools">
-          <span className="ow-hint">Zone shape:</span>
+          <span className="ow-shape-label">Zone shape:</span>
           {selected.zone.zoneType === "Seated" ? (
             <span className="ow-hint" style={{ color: "#0369a1", fontWeight: 500 }}>
               ▭ Seated zone: Fixed rectangular block (drag to position, use corners to resize or rotate).
             </span>
           ) : (
-            <>
+            <div className="ow-shape-button-group">
               <button
                 type="button"
                 className={"ow-shape-pill" + (selected.shape.type === "rectangle" ? " active" : "")}
@@ -436,7 +1060,7 @@ export default function ZoneMapCanvas({ zones, ticketTypes, readOnly, onZoneMove
               {selected.shape.type === "polygon" && (
                 <span className="ow-hint">Drag a point to move it • Double-click an edge to add a point • Right-click a point to remove it</span>
               )}
-            </>
+            </div>
           )}
         </div>
       )}
@@ -461,21 +1085,69 @@ export default function ZoneMapCanvas({ zones, ticketTypes, readOnly, onZoneMove
           >
             <Layer>
               <StageFloor width={stageWidth} height={stageHeight} />
-              <Rect
-                x={stageWidth * 0.3} y={stageHeight * 0.04} width={stageWidth * 0.4} height={stageHeight * 0.14}
-                cornerRadius={10}
-                fillLinearGradientStartPoint={{ x: 0, y: 0 }} fillLinearGradientEndPoint={{ x: 0, y: stageHeight * 0.14 }}
-                fillLinearGradientColorStops={[0, "#cfc4de", 1, "#f1ecfa"]}
-                stroke="rgba(255,255,255,.12)" strokeWidth={1}
-                shadowColor="#000" shadowBlur={14} shadowOpacity={0.5} shadowOffset={{ x: 0, y: 4 }}
-                listening={false}
+
+              {/* Movable & Resizable STAGE */}
+              <StageItem
+                shape={stageShape}
+                stageWidth={stageWidth}
+                stageHeight={stageHeight}
+                readOnly={readOnly || !!draw}
+                selected={selectedSpecial === "stage"}
+                onSelect={() => {
+                  setSelectedId(null);
+                  setSelectedSpecial("stage");
+                }}
+                onChange={handleStageChange}
               />
-              <Text text="S T A G E" x={stageWidth * 0.3} y={stageHeight * 0.04} width={stageWidth * 0.4} height={stageHeight * 0.14} align="center" verticalAlign="middle" fontSize={11} fontStyle="bold" fill="#4a4458" listening={false} />
+
+              {/* Movable & Resizable FOH Technical Booth */}
+              <FohItem
+                shape={fohShape}
+                stageWidth={stageWidth}
+                stageHeight={stageHeight}
+                readOnly={readOnly || !!draw}
+                selected={selectedSpecial === "foh"}
+                onSelect={() => {
+                  setSelectedId(null);
+                  setSelectedSpecial("foh");
+                }}
+                onChange={handleFohChange}
+              />
 
               {shapes.filter(({ zone }) => !(draw && draw.seatZoneId === zone.seatZoneId)).map(({ zone, shape }) => shape.type === "polygon" ? (
-                <PolygonZoneShape key={zone.seatZoneId} zone={zone} shape={shape} stageWidth={stageWidth} stageHeight={stageHeight} color={colorForTicketType(zone.ticketTypeId)} ticketType={ticketTypeById(zone.ticketTypeId)} readOnly={readOnly || !!draw} selected={selectedId === zone.seatZoneId} onSelect={() => setSelectedId(zone.seatZoneId)} onChange={(next) => commitShape(zone.seatZoneId, next)} />
+                <PolygonZoneShape
+                  key={zone.seatZoneId}
+                  zone={zone}
+                  shape={shape}
+                  stageWidth={stageWidth}
+                  stageHeight={stageHeight}
+                  color={colorForTicketType(zone.ticketTypeId)}
+                  ticketType={ticketTypeById(zone.ticketTypeId)}
+                  readOnly={readOnly || !!draw}
+                  selected={selectedId === zone.seatZoneId}
+                  onSelect={() => {
+                    setSelectedId(zone.seatZoneId);
+                    setSelectedSpecial(null);
+                  }}
+                  onChange={(next) => commitShape(zone.seatZoneId, next)}
+                />
               ) : (
-                <RectangleZoneShape key={zone.seatZoneId} zone={zone} shape={shape} stageWidth={stageWidth} stageHeight={stageHeight} color={colorForTicketType(zone.ticketTypeId)} ticketType={ticketTypeById(zone.ticketTypeId)} readOnly={readOnly || !!draw} selected={selectedId === zone.seatZoneId} onSelect={() => setSelectedId(zone.seatZoneId)} onChange={(next) => commitShape(zone.seatZoneId, next)} />
+                <RectangleZoneShape
+                  key={zone.seatZoneId}
+                  zone={zone}
+                  shape={shape}
+                  stageWidth={stageWidth}
+                  stageHeight={stageHeight}
+                  color={colorForTicketType(zone.ticketTypeId)}
+                  ticketType={ticketTypeById(zone.ticketTypeId)}
+                  readOnly={readOnly || !!draw}
+                  selected={selectedId === zone.seatZoneId}
+                  onSelect={() => {
+                    setSelectedId(zone.seatZoneId);
+                    setSelectedSpecial(null);
+                  }}
+                  onChange={(next) => commitShape(zone.seatZoneId, next)}
+                />
               ))}
 
               {draw && <DrawingOverlay points={draw.points} cursor={cursorPos} stageWidth={stageWidth} stageHeight={stageHeight} color={drawingColor} seatPositions={drawSeatPositions} />}

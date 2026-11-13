@@ -534,3 +534,260 @@
     gap: 5px;
   }
 }
+
+
+/* ==========================================================================
+   Refund / Return Modal & Action Buttons
+   ========================================================================== */
+
+.ticket-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  animation: ticketModalFadeIn 0.2s ease-out;
+}
+
+@keyframes ticketModalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.ticket-modal-card {
+  width: 100%;
+  max-width: 540px;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 26px 28px;
+  box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(15, 23, 42, 0.05);
+  animation: ticketModalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes ticketModalSlideUp {
+  from {
+    transform: translateY(16px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+  }
+}
+
+.ticket-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.ticket-modal-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  background: #ffe4e6;
+  color: #e11d48;
+  flex-shrink: 0;
+}
+
+.ticket-modal-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+.ticket-modal-subtitle {
+  margin: 3px 0 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.ticket-modal-info-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin: 16px 0;
+}
+
+.ticket-modal-info-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 13.5px;
+  color: #475569;
+}
+
+.ticket-modal-info-row:last-child {
+  margin-bottom: 0;
+}
+
+.ticket-modal-info-row strong {
+  color: #0f172a;
+}
+
+.ticket-modal-policy-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: #ecfdf5;
+  color: #059669;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: 1px solid #a7f3d0;
+}
+
+.ticket-modal-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 0 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.ticket-modal-char-count {
+  font-size: 12px;
+  font-weight: normal;
+  color: #94a3b8;
+}
+
+.ticket-modal-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  font-size: 14px;
+  font-family: inherit;
+  color: #1e293b;
+  resize: vertical;
+  background: #ffffff;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.ticket-modal-textarea:focus {
+  outline: none;
+  border-color: #e11d48;
+  box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.12);
+}
+
+.ticket-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.ticket-modal-cancel-btn {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ticket-modal-cancel-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.ticket-modal-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 22px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+  color: #ffffff !important;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(225, 29, 72, 0.32);
+  transition: all 0.2s;
+}
+
+.ticket-modal-submit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(225, 29, 72, 0.42);
+}
+
+.ticket-modal-submit-btn:disabled {
+  background: #e2e8f0 !important;
+  color: #94a3b8 !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+  border: 1px solid #cbd5e1 !important;
+  transform: none !important;
+  opacity: 0.9;
+}
+
+/* Need Help Support Button in Ticket Details */
+.ticket-help-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 1px solid #d8b4fe;
+  background: #faf5ff;
+  color: #7e22ce;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.ticket-help-link:hover {
+  background: #f3e8ff;
+  color: #6b21a8;
+  border-color: #c084fc;
+}
+
+.ticket-refund-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 1px solid #fecdd3;
+  background: #fff1f2;
+  color: #e11d48;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ticket-refund-btn:hover {
+  background: #ffe4e6;
+  border-color: #fda4af;
+  color: #be123c;
+}

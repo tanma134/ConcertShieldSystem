@@ -145,7 +145,7 @@ function ReturnQueue({ isAdmin }) {
                     <td>
                       {r.status === "Pending" ? (
                         <>
-                          <button className="tb-btn tb-btn-primary" onClick={() => openDecision(r, true)}>Approve</button>{" "}
+                          <button className="tb-btn tb-btn-primary" onClick={() => openDecision(r, true)}>Approve & refund</button>{" "}
                           <button className="tb-btn tb-btn-outline" onClick={() => openDecision(r, false)}>Reject</button>
                         </>
                       ) : r.canRetryRefund ? (
@@ -186,7 +186,7 @@ function ReturnQueue({ isAdmin }) {
             <div className="rp-modal-actions">
               <button className="tb-btn tb-btn-outline" disabled={decision.busy} onClick={() => setDecision(null)}>Cancel</button>
               <button className="tb-btn tb-btn-primary" disabled={decision.busy} onClick={confirmDecision}>
-                {decision.busy ? "Saving..." : decision.approve ? "Approve" : "Reject"}
+                {decision.busy ? "Saving..." : decision.approve ? "Approve & refund" : "Reject"}
               </button>
             </div>
           </div>

@@ -621,6 +621,30 @@
   font-weight: 800;
   letter-spacing: 0.25em;
   box-shadow: 0 8px 22px #0008;
+  pointer-events: none;
+  user-select: none;
+}
+
+.tb-map-foh {
+  position: absolute;
+  z-index: 5;
+  top: 55%;
+  left: 42%;
+  width: 16%;
+  height: 8%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px dashed #64748b;
+  border-radius: 6px;
+  background: rgba(248, 250, 252, 0.9);
+  color: #334155;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+  user-select: none;
 }
 
 .tb-seat-canvas {
@@ -781,4 +805,21 @@
 
 #tb-seat-details-title {
   color: #3c3552;
+}
+
+.tb-seat-dot.is-locked {
+  background: #cbd5e1 !important;
+  border-color: #94a3b8 !important;
+  opacity: 0.6;
+  cursor: not-allowed !important;
+}
+
+.tb-zone.tb-zone-locked {
+  opacity: 0.65;
+  cursor: not-allowed !important;
+  border-style: dashed;
+}
+
+.tb-ticket-row.is-not-on-sale {
+  opacity: 0.75;
 }

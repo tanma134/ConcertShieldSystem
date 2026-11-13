@@ -27,6 +27,9 @@ namespace EventAPI.Services
 
         Task<SeatZoneResponseDTO> UpdateZoneAsync(int seatZoneId, UpdateSeatZoneDTO dto, int callerId, bool isAdmin);
 
+        /// <summary>Updates layout metadata (stage shape, FOH booth position, dimensions).</summary>
+        Task<SeatingChartResponseDTO> UpdateLayoutAsync(int eventId, string layoutJson, int callerId, bool isAdmin);
+
         Task DeleteZoneAsync(int seatZoneId, int callerId, bool isAdmin);
 
         /// <summary>

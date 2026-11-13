@@ -42,7 +42,7 @@ export default function AdminAllEventsPage() {
         const data = res.data?.data;
         const list = (data?.items || []).filter((ev) => ev.status !== "Draft");
         setItems(list);
-        setTotalCount(list.length);
+        setTotalCount(data?.totalCount ?? list.length);
         setPage(p);
       })
       .catch((err) =>

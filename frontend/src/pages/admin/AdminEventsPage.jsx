@@ -105,10 +105,10 @@ export default function AdminEventsPage() {
                         ? formatDateRange(ev.submittedAt, ev.submittedAt)
                         : "—"}
                     </td>
-                    <td>
+                    <td style={{ whiteSpace: "nowrap", textAlign: "right" }}>
                       <Link
                         to={`/admin/events/${ev.eventId}`}
-                        className="tb-btn tb-btn-outline ow-btn-sm"
+                        className="admin-view-event-btn"
                       >
                         Review →
                       </Link>
