@@ -1,13 +1,13 @@
 import axiosClient from "./axiosClient";
 
 const organizerRequestApi = {
-  // User gửi yêu cầu trở thành Organizer
-  create: (data) => axiosClient.post("/organizer-requests", data),
+  // User gửi yêu cầu trở thành Organizer (kèm thông tin pháp lý và tệp/ảnh đính kèm)
+  create: (formData) => axiosClient.post("/organizer-requests", formData),
 
-  // User xem lịch sử yêu cầu của chính mình
+  // User xem lịch sử yêu cầu của chính mình (kèm danh sách tệp đính kèm)
   getMyRequests: () => axiosClient.get("/organizer-requests/me"),
 
-  // Xem chi tiết 1 request theo id
+  // Xem chi tiết 1 request theo id (kèm tài liệu)
   getById: (requestId) => axiosClient.get(`/organizer-requests/${requestId}`),
 
   // Admin: lấy danh sách request, status = "Pending" | "Approved" | "Rejected" | undefined (tất cả)

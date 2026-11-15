@@ -1,4 +1,4 @@
-﻿namespace AuthenticationAPI.Services
+namespace AuthenticationAPI.Services
 {
     public enum EmailPurpose
     {
@@ -14,5 +14,7 @@
 
         /// <summary>Result of a manual eKYC review (approve / reject).</summary>
         Task SendKycReviewResultAsync(string toEmail, bool approved, string? reason);
+
+        Task SendOrganizerRequestResultAsync(string toEmail, string fullName, bool approved, string? rejectionReason, string? reviewNote);
     }
 }

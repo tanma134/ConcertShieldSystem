@@ -1,3 +1,4 @@
+import axiosClient from "./axiosClient";
 import axios from "axios";
 
 // NotificationAPI is called directly (bypasses Gateway) because the
@@ -59,6 +60,11 @@ const withFallback = async (path, method = "get", data = null, extraConfig = {})
               : () => gatewayClient.post(path, data, config);
       return await fn();
     } catch (gatewayErr) {
+      if (path === "/notifications" && method === "get") {
+        try {
+          return await axiosClient.get("/organizer-requests/notifications");
+        } catch (_) {}
+      }
       throw gatewayErr;
     }
   }

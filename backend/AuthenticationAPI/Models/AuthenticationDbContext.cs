@@ -23,6 +23,8 @@ public partial class AuthenticationDbContext : DbContext
 
     public virtual DbSet<OrganizerRequest> OrganizerRequests { get; set; }
 
+    public virtual DbSet<OrganizerRequestDocument> OrganizerRequestDocuments { get; set; }
+
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
 
     public virtual DbSet<Role> Roles { get; set; }
@@ -239,6 +241,12 @@ public partial class AuthenticationDbContext : DbContext
             entity.Property(e => e.CompanyName)
                 .HasMaxLength(200)
                 .HasColumnName("company_name");
+            entity.Property(e => e.TaxCode)
+                .HasMaxLength(50)
+                .HasColumnName("tax_code");
+            entity.Property(e => e.RepresentativeName)
+                .HasMaxLength(200)
+                .HasColumnName("representative_name");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("now()")
                 .HasColumnName("created_at");
@@ -288,6 +296,45 @@ public partial class AuthenticationDbContext : DbContext
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("fk_organizer_requests_user");
+
+            entity.HasMany(d => d.Documents).WithOne(p => p.Request)
+                .HasForeignKey(p => p.RequestId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_organizer_request_documents_request");
+        });
+
+        modelBuilder.Entity<OrganizerRequestDocument>(entity =>
+        {
+            entity.HasKey(e => e.DocumentId).HasName("organizer_request_documents_pkey");
+
+            entity.ToTable("organizer_request_documents");
+
+            entity.Property(e => e.DocumentId)
+                .UseIdentityAlwaysColumn()
+                .HasColumnName("document_id");
+            entity.Property(e => e.RequestId).HasColumnName("request_id");
+            entity.Property(e => e.DocumentType)
+                .HasMaxLength(50)
+                .HasColumnName("document_type");
+            entity.Property(e => e.FileName)
+                .HasMaxLength(255)
+                .HasColumnName("file_name");
+            entity.Property(e => e.FileUrl).HasColumnName("file_url");
+            entity.Property(e => e.PreviewUrl).HasColumnName("preview_url");
+            entity.Property(e => e.PublicId)
+                .HasMaxLength(255)
+                .HasColumnName("public_id");
+            entity.Property(e => e.IsImage)
+                .HasDefaultValue(true)
+                .HasColumnName("is_image");
+            entity.Property(e => e.UploadedAt)
+                .HasDefaultValueSql("now()")
+                .HasColumnName("uploaded_at");
+
+            entity.HasOne(d => d.Request).WithMany(p => p.Documents)
+                .HasForeignKey(d => d.RequestId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_organizer_request_documents_request");
         });
 
         modelBuilder.Entity<RefreshToken>(entity =>

@@ -1490,6 +1490,24 @@
             }
         },
         {
+            "Key": "organizer-request-notifications",
+            "DownstreamPathTemplate": "/api/organizer-requests/notifications",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7058
+                }
+            ],
+            "UpstreamPathTemplate": "/api/organizer-requests/notifications",
+            "UpstreamHttpMethod": [
+                "Get"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
             "Key": "organizer-request-me",
             "DownstreamPathTemplate": "/api/organizer-requests/me",
             "DownstreamScheme": "https",
@@ -4914,94 +4932,6 @@
                 }
             ],
             "UpstreamPathTemplate": "/api/admin/policies",
-            "UpstreamHttpMethod": [
-                "Get",
-                "Post",
-                "Put",
-                "Delete",
-                "Options"
-            ],
-            "AuthenticationOptions": {
-                "AuthenticationProviderKey": "Bearer"
-            }
-        },
-        {
-            "Key": "organizer-verification-all",
-            "DownstreamPathTemplate": "/api/organizer/verification/{everything}",
-            "DownstreamScheme": "https",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "localhost",
-                    "Port": 7058
-                }
-            ],
-            "UpstreamPathTemplate": "/api/organizer/verification/{everything}",
-            "UpstreamHttpMethod": [
-                "Get",
-                "Post",
-                "Put",
-                "Delete",
-                "Options"
-            ],
-            "AuthenticationOptions": {
-                "AuthenticationProviderKey": "Bearer"
-            }
-        },
-        {
-            "Key": "organizer-verification-root",
-            "DownstreamPathTemplate": "/api/organizer/verification",
-            "DownstreamScheme": "https",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "localhost",
-                    "Port": 7058
-                }
-            ],
-            "UpstreamPathTemplate": "/api/organizer/verification",
-            "UpstreamHttpMethod": [
-                "Get",
-                "Post",
-                "Put",
-                "Delete",
-                "Options"
-            ],
-            "AuthenticationOptions": {
-                "AuthenticationProviderKey": "Bearer"
-            }
-        },
-        {
-            "Key": "admin-verification-all",
-            "DownstreamPathTemplate": "/api/admin/verification/{everything}",
-            "DownstreamScheme": "https",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "localhost",
-                    "Port": 7058
-                }
-            ],
-            "UpstreamPathTemplate": "/api/admin/verification/{everything}",
-            "UpstreamHttpMethod": [
-                "Get",
-                "Post",
-                "Put",
-                "Delete",
-                "Options"
-            ],
-            "AuthenticationOptions": {
-                "AuthenticationProviderKey": "Bearer"
-            }
-        },
-        {
-            "Key": "admin-verification-root",
-            "DownstreamPathTemplate": "/api/admin/verification",
-            "DownstreamScheme": "https",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "localhost",
-                    "Port": 7058
-                }
-            ],
-            "UpstreamPathTemplate": "/api/admin/verification",
             "UpstreamHttpMethod": [
                 "Get",
                 "Post",

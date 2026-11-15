@@ -1,4 +1,7 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using AuthenticationAPI.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,7 +9,6 @@ namespace AuthenticationAPI.Repositories
 {
     public class OrganizerRequestRepository : IOrganizerRequestRepository
     {
-        // TODO: doi ten "AppDbContext" cho khop voi DbContext hien co trong project cua ban
         private readonly AuthenticationDbContext _context;
 
         public OrganizerRequestRepository(AuthenticationDbContext context)
@@ -19,12 +21,14 @@ namespace AuthenticationAPI.Repositories
             return await _context.OrganizerRequests
                 .Include(r => r.User)
                 .Include(r => r.ReviewedByNavigation)
+                .Include(r => r.Documents)
                 .FirstOrDefaultAsync(r => r.RequestId == requestId && !r.IsDeleted);
         }
 
         public async Task<OrganizerRequest?> GetPendingByUserIdAsync(int userId)
         {
             return await _context.OrganizerRequests
+                .Include(r => r.Documents)
                 .Where(r => r.UserId == userId && r.Status == "Pending" && !r.IsDeleted)
                 .FirstOrDefaultAsync();
         }
@@ -34,6 +38,7 @@ namespace AuthenticationAPI.Repositories
             return await _context.OrganizerRequests
                 .Include(r => r.User)
                 .Include(r => r.ReviewedByNavigation)
+                .Include(r => r.Documents)
                 .Where(r => r.UserId == userId && !r.IsDeleted)
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
@@ -44,6 +49,7 @@ namespace AuthenticationAPI.Repositories
             var query = _context.OrganizerRequests
                 .Include(r => r.User)
                 .Include(r => r.ReviewedByNavigation)
+                .Include(r => r.Documents)
                 .Where(r => !r.IsDeleted)
                 .AsQueryable();
 
