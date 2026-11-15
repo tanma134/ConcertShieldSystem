@@ -39,6 +39,9 @@ public sealed class TicketRiskService : ITicketRiskService
 
     public async Task<RiskVerdict> CheckHoldAsync(HttpContext http, int userId, CreateHoldSessionRequest req, CancellationToken ct = default)
     {
+        // NOTE: the eKYC gate is handled once by HoldsController.CreateHoldSession,
+        // which calls this method - do not check it again here.
+
         var pre = await _guard.PreCheckAsync(http, userId, ct);
         if (!pre.Allowed) return pre;
 
@@ -55,6 +58,11 @@ public sealed class TicketRiskService : ITicketRiskService
 
     public async Task<RiskVerdict> CheckOrderAsync(HttpContext http, int userId, CreateOrderDTO dto, CancellationToken ct = default)
     {
+        // Second gate: a hold can be created before verification completes, so the
+        // order step re-checks eKYC before any money is taken.
+        var ekyc = _guard.CheckEkycAsync(http);
+        if (!ekyc.Allowed) return ekyc;
+
         var pre = await _guard.PreCheckAsync(http, userId, ct);
         if (!pre.Allowed) return pre;
 

@@ -52,7 +52,7 @@ function validate(values) {
   range("risk.ai.min_score", 0, 100); range("risk.appeal.max_evidence_files", 0, 20); range("risk.appeal.max_evidence_mb", 1, 50);
   const min = (k, lo) => { const x = n(k); if (values[k] != null && x != null && x < lo) bad(k, `Must be at least ${lo}.`); };
   min("risk.combo.min_groups", 2); min("risk.critical.min_groups", 1); min("risk.vip.min_order_amount", 0);
-  ["risk.block.escalation_window_days", "risk.trust.restore_days", "risk.alert.sla_hours", "risk.appeal.deadline_days", "risk.appeal.sla_hours"].forEach((k) => min(k, 1));
+  ["risk.block.escalation_window_days", "risk.trust.restore_days", "risk.alert.sla_hours", "risk.appeal.deadline_days", "risk.appeal.ticket_deadline_hours", "risk.appeal.sla_hours"].forEach((k) => min(k, 1));
 
   const codes = new Set(Object.keys(values).filter((k) => k.startsWith("risk.rule.")).map((k) => parseRule(k).code));
   for (const code of codes) {

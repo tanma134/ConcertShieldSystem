@@ -14,10 +14,13 @@ public sealed class AppealService : IAppealService
 
  private readonly AdminDbContext _db;
  private readonly IRiskConfigProvider _config;
+ private readonly ITicketRiskClient? _tickets;
+ private readonly ILogger<AppealService>? _logger;
 
- public AppealService(AdminDbContext db, IRiskConfigProvider config)
+ public AppealService(AdminDbContext db, IRiskConfigProvider config,
+ ITicketRiskClient? tickets = null, ILogger<AppealService>? logger = null)
  {
- _db = db; _config = config;
+ _db = db; _config = config; _tickets = tickets; _logger = logger;
  }
 
  public async Task<RiskDecisionPublicDto> GetPublicDecisionAsync(int decisionId, int requestingUserId, CancellationToken ct = default)
@@ -36,7 +39,7 @@ public sealed class AppealService : IAppealService
 
  var (canAppeal, cannotReason) = EvaluateAppealEligibility(cfg, d, existing);
 
- return ToPublicDto(d, canAppeal, cannotReason, existing);
+ return ToPublicDto(cfg, d, canAppeal, cannotReason, existing);
  }
 
  // Danh sách decision (BLOCK/HOLD, không ph?i shadow) c?a chính user, 30 ngày g?n nh?t - hi?n th? ? My Profile.
@@ -65,11 +68,11 @@ public sealed class AppealService : IAppealService
  {
  byDecision.TryGetValue(d.RiskDecisionId, out var existing);
  var (canAppeal, reason) = EvaluateAppealEligibility(cfg, d, existing);
- return ToPublicDto(d, canAppeal, reason, existing);
+ return ToPublicDto(cfg, d, canAppeal, reason, existing);
  }).ToList();
  }
 
- private static RiskDecisionPublicDto ToPublicDto(RiskDecision d, bool canAppeal, string? cannotReason, RiskAppeal? existing) => new()
+ private static RiskDecisionPublicDto ToPublicDto(RiskConfig cfg, RiskDecision d, bool canAppeal, string? cannotReason, RiskAppeal? existing) => new()
  {
  RiskDecisionId = d.RiskDecisionId,
  DecisionCode = d.DecisionCode,
@@ -81,6 +84,8 @@ public sealed class AppealService : IAppealService
  CreatedAt = d.CreatedAt,
  CanAppeal = canAppeal,
  CannotAppealReason = cannotReason,
+ AppealDeadlineAt = cfg.AppealDueAt(d.Scope, d.NotifiedAt ?? d.CreatedAt),
+ TicketId = d.TicketId,
  ExistingAppealId = existing?.RiskAppealId,
  ExistingAppealStatus = existing?.Status
  };
@@ -243,32 +248,58 @@ public sealed class AppealService : IAppealService
  ?? throw new AppealServiceException(404, "Related decision not found.");
 
 
- if (d.DecidedByType == "STAFF" && d.DecidedBy == staffId)
- throw new AppealServiceException(400, "You cannot review an appeal for a decision you made yourself.");
+ // Business rule: this system has exactly one Admin, and Staff only review and
+ // recommend. The Admin must therefore be able to resolve an appeal against a
+ // decision they made themselves; blocking it would deadlock every appeal.
+ // The conflict is still recorded in the review note and the audit log.
+ var selfReview = d.DecidedByType == "STAFF" && d.DecidedBy == staffId;
 
  var accepted = decisionWord == "Accept";
  a.Status = accepted ? "Accepted" : "Rejected";
  a.ReviewedBy = staffId;
  a.ReviewedAt = now;
- a.ReviewNote = note;
+ a.ReviewNote = selfReview ? $"[SELF-REVIEW] {note}" : note;
 
  var lifted = new List<int>();
  if (accepted)
  {
 
  var decisionId = d.RiskDecisionId;
- var createdAt = d.CreatedAt;
- var action = d.Action;
- var ownerId = d.UserId;
- var sessionId = d.SessionId;
+ var relatedAlertId = d.FraudAlertId;
+ // Lift the appealed decision and, when it belongs to a fraud alert, every active
+ // Block/Hold decision created from that same alert. Never match on timestamps:
+ // two unrelated blocks can share the same second.
  var related = await _db.RiskDecisions.Where(x =>
  x.RiskDecisionId == decisionId
- || (x.CreatedAt == createdAt && x.Action == action && x.Status == "Active" && !x.IsShadow
- && ((ownerId != null && x.UserId == ownerId)
- || (sessionId != null && x.SessionId == sessionId))))
+ || (relatedAlertId != null && x.FraudAlertId == relatedAlertId && x.Status == "Active" && !x.IsShadow
+ && (x.Action == "BLOCK" || x.Action == "HOLD")))
  .ToListAsync(ct);
+ var toLift = related.Where(x => x.Status == "Active" && !x.IsShadow).ToList();
+ var ticketIdsToUnblock = toLift
+ .Where(x => string.Equals(x.Scope, "TICKET", StringComparison.OrdinalIgnoreCase) && x.TicketId.HasValue)
+ .Select(x => x.TicketId!.Value)
+ .Distinct()
+ .ToList();
 
- foreach (var x in related.Where(x => x.Status == "Active" && !x.IsShadow))
+ // Lift the ticket restriction BEFORE the decision is marked Overturned. If TicketAPI
+ // fails, the whole accept fails and nothing is saved, so the customer is never told
+ // "unblocked" while the ticket is still refused at the gate.
+ if (ticketIdsToUnblock.Count > 0)
+ {
+ if (_tickets == null)
+ throw new AppealServiceException(503,
+ "TicketAPI is not configured, so the ticket cannot be unblocked. Please contact an administrator.");
+ foreach (var ticketId in ticketIdsToUnblock)
+ {
+ try { await _tickets.UnblockTicketAsync(ticketId, $"Appeal #{a.RiskAppealId} accepted", staffId, ct); }
+ catch (RiskServiceException ex)
+ {
+ throw new AppealServiceException(ex.StatusCode, ex.Message);
+ }
+ }
+ }
+
+ foreach (var x in toLift)
  {
  x.Status = "Overturned";
  x.RestoredBy = staffId;
@@ -296,6 +327,17 @@ public sealed class AppealService : IAppealService
  }
  }
 
+ TicketRiskRevokeResult? revoke = null;
+ if (!accepted && string.Equals(d.Scope, "TICKET", StringComparison.OrdinalIgnoreCase)
+ && d.TicketId.HasValue && d.UserId.HasValue && _tickets != null)
+ {
+ // ticket_return_requests.reason is varchar(500); the staff note can be 1000 chars.
+ var revokeReason = $"Appeal #{a.RiskAppealId} rejected: {note}";
+ if (revokeReason.Length > 500) revokeReason = revokeReason[..500];
+ revoke = await _tickets.RevokeAndRefundAsync(d.TicketId.Value, d.UserId.Value,
+ a.RiskAppealId, staffId, revokeReason, ct);
+ }
+
  _db.RiskNotifications.Add(RiskSupport.AppealNotice(a, d, accepted, now));
 
  try
@@ -309,6 +351,14 @@ public sealed class AppealService : IAppealService
 
  var result = ToResult(a);
  result.LiftedDecisionIds = lifted;
+ if (revoke != null)
+ {
+ result.TicketRevoked = revoke.TicketRevoked;
+ result.RefundStatus = revoke.RefundStatus;
+ result.RefundAmount = revoke.RefundAmount;
+ result.RefundReference = revoke.RefundReference;
+ result.RefundError = revoke.RefundError;
+ }
  return result;
  }
 
@@ -316,8 +366,8 @@ public sealed class AppealService : IAppealService
  {
  if (existing != null)
  return (false, $"This decision already has an appeal (status: {existing.Status}).");
- if (d.Action != "BLOCK" && d.Action != "HOLD")
- return (false, "Only Block or Hold decisions can be appealed.");
+ if (d.Action != "BLOCK")
+ return (false, "Only Block decisions can be appealed.");
  if (d.IsShadow)
  return (false, "This decision has not been enforced (shadow mode), so no appeal is needed.");
  if (d.Status != "Active")
@@ -325,9 +375,9 @@ public sealed class AppealService : IAppealService
  var now = DateTime.UtcNow;
  if (d.Action == "BLOCK" && d.ExpiresAt.HasValue && d.ExpiresAt.Value <= now)
  return (false, "This block has expired and is no longer in effect.");
- var deadline = (d.NotifiedAt ?? d.CreatedAt).AddDays(cfg.AppealDeadlineDays);
+ var deadline = cfg.AppealDueAt(d.Scope, d.NotifiedAt ?? d.CreatedAt);
  if (now > deadline)
- return (false, $"The {cfg.AppealDeadlineDays}-day deadline to submit an appeal has passed.");
+ return (false, $"The {cfg.AppealWindowAdjective(d.Scope)} deadline to submit an appeal has passed.");
  return (true, null);
  }
 

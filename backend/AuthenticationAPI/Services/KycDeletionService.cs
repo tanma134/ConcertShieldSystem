@@ -123,6 +123,10 @@ namespace AuthenticationAPI.Services
             var keepHash = setting.KeepDocumentHashAfterDeletion;
 
             var records = await DeletableRecords(request.UserId, keepHash).ToListAsync();
+            // Pending = submission still being processed by the provider. Purging it now
+            // would delete images that the in-flight verification is still using.
+            if (records.Any(r => r.Status == "Pending"))
+                throw new InvalidOperationException("This user has a submission still being processed. Try again once it finishes, or reject the request");
             if (records.Any(r => r.Status == "ManualReview"))
                 throw new InvalidOperationException("This user has a submission under manual review. Resolve it first, or reject the request");
 

@@ -27,9 +27,11 @@ public interface IFraudAlertService
 
 public sealed class FraudAlertService : IFraudAlertService
 {
-    private static readonly string[] ManualScopes = { "ACCOUNT", "TICKET" };
+    private static readonly string[] ManualScopes = { "ACCOUNT", "TICKET", "IP" };
     private static readonly string[] ClosedStatuses = { "Restored", "Overturned" };
     private const int MaxManualBlockHours = 24 * 30;
+    // One user may be blocked on at most this many different scopes at the same time.
+    private const int MaxActiveScopesPerUser = 2;
     private const int MinReasonLength = 10;
     private static readonly TimeSpan AlertMergeWindow = TimeSpan.FromMinutes(15);
 
@@ -37,13 +39,17 @@ public sealed class FraudAlertService : IFraudAlertService
     private readonly IRiskConfigProvider _config;
     private readonly RiskScoreCalculator _calc;
     private readonly ILogger<FraudAlertService> _logger;
+    private readonly ITicketRiskClient? _tickets;
+    private readonly IStaffDirectoryClient? _accounts;
 
     private readonly IAiSummaryQueue _aiQueue;
 
     public FraudAlertService(AdminDbContext db, IRiskConfigProvider config, RiskScoreCalculator calc,
-        IAiSummaryQueue aiQueue, ILogger<FraudAlertService> logger)
+        IAiSummaryQueue aiQueue, ILogger<FraudAlertService> logger,
+        ITicketRiskClient? tickets = null, IStaffDirectoryClient? accounts = null)
     {
-        _db = db; _config = config; _calc = calc; _aiQueue = aiQueue; _logger = logger;
+        _db = db; _config = config; _calc = calc; _aiQueue = aiQueue;
+        _logger = logger; _tickets = tickets; _accounts = accounts;
     }
 
     public async Task<IngestRiskEventResponse> IngestAsync(IngestRiskEventRequest req, CancellationToken ct = default)
@@ -345,6 +351,7 @@ public sealed class FraudAlertService : IFraudAlertService
                 DecidedByType = d.DecidedByType,
                 DecidedBy = d.DecidedBy,
                 ExpiresAt = d.ExpiresAt,
+                IpAddress = RiskSupport.MaskIp(d.IpAddress?.ToString()),
                 CreatedAt = d.CreatedAt
             }).ToList(),
             Page = page,
@@ -380,20 +387,74 @@ public sealed class FraudAlertService : IFraudAlertService
         if (!string.IsNullOrWhiteSpace(req.IpAddress) && !IPAddress.TryParse(req.IpAddress, out ip))
             throw new RiskServiceException(400, "IpAddress is invalid.");
 
-        if (scope == "TICKET" && userId == null)
-            throw new RiskServiceException(400, "Blocking a ticket requires the ticket owner's UserId (so the owner can be notified and can appeal).");
+        if ((scope == "TICKET" || scope == "IP") && userId == null)
+            throw new RiskServiceException(400, "Blocking a ticket or an IP requires the owner's UserId (so the owner can be notified and can appeal).");
 
         var probe = new BlockRequest { UserId = userId, TicketId = ticketId, SessionId = sessionId, DeviceFp = req.DeviceFp, IpAddress = ip?.ToString() };
         if (!ScopeHasTarget(scope, probe.ToIngestLike()))
             throw new RiskServiceException(400, $"Scope {scope} requires the matching target ({ScopeTargetName(scope)}).");
 
+        // ---- Target validation -------------------------------------------------
+        // A manual block is an action against a real person: the target must exist,
+        // be active, and (for tickets) actually own the ticket. Getting this wrong
+        // blocks an innocent account or notifies someone who does not exist.
+
+        AccountInfo? target = null;
+        if (userId.HasValue && scope is "ACCOUNT" or "TICKET" or "IP")
+        {
+            if (_accounts == null)
+                throw new RiskServiceException(503,
+                    "Account verification is not configured, so a block cannot be created safely.");
+            target = await _accounts.FindAccountAsync(userId.Value)
+                     ?? throw new RiskServiceException(404, $"User #{userId} does not exist.");
+            if (!target.IsActive)
+                throw new RiskServiceException(409, $"User #{userId} is not an active account.");
+        }
+
+        // Blocking any Staff (including yourself) would cut off the operations team.
         if (scope == "ACCOUNT" && userId == staffId)
             throw new RiskServiceException(400, "You cannot block your own account.");
+        if (scope == "ACCOUNT" && target?.Roles.Any(r =>
+                string.Equals(r, "Admin", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(r, "Staff", StringComparison.OrdinalIgnoreCase)) == true)
+            throw new RiskServiceException(403,
+                "Administrator and Staff accounts cannot be blocked from the fraud console. Use the user management screen instead.");
+
+        // A TICKET block revokes someone's property, so the ticket must exist and
+        // belong to the user named on the block.
+        if (scope == "TICKET")
+        {
+            if (_tickets == null)
+                throw new RiskServiceException(503,
+                    "Ticket verification is not configured, so a ticket block cannot be created safely.");
+
+            var ticket = await _tickets.FindTicketAsync(ticketId!.Value)
+                         ?? throw new RiskServiceException(404, $"Ticket #{ticketId} does not exist.");
+            if (ticket.OwnerUserId != userId)
+                throw new RiskServiceException(400,
+                    $"Ticket #{ticketId} belongs to user #{ticket.OwnerUserId}, not user #{userId}.");
+            if (ticket.CheckedInAt.HasValue)
+                throw new RiskServiceException(409,
+                    $"Ticket #{ticketId} has already been checked in and cannot be blocked.");
+            if (string.Equals(ticket.Status, "Returned", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(ticket.Status, "Revoked", StringComparison.OrdinalIgnoreCase))
+                throw new RiskServiceException(409,
+                    $"Ticket #{ticketId} is already {ticket.Status} and cannot be blocked.");
+            if (string.Equals(ticket.Status, "Blocked", StringComparison.OrdinalIgnoreCase))
+                throw new RiskServiceException(409, $"Ticket #{ticketId} is already blocked.");
+        }
 
         var (whitelisted, _) = await LookupListsAsync(userId, req.DeviceFp, ip?.ToString(), null, now, default);
-        if (scope == "ACCOUNT" && whitelisted.Contains(("USER", userId.ToString()!)) ||
-            scope == "DEVICE" && whitelisted.Contains(("DEVICE", req.DeviceFp ?? "")) ||
-            scope == "IP" && whitelisted.Contains(("IP", ip?.ToString() ?? "")))
+        // Every block target must be off the whitelist. UserId is checked for TICKET and IP
+        // as well, because those blocks also apply to the account that owns them.
+        var targetValues = new List<(string Type, string Value)>();
+        if (userId.HasValue && scope is "ACCOUNT" or "TICKET" or "IP")
+            targetValues.Add(("USER", userId.Value.ToString()));
+        if (scope == "DEVICE" && !string.IsNullOrWhiteSpace(req.DeviceFp))
+            targetValues.Add(("DEVICE", req.DeviceFp));
+        if (scope == "IP" && ip != null)
+            targetValues.Add(("IP", ip.ToString()));
+        if (targetValues.Any(tv => whitelisted.Contains(tv)))
             throw new RiskServiceException(400, "The target is on the internal whitelist and cannot be blocked.");
 
         var activeBlocks = _db.RiskDecisions.AsNoTracking().Where(x =>
@@ -408,6 +469,34 @@ public sealed class FraudAlertService : IFraudAlertService
             _ => await activeBlocks.AnyAsync(x => x.IpAddress == ip)
         };
         if (dup) throw new RiskServiceException(409, "This target is already blocked; no additional block was created.");
+
+        // A single account may not accumulate blocks across every scope at once.
+        // Without this, an admin could block ACCOUNT + TICKET + IP for the same person
+        // and the customer would have no way to understand or appeal the combination.
+        if (userId.HasValue)
+        {
+            var activeScopes = await _db.RiskDecisions.AsNoTracking()
+                .Where(x => x.UserId == userId && x.Action == "BLOCK" && x.Status == "Active" && !x.IsShadow
+                            && x.Scope != scope && (x.ExpiresAt == null || x.ExpiresAt > now))
+                .Select(x => x.Scope!)
+                .Distinct()
+                .ToListAsync();
+
+            if (activeScopes.Count >= MaxActiveScopesPerUser)
+                throw new RiskServiceException(409,
+                    $"User #{userId} already has {activeScopes.Count} active block scopes " +
+                    $"({string.Join(", ", activeScopes)}). Restore one of them before adding another.");
+        }
+
+        // For tickets, enforce the block in TicketAPI before recording the decision.
+        // The ticket status becomes "Blocked" and its QR can no longer be used.
+        var ticketBlocked = false;
+        if (scope == "TICKET" && _tickets != null)
+        {
+            await _tickets.BlockTicketAsync(ticketId!.Value, userId!.Value, reason, staffId,
+                now.AddHours(req.DurationHours));
+            ticketBlocked = true;
+        }
 
         var d = new RiskDecision
         {
@@ -457,7 +546,20 @@ public sealed class FraudAlertService : IFraudAlertService
             alert.ReviewedAt = now;
         }
 
-        await SaveAsync();
+        try
+        {
+            await SaveAsync();
+        }
+        catch
+        {
+            // Best effort: do not leave a blocked ticket behind when the decision could not be saved.
+            if (ticketBlocked && _tickets != null)
+            {
+                try { await _tickets.UnblockTicketAsync(ticketId!.Value, "Risk decision could not be saved", staffId); }
+                catch (Exception ex) { _logger.LogWarning(ex, "Could not roll back ticket block {TicketId}", ticketId); }
+            }
+            throw;
+        }
         return ToResult(d);
     }
 
@@ -477,6 +579,25 @@ public sealed class FraudAlertService : IFraudAlertService
             throw new RiskServiceException(400, "A shadow decision has not been enforced, so there is nothing to restore.");
         if (d.Status != "Active")
             throw new RiskServiceException(409, $"The decision is in status {d.Status} and cannot be restored.");
+
+        if (string.Equals(d.Scope, "TICKET", StringComparison.OrdinalIgnoreCase)
+            && d.TicketId.HasValue && _tickets != null)
+        {
+            // Do the ticket side first: if TicketAPI fails, the decision must stay Active
+            // instead of showing "Restored" while the ticket is still blocked.
+            try
+            {
+                await _tickets.UnblockTicketAsync(d.TicketId.Value,
+                    $"Block restored by admin: {reason}", staffId);
+            }
+            catch (Exception ex) when (ex is not RiskServiceException)
+            {
+                _logger.LogError(ex, "Could not unblock ticket {TicketId} while restoring decision {Id}",
+                    d.TicketId, decisionId);
+                throw new RiskServiceException(502,
+                    "TicketAPI could not unblock the ticket. The block was not restored; please retry.");
+            }
+        }
 
         d.Status = "Restored";
         d.RestoredBy = staffId;
@@ -604,7 +725,8 @@ public sealed class FraudAlertService : IFraudAlertService
         UserId = d.UserId,
         Scope = d.Scope,
         Status = d.Status,
-        ExpiresAt = d.ExpiresAt
+        ExpiresAt = d.ExpiresAt,
+        IpAddress = RiskSupport.MaskIp(d.IpAddress?.ToString())
     };
 
     private Task<bool> HadBlockAsync(int userId, DateTime since, CancellationToken ct) =>

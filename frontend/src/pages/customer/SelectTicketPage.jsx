@@ -550,6 +550,16 @@ export default function SelectTicketPage() {
       navigate(`/checkout/question-form/${encodeURIComponent(holdId)}`);
     } catch (err) {
       const body = err.response?.data;
+
+      // The API sends a machine-readable code for risk / eKYC rejections.
+      // Send the customer to the page where they can fix the cause instead of
+      // leaving them on a seat picker they cannot complete.
+      if (body?.code === "EKYC_REQUIRED") {
+        toast.error(body.message || "Please complete identity verification before booking.");
+        navigate("/kyc");
+        return;
+      }
+
       const message =
         typeof body === "string"
           ? body

@@ -414,7 +414,10 @@ namespace AuthenticationAPI.Services
                 new(ClaimTypes.Email,              user.Email),
                 new("fullName",                    user.FullName),
                 new(JwtRegisteredClaimNames.Jti,   Guid.NewGuid().ToString()),
-                new("account_created_at",          DateTime.SpecifyKind(user.CreatedAt, DateTimeKind.Utc).ToString("O"))
+                new("account_created_at",          DateTime.SpecifyKind(user.CreatedAt, DateTimeKind.Utc).ToString("O")),
+                // Lets downstream services (TicketAPI) enforce "eKYC required to buy"
+                // without an extra call on every request.
+                new("ekyc_status",                 user.EkycStatus ?? "NotSubmitted")
             };
             claims.AddRange(user.UserRoles.Select(ur => new Claim(ClaimTypes.Role, ur.Role.RoleName)));
 

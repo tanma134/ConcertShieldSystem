@@ -12,12 +12,15 @@ namespace AuthenticationAPI.Services
         private readonly AuthenticationDbContext _db;
         private readonly IKycSettingService _settings;
         private readonly IConfiguration _config;
+        private readonly IKycAccessLogService _accessLog;
 
-        public KycConsentService(AuthenticationDbContext db, IKycSettingService settings, IConfiguration config)
+        public KycConsentService(AuthenticationDbContext db, IKycSettingService settings,
+            IConfiguration config, IKycAccessLogService accessLog)
         {
             _db = db;
             _settings = settings;
             _config = config;
+            _accessLog = accessLog;
         }
 
         public async Task<KycConsentPublicDto> GetActiveAsync()
@@ -119,12 +122,12 @@ namespace AuthenticationAPI.Services
             await _db.SaveChangesAsync();
 
             if (dto.Activate)
-                await ActivateAsync(entity.Id);
+                await ActivateAsync(entity.Id, adminId);
 
             return await GetAsync(entity.Id);
         }
 
-        public async Task ActivateAsync(int id)
+        public async Task ActivateAsync(int id, int? adminId = null)
         {
             var entity = await _db.KycConsentVersions.FirstOrDefaultAsync(x => x.Id == id)
                 ?? throw new KeyNotFoundException("Consent version not found");
@@ -137,10 +140,11 @@ namespace AuthenticationAPI.Services
                 .ExecuteUpdateAsync(s => s.SetProperty(x => x.IsActive, false));
             entity.IsActive = true;
             await _db.SaveChangesAsync();
+            await RecordConfigChangeAsync(entity, adminId, "CONSENT_VERSION_ACTIVATED");
             await tx.CommitAsync();
         }
 
-        public async Task DeleteAsync(int id)
+        public async Task DeleteAsync(int id, int? adminId = null)
         {
             var entity = await _db.KycConsentVersions.FirstOrDefaultAsync(x => x.Id == id)
                 ?? throw new KeyNotFoundException("Consent version not found");
@@ -150,8 +154,28 @@ namespace AuthenticationAPI.Services
             if (await _db.EkycVerifications.AnyAsync(e => e.ConsentVersion == entity.Version))
                 throw new InvalidOperationException("Cannot delete a version that users have already consented to");
 
+            var version = entity.Version;
             _db.KycConsentVersions.Remove(entity);
             await _db.SaveChangesAsync();
+
+            // Deleting a consent version is a configuration change; keep evidence of it.
+            await SafeLogAsync(adminId, $"purpose=consent_config; action=CONSENT_VERSION_DELETED; version={version}; id={id}");
+        }
+
+        private Task RecordConfigChangeAsync(KycConsentVersion entity, int? adminId, string action) =>
+            SafeLogAsync(adminId, $"purpose=consent_config; action={action}; version={entity.Version}; id={entity.Id}");
+
+        /// <summary>Audit trail for consent configuration. Never blocks the change itself.</summary>
+        private async Task SafeLogAsync(int? adminId, string details)
+        {
+            try
+            {
+                await _accessLog.LogAsync(0, null, adminId, KycActorTypes.Admin, "CONSENT_CONFIG", null, details);
+            }
+            catch
+            {
+                // Logging failure must not roll back an administrative decision.
+            }
         }
 
         private static List<ConsentItemDto> ParseItems(string json)

@@ -59,6 +59,38 @@ namespace AuthenticationAPI.Controllers
             return Ok(staff);
         }
 
+        // GET api/users/staff/accounts?ids=3,5
+        // Internal lookup used by AdminAPI before blocking an account: answers
+        // "do these user ids exist, and which are active?" Only id/active/roles
+        // are returned so no personal data leaves AuthenticationAPI.
+        [HttpGet("accounts")]
+        public async Task<IActionResult> GetAccounts([FromQuery] string? ids)
+        {
+            var expectedKey = _configuration["InternalApiKey"];
+            var suppliedKey = Request.Headers["X-Internal-Api-Key"].FirstOrDefault();
+            var authenticatedCaller = User?.Identity?.IsAuthenticated == true;
+            var trustedService = !string.IsNullOrWhiteSpace(expectedKey) && suppliedKey == expectedKey;
+            if (!authenticatedCaller && !trustedService)
+                return Unauthorized();
+
+            var wantedIds = ParseIds(ids);
+            if (wantedIds.Count == 0)
+                return Ok(Array.Empty<object>());
+
+            var accounts = await _context.Users
+                .AsNoTracking()
+                .Where(u => wantedIds.Contains(u.UserId))
+                .Select(u => new
+                {
+                    userId = u.UserId,
+                    isActive = u.IsActive,
+                    roles = u.UserRoles.Select(ur => ur.Role.RoleName).ToList()
+                })
+                .ToListAsync();
+
+            return Ok(accounts);
+        }
+
         // Turns "3,5,x,7" into [3, 5, 7]; anything that is not a number is ignored.
         private static List<int> ParseIds(string? ids)
         {

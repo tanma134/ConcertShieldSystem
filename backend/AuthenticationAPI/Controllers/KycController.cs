@@ -11,7 +11,7 @@ namespace AuthenticationAPI.Controllers
     [Authorize(Policy = "Customer")] // only a Customer can use eKYC
     public class KycController : ControllerBase
     {
-        private const long MaxImageBytes = 6 * 1024 * 1024; // 3 ?nh x 6MB < gi?i h?n request 20MB
+        private const long MaxImageBytes = 6 * 1024 * 1024; // 3 images x 6MB < 20MB request limit
         private static readonly string[] AllowedContentTypes = { "image/jpeg", "image/png" };
 
         private readonly IKycService _kycService;
@@ -28,7 +28,7 @@ namespace AuthenticationAPI.Controllers
             _logger = logger;
         }
 
-        /// <summary>N?i dung thông báo/ð?ng ? (phiên b?n ðang active trong DB) ð? frontend hi?n th? trý?c khi cho g?i ?nh.</summary>
+        /// <summary>Consent content (the version currently active in the DB) for the frontend to show before allowing image upload.</summary>
         [HttpGet("consent")]
         public async Task<IActionResult> GetConsent()
         {
@@ -38,8 +38,8 @@ namespace AuthenticationAPI.Controllers
             }
             catch (InvalidOperationException ex)
             {
-                _logger.LogError(ex, "Chýa c?u h?nh n?i dung ð?ng ? eKYC");
-                return StatusCode(503, new { message = "N?i dung ð?ng ? chýa ðý?c c?u h?nh, vui l?ng th? l?i sau" });
+                _logger.LogError(ex, "eKYC consent content is not configured");
+                return StatusCode(503, new { message = "Consent content is not configured, please try again later" });
             }
         }
 
@@ -48,11 +48,11 @@ namespace AuthenticationAPI.Controllers
         public async Task<IActionResult> Submit([FromForm] EkycSubmitRequestDto request)
         {
             if (!TryGetCurrentUserId(out var userId))
-                return Unauthorized(new { message = "Token không h?p l?" });
+                return Unauthorized(new { message = "Invalid token" });
 
-            // 1) Ph?i có ð?ng ? r? ràng, ðúng phiên b?n n?i dung hi?n hành
+            // 1) Explicit consent is required, and it must match the current content version
             if (!request.ConsentAccepted)
-                return BadRequest(new { message = "B?n c?n ð?ng ? v?i n?i dung x? l? d? li?u cá nhân ð? ti?p t?c xác th?c" });
+                return BadRequest(new { message = "You must agree to the personal data processing terms to continue verification" });
 
             string currentVersion;
             try
@@ -61,16 +61,16 @@ namespace AuthenticationAPI.Controllers
             }
             catch (InvalidOperationException ex)
             {
-                _logger.LogError(ex, "Chýa c?u h?nh n?i dung ð?ng ? eKYC");
-                return StatusCode(503, new { message = "N?i dung ð?ng ? chýa ðý?c c?u h?nh, vui l?ng th? l?i sau" });
+                _logger.LogError(ex, "eKYC consent content is not configured");
+                return StatusCode(503, new { message = "Consent content is not configured, please try again later" });
             }
 
             if (request.ConsentVersion != currentVersion)
-                return BadRequest(new { message = "N?i dung ð?ng ? ð? ðý?c c?p nh?t, vui l?ng ð?c l?i và xác nh?n" });
+                return BadRequest(new { message = "The consent content has been updated, please review and confirm again" });
 
-            // 2) Ki?m tra sõ b? file trý?c khi t?n lý?t g?i VNPT
-            var fileError = ValidateImage(request.CccdFrontImage, "m?t trý?c CCCD")
-                         ?? ValidateImage(request.CccdBackImage, "m?t sau CCCD")
+            // 2) Quick file check before spending a VNPT call
+            var fileError = ValidateImage(request.CccdFrontImage, "front side of the ID card")
+                         ?? ValidateImage(request.CccdBackImage, "back side of the ID card")
                          ?? ValidateImage(request.SelfieImage, "selfie");
             if (fileError is not null)
                 return BadRequest(new { message = fileError });
@@ -85,14 +85,14 @@ namespace AuthenticationAPI.Controllers
                 // 3 consecutive failures -> locked for 24 hours
                 return StatusCode(423, new
                 {
-                    message = $"B?n ð? xác th?c th?t b?i 3 l?n liên ti?p. Vui l?ng th? l?i sau {ex.LockedUntilUtc:yyyy-MM-dd HH:mm} (UTC).",
+                    message = $"Verification failed 3 times in a row. Please try again after {ex.LockedUntilUtc:yyyy-MM-dd HH:mm} (UTC).",
                     lockedUntil = DateTime.SpecifyKind(ex.LockedUntilUtc, DateTimeKind.Utc)
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "L?i khi x? l? submit eKYC cho user {UserId}", userId);
-                return StatusCode(500, new { message = "Có l?i x?y ra khi x? l? xác th?c, vui l?ng th? l?i" });
+                _logger.LogError(ex, "Error while processing eKYC submit for user {UserId}", userId);
+                return StatusCode(500, new { message = "An error occurred while processing the verification, please try again" });
             }
         }
 
@@ -100,7 +100,7 @@ namespace AuthenticationAPI.Controllers
         public async Task<IActionResult> GetStatus(int ekycId)
         {
             if (!TryGetCurrentUserId(out var userId))
-                return Unauthorized(new { message = "Token không h?p l?" });
+                return Unauthorized(new { message = "Invalid token" });
 
             try
             {
@@ -109,7 +109,7 @@ namespace AuthenticationAPI.Controllers
             }
             catch (KeyNotFoundException)
             {
-                return NotFound(new { message = "Không t?m th?y b?n ghi eKYC" });
+                return NotFound(new { message = "eKYC record not found" });
             }
             catch (UnauthorizedAccessException)
             {
@@ -122,7 +122,7 @@ namespace AuthenticationAPI.Controllers
         public async Task<IActionResult> GetMyAccessLogs([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
             if (!TryGetCurrentUserId(out var userId))
-                return Unauthorized(new { message = "Token không h?p l?" });
+                return Unauthorized(new { message = "Invalid token" });
 
             try
             {
@@ -130,19 +130,19 @@ namespace AuthenticationAPI.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "L?i khi ð?c nh?t k? truy c?p eKYC c?a user {UserId}", userId);
-                return StatusCode(500, new { message = "Có l?i x?y ra, vui l?ng th? l?i" });
+                _logger.LogError(ex, "Error while reading the eKYC access log for user {UserId}", userId);
+                return StatusCode(500, new { message = "An error occurred, please try again" });
             }
         }
 
         private static string? ValidateImage(IFormFile? file, string name)
         {
             if (file is null || file.Length == 0)
-                return $"Thi?u ?nh {name}";
+                return $"Missing {name} image";
             if (file.Length > MaxImageBytes)
-                return $"?nh {name} quá l?n (t?i ða {MaxImageBytes / 1024 / 1024} MB)";
+                return $"The {name} image is too large (max {MaxImageBytes / 1024 / 1024} MB)";
             if (!AllowedContentTypes.Contains(file.ContentType, StringComparer.OrdinalIgnoreCase))
-                return $"?nh {name} ph?i là JPG ho?c PNG";
+                return $"The {name} image must be JPG or PNG";
             return null;
         }
 

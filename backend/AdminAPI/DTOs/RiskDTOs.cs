@@ -181,6 +181,7 @@ namespace AdminAPI.DTOs
         public string DecidedByType { get; set; } = null!;
         public int? DecidedBy { get; set; }
         public DateTime? ExpiresAt { get; set; }
+        public string? IpAddress { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 
@@ -193,5 +194,6 @@ namespace AdminAPI.DTOs
         public string? Scope { get; set; }
         public string Status { get; set; } = null!;
         public DateTime? ExpiresAt { get; set; }
+        public string? IpAddress { get; set; }
     }
 }

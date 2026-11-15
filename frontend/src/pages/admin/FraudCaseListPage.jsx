@@ -24,9 +24,6 @@ const OUTCOMES = [
 const MIN_NOTE = 10;
 const MAX_NOTE = 500;
 const isOpen = (c) => c.status === "Open" || c.status === "InReview";
-const roleNames = (u) =>
-  (u.roles?.length ? u.roles : u.roleName ? [u.roleName] : []).map((r) => String(r?.roleName || r).toLowerCase());
-
 function Modal({ title, subtitle, onClose, children }) {
   return (
     <div className="fr-modal-back" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
@@ -47,7 +44,7 @@ function SlaCell({ c }) {
 }
 
 export default function FraudCaseListPage() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const myId = Number(user?.userId ?? user?.id) || null;
 
   const [tab, setTab] = useState("all");
@@ -68,18 +65,22 @@ export default function FraudCaseListPage() {
   const [assign, setAssign] = useState(null);   // case being assigned
   const [assignee, setAssignee] = useState("");
   const [assignNote, setAssignNote] = useState("");
-  const [resolve, setResolve] = useState(null); // case being resolved
+  const [resolve, setResolve] = useState(null); // case being resolved by an Admin
   const [outcome, setOutcome] = useState("");
   const [resolveNote, setResolveNote] = useState("");
+  const [recommend, setRecommend] = useState(null); // case being reviewed by Staff
+  const [recommendOutcome, setRecommendOutcome] = useState("");
+  const [recommendNote, setRecommendNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [formErr, setFormErr] = useState("");
 
-  // Analysts = Admin accounts (only Admin can handle fraud cases, see CanReviewFraud policy)
+  // Assignees are active Staff accounts. /users/staff is readable by both
+  // Admin and Staff, so the picker also works on the Staff review screen.
   useEffect(() => {
-    adminApi.getUsers()
+    adminApi.getStaff()
       .then((res) => {
         const list = Array.isArray(res.data) ? res.data : res.data?.items || [];
-        setAnalysts(list.filter((u) => u.isActive !== false && roleNames(u).includes("admin")));
+        setAnalysts(list);
       })
       .catch(() => setAnalystsFailed(true));
   }, []);
@@ -126,8 +127,8 @@ export default function FraudCaseListPage() {
   const submitAssign = async (e) => {
     e.preventDefault();
     const id = Number(assignee);
-    if (!Number.isInteger(id) || id < 1) return setFormErr("Choose an analyst.");
-    if (id === assign.assignedTo) return setFormErr("The case is already assigned to this analyst.");
+    if (!Number.isInteger(id) || id < 1) return setFormErr("Choose a staff member.");
+    if (id === assign.assignedTo) return setFormErr("The case is already assigned to this staff member.");
     setBusy(true); setFormErr("");
     try {
       await riskApi.assignCase(assign.caseId, id, assignNote.trim());
@@ -139,7 +140,30 @@ export default function FraudCaseListPage() {
     } finally { setBusy(false); }
   };
 
-  // ---- UC_18.10 Resolve
+  // ---- UC_18.9 Staff review / recommendation
+  const openRecommend = (c) => {
+    setRecommend(c);
+    setRecommendOutcome(c.recommendedOutcome || "");
+    setRecommendNote(c.recommendation || "");
+    setFormErr("");
+  };
+  const submitRecommend = async (e) => {
+    e.preventDefault();
+    const note = recommendNote.trim();
+    if (!recommendOutcome) return setFormErr("Select an outcome to recommend.");
+    if (note.length < MIN_NOTE || note.length > MAX_NOTE) return setFormErr(`The review note must be ${MIN_NOTE}-${MAX_NOTE} characters.`);
+    setBusy(true); setFormErr("");
+    try {
+      await riskApi.recommendCase(recommend.caseId, recommendOutcome, note);
+      setNotice(`Review for case #${recommend.caseId} sent to an Admin. The final decision is made by an Admin.`);
+      setRecommend(null);
+      await load();
+    } catch (e2) {
+      setFormErr(errMsg(e2, "Failed to submit the review."));
+    } finally { setBusy(false); }
+  };
+
+  // ---- UC_18.10 Resolve (Admin only)
   const openResolve = (c) => { setResolve(c); setOutcome(""); setResolveNote(""); setFormErr(""); };
   const submitResolve = async (e) => {
     e.preventDefault();
@@ -157,8 +181,8 @@ export default function FraudCaseListPage() {
     } finally { setBusy(false); }
   };
 
-  const resolveBlock = (c) => (c.assignedTo != null && c.assignedTo !== myId
-    ? `Only the assigned analyst (${nameOf(c.assignedTo) || `#${c.assignedTo}`}) can resolve this case.` : "");
+  // Staff only review and recommend. The final decision and all enforcement actions stay Admin-only.
+  const resolveBlock = () => "";
 
   return (
     <Shell title="Fraud Cases">
@@ -167,7 +191,10 @@ export default function FraudCaseListPage() {
       <div className="fr-top">
         <div>
           <h1>Fraud cases</h1>
-          <p>Work queue for fraud / bot alerts. Assign a case to an analyst, then resolve it with an outcome.</p>
+          <p>
+            Work queue for fraud / bot alerts. An Admin assigns a case to a Staff member; the Staff member
+            reviews it and recommends an outcome; an Admin makes the final decision.
+          </p>
         </div>
         <button type="button" className="admin-button-secondary" onClick={load}>Refresh</button>
       </div>
@@ -220,7 +247,7 @@ export default function FraudCaseListPage() {
               <thead>
                 <tr>
                   <th>Case</th><th>User</th><th>Type</th><th>Risk</th><th>Status</th>
-                  <th>Assignee</th><th>SLA</th><th>Created</th><th></th>
+                  <th>Assignee</th><th>Staff review</th><th>SLA</th><th>Created</th><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -244,18 +271,31 @@ export default function FraudCaseListPage() {
                           </>
                         )}
                       </td>
+                      <td>
+                        {c.recommendedAt ? (
+                          <>
+                            <span className="kyc-pill kyc-pill--pending">{c.recommendedOutcome}</span>
+                            <div className="fr-hint">by #{c.recommendedBy} · {fmt(c.recommendedAt)}</div>
+                          </>
+                        ) : <span className="fr-hint">—</span>}
+                      </td>
                       <td><SlaCell c={c} /></td>
                       <td>{fmt(c.createdAt)}{c.reviewedAt && <div className="fr-hint">Closed {fmt(c.reviewedAt)}</div>}</td>
                       <td>
                         <div className="fr-row">
                           <Link className="admin-button-secondary" to={`/admin/fraud-alerts/${c.caseId}`}>View</Link>
-                          {isOpen(c) && (
+                          {isOpen(c) && isAdmin && (
                             <>
                               <button type="button" className="admin-button-secondary" onClick={() => openAssign(c)}>
                                 {c.assignedTo == null ? "Assign" : "Reassign"}
                               </button>
                               <button type="button" className="admin-button" disabled={!!blocked} title={blocked} onClick={() => openResolve(c)}>Resolve</button>
                             </>
+                          )}
+                          {isOpen(c) && !isAdmin && c.assignedTo === myId && (
+                            <button type="button" className="admin-button" onClick={() => openRecommend(c)}>
+                              {c.recommendedAt ? "Update review" : "Review & recommend"}
+                            </button>
                           )}
                         </div>
                       </td>
@@ -279,27 +319,56 @@ export default function FraudCaseListPage() {
           <form className="fr-body" onSubmit={submitAssign}>
             {formErr && <div className="auth-message error">{formErr}</div>}
             <div className="fr-field">
-              <span className="fr-label">Analyst</span>
+              <span className="fr-label">Staff member</span>
               {analystsFailed || analysts.length === 0 ? (
-                <input inputMode="numeric" placeholder="Analyst user ID" value={assignee} onChange={(e) => setAssignee(e.target.value)} />
+                <input inputMode="numeric" placeholder="Staff user ID" value={assignee} onChange={(e) => setAssignee(e.target.value)} />
               ) : (
                 <select value={assignee} onChange={(e) => setAssignee(e.target.value)}>
-                  <option value="">Select an analyst…</option>
+                  <option value="">Select a staff member…</option>
                   {analysts.map((u) => (
                     <option key={u.userId} value={u.userId}>{u.fullName || u.email} (#{u.userId}){Number(u.userId) === myId ? " — me" : ""}</option>
                   ))}
                 </select>
               )}
-              {analystsFailed && <span className="fr-hint">Could not load the analyst list. Enter the user ID manually.</span>}
+              {analystsFailed && <span className="fr-hint">Could not load the staff list. Enter the user ID manually.</span>}
             </div>
             <div className="fr-field">
               <span className="fr-label">Note <small>{assignNote.length}/500 · optional</small></span>
-              <textarea className="fr-area" maxLength={500} value={assignNote} onChange={(e) => setAssignNote(e.target.value)} placeholder="Context for the analyst" />
+              <textarea className="fr-area" maxLength={500} value={assignNote} onChange={(e) => setAssignNote(e.target.value)} placeholder="Context for the staff member" />
             </div>
-            <div className="fr-info">Assigning moves the case to <b>InReview</b>. Only the assigned analyst can resolve it afterwards.</div>
+            <div className="fr-info">Assigning moves the case to <b>InReview</b>. The assigned Staff member reviews it and recommends an outcome; an Admin makes the final decision.</div>
             <div className="fr-row end">
               <button type="button" className="admin-button-secondary" disabled={busy} onClick={() => setAssign(null)}>Cancel</button>
               <button type="submit" className="admin-button" disabled={busy}>{busy ? "Assigning..." : "Assign case"}</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {recommend && (
+        <Modal title={`Review case #${recommend.caseId}`} subtitle={`${recommend.riskLevel} · ${recommend.alertType} · ${recommend.userId != null ? `user #${recommend.userId}` : "no user"}`} onClose={() => !busy && setRecommend(null)}>
+          <form className="fr-body" onSubmit={submitRecommend}>
+            {formErr && <div className="auth-message error">{formErr}</div>}
+            <div className="fr-field">
+              <span className="fr-label">Recommended outcome</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {OUTCOMES.map(([v, label, hint]) => (
+                  <button key={v} type="button" className={`fr-radio${recommendOutcome === v ? " on" : ""}`} onClick={() => setRecommendOutcome(v)} role="radio" aria-checked={recommendOutcome === v}>
+                    <span className="dot" /><span><b>{label}</b><p>{hint}</p></span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="fr-field">
+              <span className="fr-label">Review note <small>{recommendNote.trim().length}/{MAX_NOTE} · min {MIN_NOTE}</small></span>
+              <textarea className={`fr-area${formErr.includes("note") ? " is-err" : ""}`} maxLength={MAX_NOTE} value={recommendNote} onChange={(e) => setRecommendNote(e.target.value)} placeholder="What did you check and why do you recommend this outcome?" />
+            </div>
+            <div className="fr-info fr-info--warn">
+              This is a <b>recommendation only</b>. An Admin reviews it and makes the final decision.
+            </div>
+            <div className="fr-row end">
+              <button type="button" className="admin-button-secondary" disabled={busy} onClick={() => setRecommend(null)}>Cancel</button>
+              <button type="submit" className="admin-button" disabled={busy}>{busy ? "Sending..." : "Send review"}</button>
             </div>
           </form>
         </Modal>

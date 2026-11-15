@@ -83,6 +83,21 @@ public partial class FraudAlert
     [Column("assigned_at")]
     public DateTime? AssignedAt { get; set; }
 
+    // Staff review proposal. The final outcome is still recorded by an Admin.
+    [Column("recommendation")]
+    [StringLength(1000)]
+    public string? Recommendation { get; set; }
+
+    [Column("recommended_outcome")]
+    [StringLength(20)]
+    public string? RecommendedOutcome { get; set; }
+
+    [Column("recommended_by")]
+    public int? RecommendedBy { get; set; }
+
+    [Column("recommended_at")]
+    public DateTime? RecommendedAt { get; set; }
+
     [InverseProperty("FraudAlert")]
     public virtual ICollection<RiskDecision> RiskDecisions { get; set; } = new List<RiskDecision>();
 }
