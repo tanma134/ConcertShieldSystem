@@ -127,11 +127,11 @@ const PaperclipIcon = () => (
 /**
  * IncidentDetailPage
  * Unified command hub for Concert Incident Management:
- *   - UC_16.1: View on-site incident details
- *   - UC_16.2: Attach additional evidence (photos, video, audio, PDF to Cloudinary)
- *   - UC_16.3: Update incident details & log progress notes
- *   - UC_16.4: Escalate incident to Admin
- *   - UC_16.5: View resolution report & Admin finalize resolution
+ * - View on-site incident details
+ * - Attach additional evidence (photos, video, audio, PDF to Cloudinary)
+ * - Update incident details & log progress notes
+ * - Escalate incident to Admin
+ * - View resolution report & Admin finalize resolution
  */
 export default function IncidentDetailPage() {
   const { id } = useParams();
@@ -145,13 +145,13 @@ export default function IncidentDetailPage() {
   const [resolution, setResolution] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Modal State: UC_16.2 Upload Evidence
+  // Modal State:  Upload Evidence
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadFile, setUploadFile] = useState(null);
   const [uploadCaption, setUploadCaption] = useState("");
   const [isUploading, setIsUploading] = useState(false);
 
-  // Modal State: UC_16.3 Update Incident
+  // Modal State:  Update Incident
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState({
     title: "",
@@ -164,12 +164,12 @@ export default function IncidentDetailPage() {
   });
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Modal State: UC_16.4 Escalate to Admin
+  // Modal State:  Escalate to Admin
   const [showEscalateModal, setShowEscalateModal] = useState(false);
   const [escalateReason, setEscalateReason] = useState("");
   const [isEscalating, setIsEscalating] = useState(false);
 
-  // Modal State: UC_16.5 Resolve Incident (Admin Action)
+  // Modal State:  Resolve Incident (Admin Action)
   const [showResolveModal, setShowResolveModal] = useState(false);
   const [resolveForm, setResolveForm] = useState({
     resolutionSummary: "",
@@ -484,7 +484,7 @@ export default function IncidentDetailPage() {
           </div>
         </div>
 
-        {/* Escalation Banner (UC_16.4) */}
+        {/* Escalation Banner */}
         {incident.isEscalated && (
           <div className="inc-escalation-banner" style={{ marginBottom: "20px" }}>
             <div className="inc-escalation-content">
@@ -509,7 +509,7 @@ export default function IncidentDetailPage() {
           </div>
         )}
 
-        {/* Resolution Banner (UC_16.5) */}
+        {/* Resolution Banner */}
         {isResolvedOrClosed && (
           <div className="inc-resolution-card" style={{ marginBottom: "20px" }}>
             <div className="inc-resolution-header">
@@ -625,7 +625,7 @@ export default function IncidentDetailPage() {
               </div>
             </div>
 
-            {/* Evidence Gallery (UC_16.2) */}
+            {/* Evidence Gallery */}
             <div className="inc-card">
               <div className="inc-card-title">
                 <div className="inc-card-title-left">
@@ -792,7 +792,7 @@ export default function IncidentDetailPage() {
           </div>
         </div>
 
-        {/* MODAL: UC_16.2 Upload Evidence */}
+        {/* MODAL:  Upload Evidence */}
         {showUploadModal && (
           <div className="inc-modal-overlay">
             <div className="inc-modal-content">
@@ -857,7 +857,7 @@ export default function IncidentDetailPage() {
           </div>
         )}
 
-        {/* MODAL: UC_16.3 Update Incident */}
+        {/* MODAL:  Update Incident */}
         {showEditModal && (
           <div className="inc-modal-overlay">
             <div className="inc-modal-content">
@@ -1006,7 +1006,7 @@ export default function IncidentDetailPage() {
           </div>
         )}
 
-        {/* MODAL: UC_16.4 Escalate to Admin */}
+        {/* MODAL:  Escalate to Admin */}
         {showEscalateModal && (
           <div className="inc-modal-overlay">
             <div className="inc-modal-content">
@@ -1074,7 +1074,7 @@ export default function IncidentDetailPage() {
           </div>
         )}
 
-        {/* MODAL: UC_16.5 Resolve Incident */}
+        {/* MODAL:  Resolve Incident */}
         {showResolveModal && (
           <div className="inc-modal-overlay">
             <div className="inc-modal-content">

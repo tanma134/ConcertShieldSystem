@@ -40,7 +40,7 @@ namespace AuthenticationAPI.Services
             _logger = logger;
         }
 
-        // ------------------------------------------------------------ Ngý?i dùng
+        // ----------------------------------------------------------- Ng?i dng
 
         public async Task<KycDeletionRequestDto> RequestAsync(int userId, string? ip)
         {
@@ -65,7 +65,7 @@ namespace AuthenticationAPI.Services
             }
             catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
             {
-                // 2 request ð?ng th?i: index unique (user_id) WHERE status='Pending' ch?n cái sau
+                // 2 request ?ng th?i: index unique (user_id) WHERE status='Pending' ch?n ci sau
                 throw new InvalidOperationException("You already have a pending deletion request");
             }
 
@@ -84,7 +84,7 @@ namespace AuthenticationAPI.Services
             return rows.Select(Map).ToList();
         }
 
-        // ------------------------------------------------------------ Admin
+        // ----------------------------------------------------------- Admin
 
         public async Task<KycPagedResult<KycDeletionRequestDto>> ListAsync(string? status, int page, int pageSize)
         {
@@ -200,7 +200,7 @@ namespace AuthenticationAPI.Services
             return Map(request);
         }
 
-        // ------------------------------------------------------------ Helpers
+        // ----------------------------------------------------------- Helpers
 
         private async Task<KycDeletionRequest> GetPendingAsync(int requestId)
         {
@@ -211,7 +211,7 @@ namespace AuthenticationAPI.Services
             return request;
         }
 
-        /// <summary>H? sõ c?n d? li?u c?n xóa: chýa purge, ho?c ð? purge nhýng c?n hash/s? CCCD mà chính sách không cho gi?.</summary>
+        /// <summary>H? s c?n d? li?u c?n xa: cha purge, ho?c ? purge nhng c?n hash/s? CCCD m chnh sch khng cho gi?.</summary>
         private IQueryable<EkycVerification> DeletableRecords(int userId, bool keepHash) =>
             _db.EkycVerifications.Where(e => e.UserId == userId
                 && (e.DataPurgedAt == null
@@ -243,7 +243,7 @@ namespace AuthenticationAPI.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Không g?i ðý?c email k?t qu? yêu c?u xóa eKYC cho user {UserId}", userId);
+                _logger.LogError(ex, "Khng g?i ?c email k?t qu? yu c?u xa eKYC cho user {UserId}", userId);
             }
         }
 

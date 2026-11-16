@@ -117,7 +117,6 @@ export default function ProcessRefundModal({
       <div className="rf-modal" onClick={(e) => e.stopPropagation()}>
         <div className="rf-header">
           <div className="rf-header-title">
-            <span className="rf-icon">⟲</span>
             <div>
               <h2>Process Refund</h2>
               <p>Issue a full or partial refund via VNPay gateway.</p>

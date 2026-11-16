@@ -47,7 +47,7 @@ namespace CheckinAPI.Controllers
         }
 
         // ==========================================
-        // UC_8.7 Bulk Revoke Tickets (event change)
+        // Bulk Revoke Tickets (event change)
         // ==========================================
         [HttpPost("governance/bulk-revoke")]
         public async Task<IActionResult> BulkRevokeTickets([FromBody] BulkRevokeRequestDTO request)
@@ -91,7 +91,7 @@ namespace CheckinAPI.Controllers
         }
 
         // ==========================================
-        // UC_8.8 View Ticket Revocation History
+        // View Ticket Revocation History
         // ==========================================
         [HttpGet("governance/revocations")]
         public async Task<IActionResult> GetRevocationHistory(
@@ -114,7 +114,7 @@ namespace CheckinAPI.Controllers
         }
 
         // ==========================================
-        // UC_8.10 View Reissue History (Traceability 1-1)
+        // View Reissue History (Traceability 1-1)
         // ==========================================
         [HttpGet("governance/reissues")]
         public async Task<IActionResult> GetReissueHistory(
@@ -195,7 +195,7 @@ namespace CheckinAPI.Controllers
         }
 
         // ==========================================
-        // UC_14.5 Enable Offline Check-in Mode: Preload Package
+        // Enable Offline Check-in Mode: Preload Package
         // ==========================================
         [HttpGet("offline-package")]
         public async Task<IActionResult> GetOfflinePackage([FromQuery] int eventId = 1)
@@ -213,7 +213,7 @@ namespace CheckinAPI.Controllers
         }
 
         // ==========================================
-        // UC_14.6 Sync Offline Check-in Records
+        // Sync Offline Check-in Records
         // ==========================================
         [HttpPost("offline-sync")]
         public async Task<IActionResult> SyncOfflineScans([FromBody] OfflineSyncRequestDTO request)
@@ -232,7 +232,7 @@ namespace CheckinAPI.Controllers
         }
 
         // ==========================================
-        // UC_14.7 Resolve Offline Sync Conflicts
+        // Resolve Offline Sync Conflicts
         // ==========================================
         [HttpGet("conflicts")]
         public async Task<IActionResult> GetOfflineConflicts([FromQuery] int? eventId, [FromQuery] string? status)

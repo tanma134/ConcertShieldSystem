@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import checkinApi from "../api/checkinApi";
+import { useToast } from "./ToastProvider";
 import "./OfflineConflictModal.css";
 
 export default function OfflineConflictModal({
@@ -8,6 +9,7 @@ export default function OfflineConflictModal({
   eventId = 1,
   onConflictResolved,
 }) {
+  const toast = useToast();
   const [conflicts, setConflicts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState("ALL"); // ALL, PENDING, RESOLVED
@@ -42,7 +44,7 @@ export default function OfflineConflictModal({
   const handleResolve = async (conflictId, decision) => {
     const note = activeNotes[conflictId]?.trim() || "";
     if (decision === "MANUAL_OVERRIDE_ADMIN" && !note) {
-      alert("Please provide audit justification notes when selecting Manual Override!");
+      toast.warning("Please provide audit justification notes when selecting Manual Override!");
       return;
     }
 
@@ -190,7 +192,7 @@ export default function OfflineConflictModal({
                     <strong>Collision Cause:</strong> Duplicate check-in scan registered across different gates or offline terminals within operational shift.
                   </div>
 
-                  {/* Dual Stream Side-by-Side Comparison (UC_14.7) */}
+                  {/* Dual Stream Side-by-Side Comparison */}
                   <div className="dual-scan-comparison">
                     <div className="scan-stream-card stream-earlier">
                       <div className="stream-badge earlier-badge">

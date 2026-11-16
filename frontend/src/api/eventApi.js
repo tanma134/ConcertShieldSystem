@@ -1,8 +1,7 @@
 import axiosClient from "./axiosClient";
 
 const eventApi = {
-  getById: (id) => axiosClient.get(`/events/${id}`),
-  // ---- Public reads (Published only) ----
+  // --- Public reads (Published only) ----
   getList: (filter = {}) => axiosClient.get("/events", { params: filter }),
   getFeatured: (count = 5) =>
     axiosClient.get("/events/featured", { params: { count } }),
@@ -19,21 +18,28 @@ const eventApi = {
       params: { slug, ...(excludeEventId ? { excludeEventId } : {}) },
     }),
 
-  // ---- Customer: my concerts (any status) ----
+  // --- Customer: my concerts (any status) ----
   getMine: () => axiosClient.get("/events/mine"),
   getMineById: (id) => axiosClient.get(`/events/mine/${id}`),
   getMyDashboard: () => axiosClient.get("/events/mine/dashboard"),
 
-  // ---- Draft lifecycle ----
+  // --- Draft lifecycle ----
   create: (dto) => axiosClient.post("/events", dto),
   update: (id, dto) => axiosClient.put(`/events/${id}`, dto),
   remove: (id) => axiosClient.delete(`/events/${id}`),
 
   validateForSubmission: (id) => axiosClient.get(`/events/${id}/validate`),
   submit: (id) => axiosClient.post(`/events/${id}/submit`),
-  cancel: (id) => axiosClient.post(`/events/${id}/cancel`),
+  cancel: (id, payload) => {
+    if (payload instanceof FormData) {
+      return axiosClient.post(`/events/${id}/cancel`, payload, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    }
+    return axiosClient.post(`/events/${id}/cancel`, typeof payload === 'string' ? { reason: payload } : (payload || {}));
+  },
 
-  // ---- Poster / banner (multipart) ----
+  // --- Poster / banner (multipart) ----
   uploadPoster: (id, file) => {
     const form = new FormData();
     form.append("file", file);
@@ -52,7 +58,7 @@ const eventApi = {
   },
   deleteBanner: (id) => axiosClient.delete(`/events/${id}/banner`),
 
-  // ---- Admin moderation ----
+  // --- Admin moderation ----
   getPending: (page = 1, pageSize = 12) =>
     axiosClient.get("/events/pending", { params: { page, pageSize } }),
   getAllAdmin: (filter = {}) =>

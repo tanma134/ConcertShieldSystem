@@ -36,7 +36,7 @@ namespace CheckinAPI.Controllers
         }
 
         /// <summary>
-        /// UC_29 Monitor Real-time Check-in Status
+        /// Monitor Real-time Check-in Status
         /// BR-395: 04 Real-time metrics (Total Issued, Checked-in, Pending, Occupancy Rate %)
         /// BR-396: Gate & Zone breakdown filtering
         /// BR-398 & BR-61: Access restriction to event owner (Organizer) and Admin
@@ -70,7 +70,7 @@ namespace CheckinAPI.Controllers
         }
 
         /// <summary>
-        /// UC_15.2 Scan Dynamic QR Ticket
+        /// Scan Dynamic QR Ticket
         /// BR-08, BR-10, BR-152, BR-153, BR-289
         /// </summary>
         [HttpPost("scan-qr")]
@@ -91,7 +91,7 @@ namespace CheckinAPI.Controllers
         }
 
         /// <summary>
-        /// UC_15.3 Manual Check-in
+        /// Manual Check-in
         /// BR-290, BR-292, BR-293
         /// </summary>
         [HttpPost("manual-checkin")]
@@ -112,7 +112,7 @@ namespace CheckinAPI.Controllers
         }
 
         /// <summary>
-        /// UC_15.4 Lookup Ticket
+        /// Lookup Ticket
         /// BR-154, BR-155, BR-156, BR-291, BR-294 (PII Masking)
         /// </summary>
         [HttpGet("lookup-ticket")]
@@ -138,7 +138,7 @@ namespace CheckinAPI.Controllers
         }
 
         /// <summary>
-        /// UC_15.5 View Check-in Scan History
+        /// View Check-in Scan History
         /// BR-295 (Staff view restricted to active shift entries)
         /// </summary>
         [HttpGet("scan-history")]
@@ -158,7 +158,7 @@ namespace CheckinAPI.Controllers
         }
 
         /// <summary>
-        /// UC_30 / UC-54 View Gate Assignment & Shift Info
+        /// View Gate Assignment & Shift Info
         /// BR-399, BR-400
         /// </summary>
         [HttpGet("gate-assignment")]

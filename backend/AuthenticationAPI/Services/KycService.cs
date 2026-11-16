@@ -116,7 +116,7 @@ namespace AuthenticationAPI.Services
             await _accessLog.LogAsync(record.UserId, record.EkycId, record.UserId, KycActorTypes.User,
                 KycAccessActions.Submit, ip, $"purpose=identity_verification; consentVersion={record.ConsentVersion}");
 
-            // --- Upload original images to object storage ---
+            // -- Upload original images to object storage ---
             frontStream.Position = 0;
             record.CccdFrontObjectKey = await _objectStorage.UploadAsync(frontStream, $"kyc/{record.EkycId}/front.jpg");
 
@@ -126,7 +126,7 @@ namespace AuthenticationAPI.Services
             selfieStream.Position = 0;
             record.FaceCaptureObjectKey = await _objectStorage.UploadAsync(selfieStream, $"kyc/{record.EkycId}/selfie.jpg");
 
-            // --- Card liveness + CCCD OCR (VNPT) ---
+            // -- Card liveness + CCCD OCR (VNPT) ---
             frontStream.Position = 0;
             backStream.Position = 0;
             await _accessLog.LogAsync(record.UserId, record.EkycId, null, KycActorTypes.System,
@@ -148,11 +148,11 @@ namespace AuthenticationAPI.Services
             record.CccdNumberHash = _cccdProtector.Hash(idNumber);
             record.OcrRawData = OcrDataSanitizer.Sanitize(ocrResult.RawResponseJson); // CCCD number already masked
 
-            // --- Block one CCCD from being used for multiple accounts (checked first to save VNPT face API calls) ---
+            // -- Block one CCCD from being used for multiple accounts (checked first to save VNPT face API calls) ---
             if (await _repository.IsCccdUsedByAnotherUserAsync(record.CccdNumberHash, record.UserId))
                 return await FailAsync(record, DuplicateCccdMessage, identity);
 
-            // --- Face liveness + Face matching (VNPT) ---
+            // -- Face liveness + Face matching (VNPT) ---
             frontStream.Position = 0;
             selfieStream.Position = 0;
             await _accessLog.LogAsync(record.UserId, record.EkycId, null, KycActorTypes.System,
@@ -282,7 +282,7 @@ namespace AuthenticationAPI.Services
 
         private string GenerateVerifiedToken(int userId, int ekycId)
         {
-            // Shares the secret with AuthenticationAPI's JWT (JwtSettings:SecretKey in appsettings) —
+            // Shares the secret with AuthenticationAPI's JWT (JwtSettings:SecretKey in appsettings) 
             // so TicketingService can verify it with the same key.
             var secret = _config["JwtSettings:SecretKey"]
                 ?? throw new InvalidOperationException("Missing configuration JwtSettings:SecretKey");

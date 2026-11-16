@@ -8,7 +8,7 @@ using AuthenticationAPI.DTOs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-// Vi?t theo tài li?u "API eKYC" c?a VNPT (domain https://api.idg.vnpt.vn)
+// Vi?t theo ti li?u "API eKYC" c?a VNPT (domain https://api.idg.vnpt.vn)
 namespace AuthenticationAPI.Providers
 {
     public class VnptEkycOptions
@@ -19,15 +19,15 @@ namespace AuthenticationAPI.Providers
         public string TokenKey { get; set; } = "";
         public string MacAddress { get; set; } = "AUTH-API-SERVER";
 
-        // Tài li?u ðánh d?u crop_param là b?t bu?c cho /ai/v1/ocr/id
-        // Ð?nh d?ng "<crop trên>,<crop dý?i>", ví d? "0.14,0.3"
+        // Ti li?u nh d?u crop_param l b?t bu?c cho /ai/v1/ocr/id
+        // ?nh d?ng "<crop trn>,<crop d?i>", v d? "0.14,0.3"
         public string CropParam { get; set; } = "0.14,0.3";
 
-        // Không c?n dùng:  luôn t? ch?i gi?y t? h?t h?n. Gi? l?i ð? appsettings c? không l?i.
+        // Khng c?n dng:  lun t? ch?i gi?y t? h?t h?n. Gi? l?i ? appsettings c? khng l?i.
         public bool RejectExpiredCard { get; set; } = true;
 
-        // true: OCR t?ng m?t qua /ai/v1/ocr/id/front và /ai/v1/ocr/id/back (bi?t chính xác m?t nào l?i,
-        // và không dùng crop_param). false: 1 l?n g?i /ai/v1/ocr/id cho c? 2 m?t.
+        // true: OCR t?ng m?t qua /ai/v1/ocr/id/front v /ai/v1/ocr/id/back (bi?t chnh xc m?t no l?i,
+        // v khng dng crop_param). false: 1 l?n g?i /ai/v1/ocr/id cho c? 2 m?t.
         public bool SplitOcr { get; set; } = false;
     }
 
@@ -49,7 +49,7 @@ namespace AuthenticationAPI.Providers
                 var o = sp.GetRequiredService<IOptions<VnptEkycOptions>>().Value;
                 client.BaseAddress = new Uri(o.BaseUrl);
                 client.Timeout = TimeSpan.FromSeconds(60);
-                // Portal VNPT hi?n th? token d?ng "bearer eyJ..." -> b? ti?n t? ð? không thành "Bearer bearer eyJ..."
+                // Portal VNPT hi?n th? token d?ng "bearer eyJ..." -> b? ti?n t? ? khng thnh "Bearer bearer eyJ..."
                 var accessToken = o.AccessToken.Trim();
                 if (accessToken.StartsWith("bearer ", StringComparison.OrdinalIgnoreCase))
                     accessToken = accessToken.Substring(7).Trim();
@@ -73,13 +73,13 @@ namespace AuthenticationAPI.Providers
         private readonly VnptEkycOptions _options;
         private readonly ILogger<VnptEkycProvider> _logger;
 
-        // Tài li?u yêu c?u client_session theo cú pháp:
+        // Ti li?u yu c?u client_session theo c php:
         // <IOS/ANDROID>_<model>_<OS/API>_<Device/Simulator>_<SDK version>_<Device id>_<Time stamp>
-        // N?u app mobile g?i ðý?c session th?t lên backend th? nên dùng giá tr? ðó thay cho chu?i này.
+        // N?u app mobile g?i ?c session th?t ln backend th? nn dng gi tr?  thay cho chu?i ny.
         private readonly string _clientSession =
             $"ANDROID_backend_28_Device_1.0.0_{Guid.NewGuid():N}_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
 
-        // Cache hash theo n?i dung ?nh: ?nh m?t trý?c dùng cho OCR + compare nhýng ch? upload 1 l?n
+        // Cache hash theo n?i dung ?nh: ?nh m?t tr?c dng cho OCR + compare nhng ch? upload 1 l?n
         private readonly Dictionary<string, string> _hashCache = new();
 
         public VnptEkycProvider(HttpClient http, IOptions<VnptEkycOptions> options, ILogger<VnptEkycProvider> logger)
@@ -89,28 +89,28 @@ namespace AuthenticationAPI.Providers
             _logger = logger;
         }
 
-        // ---------------------------------------------------------------
+        // --------------------------------------------------------------
         // Ki?m tra gi?y t? th?t/gi? (#3) + OCR (#6)
-        // ---------------------------------------------------------------
+        // --------------------------------------------------------------
         public async Task<OcrResult> ExtractIdCardInfoAsync(Stream front, Stream back)
         {
             try
             {
-                _logger.LogInformation("VNPT OCR b?t ð?u: SplitOcr={Split}, CropParam='{Crop}'",
+                _logger.LogInformation("VNPT OCR b?t ?u: SplitOcr={Split}, CropParam='{Crop}'",
                     _options.SplitOcr, _options.CropParam);
 
                 var frontHash = await GetHashAsync(front, "front.jpg");
                 var backHash = await GetHashAsync(back, "back.jpg");
 
-                // 1) /ai/v1/card/liveness (body theo tài li?u ch? có img + client_session)
+                // 1) /ai/v1/card/liveness (body theo ti li?u ch? c img + client_session)
                 var cardLive = (await PostAiAsync("/ai/v1/card/liveness",
                     new() { ["img"] = frontHash }, includeToken: false)).GetProperty("object");
 
                 if (!IsSuccess(cardLive, "liveness")
                     || GetBool(cardLive, "fake_liveness")     // gi?y t? b? ch?p l?i
-                    || GetBool(cardLive, "face_swapping"))    // gi?y t? b? dán/thay ?nh
+                    || GetBool(cardLive, "face_swapping"))    // gi?y t? b? dn/thay ?nh
                 {
-                    return Fail("Gi?y t? không h?p l? ho?c nghi ng? gi? m?o"
+                    return Fail("Gi?y t? khng h?p l? ho?c nghi ng? gi? m?o"
                                 + (GetString(cardLive, "liveness_msg") is { } m ? $" ({m})" : ""));
                 }
 
@@ -125,7 +125,7 @@ namespace AuthenticationAPI.Providers
                     ["type"] = -1,                       // CMT c?/m?i, CCCD
                     ["validate_postcode"] = true
                 };
-                // "0,0" = không crop. ?nh ð? ch?p sát gi?y t? th? KHÔNG nên crop m?nh (vd 0.14,0.3)
+                // "0,0" = khng crop. ?nh ? ch?p st gi?y t? th? KHNG nn crop m?nh (vd 0.14,0.3)
                 if (!string.IsNullOrWhiteSpace(_options.CropParam))
                     ocrBody["crop_param"] = _options.CropParam;
 
@@ -153,7 +153,7 @@ namespace AuthenticationAPI.Providers
             }
         }
 
-        // OCR tách t?ng m?t: báo l?i chính xác m?t nào không ð?t
+        // OCR tch t?ng m?t: bo l?i chnh xc m?t no khng ?t
         private async Task<OcrResult> ExtractSplitAsync(string frontHash, string backHash)
         {
             JsonElement frontObj, backObj;
@@ -169,8 +169,8 @@ namespace AuthenticationAPI.Providers
             }
             catch (VnptApiException ex)
             {
-                _logger.LogWarning(ex, "VNPT OCR m?t trý?c l?i");
-                return Fail(SideMessage("trý?c", ex));
+                _logger.LogWarning(ex, "VNPT OCR m?t tr?c l?i");
+                return Fail(SideMessage("tr?c", ex));
             }
 
             try
@@ -189,13 +189,13 @@ namespace AuthenticationAPI.Providers
 
             var frontWarn = GetStringList(frontObj, "warning_msg");
             if (frontWarn.Count > 0)
-                return Fail("?nh m?t trý?c chýa ð?t: " + string.Join(", ", frontWarn));
+                return Fail("?nh m?t tr?c cha ?t: " + string.Join(", ", frontWarn));
 
             var backWarn = GetStringList(backObj, "warning_msg");
             if (backWarn.Count > 0)
-                return Fail("?nh m?t sau chýa ð?t: " + string.Join(", ", backWarn));
+                return Fail("?nh m?t sau cha ?t: " + string.Join(", ", backWarn));
 
-            // G?p 2 object thành 1 ð? dùng l?i ValidateOcr (c?n c? msg và msg_back)
+            // G?p 2 object thnh 1 ? dng l?i ValidateOcr (c?n c? msg v msg_back)
             var merged = new JsonObject();
             foreach (var p in frontObj.EnumerateObject()) merged[p.Name] = JsonNode.Parse(p.Value.GetRawText());
             foreach (var p in backObj.EnumerateObject()) merged[p.Name] = JsonNode.Parse(p.Value.GetRawText());
@@ -220,40 +220,40 @@ namespace AuthenticationAPI.Providers
 
         private static string SideMessage(string side, Exception ex) =>
             ex is VnptApiException { Code: "IDG-00010003" }
-                ? $"?nh m?t {side} CCCD không ð?t chu?n (m?, t?i, chói sáng, m?t góc ho?c quá nh?). Vui l?ng ch?p l?i m?t {side}"
+                ? $"?nh m?t {side} CCCD khng ?t chu?n (m?, t?i, chi sng, m?t gc ho?c qu nh?). Vui l?ng ch?p l?i m?t {side}"
                 : ToUserMessage(ex);
 
-        // Tr? v? thông báo l?i n?u k?t qu? OCR không ð?t, null n?u ?n
+        // Tr? v? thng bo l?i n?u k?t qu? OCR khng ?t, null n?u ?n
         private string? ValidateOcr(JsonElement obj)
         {
             if (GetString(obj, "msg") != "OK" || GetString(obj, "msg_back") != "OK")
-                return "Không ð?c ðý?c thông tin gi?y t?, vui l?ng ch?p l?i r? nét c? 2 m?t";
+                return "Khng ?c ?c thng tin gi?y t?, vui l?ng ch?p l?i r? nt c? 2 m?t";
 
-            // ?nh có v?n ð?: m?t góc, m?/nh?e...
+            // ?nh c v?n ?: m?t gc, m?/nh?e...
             var warnings = GetStringList(obj, "warning_msg");
             if (warnings.Count > 0)
-                return "?nh gi?y t? chýa ð?t: " + string.Join(", ", warnings);
+                return "?nh gi?y t? cha ?t: " + string.Join(", ", warnings);
 
             if (string.IsNullOrWhiteSpace(GetString(obj, "id")))
-                return "Không ð?c ðý?c s? CCCD, vui l?ng ch?p l?i ?nh r? nét hõn";
+                return "Khng ?c ?c s? CCCD, vui l?ng ch?p l?i ?nh r? nt hn";
 
             // only a citizen ID card (CCCD, 12-digit number) is accepted
             var idNumber = (GetString(obj, "id") ?? string.Empty).Trim();
             if (idNumber.Length != 12 || !idNumber.All(char.IsDigit))
-                return "Ch? ch?p nh?n Cãn cý?c công dân (CCCD) 12 s?";
+                return "Ch? ch?p nh?n Cn c?c cng dn (CCCD) 12 s?";
 
             // front and back must be the same card. The MRZ on the back embeds the full ID number.
             var mrz = GetString(obj, "mrz");
             if (!string.IsNullOrWhiteSpace(mrz)
                 && mrz.Replace("<", "").Replace(" ", "").Length >= 20
                 && !mrz.Contains(idNumber))
-                return "Hai m?t gi?y t? không thu?c cùng m?t th? CCCD";
+                return "Hai m?t gi?y t? khng thu?c cng m?t th? CCCD";
 
-            // S? ID có h?p l? theo quy lu?t không (tampering.is_legal = "yes")
+            // S? ID c h?p l? theo quy lu?t khng (tampering.is_legal = "yes")
             if (obj.TryGetProperty("tampering", out var tamper)
                 && GetString(tamper, "is_legal") is { } legal
                 && !legal.Equals("yes", StringComparison.OrdinalIgnoreCase))
-                return "S? gi?y t? không h?p l?";
+                return "S? gi?y t? khng h?p l?";
 
             if (string.Equals(GetString(obj, "id_fake_warning"), "yes", StringComparison.OrdinalIgnoreCase))
                 return "S? gi?y t? nghi ng? gi? m?o";
@@ -261,14 +261,14 @@ namespace AuthenticationAPI.Providers
             // an expired ID card is always rejected (no longer controlled by configuration)
             if (string.Equals(GetString(obj, "expire_warning"), "yes", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(GetString(obj, "back_expire_warning"), "yes", StringComparison.OrdinalIgnoreCase))
-                return "Gi?y t? ð? h?t h?n";
+                return "Gi?y t? ? h?t h?n";
 
             return null;
         }
 
-        // ---------------------------------------------------------------
+        // --------------------------------------------------------------
         // Face liveness (#8) + Face compare (#7)
-        // ---------------------------------------------------------------
+        // --------------------------------------------------------------
         public async Task<FaceCompareResult> CompareFaceAsync(Stream idCardFront, Stream selfie)
         {
             try
@@ -298,7 +298,7 @@ namespace AuthenticationAPI.Providers
                     ["img_face"] = selfieHash
                 })).GetProperty("object");
 
-                // Tài li?u ghi prob là string nhýng ví d? tr? s? -> x? l? c? hai
+                // Ti li?u ghi prob l string nhng v d? tr? s? -> x? l? c? hai
                 TryGetDecimal(cmp, "prob", out var prob);
 
                 return new FaceCompareResult
@@ -316,28 +316,28 @@ namespace AuthenticationAPI.Providers
             }
         }
 
-        // ---------------------------------------------------------------
+        // --------------------------------------------------------------
         // Helpers
-        // ---------------------------------------------------------------
+        // --------------------------------------------------------------
         private static OcrResult Fail(string message) =>
             new() { Success = false, ErrorMessage = message };
 
-        // Không ðýa m? l?i/chi ti?t c?a VNPT ra cho ngý?i dùng cu?i (chi ti?t ð? có trong log)
+        // Khng a m? l?i/chi ti?t c?a VNPT ra cho ng?i dng cu?i (chi ti?t ? c trong log)
         private static string ToUserMessage(Exception ex) => ex switch
         {
             VnptApiException { Code: "IDG-00010003" } =>
-                "Ch?t lý?ng ?nh không ð?t chu?n (m?, t?i, chói sáng, m?t góc ho?c quá nh?). Vui l?ng ch?p l?i r? nét",
+                "Ch?t l?ng ?nh khng ?t chu?n (m?, t?i, chi sng, m?t gc ho?c qu nh?). Vui l?ng ch?p l?i r? nt",
             VnptApiException { Code: "LOCAL-UNSUPPORTED-IMAGE" } =>
-                "Ch? h? tr? ?nh ð?nh d?ng JPG ho?c PNG",
+                "Ch? h? tr? ?nh ?nh d?ng JPG ho?c PNG",
             VnptApiException =>
-                "Không xác th?c ðý?c ?nh, vui l?ng ch?p l?i ho?c th? l?i sau",
+                "Khng xc th?c ?c ?nh, vui l?ng ch?p l?i ho?c th? l?i sau",
             TaskCanceledException =>
-                "H? th?ng xác th?c ph?n h?i quá ch?m, vui l?ng th? l?i",
+                "H? th?ng xc th?c ph?n h?i qu ch?m, vui l?ng th? l?i",
             _ =>
-                "Không k?t n?i ðý?c h? th?ng xác th?c, vui l?ng th? l?i sau"
+                "Khng k?t n?i ?c h? th?ng xc th?c, vui l?ng th? l?i sau"
         };
 
-        // Nh?n di?n JPG/PNG theo magic bytes (iPhone có th? g?i HEIC, Android có th? g?i WebP -> VNPT không nh?n)
+        // Nh?n di?n JPG/PNG theo magic bytes (iPhone c th? g?i HEIC, Android c th? g?i WebP -> VNPT khng nh?n)
         private static (string ContentType, string Extension)? DetectImageType(byte[] b)
         {
             if (b.Length > 3 && b[0] == 0xFF && b[1] == 0xD8 && b[2] == 0xFF)
@@ -347,7 +347,7 @@ namespace AuthenticationAPI.Providers
             return null;
         }
 
-        // Upload ?nh (#1) -> hash. Ð?c ra byte[] ð? HttpClient không dispose stream c?a KycService.
+        // Upload ?nh (#1) -> hash. ?c ra byte[] ? HttpClient khng dispose stream c?a KycService.
         private async Task<string> GetHashAsync(Stream stream, string fileName)
         {
             var bytes = await ReadAllBytesAsync(stream);
@@ -357,7 +357,7 @@ namespace AuthenticationAPI.Providers
                 return cached;
 
             var type = DetectImageType(bytes)
-                ?? throw new VnptApiException("Ð?nh d?ng ?nh không ðý?c h? tr? (ch? JPG/PNG)", "LOCAL-UNSUPPORTED-IMAGE");
+                ?? throw new VnptApiException("?nh d?ng ?nh khng ?c h? tr? (ch? JPG/PNG)", "LOCAL-UNSUPPORTED-IMAGE");
 
             var uploadName = Path.ChangeExtension(fileName, type.Extension);
             _logger.LogInformation("VNPT upload {File}: {SizeKb} KB, {Type}",
@@ -375,24 +375,24 @@ namespace AuthenticationAPI.Providers
 
             var hash = root.GetProperty("object").GetProperty("hash").GetString();
             if (string.IsNullOrEmpty(hash))
-                throw new VnptApiException("addFile không tr? v? hash");
+                throw new VnptApiException("addFile khng tr? v? hash");
 
             _hashCache[cacheKey] = hash;
             return hash;
         }
 
-        // Theo tài li?u: card/liveness và face/mask không có field "token"; các API c?n l?i có.
+        // Theo ti li?u: card/liveness v face/mask khng c field "token"; cc API c?n l?i c.
         private async Task<JsonElement> PostAiAsync(string path, Dictionary<string, object?> body, bool includeToken = true)
         {
             body["client_session"] = _clientSession;
             if (includeToken)
-                body["token"] = Guid.NewGuid().ToString("N");   // chu?i b?t k?, không k? t? ð?c bi?t
+                body["token"] = Guid.NewGuid().ToString("N");   // chu?i b?t k?, khng k? t? ?c bi?t
 
             using var resp = await _http.PostAsJsonAsync(path, body);
             return await ParseAsync(resp, path);
         }
 
-        // Thành công: message = "IDG-00000000".
+        // Thnh cng: message = "IDG-00000000".
         // L?i: {status, message (vd IDG-00010102), statusCode, errors[]}
         private static async Task<JsonElement> ParseAsync(HttpResponseMessage resp, string path)
         {

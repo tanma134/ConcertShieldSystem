@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace EventAPI.Controllers
 {
     /// <summary>
-    /// Dynamic pricing rules layered on a TicketType's base price (UC_27.1 — Configure
+    /// Dynamic pricing rules layered on a TicketType's base price (— Configure
     /// Pricing Rule): time-based discounts (EarlyBird/LastMinute), fixed calendar
     /// windows (TimeBased), or quantity-triggered price steps (QuantityBased).
     ///

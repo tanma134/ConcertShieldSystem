@@ -2,7 +2,7 @@ using EventAPI.DTOs;
 
 namespace EventAPI.Services
 {
-    /// <summary>UC_26.2 — Apply Seating Template / UC_26.3 — Save Seating Chart as Template.</summary>
+    /// <summary>— Apply Seating Template / — Save Seating Chart as Template.</summary>
     public interface ISeatingTemplateService
     {
         /// <summary>Templates the caller can use: their own plus every public (admin-provided) one.</summary>
@@ -10,7 +10,7 @@ namespace EventAPI.Services
 
         Task<SeatingTemplateResponseDTO> GetByIdAsync(int id, int callerId, bool isAdmin);
 
-        /// <summary>UC_26.3 — snapshots the current, already-built layout of one of my concerts.</summary>
+        /// <summary>— snapshots the current, already-built layout of one of my concerts.</summary>
         Task<SeatingTemplateResponseDTO> SaveFromEventAsync(SaveSeatingTemplateDTO dto, int callerId, bool isAdmin);
 
         /// <summary>Draw-from-scratch template, not tied to any concert.</summary>
@@ -20,7 +20,7 @@ namespace EventAPI.Services
         Task DeleteAsync(int id, int callerId, bool isAdmin);
 
         /// <summary>
-        /// UC_26.2 — maps every template zone onto one of the target concert's ticket
+        /// — maps every template zone onto one of the target concert's ticket
         /// types, then builds the concert's seating chart from it.
         /// </summary>
         Task<SeatingChartResponseDTO> ApplyToEventAsync(

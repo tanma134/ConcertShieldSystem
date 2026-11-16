@@ -5,7 +5,7 @@ import axiosClient from "./axiosClient";
 const endOfDay = (d) => (d && /^\d{4}-\d{2}-\d{2}$/.test(d) ? `${d}T23:59:59.999` : d || undefined);
 
 const riskApi = {
-  // UC_18.1 View Fraud Alert Dashboard
+  // View Fraud Alert Dashboard
   getSummary: (query = {}) =>
     axiosClient.get("/admin/fraud-alerts/summary", {
       params: {
@@ -14,7 +14,7 @@ const riskApi = {
       },
     }),
 
-  // UC_18.1 list + filters
+  // list + filters
   search: (query = {}) =>
     axiosClient.get("/admin/fraud-alerts", {
       params: {
@@ -29,7 +29,7 @@ const riskApi = {
       },
     }),
 
-  // UC_18.2 View Fraud Alert Details
+  // View Fraud Alert Details
   getDetail: (id) => axiosClient.get(`/admin/fraud-alerts/${id}`),
 
   // Tạo / làm mới bản tóm tắt AI cho một alert
@@ -48,14 +48,14 @@ const riskApi = {
       },
     }),
 
-  // UC_18.3 Block Account/Ticket
+  // Block Account/Ticket
   createBlock: (payload) => axiosClient.post("/admin/risk/blocks", payload),
 
-  // UC_18.4 Restore Account/Ticket
+  // Restore Account/Ticket
   restoreBlock: (id, reason) =>
     axiosClient.post(`/admin/risk/blocks/${id}/restore`, { reason }),
 
-  // UC_18.8 View Fraud Case List
+  // View Fraud Case List
   searchCases: (q = {}) =>
     axiosClient.get("/admin/fraud-cases", {
       params: {
@@ -75,15 +75,15 @@ const riskApi = {
       },
     }),
 
-  // UC_18.9 Assign Fraud Case to Analyst
+  // Assign Fraud Case to Analyst
   assignCase: (id, analystId, note) =>
     axiosClient.post(`/admin/fraud-cases/${id}/assign`, { analystId, note: note || undefined }),
 
-  // UC_18.10 Resolve Fraud Case (outcome: Confirmed | FalsePositive | Dismissed)
+  // Resolve Fraud Case (outcome: Confirmed | FalsePositive | Dismissed)
   resolveCase: (id, outcome, note) =>
     axiosClient.post(`/admin/fraud-cases/${id}/resolve`, { outcome, note }),
 
-  // UC_18.11 Configure Risk Policy Parameters
+  // Configure Risk Policy Parameters
   getPolicy: (category) =>
     axiosClient.get("/admin/risk/policy", { params: { category: category || undefined } }),
   updatePolicy: (items, reason) =>

@@ -9,7 +9,7 @@ using TicketAPI.Models;
 
 namespace TicketAPI.Services
 {
-    // UC_13 (revenue dashboard, filter, export) and UC_14.2 (check-in report export).
+    // (revenue dashboard, filter, export) and (check-in report export).
     // Every method first proves that the caller owns the event.
     public class ReportService : IReportService
     {
@@ -25,7 +25,7 @@ namespace TicketAPI.Services
             _eventApi = eventApi;
         }
 
-        // UC_13.1 / UC_13.2: totals and breakdowns for the chosen filters.
+        // totals and breakdowns for the chosen filters.
         public async Task<RevenueReportDto> GetRevenueAsync(
             int eventId, int callerId, bool isAdmin, string? bearer,
             DateOnly? from, DateOnly? to, int? ticketTypeId)
@@ -57,7 +57,7 @@ namespace TicketAPI.Services
             };
         }
 
-        // UC_13.3: the same report as a CSV file (one table: totals, then days, then ticket types).
+        // the same report as a CSV file (one table: totals, then days, then ticket types).
         public async Task<ExportFileDto> ExportRevenueAsync(
             int eventId, int callerId, bool isAdmin, string? bearer,
             DateOnly? from, DateOnly? to, int? ticketTypeId)
@@ -84,7 +84,7 @@ namespace TicketAPI.Services
             return ToFile($"revenue-event-{eventId}-{DateTime.UtcNow:yyyyMMdd}.csv", csv);
         }
 
-        // UC_14.2 (screen): check-in figures shown next to the export button.
+        // (screen): check-in figures shown next to the export button.
         public async Task<CheckinReportDto> GetCheckinAsync(int eventId, int callerId, bool isAdmin, string? bearer)
         {
             var ev = await EnsureOwnerAsync(eventId, callerId, isAdmin, bearer);
@@ -97,7 +97,7 @@ namespace TicketAPI.Services
             return new CheckinReportDto { EventId = eventId, EventTitle = ev.Title, Summary = summary };
         }
 
-        // UC_14.2: one CSV line per ticket with its check-in time and the staff member who scanned it.
+        // one CSV line per ticket with its check-in time and the staff member who scanned it.
         public async Task<ExportFileDto> ExportCheckinAsync(int eventId, int callerId, bool isAdmin, string? bearer)
         {
             await EnsureOwnerAsync(eventId, callerId, isAdmin, bearer);

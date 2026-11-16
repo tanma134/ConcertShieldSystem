@@ -1,15 +1,15 @@
 import axiosClient from "./axiosClient";
 
-// UC_14.3 / UC_14.4: staff assigned to one event.
+// staff assigned to one event.
 const staffApi = {
-  // UC_14.3: staff currently assigned to the event.
+  // staff currently assigned to the event.
   list: (eventId) => axiosClient.get(`/events/${eventId}/staff`),
 
-  // UC_14.4: Staff accounts the organizer can pick from; q filters by name or email.
+  // Staff accounts the organizer can pick from; q filters by name or email.
   candidates: (eventId, q) =>
     axiosClient.get(`/events/${eventId}/staff/candidates`, { params: q ? { q } : {} }),
 
-  // UC_14.4: assign a Staff account to the event.
+  // assign a Staff account to the event.
   assign: (eventId, staffUserId, gateName, canReviewReturns = false) =>
     axiosClient.post(`/events/${eventId}/staff`, { staffUserId, gateName, canReviewReturns }),
 
@@ -17,7 +17,7 @@ const staffApi = {
   setReturnReview: (eventId, staffUserId, canReviewReturns) =>
     axiosClient.put(`/events/${eventId}/staff/${staffUserId}/return-review`, { canReviewReturns }),
 
-  // UC_14.4: remove a staff member from the event.
+  // remove a staff member from the event.
   unassign: (eventId, staffUserId) => axiosClient.delete(`/events/${eventId}/staff/${staffUserId}`),
 
   // Events & gates assigned to this staff member

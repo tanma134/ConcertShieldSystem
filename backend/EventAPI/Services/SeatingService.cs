@@ -283,7 +283,7 @@ namespace EventAPI.Services
                 zone.ZoneName = dto.ZoneName.Trim();
             }
 
-            // ---- Re-link to a different ticket type ----
+            // --- Re-link to a different ticket type ----
             if (dto.TicketTypeId.HasValue && dto.TicketTypeId.Value != zone.TicketTypeId)
             {
                 if (!ticketTypes.Any(t => t.TicketTypeId == dto.TicketTypeId.Value))
@@ -295,7 +295,7 @@ namespace EventAPI.Services
                 zone.TicketTypeId = dto.TicketTypeId.Value;
             }
 
-            // ---- Resize a standing zone ----
+            // --- Resize a standing zone ----
             if (dto.Capacity.HasValue)
             {
                 if (SeatZoneType.IsSeated(zone.ZoneType))
@@ -317,7 +317,7 @@ namespace EventAPI.Services
                 zone.Capacity = dto.Capacity.Value;
             }
 
-            // ---- Resize/regenerate a numbered grid ----
+            // --- Resize/regenerate a numbered grid ----
             if (dto.Rows.HasValue || dto.SeatsPerRow.HasValue || dto.RowLabelPrefix != null)
             {
                 if (!SeatZoneType.IsSeated(zone.ZoneType))
@@ -626,7 +626,7 @@ namespace EventAPI.Services
             return ev;
         }
 
-        // ---- Mapping ----
+        // --- Mapping ----
 
         internal static SeatingChartResponseDTO MapChart(SeatMap m, bool includeSeats) => new()
         {

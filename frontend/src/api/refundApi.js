@@ -1,14 +1,14 @@
 import axiosClient from "./axiosClient";
 
 const refundApi = {
-  // UC 3.16.20: Process Full or Partial Refund
+  // Process Full or Partial Refund
   processRefund: (payload) => axiosClient.post("/refunds/process", payload),
 
-  // UC 3.16.21: Retry Failed Refund
+  // Retry Failed Refund
   retryRefund: (refundId, payload = { strategy: "Immediate" }) =>
     axiosClient.post(`/refunds/${refundId}/retry`, payload),
 
-  // UC 3.16.22: View Refund Reconciliation Report
+  // View Refund Reconciliation Report
   getReconciliationReport: (params = {}) =>
     axiosClient.get("/refunds/reconciliation", { params }),
 

@@ -9,7 +9,7 @@ import "../organizer/OrganizerWizard.css";
 import "./OrganizerDashboardPage.css";
 import "../../styles/reportPages.css";
 
-// UC_14.2 (export check-in report), UC_14.3 (view staff list) and UC_14.4 (assign / unassign staff).
+// (export check-in report),  (view staff list) and  (assign / unassign staff).
 export default function CheckinManagementPage() {
   const { id } = useParams();
   const [checkin, setCheckin] = useState(null);
@@ -57,7 +57,7 @@ export default function CheckinManagementPage() {
     loadAll();
   }, [id]);
 
-  // UC_14.2: downloads the check-in report as a CSV file.
+  // downloads the check-in report as a CSV file.
   const exportCsv = async () => {
     setBusy(true);
     try {
@@ -70,7 +70,7 @@ export default function CheckinManagementPage() {
     }
   };
 
-  // UC_14.4: looks up Staff accounts by name or email.
+  // looks up Staff accounts by name or email.
   const searchCandidates = async () => {
     setBusy(true);
     try {
@@ -84,7 +84,7 @@ export default function CheckinManagementPage() {
     }
   };
 
-  // UC_14.4: assigns one account, then refreshes both lists.
+  // assigns one account, then refreshes both lists.
   const assign = async (candidate) => {
     setBusy(true);
     try {
@@ -114,7 +114,7 @@ export default function CheckinManagementPage() {
     }
   };
 
-  // UC_14.4: removes one staff member after the organizer confirms.
+  // removes one staff member after the organizer confirms.
   const unassign = async (member) => {
     if (!window.confirm(`Remove ${member.fullName} from this concert?`)) return;
 

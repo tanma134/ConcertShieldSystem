@@ -7,7 +7,7 @@ using TicketAPI.Services;
 
 namespace TicketAPI.Controllers
 {
-    // UC_9: ticket return requests of the signed-in customer.
+    // ticket return requests of the signed-in customer.
     [Route("api/ticket-returns")]
     [Authorize]
     public class TicketReturnsController : TicketApiControllerBase
@@ -32,7 +32,7 @@ namespace TicketAPI.Controllers
             return (await _eventApiClient.GetReturnReviewEventIdsAsync(CurrentUserId)).ToList();
         }
 
-        // UC_9.1: POST api/ticket-returns
+        // POST api/ticket-returns
         [HttpPost]
         public async Task<IActionResult> Submit([FromBody] SubmitTicketReturnDto dto)
         {
@@ -51,7 +51,7 @@ namespace TicketAPI.Controllers
             }
         }
 
-        // UC_9.2: GET api/ticket-returns?status=Pending
+        // GET api/ticket-returns?status=Pending
         [HttpGet]
         public async Task<IActionResult> List([FromQuery] string? status)
         {
@@ -65,7 +65,7 @@ namespace TicketAPI.Controllers
             }
         }
 
-        // UC_9.2: GET api/ticket-returns/{id}
+        // GET api/ticket-returns/{id}
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -79,7 +79,7 @@ namespace TicketAPI.Controllers
             }
         }
 
-        // UC_9.3: POST api/ticket-returns/{id}/cancel
+        // POST api/ticket-returns/{id}/cancel
         [HttpPost("{id:int}/cancel")]
         public async Task<IActionResult> Cancel(int id)
         {

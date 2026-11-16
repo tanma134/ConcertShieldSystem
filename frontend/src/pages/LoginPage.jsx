@@ -147,7 +147,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* UC 11.1 & 11.2: Platform Policy Modal */}
+      {/* Platform Policy Modal */}
       <PlatformPolicyModal
         isOpen={showPolicyModal}
         onClose={() => setShowPolicyModal(false)}

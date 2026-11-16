@@ -5,7 +5,7 @@ using TicketAPI.Services;
 
 namespace TicketAPI.Controllers
 {
-    // Organizer reports of one event: revenue (UC_13) and check-in (UC_14.2).
+    // Organizer reports of one event: revenue and check-in.
     [Route("api/organizer/events/{eventId:int}")]
     [Authorize(Roles = "Organizer,Admin")]
     public class OrganizerReportsController : TicketApiControllerBase
@@ -17,7 +17,7 @@ namespace TicketAPI.Controllers
             _service = service;
         }
 
-        // UC_13.1 + UC_13.2: GET revenue?from=2026-10-01&to=2026-10-31&ticketTypeId=3
+        // + GET revenue?from=2026-10-01&to=2026-10-31&ticketTypeId=3
         [HttpGet("revenue")]
         public async Task<IActionResult> GetRevenue(
             int eventId, [FromQuery] DateOnly? from, [FromQuery] DateOnly? to, [FromQuery] int? ticketTypeId)
@@ -34,7 +34,7 @@ namespace TicketAPI.Controllers
             }
         }
 
-        // UC_13.3: GET revenue/export (CSV download, same filters as the dashboard)
+        // GET revenue/export (CSV download, same filters as the dashboard)
         [HttpGet("revenue/export")]
         public async Task<IActionResult> ExportRevenue(
             int eventId, [FromQuery] DateOnly? from, [FromQuery] DateOnly? to, [FromQuery] int? ticketTypeId)
@@ -51,7 +51,7 @@ namespace TicketAPI.Controllers
             }
         }
 
-        // UC_14.2 (screen): GET checkin
+        // (screen): GET checkin
         [HttpGet("checkin")]
         public async Task<IActionResult> GetCheckin(int eventId)
         {
@@ -65,7 +65,7 @@ namespace TicketAPI.Controllers
             }
         }
 
-        // UC_14.2: GET checkin/export (CSV download)
+        // GET checkin/export (CSV download)
         [HttpGet("checkin/export")]
         public async Task<IActionResult> ExportCheckin(int eventId)
         {

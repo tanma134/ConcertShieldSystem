@@ -31,7 +31,7 @@ public class EvidenceController : ControllerBase
             return Ok(evidences);
         });
 
-    // POST api/incidents/{incidentId}/evidences (UC_16.2 Attach Evidence)
+    // POST api/incidents/{incidentId}/evidences (Attach Evidence)
     [HttpPost]
     [Authorize(Policy = "CanManageIncidents")]
     [RequestSizeLimit(50 * 1024 * 1024)]

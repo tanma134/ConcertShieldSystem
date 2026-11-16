@@ -262,13 +262,12 @@ export default function ChangeSeatSelectionModal({
       onSaved(updatedHold);
       onClose();
     } catch (saveError) {
-      setSaveError(
+      const errMsg =
         saveError.response?.data?.message ||
-          saveError.message ||
-          "Could not change seats. Your current seats are still held."
-      );
-      setSaveError(message);
-      toast.error(message);
+        saveError.message ||
+        "Could not change seats. Your current seats are still held.";
+      setSaveError(errMsg);
+      toast.error(errMsg);
     } finally {
       setSaving(false);
     }

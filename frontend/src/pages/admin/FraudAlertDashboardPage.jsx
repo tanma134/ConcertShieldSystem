@@ -134,7 +134,7 @@ export default function FraudAlertDashboardPage() {
         </div>
       )}
 
-      {/* UC_18.1 - View Fraud Alert Dashboard */}
+      {/* View Fraud Alert Dashboard */}
       <section className="admin-panel">
         <div className="panel-header">
           <h2>Fraud alert dashboard</h2>

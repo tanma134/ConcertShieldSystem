@@ -23,23 +23,23 @@ export function saveBlob(response, fallbackName) {
   window.URL.revokeObjectURL(url);
 }
 
-// UC_13 and UC_14.2: organizer reports of one event.
+// and organizer reports of one event.
 const reportApi = {
-  // UC_13.1 + UC_13.2: revenue summary; params = { from, to, ticketTypeId }.
+  // + revenue summary; params = { from, to, ticketTypeId }.
   getRevenue: (eventId, params) =>
     axiosClient.get(`/organizer/events/${eventId}/revenue`, { params: cleanParams(params) }),
 
-  // UC_13.3: the same report as a CSV file.
+  // the same report as a CSV file.
   exportRevenue: (eventId, params) =>
     axiosClient.get(`/organizer/events/${eventId}/revenue/export`, {
       params: cleanParams(params),
       responseType: "blob",
     }),
 
-  // UC_14.2: check-in figures shown next to the export button.
+  // check-in figures shown next to the export button.
   getCheckin: (eventId) => axiosClient.get(`/organizer/events/${eventId}/checkin`),
 
-  // UC_14.2: check-in report as a CSV file.
+  // check-in report as a CSV file.
   exportCheckin: (eventId) =>
     axiosClient.get(`/organizer/events/${eventId}/checkin/export`, { responseType: "blob" }),
 };

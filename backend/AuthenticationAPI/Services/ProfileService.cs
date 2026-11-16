@@ -142,7 +142,7 @@ namespace AuthenticationAPI.Services
             string? email,
             string? userId)
         {
-            // ------------------------------------------
+            // -----------------------------------------
             // User ID is immutable; email may have changed since the JWT was issued.
             if (int.TryParse(userId, out var id))
             {
@@ -152,7 +152,7 @@ namespace AuthenticationAPI.Services
             }
 
             // Fall back to email for tokens that do not contain a user ID.
-            // ------------------------------------------
+            // -----------------------------------------
             if (!string.IsNullOrWhiteSpace(email))
             {
                 var user = await _userRepository.GetByEmailAsync(email);

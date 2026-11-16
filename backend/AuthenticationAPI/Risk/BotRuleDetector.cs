@@ -35,7 +35,7 @@ public static class BotRuleDetector
         var ua = c.UserAgent ?? "";
         var who = c.SessionId ?? c.Ip ?? "unknown";
 
-        // ---- H: Header ----
+        // --- H: Header ----
         if (string.IsNullOrWhiteSpace(ua))
             hits.Add(new RuleHit("BOT_H01", 1, "(empty user-agent)"));
         else if (CliAgents.FirstOrDefault(a => ua.Contains(a, StringComparison.OrdinalIgnoreCase)) is { } cli)
@@ -55,7 +55,7 @@ public static class BotRuleDetector
             hits.Add(new RuleHit("BOT_H04", 1, string.IsNullOrEmpty(origin) ? "(no origin/referer)" : Trim(origin)));
         // BOT_H05 (gọi API đặt vé khi không có token) không cần ở đây: endpoint [Authorize] đã trả 401 trước khi tới.
 
-        // ---- E: Môi trường ----
+        // --- E: Môi trường ----
         if (c.Webdriver || HeadlessAgents.Any(a => ua.Contains(a, StringComparison.OrdinalIgnoreCase)))
             hits.Add(new RuleHit("BOT_E01", 1, c.Webdriver ? "navigator.webdriver = true" : Trim(ua)));
         // BOT_E02 (datacenter/VPN/Tor) cần dịch vụ tra ASN - chưa làm.
@@ -66,7 +66,7 @@ public static class BotRuleDetector
             else if (c.HadInput == null) missing.Add("had_input");
         }
 
-        // ---- V: Tốc độ ----
+        // --- V: Tốc độ ----
         var perSession = counters.Hit($"v01:{who}", V01_Window);
         if (perSession > V01_Level2_Count) hits.Add(new RuleHit("BOT_V01", 2, $"{perSession} requests/10s"));
         else if (perSession > V01_Level1_Count) hits.Add(new RuleHit("BOT_V01", 1, $"{perSession} requests/10s"));

@@ -6,7 +6,7 @@ const seatingTemplateApi = {
 
   getById: (id) => axiosClient.get(`/seating-templates/${id}`),
 
-  // UC_26.3 - snapshot the already-built layout of one of my concerts.
+  // snapshot the already-built layout of one of my concerts.
   saveFromEvent: (dto) =>
     axiosClient.post(`/seating-templates/from-event`, dto),
 
@@ -17,7 +17,7 @@ const seatingTemplateApi = {
 
   remove: (id) => axiosClient.delete(`/seating-templates/${id}`),
 
-  // UC_26.2 - map each template zone to a ticket type, then build the chart.
+  // map each template zone to a ticket type, then build the chart.
   apply: (templateId, eventId, dto) =>
     axiosClient.post(
       `/seating-templates/${templateId}/apply/${eventId}`,

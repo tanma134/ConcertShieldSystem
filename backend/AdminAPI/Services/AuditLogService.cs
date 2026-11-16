@@ -23,9 +23,9 @@ namespace AdminAPI.Services
             _db = db;
         }
 
-        // ------------------------------------------------------------
+        // -----------------------------------------------------------
         // 19.1 View Activity Log List
-        // ------------------------------------------------------------
+        // -----------------------------------------------------------
         public async Task<PagedResult<AuditLogDto>> SearchAsync(AuditLogQuery query)
         {
             if (query.From is not null && query.To is not null && query.From > query.To)
@@ -55,9 +55,9 @@ namespace AdminAPI.Services
             };
         }
 
-        // ------------------------------------------------------------
+        // -----------------------------------------------------------
         // 19.2 Export Audit Log
-        // ------------------------------------------------------------
+        // -----------------------------------------------------------
         public async Task<(byte[] Content, string ContentType, string FileName)> ExportAsync(AuditLogQuery query, string format)
         {
             if (query.From is null || query.To is null)
@@ -88,9 +88,9 @@ namespace AdminAPI.Services
             };
         }
 
-        // ------------------------------------------------------------
+        // -----------------------------------------------------------
         // Ghi log (dùng ở các service/controller khác trong AdminAPI)
-        // ------------------------------------------------------------
+        // -----------------------------------------------------------
         public async Task LogAsync(int? userId, string actorType, string action, string entityType,
             string? entityId = null, object? oldValue = null, object? newValue = null,
             string? ipAddress = null, string? requestId = null, string? userAgent = null)
@@ -114,9 +114,9 @@ namespace AdminAPI.Services
             await _db.SaveChangesAsync();
         }
 
-        // ------------------------------------------------------------
+        // -----------------------------------------------------------
         // Helpers
-        // ------------------------------------------------------------
+        // -----------------------------------------------------------
         private IQueryable<AuditLog> BuildFilteredQuery(AuditLogQuery query)
         {
             var q = _db.AuditLogs.AsNoTracking().AsQueryable();

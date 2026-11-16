@@ -1813,7 +1813,7 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
 }
 
 // =============================================================================
-// Seating templates (UC_26.2 Apply Seating Template / UC_26.3 Save as Template)
+// Seating templates ( Apply Seating Template /  Save as Template)
 // =============================================================================
 
 /**

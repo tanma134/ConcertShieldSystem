@@ -47,13 +47,13 @@ public class PaymentAPIClient : IPaymentAPIClient
         }
     }
 
-    public async Task<RefundOutcome> RefundAsync(int returnRequestId, int orderId, long amount, CancellationToken cancellationToken = default)
+    public async Task<RefundOutcome> RefundAsync(int returnRequestId, int orderId, long amount, string? customerName = null, int? eventId = null, string? eventName = null, CancellationToken cancellationToken = default)
     {
         try
         {
             using var response = await _httpClient.PostAsJsonAsync(
                 "api/internal/refunds",
-                new { returnRequestId, orderId, amount },
+                new { returnRequestId, orderId, amount, customerName, eventId, eventName },
                 cancellationToken);
 
             if (!response.IsSuccessStatusCode)

@@ -6,7 +6,7 @@ using TicketAPI.Models;
 
 namespace TicketAPI.Services
 {
-    // UC_9: submit, track and cancel ticket return requests.
+    // submit, track and cancel ticket return requests.
     public class TicketReturnService : ITicketReturnService
     {
         private readonly TicketDbContext _context;
@@ -99,7 +99,7 @@ namespace TicketAPI.Services
                 .ToList();
         }
 
-        // UC_9.1: validates the ticket and the reason, then opens a Pending request
+        // validates the ticket and the reason, then opens a Pending request
         // and moves the ticket to ReturnPending so its QR stops working.
         public async Task<TicketReturnDto> SubmitAsync(int userId, SubmitTicketReturnDto dto)
         {
@@ -158,7 +158,7 @@ namespace TicketAPI.Services
             return MapRequest(request, ticket);
         }
 
-        // UC_9.2: the user's requests, newest first, optionally filtered by status.
+        // the user's requests, newest first, optionally filtered by status.
         public async Task<List<TicketReturnDto>> ListMineAsync(int userId, string? status)
         {
             var query = _context.TicketReturnRequests
@@ -174,7 +174,7 @@ namespace TicketAPI.Services
             return requests.Select(r => MapRequest(r, r.Ticket)).ToList();
         }
 
-        // UC_9.2: one request. Other people's requests look like "not found".
+        // one request. Other people's requests look like "not found".
         public async Task<TicketReturnDto> GetMineAsync(int userId, int requestId)
         {
             var request = await _context.TicketReturnRequests
@@ -186,7 +186,7 @@ namespace TicketAPI.Services
             return MapRequest(request, request.Ticket);
         }
 
-        // UC_9.3: withdraws a Pending request and gives the ticket back to its owner.
+        // withdraws a Pending request and gives the ticket back to its owner.
         public async Task<TicketReturnDto> CancelAsync(int userId, int requestId)
         {
             var request = await _context.TicketReturnRequests
@@ -305,7 +305,13 @@ namespace TicketAPI.Services
         // Asks PaymentAPI to pay the refund and stores the outcome (Refunded or RefundFailed).
         private async Task PayBackAsync(TicketReturnRequest request)
         {
-            var outcome = await _paymentClient.RefundAsync(request.TicketReturnRequestId, request.OrderId, request.RefundAmount);
+            var outcome = await _paymentClient.RefundAsync(
+                request.TicketReturnRequestId,
+                request.OrderId,
+                request.RefundAmount,
+                request.Ticket.Order?.FullName,
+                request.Ticket.Order?.EventId,
+                request.Ticket.Order?.EventName);
             var now = DateTime.UtcNow;
             request.UpdatedAt = now;
 
@@ -315,6 +321,19 @@ namespace TicketAPI.Services
                 request.RefundedAt = now;
                 request.RefundReference = outcome.Reference;
                 request.RefundError = null;
+
+                // Sync Order status if all tickets in the order have been returned / refunded
+                var hasRemainingActive = await _context.Tickets
+                    .AnyAsync(t => t.OrderId == request.OrderId && !t.IsDeleted && t.Status != TicketStatuses.Returned && t.Status != TicketStatuses.Revoked);
+
+                if (!hasRemainingActive)
+                {
+                    var order = await _context.Orders.FirstOrDefaultAsync(o => o.OrderId == request.OrderId);
+                    if (order != null)
+                    {
+                        order.Status = "Refunded";
+                    }
+                }
             }
             else
             {

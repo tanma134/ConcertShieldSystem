@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import riskApi from "../../api/riskApi";
 import { Shell, Banner, fmt, errMsg } from "./frCommon";
 
-// UC_18.11 Configure Risk Policy Parameters (Admin). The Risk Engine re-reads the config within ~60 s.
+// Configure Risk Policy Parameters (Admin). The Risk Engine re-reads the config within ~60 s.
 const MIN_REASON = 10;
 const MAX_REASON = 500;
 

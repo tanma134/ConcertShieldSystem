@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EventAPI.Services
 {
-    // UC_14.3 (view staff list) and UC_14.4 (assign / unassign staff).
+    // (view staff list) and (assign / unassign staff).
     // Only the event's organizer (or an Admin) may use it, and only real Staff accounts can be assigned.
     public class EventStaffService : IEventStaffService
     {
@@ -22,7 +22,7 @@ namespace EventAPI.Services
             _directory = directory;
         }
 
-        // UC_14.3: the staff currently assigned to the event, oldest assignment first.
+        // the staff currently assigned to the event, oldest assignment first.
         public async Task<List<EventStaffDTO>> ListAsync(int eventId, int callerId, bool isAdmin, string? bearer)
         {
             await EnsureOwnerAsync(eventId, callerId, isAdmin);
@@ -42,7 +42,7 @@ namespace EventAPI.Services
             }).ToList();
         }
 
-        // UC_14.4: Staff accounts matching the text, each marked when already assigned.
+        // Staff accounts matching the text, each marked when already assigned.
         public async Task<List<StaffCandidateDTO>> SearchCandidatesAsync(
             int eventId, int callerId, bool isAdmin, string? bearer, string? query)
         {
@@ -65,7 +65,7 @@ namespace EventAPI.Services
             }).ToList();
         }
 
-        // UC_14.4: assigns a Staff account to the event.
+        // assigns a Staff account to the event.
         public async Task<EventStaffDTO> AssignAsync(int eventId, int staffUserId, string? gateName, int callerId, bool isAdmin, string? bearer, bool canReviewReturns = false)
         {
             if (staffUserId <= 0)
@@ -165,7 +165,7 @@ namespace EventAPI.Services
             return await query.ToListAsync();
         }
 
-        // UC_14.4: removes a staff member from the event; the row is kept as history.
+        // removes a staff member from the event; the row is kept as history.
         public async Task UnassignAsync(int eventId, int staffUserId, int callerId, bool isAdmin)
         {
             await EnsureOwnerAsync(eventId, callerId, isAdmin);

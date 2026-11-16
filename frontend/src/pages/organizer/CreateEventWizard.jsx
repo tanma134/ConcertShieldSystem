@@ -2,6 +2,7 @@ import OrganizerShell from "./OrganizerShell";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
 import eventApi from "../../api/eventApi";
+import { cleanReason } from "../../utils/format";
 import StepInfo from "./steps/StepInfo";
 import StepImages from "./steps/StepImages";
 import StepTicketsSeating from "./steps/StepTicketsSeating";
@@ -77,16 +78,20 @@ export default function CreateEventWizard() {
 
   const canLeaveStep1 = !!eventId;
 
+  const isCancelled = event?.status === "Cancelled";
+  const isPublished = event?.status === "Published";
+
   return (
     <OrganizerShell title="Concert Setup">
 
       <div className="tb-container ow-wrap">
         <div className="ow-head">
           <div>
-            <h1>{routeId ? "Edit Event" : "Create New Event"}</h1>
+            <h1>{isCancelled ? "View Cancelled Event" : (routeId ? (isPublished ? "View / Edit Event" : "Edit Event") : "Create New Event")}</h1>
             <p className="ow-sub">
-              Events are always in the <strong>Music</strong> category. You
-              can save a draft at any step and come back later.
+              {isCancelled
+                ? "This concert has been officially cancelled. All configurations are permanently locked in read-only mode."
+                : "Events are always in the Music category. You can save a draft at any step and come back later."}
             </p>
           </div>
           <div className="ow-head-actions" style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
@@ -109,11 +114,19 @@ export default function CreateEventWizard() {
           </div>
         </div>
 
+        {isCancelled && (
+          <div className="ow-banner ow-banner-rejected" style={{ background: "#fee2e2", borderColor: "#fca5a5", color: "#991b1b" }}>
+            <strong>⚠️ This event has been cancelled.</strong>{" "}
+            {event.rejectedReason
+              ? `Reason: ${cleanReason(event.rejectedReason)}`
+              : "Ticket sales are terminated and active tickets are in refund reconciliation."}
+          </div>
+        )}
         {event?.status === "Rejected" && (
           <div className="ow-banner ow-banner-rejected">
             <strong>This event was rejected.</strong>{" "}
             {event.rejectedReason
-              ? `Reason: ${event.rejectedReason}`
+              ? `Reason: ${cleanReason(event.rejectedReason)}`
               : "Please make changes and submit for review again."}
           </div>
         )}

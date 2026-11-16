@@ -1,20 +1,25 @@
 import axiosClient from "./axiosClient";
 
-// UC_9: ticket return requests of the signed-in customer.
+// ticket return requests of the signed-in customer.
 const ticketReturnApi = {
   // "My tickets" list, each ticket carries whether it can be returned right now.
   getMyTickets: () => axiosClient.get("/tickets/my"),
 
-  // UC_9.1: submit a return request for one ticket.
-  submit: (ticketId, reason) => axiosClient.post("/ticket-returns", { ticketId, reason }),
+  // submit a return request for one ticket.
+  submit: (ticketId, reason, proofUrl = null) =>
+    axiosClient.post("/ticket-returns", { ticketId, reason, proofUrl }),
 
-  // UC_9.2: all my return requests, optionally filtered by status.
+  // Hoàn tiền theo lô cho nhiều vé trong cùng một đơn hàng
+  submitBatch: (ticketIds, reason, proofUrl = null) =>
+    axiosClient.post("/ticket-returns/batch", { ticketIds, reason, proofUrl }),
+
+  // all my return requests, optionally filtered by status.
   list: (status) => axiosClient.get("/ticket-returns", { params: status ? { status } : {} }),
 
-  // UC_9.2: one return request.
+  // one return request.
   getById: (id) => axiosClient.get(`/ticket-returns/${id}`),
 
-  // UC_9.3: withdraw a request that is still pending.
+  // withdraw a request that is still pending.
   cancel: (id) => axiosClient.post(`/ticket-returns/${id}/cancel`),
   reviewQueue: (status = "Pending") => axiosClient.get("/ticket-returns/review", { params: status ? { status } : {} }),
   retryRefund: (id) => axiosClient.post(`/ticket-returns/${id}/retry-refund`),

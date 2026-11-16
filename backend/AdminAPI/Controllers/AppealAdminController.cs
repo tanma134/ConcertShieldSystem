@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AdminAPI.Controllers
 {
-    /// <summary>UC_18.7 Review & Resolve Appeal (Admin, Staff).</summary>
+    /// <summary>Review & Resolve Appeal (Admin, Staff).</summary>
     [ApiController]
     [Route("api/admin/risk/appeals")]
     [Authorize(Policy = "CanReviewFraud")]

@@ -65,7 +65,7 @@ public class EvidenceService : IEvidenceService
 
         _db.IncidentEvidences.Add(evidence);
 
-        // Ghi nhận nhật ký đính kèm bằng chứng (UC_16.3)
+        // Ghi nhận nhật ký đính kèm bằng chứng
         var update = new IncidentUpdate
         {
             IncidentId = incidentId,

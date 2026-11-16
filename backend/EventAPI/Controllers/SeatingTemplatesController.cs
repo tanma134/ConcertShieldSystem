@@ -10,9 +10,9 @@ namespace EventAPI.Controllers
     /// concerts — the "canvas + template library" workflow requested for the
     /// seating chart builder.
     ///
-    ///   UC_26.3 Save Seating Chart as Template — snapshot an already-built concert
+    ///   Save Seating Chart as Template — snapshot an already-built concert
     ///           layout into the reusable library.
-    ///   UC_26.2 Apply Seating Template        — load a template into a (Draft or
+    ///   Apply Seating Template        — load a template into a (Draft or
     ///           Rejected) concert, mapping each template zone onto one of that
     ///           concert's ticket types.
     ///
@@ -50,7 +50,7 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        /// <summary>UC_26.3 — snapshot the current, already-built layout of one of my concerts.</summary>
+        /// <summary>— snapshot the current, already-built layout of one of my concerts.</summary>
         [HttpPost("from-event")]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> SaveFromEvent([FromBody] SaveSeatingTemplateDTO dto)
@@ -103,7 +103,7 @@ namespace EventAPI.Controllers
         }
 
         /// <summary>
-        /// UC_26.2 — builds the concert's seating chart from the template, after the
+        /// — builds the concert's seating chart from the template, after the
         /// organizer maps each template zone to one of the concert's ticket types.
         /// </summary>
         [HttpPost("{templateId:int}/apply/{eventId:int}")]

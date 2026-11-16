@@ -136,7 +136,7 @@ namespace PaymentAPI.Controllers
         }
 
         /// <summary>
-        /// Cập nhật thông tin Voucher (UC_44 / UC_44.2).
+        /// Cập nhật thông tin Voucher.
         /// </summary>
         [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateVoucher(int id, [FromBody] UpdateVoucherDTO dto)

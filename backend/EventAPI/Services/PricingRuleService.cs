@@ -125,9 +125,9 @@ namespace EventAPI.Services
 
         // Cross-checks a rule's shape against its declared RuleType so a saved rule
         // can never be ambiguous about when or how it applies:
-        //   - EarlyBird / LastMinute / TimeBased -> needs at least one trigger time.
-        //   - QuantityBased -> needs a positive QuantityThreshold.
-        //   - Every rule needs a price effect: AdjustedPrice and/or DiscountPercent.
+        // EarlyBird / LastMinute / TimeBased -> needs at least one trigger time.
+        // QuantityBased -> needs a positive QuantityThreshold.
+        // Every rule needs a price effect: AdjustedPrice and/or DiscountPercent.
         // FluentValidation (CreatePricingRuleValidator) already covers most of this
         // on Create; it is re-checked here because Update can clear one field
         // without the request going back through the validator.

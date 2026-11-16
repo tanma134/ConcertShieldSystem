@@ -5,7 +5,7 @@ import adminApi from "../../api/adminApi";
 import { useAuth } from "../../context/AuthContext";
 import { Shell, Banner, fmt, errMsg, levelPill, statusPill, slaInfo } from "./frCommon";
 
-// UC_18.8 View Fraud Case List · UC_18.9 Assign Fraud Case to Analyst · UC_18.10 Resolve Fraud Case
+// View Fraud Case List ·  Assign Fraud Case to Analyst ·  Resolve Fraud Case
 const LEVELS = ["", "Critical", "High", "Medium", "Low"];
 const TYPES = ["", "Bot", "Fraud"];
 const STATUSES = ["", "Open", "InReview", "Resolved", "FalsePositive", "Dismissed"];
@@ -121,7 +121,7 @@ export default function FraudCaseListPage() {
     setPage(1); setApplied(filters);
   };
 
-  // ---- UC_18.9 Assign
+  // ---  Assign
   const openAssign = (c) => { setAssign(c); setAssignee(c.assignedTo ? String(c.assignedTo) : ""); setAssignNote(""); setFormErr(""); };
   const submitAssign = async (e) => {
     e.preventDefault();
@@ -139,7 +139,7 @@ export default function FraudCaseListPage() {
     } finally { setBusy(false); }
   };
 
-  // ---- UC_18.10 Resolve
+  // ---  Resolve
   const openResolve = (c) => { setResolve(c); setOutcome(""); setResolveNote(""); setFormErr(""); };
   const submitResolve = async (e) => {
     e.preventDefault();

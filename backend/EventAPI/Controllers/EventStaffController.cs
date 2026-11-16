@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EventAPI.Controllers
 {
-    // UC_14.3 / UC_14.4: staff assigned to one concert. Organizer of the concert (or Admin) only.
+    // staff assigned to one concert. Organizer of the concert (or Admin) only.
     [Route("api/events/{eventId:int}/staff")]
     [Authorize(Policy = "RequireOrganizer")]
     public class EventStaffController : BaseApiController
@@ -17,7 +17,7 @@ namespace EventAPI.Controllers
             _service = service;
         }
 
-        // UC_14.3: GET api/events/{eventId}/staff
+        // GET api/events/{eventId}/staff
         [HttpGet]
         public async Task<ActionResult> GetStaff(int eventId)
         {
@@ -29,7 +29,7 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        // UC_14.4: GET api/events/{eventId}/staff/candidates?q=an
+        // GET api/events/{eventId}/staff/candidates?q=an
         [HttpGet("candidates")]
         public async Task<ActionResult> GetCandidates(int eventId, [FromQuery] string? q)
         {
@@ -41,7 +41,7 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        // UC_14.4: POST api/events/{eventId}/staff   { "staffUserId": 12 }
+        // POST api/events/{eventId}/staff   { "staffUserId": 12 }
         [HttpPost]
         public async Task<ActionResult> Assign(int eventId, [FromBody] AssignStaffDTO dto)
         {
@@ -65,7 +65,7 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        // UC_14.4: DELETE api/events/{eventId}/staff/{staffUserId}
+        // DELETE api/events/{eventId}/staff/{staffUserId}
         [HttpDelete("{staffUserId:int}")]
         public async Task<ActionResult> Unassign(int eventId, int staffUserId)
         {

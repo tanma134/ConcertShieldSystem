@@ -43,7 +43,7 @@ namespace PaymentAPI.Controllers
                  c.Value.Equals("SupportStaff", StringComparison.OrdinalIgnoreCase) ||
                  c.Value.Equals("SecurityStaff", StringComparison.OrdinalIgnoreCase)));
 
-        // UC 3.16.20: Process Full / Partial Refund
+        // Process Full / Partial Refund
         [HttpPost("process")]
         public async Task<IActionResult> ProcessRefund([FromBody] ProcessRefundRequestDto request, CancellationToken ct)
         {
@@ -74,7 +74,7 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        // UC 3.16.21: Retry Failed Refund
+        // Retry Failed Refund
         [HttpPost("{id:int}/retry")]
         public async Task<IActionResult> RetryRefund(int id, [FromBody] RetryRefundRequestDto? request, CancellationToken ct)
         {
@@ -102,7 +102,7 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        // UC 3.16.22: View Refund Reconciliation Report (Platform Admin)
+        // View Refund Reconciliation Report (Platform Admin)
         [HttpGet("reconciliation")]
         public async Task<IActionResult> GetReconciliationReport([FromQuery] ReconciliationFilterDto filter, CancellationToken ct)
         {

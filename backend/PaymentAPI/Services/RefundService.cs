@@ -61,6 +61,9 @@ namespace PaymentAPI.Services
                     ReturnRequestId = request.ReturnRequestId,
                     OrderId = request.OrderId,
                     Amount = request.Amount,
+                    CustomerName = request.CustomerName,
+                    EventId = request.EventId,
+                    EventName = request.EventName,
                     Gateway = "VNPay",
                     Status = "Pending",
                     RefundType = "Full",
@@ -84,7 +87,7 @@ namespace PaymentAPI.Services
             return await ExecuteRefundAsync(refund, request.OrderId, request.Amount, ct);
         }
 
-        // UC 3.16.20: Process Full / Partial Refund
+        // Process Full / Partial Refund
         public async Task<RefundResultDto> ProcessRefundAsync(ProcessRefundRequestDto request, int actorId, string actorName, CancellationToken ct = default)
         {
             if (request.OrderId <= 0)
@@ -129,7 +132,7 @@ namespace PaymentAPI.Services
             return await ExecuteRefundAsync(refund, request.OrderId, request.Amount, ct);
         }
 
-        // UC 3.16.21: Retry Failed Refund
+        // Retry Failed Refund
         public async Task<RefundResultDto> RetryRefundAsync(int refundId, string strategy, int actorId, string actorName, CancellationToken ct = default)
         {
             var refund = await _db.PaymentRefunds.FirstOrDefaultAsync(r => r.PaymentRefundId == refundId, ct)
@@ -260,7 +263,7 @@ namespace PaymentAPI.Services
             };
         }
 
-        // UC 3.16.22: Refund Reconciliation Report
+        // Refund Reconciliation Report
         public async Task<RefundReconciliationReportDto> GetReconciliationReportAsync(ReconciliationFilterDto filter, CancellationToken ct = default)
         {
             var query = _db.PaymentRefunds.AsNoTracking().AsQueryable();
@@ -277,6 +280,7 @@ namespace PaymentAPI.Services
                 {
                     query = query.Where(r =>
                         (r.CustomerName != null && r.CustomerName.ToLower().Contains(term)) ||
+                        (r.EventName != null && r.EventName.ToLower().Contains(term)) ||
                         (r.GatewayRefundRef != null && r.GatewayRefundRef.ToLower().Contains(term)));
                 }
             }

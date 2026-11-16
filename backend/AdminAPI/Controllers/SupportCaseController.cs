@@ -136,7 +136,7 @@ public class SupportCaseController : ControllerBase
  }
  catch (InvalidOperationException ex)
  {
- // : Cannot reassign closed cases
+ // Cannot reassign closed cases
  return BadRequest(new { message = ex.Message });
  }
  }

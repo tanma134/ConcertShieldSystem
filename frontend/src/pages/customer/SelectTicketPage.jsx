@@ -439,7 +439,7 @@ export default function SelectTicketPage() {
       existingZoneId &&
       Number(existingZoneId) !== Number(zone.seatZoneId)
     ) {
-      window.alert("Please select tickets from only one zone at a time.");
+      toast.warning("Please select tickets from only one zone at a time.");
       return;
     }
 
@@ -512,14 +512,14 @@ export default function SelectTicketPage() {
       ).length;
 
     if (selectedForType >= getTicketMax(ticket)) {
-      window.alert(
+      toast.warning(
         `The limit for ${ticket?.typeName || zone.zoneName} is ${getTicketMax(ticket)} ticket(s).`
       );
       return;
     }
 
     if (selectedSeatIds.length >= maxPerAccount) {
-      window.alert(
+      toast.warning(
         `You can select up to ${maxPerAccount} ticket(s) per order.`
       );
       return;
@@ -978,6 +978,25 @@ export default function SelectTicketPage() {
               <span>🎟</span>
               Maximum {maxPerAccount} ticket(s) per order
             </div>
+            {event.startsAt && new Date(event.startsAt).getTime() - Date.now() < 24 * 3600 * 1000 && (
+              <div
+                style={{
+                  marginTop: "12px",
+                  padding: "10px 12px",
+                  borderRadius: "8px",
+                  background: "#fffbeb",
+                  border: "1px solid #fef3c7",
+                  color: "#92400e",
+                  fontSize: "12px",
+                  lineHeight: 1.4,
+                }}
+              >
+                <strong>⚠️ Quy chế mua vé sát giờ (Final Sale):</strong>
+                <p style={{ margin: "4px 0 0 0" }}>
+                  Sự kiện diễn ra trong vòng 24h tới. Vé mua sẽ không hỗ trợ hoàn hủy theo chính sách của Ban Tổ Chức.
+                </p>
+              </div>
+            )}
           </section>
 
           {zones.length > 0 && (

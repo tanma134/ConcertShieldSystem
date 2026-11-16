@@ -19,9 +19,9 @@ namespace AuthenticationAPI.Controllers
 {
     // ==========================================
     // NHÓM 2: GOVERNANCE, POLICY VERSIONING & COMPLIANCE
-    // UC_11.3 - Submit Organizer Verification Documents (Actor: Organizer)
-    // UC_11.4 - Review Organizer Verification Documents (Actor: Admin)
-    // UC_11.5 - Approve/Reject Organizer Verification (Actor: Admin)
+    // Submit Organizer Verification Documents (Actor: Organizer)
+    // Review Organizer Verification Documents (Actor: Admin)
+    // Approve/Reject Organizer Verification (Actor: Admin)
     // ==========================================
 
     public class VerificationDocumentItemDTO
@@ -242,7 +242,7 @@ namespace AuthenticationAPI.Controllers
         }
 
         // ==========================================
-        // UC_11.4 - Review Organizer Verification Documents (Admin)
+        // Review Organizer Verification Documents (Admin)
         // ==========================================
         [HttpGet("api/admin/verification/requests")]
         [Authorize(Roles = "Admin")]
@@ -351,7 +351,7 @@ namespace AuthenticationAPI.Controllers
         }
 
         // ==========================================
-        // UC_11.5 - Approve Organizer Verification (Admin)
+        // Approve Organizer Verification (Admin)
         // ==========================================
         [HttpPost("api/admin/verification/{requestId}/approve")]
         [Authorize(Roles = "Admin")]
@@ -470,7 +470,7 @@ namespace AuthenticationAPI.Controllers
         }
 
         // ==========================================
-        // UC_11.5 - Reject Organizer Verification (Admin)
+        // Reject Organizer Verification (Admin)
         // ==========================================
         [HttpPost("api/admin/verification/{requestId}/reject")]
         [Authorize(Roles = "Admin")]
@@ -569,7 +569,7 @@ namespace AuthenticationAPI.Controllers
         }
 
         // ==========================================
-        // UC_11.3 - Submit Organizer Verification Documents (Organizer)
+        // Submit Organizer Verification Documents (Organizer)
         // ==========================================
         [HttpPost("api/organizer/verification/submit")]
         [Authorize]

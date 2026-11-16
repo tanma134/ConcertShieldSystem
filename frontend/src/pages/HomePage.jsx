@@ -141,6 +141,7 @@ export default function HomePage() {
       pageSize: 100,
       sortBy: "StartsAt",
       sortOrder: "asc",
+      dateFrom: new Date().toISOString(),
     };
     if (q) filter.search = q;
 
@@ -175,9 +176,9 @@ export default function HomePage() {
     });
   }, [events, saleStatus]);
 
-  // Giới hạn 6 sự kiện ở trang chủ theo yêu cầu
+  // Hien thi 8 su kien o trang chu de vua van 2 hang (luoi 4 cot x 2 hang = 8 cards)
   const displayedEvents = useMemo(() => {
-    return filteredEvents.slice(0, 6);
+    return filteredEvents.slice(0, 8);
   }, [filteredEvents]);
 
   // Sự kiện nổi bật nhất dùng cho thẻ preview trong hero

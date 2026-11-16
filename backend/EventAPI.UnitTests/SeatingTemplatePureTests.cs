@@ -80,6 +80,7 @@ public class SeatingTemplatePureTests
         public Task<SeatZoneResponseDTO> UpdateZoneAsync(int seatZoneId, UpdateSeatZoneDTO dto, int callerId, bool isAdmin) => Task.FromResult(new SeatZoneResponseDTO());
         public Task DeleteZoneAsync(int seatZoneId, int callerId, bool isAdmin) => Task.CompletedTask;
         public Task DeleteAsync(int eventId, int callerId, bool isAdmin) => Task.CompletedTask;
+        public Task<SeatingChartResponseDTO> UpdateLayoutAsync(int eventId, string layoutJson, int callerId, bool isAdmin) => Task.FromResult(new SeatingChartResponseDTO());
     }
 
     [Fact]

@@ -1,6 +1,6 @@
 namespace AuthenticationAPI.DTOs
 {
-    // ---------- Chung ----------
+    // --------- Chung ----------
     public class KycPagedResult<T>
     {
         public List<T> Items { get; set; } = new();
@@ -9,14 +9,14 @@ namespace AuthenticationAPI.DTOs
         public int PageSize { get; set; }
     }
 
-    // ---------- 3.4 Consent ----------
+    // --------- 3.4 Consent ----------
     public class ConsentItemDto
     {
         public string Heading { get; set; } = "";
         public string Content { get; set; } = "";
     }
 
-    /// <summary>Tr? cho app/web ? GET api/kyc/consent (gi? ðúng shape c?).</summary>
+    /// <summary>Tr? cho app/web ? GET api/kyc/consent (gi? ng shape c?).</summary>
     public class KycConsentPublicDto
     {
         public string Version { get; set; } = "";
@@ -35,7 +35,7 @@ namespace AuthenticationAPI.DTOs
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public int? CreatedBy { get; set; }
-        /// <summary>S? h? sõ eKYC ð? ð?ng ? theo phiên b?n này.</summary>
+        /// <summary>S? h? s eKYC ? ?ng ? theo phin b?n ny.</summary>
         public int ConsentCount { get; set; }
     }
 
@@ -45,14 +45,14 @@ namespace AuthenticationAPI.DTOs
         public string Title { get; set; } = "";
         public List<ConsentItemDto> Items { get; set; } = new();
         public string CheckboxText { get; set; } = "";
-        /// <summary>true = kích ho?t ngay sau khi t?o.</summary>
+        /// <summary>true = kch ho?t ngay sau khi t?o.</summary>
         public bool Activate { get; set; }
     }
 
-    // ---------- 3.5 Retention ----------
+    // --------- 3.5 Retention ----------
     public class KycSettingDto
     {
-        /// <summary>Ph?i n?m trong [MinRetentionDays, MaxRetentionDays]; không c?n giá tr? 0.</summary>
+        /// <summary>Ph?i n?m trong [MinRetentionDays, MaxRetentionDays]; khng c?n gi tr? 0.</summary>
         public int RetentionDays { get; set; }
         public bool KeepDocumentHashAfterDeletion { get; set; }
         /// <summary> shortest retention allowed (legal minimum).</summary>
@@ -69,7 +69,7 @@ namespace AuthenticationAPI.DTOs
         public bool KeepDocumentHashAfterDeletion { get; set; }
     }
 
-    // ---------- 3.6 Deletion ----------
+    // --------- 3.6 Deletion ----------
     public class KycDeletionRequestDto
     {
         public int Id { get; set; }
@@ -92,7 +92,7 @@ namespace AuthenticationAPI.DTOs
         public string Note { get; set; } = "";
     }
 
-    // ---------- eKYC manual review  ----------
+    // --------- eKYC manual review  ----------
     public class KycReviewItemDto
     {
         public int EkycId { get; set; }
@@ -114,7 +114,7 @@ namespace AuthenticationAPI.DTOs
         public string? Reason { get; set; }
     }
 
-    // ---------- 3.7 Access log ----------
+    // --------- 3.7 Access log ----------
     public class KycAccessLogDto
     {
         public long Id { get; set; }

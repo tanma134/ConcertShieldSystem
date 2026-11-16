@@ -169,7 +169,7 @@ export default function OrganizerVerificationsPage() {
         </button>
       </div>
 
-      {/* Requests Table (UC_11.4) */}
+      {/* Requests Table */}
       <div className="requests-section">
         {loading ? (
           <div className="loading-box">
@@ -242,7 +242,7 @@ export default function OrganizerVerificationsPage() {
         )}
       </div>
 
-      {/* MODAL 1: Request Inspection & Review Details (UC_11.4 & UC_11.5) */}
+      {/* MODAL 1: Request Inspection & Review Details */}
       {showDetailModal && selectedRequest && (
         <div className="modal-overlay">
           <div className="modal-card extra-wide">
@@ -292,7 +292,7 @@ export default function OrganizerVerificationsPage() {
                 )}
               </div>
 
-              {/* Cloudinary Documents Inspection (UC_11.3 / UC_11.4) */}
+              {/* Cloudinary Documents Inspection */}
               <div className="documents-inspection-card">
                 <h3>Uploaded Legal Verification Documents (Cloudinary Cloud Storage)</h3>
                 {selectedRequest.documents?.length === 0 ? (
@@ -376,7 +376,7 @@ export default function OrganizerVerificationsPage() {
               </div>
             </div>
 
-            {/* Decision Footer Buttons (UC_11.5) */}
+            {/* Decision Footer Buttons */}
             <div className="modal-footer">
               <button className="btn-cancel" onClick={() => setShowDetailModal(false)}>
                 Close
@@ -409,7 +409,7 @@ export default function OrganizerVerificationsPage() {
         </div>
       )}
 
-      {/* MODAL 2: Mandatory Rejection Reason Input (UC_11.5) */}
+      {/* MODAL 2: Mandatory Rejection Reason Input */}
       {showRejectModal && selectedRequest && (
         <div className="modal-overlay">
           <div className="modal-card">

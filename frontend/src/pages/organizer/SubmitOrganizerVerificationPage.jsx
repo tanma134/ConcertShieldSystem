@@ -192,7 +192,7 @@ export default function SubmitOrganizerVerificationPage() {
             </div>
           )}
 
-          {/* Submission Form (UC_11.3) */}
+          {/* Submission Form */}
           <div className="form-card">
             <h3>Enterprise Legal Information & Document Upload</h3>
 

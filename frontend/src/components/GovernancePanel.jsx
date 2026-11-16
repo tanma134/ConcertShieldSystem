@@ -1,18 +1,21 @@
 import {useCallback,useEffect,useState} from 'react';
 import {governanceApi as api} from '../api/governanceApi';
 import {validateChange,validateReview,canPublish,fileError,localToUtc} from '../utils/governanceRules';
+import {useToast} from './ToastProvider';
 import './GovernancePanel.css';
 const message = err => err.response?.data?.message || err.message || 'Request failed. Please retry.';
 const money = amount => new Intl.NumberFormat('en-US').format(amount || 0) + ' VND';
 const date = value => value ? new Date(value).toLocaleString() : 'To be announced';
 
 export default function GovernancePanel({event,admin=false,onUpdated,onCompliance}) {
+  const toast = useToast();
   const id=event.eventId;
   const [record,setRecord]=useState(null),[changes,setChanges]=useState([]);
   const [error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true);
   const [type,setType]=useState(''),[file,setFile]=useState(null),[fileKey,setFileKey]=useState(0);
   const [decision,setDecision]=useState('Approved'),[notes,setNotes]=useState('');
   const [form,setForm]=useState({type:'Reschedule',reason:'',newStartsAt:'',newEndsAt:''}),[preview,setPreview]=useState(null);
+  const [changeEvidenceFile, setChangeEvidenceFile] = useState(null);
   const [request,setRequest]=useState(null),[affected,setAffected]=useState(null),[reading,setReading]=useState(false);
   const [filters,setFilters]=useState({tab:'orders',status:'',orderCode:'',userId:'',page:1,pageSize:10});
   const [search,setSearch]=useState({status:'',orderCode:'',userId:''});
@@ -43,10 +46,42 @@ export default function GovernancePanel({event,admin=false,onUpdated,onComplianc
   const current=record?.documents.filter(d=>d.version===record.version)||[];
   const changeable=!admin&&['Published','Postponed'].includes(event.status)&&!changes.some(c=>c.status==='Pending');
   const buildInput=()=>{
-    const input={...form,reason:form.reason.trim(),newStartsAt:form.type==='Postpone'?null:localToUtc(form.newStartsAt,event.timezone),newEndsAt:form.type==='Postpone'?null:localToUtc(form.newEndsAt,event.timezone)};
+    const isNoDates = form.type === 'Postpone' || form.type === 'Cancel';
+    const input={...form,reason:form.reason.trim(),newStartsAt:isNoDates?null:localToUtc(form.newStartsAt,event.timezone),newEndsAt:isNoDates?null:localToUtc(form.newEndsAt,event.timezone)};
     const problem=validateChange(input);if(problem)throw new Error(problem);return input;
   };
   const updateForm=(key,value)=>{setForm(f=>({...f,[key]:value}));setPreview(null);};
+
+  // Tính thời gian hiện tại theo định dạng YYYY-MM-DDTHH:mm cho thuộc tính min
+  const getNowLocal = () => {
+    const d = new Date();
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 16);
+  };
+  const nowMin = getNowLocal();
+
+  const isStartInPast = form.type === 'Reschedule' && form.newStartsAt && form.newStartsAt <= nowMin;
+  const isEndBeforeStart = form.type === 'Reschedule' && form.newStartsAt && form.newEndsAt && form.newEndsAt <= form.newStartsAt;
+
+  // Kiểm tra khung giờ mở bán vé (SalesStartsAt) nếu có
+  const ticketTypes = event?.ticketTypes || [];
+  const earliestSalesStart = ticketTypes.reduce((min, t) => {
+    if (!t.salesStartsAt) return min;
+    const dt = new Date(t.salesStartsAt).getTime();
+    return !min || dt < min ? dt : min;
+  }, null);
+
+  const isStartBeforeSales = Boolean(
+    form.type === 'Reschedule' &&
+    form.newStartsAt &&
+    earliestSalesStart &&
+    new Date(form.newStartsAt).getTime() <= earliestSalesStart
+  );
+
+  const isRescheduleInvalid =
+    form.type === 'Reschedule' &&
+    (!form.newStartsAt || !form.newEndsAt || isStartInPast || isEndBeforeStart || isStartBeforeSales);
+
   useEffect(()=>{
     if(!request)return;let active=true;setReading(true);setAffected(null);
     api.affected(id,request.id,filters).then(r=>{if(active)setAffected(r.data.data);}).catch(err=>{if(active)setError(message(err));}).finally(()=>{if(active)setReading(false);});
@@ -94,17 +129,147 @@ export default function GovernancePanel({event,admin=false,onUpdated,onComplianc
         {record.reviews.map(r=><p key={r.id}>Version {r.version} · {r.decision} · Admin #{r.reviewedBy} · {date(r.reviewedAt)}: {r.notes}</p>)}
       </details>
     </>}
-    <h2>Postpone / Reschedule</h2>
+    <h2>Postpone / Reschedule / Cancel</h2>
     <p>Current schedule: {event.status==='Postponed'?'To be announced':`${date(event.startsAt)} – ${date(event.endsAt)}`} · Timezone: {event.timezone}</p>
-    {changeable&&<form onSubmit={e=>{e.preventDefault();run(async()=>{const input=buildInput(),r=await api.preview(id,input);setPreview({...r.data.data,input});});}}>
-      <label>Change type<select value={form.type} onChange={e=>updateForm('type',e.target.value)}><option>Reschedule</option>{event.status!=='Postponed'&&<option>Postpone</option>}</select></label>
-      {form.type==='Reschedule'&&<><label>New start in concert timezone<input type="datetime-local" required value={form.newStartsAt} onChange={e=>updateForm('newStartsAt',e.target.value)}/></label><label>New end in concert timezone<input type="datetime-local" required value={form.newEndsAt} onChange={e=>updateForm('newEndsAt',e.target.value)}/></label></>}
-      <label>Reason<textarea required minLength={10} maxLength={1000} value={form.reason} onChange={e=>updateForm('reason',e.target.value)}/></label>
-      <button className="tb-btn tb-btn-outline" disabled={busy}>Review change</button>
-      {preview&&<div><p>Requested: {date(preview.input.newStartsAt)} – {date(preview.input.newEndsAt)}</p><p>Estimated impact: {preview.affected.summary.orders} orders · {preview.affected.summary.tickets} tickets · {money(preview.affected.summary.totalPaid)}</p><p>The current schedule stays live until Admin approval.</p><button type="button" className="tb-btn tb-btn-primary" disabled={busy} onClick={()=>run(async()=>{await api.submitChange(id,preview.input);setPreview(null);setNotice('Change request submitted. Waiting for Admin review.');})}>Submit for approval</button></div>}
+    {changeable&&<form className="gov-change-schedule-form" onSubmit={e=>{e.preventDefault();run(async()=>{const input=buildInput(),r=await api.preview(id,input);setPreview({...r.data.data,input});});}}>
+      <label>Change type<select value={form.type} onChange={e=>updateForm('type',e.target.value)}><option>Reschedule</option>{event.status!=='Postponed'&&<option>Postpone</option>}<option>Cancel</option></select></label>
+      {form.type==='Reschedule'&&<>
+        <label>
+          New start in concert timezone
+          <input
+            type="datetime-local"
+            required
+            min={nowMin}
+            value={form.newStartsAt}
+            onChange={e=>updateForm('newStartsAt',e.target.value)}
+            style={isStartInPast || isStartBeforeSales ? { borderColor: '#ef4444', background: '#fef2f2' } : {}}
+          />
+          {isStartInPast && (
+            <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 500 }}>
+              ⚠️ Start time must be in the future (after now)
+            </span>
+          )}
+          {!isStartInPast && isStartBeforeSales && (
+            <span style={{ color: '#ea580c', fontSize: '11px', marginTop: '2px', fontWeight: 500 }}>
+              ⚠️ Start time is earlier than ticket sales opening ({new Date(earliestSalesStart).toLocaleDateString()})
+            </span>
+          )}
+        </label>
+        <label>
+          New end in concert timezone
+          <input
+            type="datetime-local"
+            required
+            min={form.newStartsAt || nowMin}
+            value={form.newEndsAt}
+            onChange={e=>updateForm('newEndsAt',e.target.value)}
+            style={isEndBeforeStart ? { borderColor: '#ef4444', background: '#fef2f2' } : {}}
+          />
+          {isEndBeforeStart && (
+            <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '2px', fontWeight: 500 }}>
+              ⚠️ End time must be after start time
+            </span>
+          )}
+        </label>
+      </>}
+      <label style={{ flex: 2 }}>Reason<input type="text" placeholder="Enter reason for change (min 10 characters)..." required minLength={10} maxLength={1000} value={form.reason} onChange={e=>updateForm('reason',e.target.value)}/></label>
+      
+      {/* Supporting legal document for Reschedule/Postpone */}
+      <div style={{ width: '100%', margin: '6px 0 8px 0' }}>
+        <label style={{ fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '6px', display: 'flex', justifyContent: 'space-between', minWidth: '100%' }}>
+          <span>Supporting Document / Venue Addendum (PDF, PNG, JPG)</span>
+          <span style={{ fontSize: '11px', color: '#6b7280' }}>Recommended (Max 15MB)</span>
+        </label>
+        {!changeEvidenceFile ? (
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '10px 14px',
+              border: '1px dashed #d1d5db',
+              borderRadius: '8px',
+              background: '#f9fafb',
+              cursor: 'pointer',
+              minWidth: '100%',
+              boxSizing: 'border-box'
+            }}
+          >
+            <input
+              type="file"
+              accept=".pdf,image/png,image/jpeg,image/jpg"
+              style={{ display: 'none' }}
+              onChange={e => {
+                const f = e.target.files?.[0];
+                if (f) {
+                  if (f.size > 15 * 1024 * 1024) {
+                    toast.error('File exceeds 15MB limit.');
+                    return;
+                  }
+                  setChangeEvidenceFile(f);
+                }
+              }}
+            />
+            <span style={{ fontSize: '20px' }}>📎</span>
+            <span style={{ fontSize: '13px', color: '#4b5563' }}>Attach venue confirmation, ministerial permit, or official authority notice</span>
+          </label>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', width: '100%', boxSizing: 'border-box' }}>
+            <span style={{ fontSize: '13px', color: '#1e40af', fontWeight: 600 }}>📄 {changeEvidenceFile.name} ({(changeEvidenceFile.size / (1024 * 1024)).toFixed(2)} MB)</span>
+            <button type="button" style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }} onClick={() => setChangeEvidenceFile(null)}>✕ Remove</button>
+          </div>
+        )}
+      </div>
+
+      <button className="tb-btn tb-btn-outline" disabled={busy || isRescheduleInvalid || form.reason.trim().length < 10}>Review change</button>
+      {preview&&<div style={{ width: '100%', marginTop: '12px' }}><p>Requested: {date(preview.input.newStartsAt)} – {date(preview.input.newEndsAt)}</p><p>Estimated impact: {preview.affected.summary.orders} orders · {preview.affected.summary.tickets} tickets · {money(preview.affected.summary.totalPaid)}</p><p>The current schedule stays live until Admin approval.</p><button type="button" className="tb-btn tb-btn-primary" disabled={busy} onClick={()=>run(async()=>{
+        const formData = new FormData();
+        formData.append('type', preview.input.type);
+        formData.append('reason', preview.input.reason);
+        if (preview.input.newStartsAt) formData.append('newStartsAt', preview.input.newStartsAt);
+        if (preview.input.newEndsAt) formData.append('newEndsAt', preview.input.newEndsAt);
+        if (changeEvidenceFile) formData.append('evidenceFile', changeEvidenceFile);
+        await api.submitChange(id, formData);
+        setPreview(null);
+        setChangeEvidenceFile(null);
+        setNotice('Change request submitted with supporting document. Waiting for Admin review.');
+      })}>Submit for approval</button></div>}
     </form>}
     {changes.length===0?<p>No schedule change requests.</p>:changes.map(change=><article key={change.id} className="governance-change">
-      <strong>CR-{change.id} · {change.type} · {change.status}</strong><p>{change.reason}</p><p>{date(change.oldStartsAt)} → {date(change.newStartsAt)} · Synchronization: {change.processingStatus}</p>
+      <strong>CR-{change.id} · {change.type} · {change.status}</strong><p>{change.reason}</p>
+      {change.documentUrl && (
+        <p>
+          <button
+            type="button"
+            onClick={async (e) => {
+              e.preventDefault();
+              try {
+                const res = await api.downloadChangeDocument(id, change.id);
+                const blob = new Blob([res.data], { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+                window.open(url, '_blank');
+              } catch (err) {
+                toast.error('Could not open document: ' + (err.response?.data?.message || err.message));
+              }
+            }}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              color: '#2563eb',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              textDecoration: 'underline'
+            }}
+          >
+            📄 Official Legal Document: {change.documentUrl.split('/').pop()}
+          </button>
+        </p>
+      )}
+      <p>{date(change.oldStartsAt)} → {date(change.newStartsAt)} · Synchronization: {change.processingStatus}</p>
       {change.reviewNotes&&<p>Admin #{change.reviewedBy}: {change.reviewNotes}</p>}
       {change.status!=='Rejected'&&<button disabled={busy} onClick={()=>{setRequest(change);setFilters({tab:'orders',status:'',orderCode:'',userId:'',page:1,pageSize:10});setSearch({status:'',orderCode:'',userId:''});}}>View affected orders / tickets</button>}
       {admin&&change.status==='Pending'&&<p><a href={`/admin/change-requests?request=${change.id}`}>Decide on the Change requests page</a></p>}

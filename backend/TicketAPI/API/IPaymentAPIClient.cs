@@ -7,7 +7,7 @@ namespace TicketAPI.API
         Task<CreateVnPayPaymentResponseDto> CreateVnPayPaymentAsync(CreateVnPayPaymentRequestDto request, CancellationToken cancellationToken = default);
 
         // Asks PaymentAPI to pay the money of an approved return back to the customer.
-        Task<RefundOutcome> RefundAsync(int returnRequestId, int orderId, long amount, CancellationToken cancellationToken = default);
+        Task<RefundOutcome> RefundAsync(int returnRequestId, int orderId, long amount, string? customerName = null, int? eventId = null, string? eventName = null, CancellationToken cancellationToken = default);
 
         Task<ApplyVoucherResponseDto> ApplyVoucherAsync(ApplyVoucherRequestDto request, CancellationToken cancellationToken = default);
     }

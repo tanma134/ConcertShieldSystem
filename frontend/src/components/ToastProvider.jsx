@@ -6,7 +6,7 @@ import "./ToastProvider.css";
 // cho phản hồi tức thì của thao tác người dùng vừa làm (lưu, lỗi nhập liệu...).
 const ToastContext = createContext(null);
 
-const DURATION_MS = { success: 3500, info: 4000, error: 6000 };
+const DURATION_MS = { success: 3500, info: 4000, error: 6000, warning: 5000 };
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
@@ -36,9 +36,11 @@ export function ToastProvider({ children }) {
       success: (message) => push("success", message),
       error: (message) => push("error", message),
       info: (message) => push("info", message),
+      warning: (message) => push("warning", message),
       showSuccess: (message) => push("success", message),
       showError: (message) => push("error", message),
       showInfo: (message) => push("info", message),
+      showWarning: (message) => push("warning", message),
     }),
     [push]
   );

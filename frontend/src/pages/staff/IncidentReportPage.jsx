@@ -443,7 +443,7 @@ export default function IncidentReportPage() {
             </div>
           </div>
 
-          {/* Evidence Upload (UC_16.2) */}
+          {/* Evidence Upload */}
           <div className="inc-card" style={{ marginTop: "20px" }}>
             <div className="inc-card-title">
               <div className="inc-card-title-left">

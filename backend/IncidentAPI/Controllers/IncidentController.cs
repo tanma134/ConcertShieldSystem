@@ -44,7 +44,7 @@ public class IncidentController : ControllerBase
             return Ok(result);
         });
 
-    // POST api/incidents (UC_16.1 Report Incident)
+    // POST api/incidents (Report Incident)
     [HttpPost]
     [Authorize(Policy = "CanReportIncident")]
     public Task<IActionResult> Create([FromBody] CreateIncidentRequest req) =>
@@ -56,7 +56,7 @@ public class IncidentController : ControllerBase
             return CreatedAtAction(nameof(GetDetail), new { id = result.Id }, result);
         });
 
-    // PUT api/incidents/{id} (UC_16.3 Update Incident)
+    // PUT api/incidents/{id} (Update Incident)
     [HttpPut("{id:int}")]
     [Authorize(Policy = "CanManageIncidents")]
     public Task<IActionResult> Update(int id, [FromBody] UpdateIncidentRequest req) =>
@@ -82,7 +82,7 @@ public class IncidentController : ControllerBase
             return Ok(result);
         });
 
-    // POST api/incidents/{id}/escalate (UC_16.4 Escalate Incident to Admin)
+    // POST api/incidents/{id}/escalate (Escalate Incident to Admin)
     [HttpPost("{id:int}/escalate")]
     [Authorize(Policy = "CanReportIncident")]
     public Task<IActionResult> Escalate(int id, [FromBody] EscalateIncidentRequest req) =>
@@ -94,7 +94,7 @@ public class IncidentController : ControllerBase
             return Ok(result);
         });
 
-    // POST api/incidents/{id}/resolve (UC_16.5 Resolve Incident)
+    // POST api/incidents/{id}/resolve (Resolve Incident)
     [HttpPost("{id:int}/resolve")]
     [Authorize(Policy = "CanManageIncidents")]
     public Task<IActionResult> Resolve(int id, [FromBody] ResolveIncidentRequest req) =>
@@ -106,7 +106,7 @@ public class IncidentController : ControllerBase
             return Ok(result);
         });
 
-    // GET api/incidents/{id}/resolution (UC_16.5 View Resolution)
+    // GET api/incidents/{id}/resolution (View Resolution)
     [HttpGet("{id:int}/resolution")]
     [Authorize(Policy = "CanManageIncidents")]
     public Task<IActionResult> GetResolution(int id) =>

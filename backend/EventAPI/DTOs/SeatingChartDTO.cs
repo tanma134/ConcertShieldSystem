@@ -39,7 +39,7 @@ namespace EventAPI.DTOs
         [MaxLength(20)]
         public string ZoneType { get; set; } = "Seated";
 
-        // ---- Seated zones only ----
+        // --- Seated zones only ----
         /// <summary>Number of rows to generate. Ignored for Standing zones.</summary>
         public int Rows { get; set; } = 1;
 
@@ -49,7 +49,7 @@ namespace EventAPI.DTOs
         /// <summary>First row label, e.g. "A" (then B, C... AA, AB). Ignored for Standing zones.</summary>
         public string RowLabelPrefix { get; set; } = "A";
 
-        // ---- Standing zones only ----
+        // --- Standing zones only ----
         /// <summary>
         /// How many people the standing area holds. Required for Standing zones,
         /// ignored for Seated zones (their capacity is the generated seat count).

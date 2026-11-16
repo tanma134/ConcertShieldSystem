@@ -14,7 +14,7 @@ namespace EventAPI.DTOs
         public bool CanReviewReturns { get; set; }
     }
 
-    // One staff member assigned to an event (UC_14.3).
+    // One staff member assigned to an event.
     public class EventStaffDTO
     {
         public int EventStaffId { get; set; }
@@ -28,7 +28,7 @@ namespace EventAPI.DTOs
         public int AssignedBy { get; set; }
     }
 
-    // One Staff account the organizer can pick from (UC_14.4).
+    // One Staff account the organizer can pick from.
     public class StaffCandidateDTO
     {
         public int UserId { get; set; }

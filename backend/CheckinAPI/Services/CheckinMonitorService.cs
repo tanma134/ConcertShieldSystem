@@ -259,7 +259,7 @@ namespace CheckinAPI.Services
         }
 
         // ==========================================
-        // UC_15.2 Scan Dynamic QR Ticket (BR-08, BR-10, BR-152, BR-153, BR-289)
+        // Scan Dynamic QR Ticket (BR-08, BR-10, BR-152, BR-153, BR-289)
         // ==========================================
         public async Task<ScanResultResponseDTO> ScanQrTicketAsync(ScanQrRequestDTO request, int staffUserId, string staffUserName)
         {
@@ -464,7 +464,7 @@ namespace CheckinAPI.Services
         }
 
         // ==========================================
-        // UC_15.3 Manual Check-in (BR-290, BR-292, BR-293)
+        // Manual Check-in (BR-290, BR-292, BR-293)
         // ==========================================
         public async Task<ScanResultResponseDTO> ManualCheckinAsync(ManualCheckinRequestDTO request, int staffUserId, string staffUserName)
         {
@@ -648,7 +648,7 @@ namespace CheckinAPI.Services
         }
 
         // ==========================================
-        // UC_15.4 Lookup Ticket (BR-154, BR-155, BR-156, BR-291, BR-294)
+        // Lookup Ticket (BR-154, BR-155, BR-156, BR-291, BR-294)
         // ==========================================
         public async Task<LookupTicketResponseDTO> LookupTicketsAsync(LookupTicketRequestDTO request, int staffUserId)
         {
@@ -780,7 +780,7 @@ namespace CheckinAPI.Services
         }
 
         // ==========================================
-        // UC_15.5 View Check-in Scan History (BR-295)
+        // View Check-in Scan History (BR-295)
         // ==========================================
         public async Task<ScanHistoryResponseDTO> GetScanHistoryAsync(int eventId, string? gateId, string? statusFilter, int staffUserId)
         {
@@ -925,7 +925,7 @@ namespace CheckinAPI.Services
         }
 
         // ==========================================
-        // UC_15.1 View Gate Assignment & Shift Info
+        // View Gate Assignment & Shift Info
         // ==========================================
         public async Task<GateAssignmentResponseDTO> GetGateAssignmentAsync(int eventId, int staffUserId)
         {

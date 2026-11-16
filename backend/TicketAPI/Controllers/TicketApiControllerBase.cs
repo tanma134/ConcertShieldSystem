@@ -3,8 +3,7 @@ using System.Security.Claims;
 
 namespace TicketAPI.Controllers
 {
-    // Shared helpers for the controllers added for UC_9, UC_13 and UC_14.
-    [ApiController]
+    // Shared helpers for the controllers added for and     [ApiController]
     public abstract class TicketApiControllerBase : ControllerBase
     {
         // Id of the signed-in user, read from the JWT.

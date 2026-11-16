@@ -1,4 +1,4 @@
-﻿-- ConcertShield sample seed, verified from public event pages on 2026-11-11.
+-- ConcertShield sample seed, verified from public event pages on 2026-11-11.
 -- Run against event_db. This script is repeatable by slug.
 -- Source pages: https://taomeoticket.com/en/show/...
 -- Capacities below are SMALL LOCAL DEMO capacities because the public sources
@@ -37,14 +37,14 @@ VALUES
  'https://taomeoticket.com/img/shows/my-tam-live-concert-see-the-light-day-2.jpg','source/my-tam-see-the-light-day2',
  'https://taomeoticket.com/img/shows/my-tam-live-concert-see-the-light-day-2.jpg','source/my-tam-see-the-light-day2',
  'Vạn Phúc City','Khu đô thị Vạn Phúc, TP. Hồ Chí Minh','Hồ Chí Minh','2026-11-21 19:00:00+07'::timestamptz,'2026-11-21 23:00:00+07'::timestamptz,'SE Asia Standard Time',
- false,'GeneralAdmission',true,'Published',false,20,20,1,4,'Mỹ Tâm See The Light Day 2','CTicket · 21/11/2026','Approved',1,1,now(),now(),now(),3,3),
+ false,'GeneralAdmission',true,'Published',true,20,20,1,4,'Mỹ Tâm See The Light Day 2','CTicket · 21/11/2026','Approved',1,1,now(),now(),now(),3,3),
 (3,1,'Vương Bình – Tiệc Thành Thân (Mâm 2)','real-vuong-binh-mam2-2026',
  'Fan gathering Vương Bình tại Cung Thiếu nhi Hà Nội.',
  'Sự kiện lúc 11:00 ngày 21/11/2026 tại Cung Thiếu nhi Hà Nội cơ sở 2, 17 Phạm Hùng. Nguồn công khai: https://taomeoticket.com/en/show/vuong-binh-tiec-thanh-than-mam-2. Bốn hạng vé HAI QUÝ, BA THƯƠNG, TƯ MẾN và ÚT CƯNG bán trên 1ZONE.',
  'https://taomeoticket.com/img/shows/vuong-binh-tiec-thanh-than-mam-2.jpg','source/vuong-binh-tiec-thanh-than-mam-2',
  'https://taomeoticket.com/img/shows/vuong-binh-tiec-thanh-than-mam-2.jpg','source/vuong-binh-tiec-thanh-than-mam-2',
  'Cung Thiếu nhi Hà Nội (cơ sở 2)','17 Phạm Hùng, phường Cầu Giấy','Hà Nội','2026-11-21 11:00:00+07'::timestamptz,'2026-11-21 15:00:00+07'::timestamptz,'SE Asia Standard Time',
- true,'ReservedSeating',true,'Published',false,24,0,1,4,'Vương Bình Tiệc Thành Thân Mâm 2','1ZONE · 21/11/2026','Approved',1,1,now(),now(),now(),3,3),
+ true,'ReservedSeating',true,'Published',true,24,0,1,4,'Vương Bình Tiệc Thành Thân Mâm 2','1ZONE · 21/11/2026','Approved',1,1,now(),now(),now(),3,3),
 (3,1,'OFF THE RECORD: Mason Nguyễn Music Showcase','real-mason-off-the-record-2026',
  'Music showcase Mason Nguyễn tại 8889 Station.',
  'Sự kiện ngày 19/12/2026 tại 8889 Station, Vạn Phúc City, TP. Hồ Chí Minh. Nguồn công khai: https://taomeoticket.com/en/show/off-the-record-mason-nguyen-music-showcase. Mở bán lúc 12:00 ngày 14/11/2026 trên 1ZONE; dữ liệu mẫu thể hiện Coming Soon trước giờ mở bán.',
@@ -146,7 +146,8 @@ FROM seat_maps m JOIN sample_events e ON e.event_id=m.event_id JOIN ticket_types
 -- Generate numbered demo seats for seated zones. Public sources describe zones but not full seat counts.
 INSERT INTO seats(seat_zone_id,row_label,seat_number,x_coordinate,y_coordinate,status)
 SELECT z.seat_zone_id,'R'||r,'S'||s,5+s*10,30+r*12,'Available'
-FROM seat_zones z CROSS JOIN generate_series(1,2) r CROSS JOIN generate_series(1,3) s
+FROM seat_zones z JOIN seat_maps m ON z.seat_map_id = m.seat_map_id JOIN sample_events e ON m.event_id = e.event_id
+CROSS JOIN generate_series(1,2) r CROSS JOIN generate_series(1,3) s
 WHERE z.zone_type='Seated' AND z.capacity >= 6;
 
 -- Refund policy required by publication validation.

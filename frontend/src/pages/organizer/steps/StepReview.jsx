@@ -2,7 +2,7 @@ import { useToast } from "../../../components/ToastProvider";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import eventApi from "../../../api/eventApi";
-import { formatDateRange, formatPrice } from "../../../utils/format";
+import { formatDateRange, formatPrice, cleanReason } from "../../../utils/format";
 
 export default function StepReview({ eventId, event, onRefresh, onSaved, onBack, onSubmitted }) {
   const [validation, setValidation] = useState(null);
@@ -95,20 +95,33 @@ export default function StepReview({ eventId, event, onRefresh, onSaved, onBack,
     );
   }
 
+  const isCancelled = event?.status === "Cancelled";
+
   return (
     <div className="ow-step-body">
-      <h2>4. Review & Submit</h2>
-      <p className="ow-hint">
-        Double-check everything before sending it to the admin. Once
-        submitted, the event moves to Pending status and can't be edited
-        until it's approved or rejected.
-      </p>
+      <h2>{isCancelled ? "4. Event Summary (Cancelled)" : "4. Review & Submit"}</h2>
+      {isCancelled ? (
+        <div className="ow-banner ow-banner-rejected" style={{ background: "#fee2e2", borderColor: "#fca5a5", color: "#991b1b", marginBottom: "16px" }}>
+          <strong>⚠️ This concert has been officially cancelled.</strong>
+          <p style={{ margin: "4px 0 0 0" }}>
+            {event.rejectedReason
+              ? `Reason: ${cleanReason(event.rejectedReason)}`
+              : "Ticket sales have ended and active tickets are in refund reconciliation."}
+          </p>
+        </div>
+      ) : (
+        <p className="ow-hint">
+          Double-check everything before sending it to the admin. Once
+          submitted, the event moves to Pending status and can't be edited
+          until it's approved or rejected.
+        </p>
+      )}
 
       {error && <div className="ow-error">{error}</div>}
 
       {checking && <div className="tb-loading">Checking submission requirements...</div>}
 
-      {!checking && validation && (
+      {!isCancelled && !checking && validation && (
         <div
           className={
             "ow-validation " + (validation.isValid ? "ow-validation-ok" : "ow-validation-bad")
@@ -197,22 +210,33 @@ export default function StepReview({ eventId, event, onRefresh, onSaved, onBack,
         </div>
       )}
 
-      <div className="ow-actions">
-        <button type="button" className="tb-btn tb-btn-outline" onClick={onBack}>
-          ← Back
-        </button>
-        <button type="button" className="tb-btn tb-btn-outline" onClick={handleSaveDraft}>
-          💾 Save draft
-        </button>
-        <button
-          type="button"
-          className="tb-btn tb-btn-primary"
-          onClick={handleSubmit}
-          disabled={submitting || checking || (validation && !validation.isValid)}
-        >
-          {submitting ? "Submitting..." : "🚀 Submit for review"}
-        </button>
-      </div>
+      {isCancelled ? (
+        <div className="ow-actions">
+          <button type="button" className="tb-btn tb-btn-outline" onClick={onBack}>
+            ← Back
+          </button>
+          <Link to="/organizer/events" className="tb-btn tb-btn-primary">
+            ← Back to My Events
+          </Link>
+        </div>
+      ) : (
+        <div className="ow-actions">
+          <button type="button" className="tb-btn tb-btn-outline" onClick={onBack}>
+            ← Back
+          </button>
+          <button type="button" className="tb-btn tb-btn-outline" onClick={handleSaveDraft}>
+            💾 Save draft
+          </button>
+          <button
+            type="button"
+            className="tb-btn tb-btn-primary"
+            onClick={handleSubmit}
+            disabled={submitting || checking || (validation && !validation.isValid)}
+          >
+            {submitting ? "Submitting..." : "🚀 Submit for review"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

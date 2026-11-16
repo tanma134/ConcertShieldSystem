@@ -336,7 +336,7 @@ namespace CheckinAPI.Services
         }
 
         // ==========================================
-        // UC_8.7: Bulk Revoke Tickets (event change)
+        // Bulk Revoke Tickets (event change)
         // ==========================================
         public async Task<BulkRevokeResponseDTO> BulkRevokeTicketsAsync(BulkRevokeRequestDTO request, int adminId, string adminName)
         {
@@ -575,7 +575,7 @@ namespace CheckinAPI.Services
         }
 
         // ==========================================
-        // UC_8.8: View Ticket Revocation History
+        // View Ticket Revocation History
         // ==========================================
         public async Task<RevocationHistoryResponseDTO> GetRevocationHistoryAsync(int? eventId, string? search, string? reasonType, int page, int pageSize)
         {
@@ -679,7 +679,7 @@ namespace CheckinAPI.Services
         }
 
         // ==========================================
-        // UC_8.10: View Reissue History (Traceability 1-1)
+        // View Reissue History (Traceability 1-1)
         // ==========================================
         public async Task<ReissueHistoryResponseDTO> GetReissueHistoryAsync(int? eventId, string? search, int page, int pageSize)
         {
@@ -928,7 +928,7 @@ namespace CheckinAPI.Services
         }
 
         // ==========================================
-        // UC_14.5: Offline Ticket Package Preload
+        // Offline Ticket Package Preload
         // ==========================================
         public async Task<OfflinePackageResponseDTO> GetOfflinePackageAsync(int eventId)
         {
@@ -990,7 +990,7 @@ namespace CheckinAPI.Services
         }
 
         // ==========================================
-        // UC_14.6: Sync Offline Check-in Records
+        // Sync Offline Check-in Records
         // ==========================================
         public async Task<OfflineSyncResponseDTO> SyncOfflineScansAsync(OfflineSyncRequestDTO request, int staffUserId)
         {

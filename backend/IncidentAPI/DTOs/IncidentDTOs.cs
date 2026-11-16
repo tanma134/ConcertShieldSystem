@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace IncidentAPI.DTOs;
 
-// Request DTO cho UC_16.1 Report Incident
+// Request DTO cho Report Incident
 public class CreateIncidentRequest
 {
     [Required]
@@ -28,7 +28,7 @@ public class CreateIncidentRequest
     public string Description { get; set; } = null!;
 }
 
-// Request DTO cho UC_16.3 Update Incident
+// Request DTO cho Update Incident
 public class UpdateIncidentRequest
 {
     public string? Title { get; set; }
@@ -48,7 +48,7 @@ public class UpdateStatusRequest
     public string? Note { get; set; }
 }
 
-// Request DTO cho UC_16.4 Escalate Incident
+// Request DTO cho Escalate Incident
 public class EscalateIncidentRequest
 {
     [Required]
@@ -56,7 +56,7 @@ public class EscalateIncidentRequest
     public int? AdminId { get; set; }
 }
 
-// Request DTO cho UC_16.5 Resolve Incident
+// Request DTO cho Resolve Incident
 public class ResolveIncidentRequest
 {
     [Required]
@@ -116,7 +116,7 @@ public class IncidentDetailDto
     public List<IncidentUpdateDto> Updates { get; set; } = new();
 }
 
-// DTO cho UC_16.2 Bằng chứng
+// DTO cho Bằng chứng
 public class IncidentEvidenceDto
 {
     public int Id { get; set; }
@@ -133,7 +133,7 @@ public class IncidentEvidenceDto
     public DateTime UploadedAt { get; set; }
 }
 
-// DTO cho UC_16.3 Lịch sử cập nhật / Timeline
+// DTO cho Lịch sử cập nhật / Timeline
 public class IncidentUpdateDto
 {
     public int Id { get; set; }
@@ -147,7 +147,7 @@ public class IncidentUpdateDto
     public DateTime CreatedAt { get; set; }
 }
 
-// DTO cho UC_16.5 Kết quả giải quyết
+// DTO cho Kết quả giải quyết
 public class ResolutionDto
 {
     public int IncidentId { get; set; }

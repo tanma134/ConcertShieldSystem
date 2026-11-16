@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AdminAPI.Controllers
 {
-    /// <summary>UC_18.8 View Fraud Case List, UC_18.9 Assign Fraud Case to Analyst, UC_18.10 Resolve Fraud Case.</summary>
+    /// <summary>View Fraud Case List, Assign Fraud Case to Analyst, Resolve Fraud Case.</summary>
     [ApiController]
     [Route("api/admin/fraud-cases")]
     [Authorize(Policy = "CanReviewFraud")]

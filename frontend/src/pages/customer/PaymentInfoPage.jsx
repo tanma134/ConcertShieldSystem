@@ -603,10 +603,6 @@ export default function PaymentInfoPage() {
       setLoadError(message);
       toast.error(message);
 
-      window.alert(
-        typeof message === "string" ? message : JSON.stringify(message)
-      );
-
       setIsProcessing(false);
     }
   };

@@ -20,6 +20,7 @@ export default function RefundReconciliationPage() {
 
   // Modals
   const [processOrderId, setProcessOrderId] = useState(null);
+  const [processCustomerName, setProcessCustomerName] = useState("");
   const [promptOrderId, setPromptOrderId] = useState(false);
   const [manualOrderIdInput, setManualOrderIdInput] = useState("");
   const [retryRefundItem, setRetryRefundItem] = useState(null);
@@ -245,7 +246,21 @@ export default function RefundReconciliationPage() {
         <div className="rr-toolbar">
           <div className="rr-toolbar-left">
             <form onSubmit={handleSearchSubmit} className="rr-search-form">
-              <span className="rr-search-icon">🔍</span>
+              <svg
+                className="rr-search-icon"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
               <input
                 type="text"
                 placeholder="Search by refundId or orderId..."
@@ -269,7 +284,6 @@ export default function RefundReconciliationPage() {
 
             {/* Event Dropdown Filter */}
             <div className="rr-event-select-wrapper">
-              <span className="rr-event-select-icon">🎵</span>
               <select
                 value={selectedEventId}
                 onChange={(e) => setSelectedEventId(e.target.value)}
@@ -287,14 +301,19 @@ export default function RefundReconciliationPage() {
           </div>
 
           <div className="rr-filter-tabs">
-            {["All", "Pending", "Mismatched", "Completed"].map((tab) => (
+            {[
+              { id: "All", label: "All" },
+              { id: "Pending", label: "Pending Refunds" },
+              { id: "Mismatched", label: "Mismatched" },
+              { id: "Completed", label: "Completed" },
+            ].map((tab) => (
               <button
-                key={tab}
+                key={tab.id}
                 type="button"
-                className={`rr-filter-btn ${statusFilter === tab ? "active" : ""}`}
-                onClick={() => setStatusFilter(tab)}
+                className={`rr-filter-btn ${statusFilter === tab.id ? "active" : ""}`}
+                onClick={() => setStatusFilter(tab.id)}
               >
-                {tab}
+                {tab.label}
               </button>
             ))}
           </div>
@@ -359,12 +378,13 @@ export default function RefundReconciliationPage() {
                       </td>
                       <td className="rr-cell-customer">
                         <div className="rr-customer-main">
-                          <span className="rr-order-tag">#ORD-{r.orderId}</span> •{" "}
+                          <span className="rr-order-tag">#ORD-{r.orderId}</span>
+                          <span className="rr-dot-separator">·</span>
                           <span className="rr-name">{r.customerName}</span>
                         </div>
                         {r.eventName && (
                           <div className="rr-event-subtag" title={`Event ID: #${r.eventId}`}>
-                            <span className="rr-event-tag-icon">🎵</span> {r.eventName}
+                            {r.eventName}
                           </div>
                         )}
                       </td>
@@ -385,6 +405,19 @@ export default function RefundReconciliationPage() {
                         {formatDateDisplay(r.completedAt || r.createdAt)}
                       </td>
                       <td className="rr-cell-actions">
+                        {r.status === "Pending" && (
+                          <button
+                            type="button"
+                            className="rr-action-process-btn"
+                            onClick={() => {
+                              setProcessOrderId(r.orderId);
+                              setProcessCustomerName(r.customerName);
+                            }}
+                            title="Process refund for this order"
+                          >
+                            Process Refund
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="rr-action-link"
@@ -417,7 +450,6 @@ export default function RefundReconciliationPage() {
           <div className="rf-modal" onClick={(e) => e.stopPropagation()}>
             <div className="rf-header">
               <div className="rf-header-title">
-                <span className="rf-icon">⟲</span>
                 <div>
                   <h2>Select Order to Refund</h2>
                   <p>Enter the Order ID to issue a full or partial refund.</p>
@@ -465,7 +497,11 @@ export default function RefundReconciliationPage() {
       {processOrderId && (
         <ProcessRefundModal
           orderId={processOrderId}
-          onClose={() => setProcessOrderId(null)}
+          initialCustomerName={processCustomerName}
+          onClose={() => {
+            setProcessOrderId(null);
+            setProcessCustomerName("");
+          }}
           onSuccess={handleProcessRefundSuccess}
         />
       )}
@@ -485,7 +521,6 @@ export default function RefundReconciliationPage() {
           <div className="rf-modal" onClick={(e) => e.stopPropagation()}>
             <div className="rf-header">
               <div className="rf-header-title">
-                <span className="rf-icon">ℹ</span>
                 <div>
                   <h2>Refund Audit Details</h2>
                   <p>{inspectRefundItem.refundReference}</p>
@@ -522,31 +557,37 @@ export default function RefundReconciliationPage() {
                 {inspectRefundItem.eventName && (
                   <div className="rf-card-row">
                     <span className="rf-label">Event</span>
-                    <span className="rf-value highlight">
-                      🎵 {inspectRefundItem.eventName} (ID: #{inspectRefundItem.eventId})
+                    <span className="rf-value" style={{ fontWeight: 600 }}>
+                      {inspectRefundItem.eventName} (ID: #{inspectRefundItem.eventId})
                     </span>
                   </div>
                 )}
                 <div className="rf-card-row">
                   <span className="rf-label">Refund Amount</span>
-                  <span className="rf-value highlight">
+                  <span className="rf-value highlight" style={{ color: "#0f172a", fontSize: "16px", fontWeight: 800 }}>
                     {formatPrice(inspectRefundItem.amount)}
                   </span>
                 </div>
                 <div className="rf-card-row">
                   <span className="rf-label">Gateway Amount</span>
-                  <span className="rf-value">
+                  <span className="rf-value" style={{ color: "#16a34a", fontWeight: 700 }}>
                     {formatPrice(inspectRefundItem.gatewayAmount || 0)}
                   </span>
                 </div>
                 <div className="rf-card-row">
                   <span className="rf-label">Status</span>
-                  <span className="rf-value">{inspectRefundItem.status}</span>
+                  <span className="rf-value">
+                    <span className={`rr-badge status-${(inspectRefundItem.status || "").toLowerCase()}`}>
+                      {inspectRefundItem.status}
+                    </span>
+                  </span>
                 </div>
                 <div className="rf-card-row">
                   <span className="rf-label">Reconciliation Match</span>
                   <span className="rf-value">
-                    {inspectRefundItem.matchStatus}
+                    <span className={`rr-badge match-${(inspectRefundItem.matchStatus || "").toLowerCase()}`}>
+                      {inspectRefundItem.matchStatus}
+                    </span>
                   </span>
                 </div>
                 <div className="rf-card-row">
@@ -556,7 +597,7 @@ export default function RefundReconciliationPage() {
                 <div className="rf-card-row">
                   <span className="rf-label">Processed By</span>
                   <span className="rf-value">
-                    {inspectRefundItem.processedByUserName || "System"}
+                    {inspectRefundItem.processedByUserName || "System Administrator"}
                   </span>
                 </div>
                 {inspectRefundItem.retryCount > 0 && (
@@ -568,11 +609,11 @@ export default function RefundReconciliationPage() {
                   </div>
                 )}
                 {inspectRefundItem.errorMessage && (
-                  <div className="rf-card-row" style={{ color: "#d63a3a" }}>
-                    <span className="rf-label" style={{ color: "#d63a3a" }}>
+                  <div className="rf-card-row" style={{ color: "#dc2626" }}>
+                    <span className="rf-label" style={{ color: "#dc2626" }}>
                       Error Details
                     </span>
-                    <span className="rf-value" style={{ color: "#e8a0a0" }}>
+                    <span className="rf-value" style={{ color: "#dc2626" }}>
                       {inspectRefundItem.errorMessage}
                     </span>
                   </div>

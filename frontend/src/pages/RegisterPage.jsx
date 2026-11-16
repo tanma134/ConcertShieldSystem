@@ -25,7 +25,7 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
 
-    // UC 11.1 & 11.2: Check policy agreement
+    // Check policy agreement
     if (!agreedPolicies) {
       setError("Vui lòng đọc và tích chọn đồng ý với Điều khoản Dịch vụ & Chính sách nền tảng để tiếp tục.");
       return;
@@ -101,7 +101,7 @@ export default function RegisterPage() {
               />
             </div>
 
-            {/* UC 11.1 & UC 11.2: Policy Agreement Checkbox */}
+            {/* Policy Agreement Checkbox */}
             <div className="auth-policy-group">
               <input
                 type="checkbox"
@@ -144,7 +144,7 @@ export default function RegisterPage() {
         </div>
       </div>
 
-      {/* UC 11.1 & 11.2: Platform Policy Modal */}
+      {/* Platform Policy Modal */}
       <PlatformPolicyModal
         isOpen={showPolicyModal}
         onClose={() => setShowPolicyModal(false)}

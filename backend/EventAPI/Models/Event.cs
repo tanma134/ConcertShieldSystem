@@ -40,7 +40,7 @@ namespace EventAPI.Models
         // Reason supplied by the Admin when rejecting. Cleared on resubmit.
         public string? RejectedReason { get; set; }
 
-        // ---- Lifecycle audit timestamps ----
+        // --- Lifecycle audit timestamps ----
         // Set when the owner submits Draft/Rejected -> Pending.
         public DateTime? SubmittedAt { get; set; }
 

@@ -13,8 +13,8 @@ namespace AdminAPI.Controllers
 {
     // ==========================================
     // NHÓM 2: GOVERNANCE, POLICY VERSIONING & COMPLIANCE
-    // UC_11.1 - View Policy Version History (Actor: Admin)
-    // UC_11.2 - Create New Policy Version (Actor: Admin)
+    // View Policy Version History (Actor: Admin)
+    // Create New Policy Version (Actor: Admin)
     // ==========================================
 
     public class PolicyVersionDTO
@@ -82,7 +82,7 @@ namespace AdminAPI.Controllers
         }
 
         /// <summary>
-        /// UC_11.1: View Policy Version History (Category: PRICE_TICKETING, REFUND_CANCELLATION, VIRTUAL_QUEUE, RISK_ANTI_FRAUD, TERMS_OF_SERVICE)
+        /// View Policy Version History (Category: PRICE_TICKETING, REFUND_CANCELLATION, VIRTUAL_QUEUE, RISK_ANTI_FRAUD, TERMS_OF_SERVICE)
         /// Directly queried from system_policies table in admin_db.
         /// </summary>
         [HttpGet("history")]
@@ -200,7 +200,7 @@ namespace AdminAPI.Controllers
         }
 
         /// <summary>
-        /// UC_11.2: Create / Publish New Policy Version (Actor: Admin)
+        /// Create / Publish New Policy Version (Actor: Admin)
         /// Archives previous active versions and inserts new active policy document into admin_db.
         /// </summary>
         [HttpPost("create")]

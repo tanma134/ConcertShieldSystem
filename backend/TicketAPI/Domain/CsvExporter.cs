@@ -3,7 +3,7 @@ using System.Text;
 
 namespace TicketAPI.Domain;
 
-// Writes CSV text that is safe to open in Excel (UC_13.3 and UC_14.2).
+// Writes CSV text that is safe to open in Excel (and ).
 public static class CsvExporter
 {
     // A cell that starts with = + - @ is treated as a formula by spreadsheet apps

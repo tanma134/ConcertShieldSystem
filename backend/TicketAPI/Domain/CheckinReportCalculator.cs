@@ -16,7 +16,7 @@ public sealed record CheckinSummary(
     double CheckInRatePercent,
     IReadOnlyList<CheckinByTicketType> ByTicketType);
 
-// Computes the figures shown at the top of the check-in report (UC_14.2).
+// Computes the figures shown at the top of the check-in report.
 public static class CheckinReportCalculator
 {
     // Counts valid / checked-in / returned tickets and the check-in rate.

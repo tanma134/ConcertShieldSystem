@@ -380,7 +380,7 @@ export default function TicketGovernancePage() {
           </button>
         </div>
 
-        {/* TAB 1: BULK REVOKE (UC_8.7) */}
+        {/* TAB 1: BULK REVOKE */}
         {activeTab === "BULK_REVOKE" && (
           <div className="gov-tab-content">
             <div className="gov-bulk-layout">
@@ -450,33 +450,37 @@ export default function TicketGovernancePage() {
                         <span>Status: <strong>{selectedEventObj.status}</strong></span>
                       </div>
 
-                      {/* Bảng cảnh báo hiển thị tổng số vé sẽ bị hủy (Bước 2) */}
+                      {/* Prominent warning box for tickets to be revoked */}
                       <div className="gov-warning-box-prominent" style={{
-                        marginTop: "12px",
-                        padding: "16px",
-                        backgroundColor: "#fff8e6",
-                        border: "1.5px solid #ffd591",
-                        borderRadius: "8px"
+                        marginTop: "14px",
+                        padding: "18px",
+                        backgroundColor: "#fef2f2",
+                        border: "1.5px solid #fecaca",
+                        borderRadius: "10px"
                       }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-                          <strong style={{ fontSize: "1rem", color: "#d46b08" }}>
-                            CẢNH BÁO: SỰ KIỆN ĐÃ ĐƯỢC CHẤP NHẬN HỦY / HOÃN ({selectedEventObj.status.toUpperCase()})
+                          <span style={{ fontSize: "18px" }}>⚠️</span>
+                          <strong style={{ fontSize: "15px", color: "#991b1b" }}>
+                            WARNING: EVENT TICKETS PENDING BULK REVOCATION ({selectedEventObj.status.toUpperCase()})
                           </strong>
                         </div>
-                        <p style={{ margin: "4px 0 10px 0", fontSize: "0.9rem", color: "#595959" }}>
-                          Sự kiện <strong>"{selectedEventObj.title}"</strong> đã được chấp nhận hủy/hoãn trên hệ thống. Khi thực hiện thu hồi, toàn bộ vé đang hoạt động sẽ bị vô hiệu hóa, xóa quyền quét tại cổng và tự động gửi thông báo đến người mua.
+                        <p style={{ margin: "6px 0 12px 0", fontSize: "13.5px", color: "#7f1d1d", lineHeight: 1.5 }}>
+                          Event <strong>"{selectedEventObj.title}"</strong> is undergoing event disruption / reschedule processing. Executing bulk revocation will immediately invalidate all active tickets, flush gate validation cache (Redis), and trigger refund / reconciliation procedures.
                         </p>
                         <div style={{
-                          display: "inline-block",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "8px",
                           padding: "8px 16px",
-                          backgroundColor: "#fff1f0",
-                          border: "1.5px solid #ffa39e",
-                          borderRadius: "6px",
-                          color: "#b81a2a",
-                          fontWeight: "bold",
-                          fontSize: "1.05rem"
+                          backgroundColor: "#ffffff",
+                          border: "1.5px solid #f87171",
+                          borderRadius: "8px",
+                          color: "#dc2626",
+                          fontWeight: "800",
+                          fontSize: "14px"
                         }}>
-                          Tổng số vé sẽ bị hủy: {Number(selectedEventObj.activeTicketsCount).toLocaleString()} vé
+                          <span>🎟️</span>
+                          <span>Total Tickets to be Revoked: <strong>{Number(selectedEventObj.activeTicketsCount).toLocaleString()} tickets</strong></span>
                         </div>
                       </div>
                     </>
@@ -520,19 +524,19 @@ export default function TicketGovernancePage() {
 
                 <div className="form-group">
                   <label className="form-label">
-                    Revocation Reason (Lý do thu hồi vé) <span className="text-danger">*</span>
+                    Revocation Reason (Audit Justification) <span className="text-danger">*</span>
                   </label>
                   <textarea
                     className="form-control"
                     rows={3}
-                    placeholder='Bắt buộc nhập lý do thu hồi (Ví dụ: "Hủy show do thời tiết bão", "Ban tổ chức dời lịch diễn sang tháng sau")...'
+                    placeholder='Mandatory revocation reason (e.g., "Event cancelled due to storm weather per Official Notice #12", "Postponed to next month per approved change request CR-12")...'
                     value={reasonNote}
                     onChange={(e) => setReasonNote(e.target.value)}
                     disabled={submittingBulk}
                   />
                   {!reasonNote.trim() && (
-                    <small style={{ color: "#b81a2a", display: "block", marginTop: "6px", fontWeight: "500" }}>
-                      * Bắt buộc phải nhập lý do thu hồi (Revocation Reason) mới có thể bấm nút xác nhận.
+                    <small style={{ color: "#dc2626", display: "block", marginTop: "6px", fontWeight: "600" }}>
+                      * Revocation reason (Audit Justification) is required before confirming.
                     </small>
                   )}
                 </div>
@@ -547,7 +551,7 @@ export default function TicketGovernancePage() {
                     />
                     <span>
                       <strong>Trigger automated in-app notification to all ticket holders</strong>
-                      <small className="help-text">Tự động gửi thông báo đến từng tài khoản khách hàng sở hữu vé.</small>
+                      <small className="help-text">Automatically dispatches notifications to each ticket owner's account.</small>
                     </span>
                   </label>
                 </div>
@@ -569,8 +573,8 @@ export default function TicketGovernancePage() {
                       if (!reasonNote.trim()) {
                         setNoticeDialog({
                           type: "WARNING",
-                          title: "Lý do thu hồi bắt buộc",
-                          message: "Bắt buộc phải nhập lý do thu hồi vé (Revocation Reason, ví dụ: 'Hủy show do thời tiết') trước khi xác nhận.",
+                          title: "Revocation Reason Required",
+                          message: "Revocation reason is required (e.g. 'Show postponed due to weather') before confirmation.",
                         });
                         return;
                       }
@@ -600,7 +604,7 @@ export default function TicketGovernancePage() {
                     {reconciliations.map((r) => (
                       <div key={r.reconciliationId} className="reconcile-item">
                         <div className="reconcile-top">
-                          <span className="reconcile-id">Record {r.reconciliationId}</span>
+                          <span className="reconcile-id">Record #{r.reconciliationId}</span>
                           <span className={`badge-reason ${r.reasonType}`}>
                             {r.reasonType === "EVENT_CANCELLED" ? "CANCELLED" : "POSTPONED"}
                           </span>
@@ -648,10 +652,10 @@ export default function TicketGovernancePage() {
                           <strong>INSTANTLY INVALIDATES</strong> ticket QR identifiers across Gate Validation Cache (Redis) to block entry at all terminals.
                         </li>
                         <li>
-                          Tạo bản ghi đối soát hệ thống (Reconciliation Record) và gửi thông báo trực tiếp đến người sở hữu vé.
+                          Generates system reconciliation audit records and dispatches notifications directly to all ticket holders.
                         </li>
                       </ul>
-                      <p className="text-danger fw-bold">
+                      <p className="text-danger fw-bold" style={{ margin: 0, fontWeight: 700 }}>
                         This action cannot be undone directly. Are you sure you wish to proceed?
                       </p>
                     </div>
@@ -686,7 +690,7 @@ export default function TicketGovernancePage() {
           </div>
         )}
 
-        {/* TAB 2: REVOCATION HISTORY (UC_8.8) */}
+        {/* TAB 2: REVOCATION HISTORY */}
         {activeTab === "REVOCATION_HISTORY" && (
           <div className="gov-tab-content">
             <div className="gov-card">
@@ -853,7 +857,7 @@ export default function TicketGovernancePage() {
           </div>
         )}
 
-        {/* TAB 3: REISSUE HISTORY (UC_8.10) */}
+        {/* TAB 3: REISSUE HISTORY */}
         {activeTab === "REISSUE_HISTORY" && (
           <div className="gov-tab-content">
             <div className="gov-card">
@@ -943,7 +947,7 @@ export default function TicketGovernancePage() {
                               <span className="badge-revoked-tag">Revoked</span>
                             </div>
                           </td>
-                          <td className="arrow-cell">to</td>
+                          <td className="arrow-cell">➔</td>
                           <td>
                             <div className="ticket-trace-box new-ticket">
                               <span className="trace-label">NEW TICKET</span>
@@ -1009,6 +1013,7 @@ export default function TicketGovernancePage() {
           <div className="gov-modal-overlay">
             <div className="gov-dialog-modal">
               <div className={`gov-dialog-header ${noticeDialog.type?.toLowerCase()}`}>
+                <span className="dialog-icon">{noticeDialog.type === "WARNING" ? "⚠️" : "ℹ️"}</span>
                 <h3>{noticeDialog.title}</h3>
                 <button
                   type="button"
@@ -1057,7 +1062,7 @@ export default function TicketGovernancePage() {
                 <div className="modal-summary-table">
                   <div>
                     <span>Reconciliation Record ID:</span>
-                    <strong>{successResultModal.reconciliationId}</strong>
+                    <strong>#{successResultModal.reconciliationId}</strong>
                   </div>
                   <div>
                     <span>Total Tickets Revoked:</span>

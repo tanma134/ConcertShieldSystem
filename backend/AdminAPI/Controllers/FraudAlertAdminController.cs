@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AdminAPI.Controllers
 {
-    /// <summary>UC_18.1 Fraud Alert Dashboard, UC_18.2 Fraud Alert Details (Admin, Staff, chỉ đọc).</summary>
+    /// <summary>Fraud Alert Dashboard, Fraud Alert Details (Admin, Staff, chỉ đọc).</summary>
     [ApiController]
     [Route("api/admin/fraud-alerts")]
     [Authorize(Policy = "CanReviewFraud")]

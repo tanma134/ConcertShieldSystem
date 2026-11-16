@@ -17,7 +17,7 @@ function errMsg(e, fallback) {
   return e.response?.data?.message || fallback;
 }
 
-// ---- Matched rules: render as a readable list instead of raw JSON ----
+// --- Matched rules: render as a readable list instead of raw JSON ----
 const TITLE_KEYS = ["rule", "ruleName", "rule_name", "name", "ruleCode", "rule_code", "code", "id"];
 const SCORE_KEYS = ["score", "weight", "points", "contribution"];
 const DESC_KEYS = ["description", "reason", "message", "detail", "details"];
@@ -115,7 +115,7 @@ function VerdictPill({ verdict }) {
   return <span className={`kyc-pill ${cls}`}>{verdict}</span>;
 }
 
-// UC_18.2 View Fraud Alert Details, with UC_18.3 Block / UC_18.4 Restore actions
+// View Fraud Alert Details, with  Block /  Restore actions
 // attached directly to the alert for convenience.
 export default function FraudAlertDetailPage() {
   const { id } = useParams();
@@ -259,7 +259,7 @@ export default function FraudAlertDetailPage() {
         ← Alert list
       </button>
 
-      {/* UC_18.2 - View Fraud Alert Details */}
+      {/* View Fraud Alert Details */}
       <section className="admin-panel">
         <div className="panel-header">
           <h2>Alert information</h2>
@@ -320,7 +320,7 @@ export default function FraudAlertDetailPage() {
         )}
       </section>
 
-      {/* UC_18.3 / UC_18.4 - Decisions (blocks) related to this alert */}
+      {/* Decisions (blocks) related to this alert */}
       <section className="admin-panel">
         <div className="panel-header"><h2>Risk Decisions</h2></div>
 

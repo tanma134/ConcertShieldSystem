@@ -2,7 +2,7 @@ using TicketAPI.Domain;
 
 namespace TicketAPI.DTOs;
 
-// Response of GET api/organizer/events/{id}/revenue (UC_13.1 / UC_13.2).
+// Response of GET api/organizer/events/{id}/revenue.
 public class RevenueReportDto
 {
     public int EventId { get; set; }

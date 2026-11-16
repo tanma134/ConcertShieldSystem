@@ -61,7 +61,7 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("CanReportIncident", policy =>
         policy.RequireRole("Staff", "Admin"));
 
-    // Chỉ Admin mới được giải quyết sự cố (UC_16.5)
+    // Chỉ Admin mới được giải quyết sự cố
     options.AddPolicy("CanResolveIncident", policy =>
         policy.RequireRole("Admin"));
 });
@@ -86,7 +86,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "IncidentAPI",
         Version = "v1",
-        Description = "API quản lý sự cố tại hiện trường - UC_16.1 đến UC_16.5"
+        Description = "API quản lý sự cố tại hiện trường"
     });
 
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme

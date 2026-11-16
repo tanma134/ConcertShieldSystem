@@ -366,3 +366,9 @@ FodyWeavers.xsd
 scratch/
 *.docx
 ~$*.docx
+
+# Database temporary dumps & backups
+database/backups_pre_recreate/
+database/schema_dumps/
+*.sql.bak
+*.dmp

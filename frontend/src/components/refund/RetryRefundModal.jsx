@@ -52,7 +52,6 @@ export default function RetryRefundModal({
       <div className="rf-modal" onClick={(e) => e.stopPropagation()}>
         <div className="rf-header">
           <div className="rf-header-title">
-            <span className="rf-icon">⟲</span>
             <div>
               <h2>Retry Failed Refund</h2>
               <p>Retry the failed refund without creating a duplicate transaction.</p>

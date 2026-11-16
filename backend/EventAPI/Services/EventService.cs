@@ -410,7 +410,7 @@ namespace EventAPI.Services
             _governance.Queue("Notification", new NotificationMessage(entity.OrganizerId, "Concert approved", $"{entity.Title} has been published.", "event_approved", $"/events/{entity.Slug}"));
             await _eventRepository.UpdateAsync(entity);
             await approvalTransaction.CommitAsync();
-            // UC 20: Real-time In-App Notifications upon Event Approval
+            // Real-time In-App Notifications upon Event Approval
             var approvedEventTitle = entity.Title;
             var approvedEventId = entity.EventId;
             var approvedOrganizerId = entity.OrganizerId;
@@ -587,7 +587,7 @@ namespace EventAPI.Services
             return await MapToResponseWithSeatingAsync(reloaded!);
         }
 
-        // ---- Mapping ----
+        // --- Mapping ----
 
         public static EventResponseDTO MapToResponse(Event e) => new()
         {

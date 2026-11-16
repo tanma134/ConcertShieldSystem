@@ -9,6 +9,9 @@ namespace PaymentAPI.DTOs
         public int ReturnRequestId { get; set; }
         public int OrderId { get; set; }
         public long Amount { get; set; }
+        public string? CustomerName { get; set; }
+        public int? EventId { get; set; }
+        public string? EventName { get; set; }
     }
 
     public class RefundResultDto
@@ -20,7 +23,7 @@ namespace PaymentAPI.DTOs
         public string? ErrorCode { get; set; }
     }
 
-    // UC 3.16.20: Process Full / Partial Refund
+    // Process Full / Partial Refund
     public class ProcessRefundRequestDto
     {
         public int OrderId { get; set; }
@@ -30,7 +33,7 @@ namespace PaymentAPI.DTOs
         public string? Notes { get; set; }
     }
 
-    // UC 3.16.21: Retry Failed Refund
+    // Retry Failed Refund
     public class RetryRefundRequestDto
     {
         public string Strategy { get; set; } = "Immediate"; // Immediate | Scheduled
@@ -80,7 +83,7 @@ namespace PaymentAPI.DTOs
         public DateTime? CompletedAt { get; set; }
     }
 
-    // UC 3.16.22: Refund Reconciliation Report
+    // Refund Reconciliation Report
     public class RefundReconciliationReportDto
     {
         public int TotalRefunds { get; set; }

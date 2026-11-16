@@ -18,16 +18,16 @@ namespace EventAPI.DTOs
         [MaxLength(20)]
         public string ZoneType { get; set; } = "Seated";
 
-        // ---- Seated zones only ----
+        // --- Seated zones only ----
         public int Rows { get; set; } = 1;
         public int SeatsPerRow { get; set; } = 10;
         public string RowLabelPrefix { get; set; } = "A";
 
-        // ---- Standing zones only ----
+        // --- Standing zones only ----
         public int? Capacity { get; set; }
     }
 
-    /// <summary>UC_26.3 — Save Seating Chart as Template: snapshot an already-built concert layout.</summary>
+    /// <summary>— Save Seating Chart as Template: snapshot an already-built concert layout.</summary>
     public class SaveSeatingTemplateDTO
     {
         [Required]
@@ -79,7 +79,7 @@ namespace EventAPI.DTOs
         public bool? IsPublic { get; set; }
     }
 
-    /// <summary>One entry in an organizer's zone-to-ticket-type mapping for UC_26.2 — Apply Seating Template.</summary>
+    /// <summary>One entry in an organizer's zone-to-ticket-type mapping for — Apply Seating Template.</summary>
     public class TemplateZoneMappingDTO
     {
         /// <summary>Index into the template's Zones list.</summary>
@@ -120,7 +120,7 @@ namespace EventAPI.DTOs
         public DateTime UpdatedAt { get; set; }
     }
 
-    /// <summary>Lightweight row for the template picker (UC_26.2's "Seating Template List" screen).</summary>
+    /// <summary>Lightweight row for the template picker ('s "Seating Template List" screen).</summary>
     public class SeatingTemplateListDTO
     {
         public int SeatingTemplateId { get; set; }

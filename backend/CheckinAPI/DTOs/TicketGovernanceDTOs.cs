@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace CheckinAPI.DTOs
 {
     // ==========================================
-    // UC_8.7 Bulk Revoke Tickets DTOs
+    // Bulk Revoke Tickets DTOs
     // ==========================================
     public class BulkRevokeRequestDTO
     {
@@ -33,7 +33,7 @@ namespace CheckinAPI.DTOs
     }
 
     // ==========================================
-    // UC_8.8 Ticket Revocation History DTOs
+    // Ticket Revocation History DTOs
     // ==========================================
     public class RevocationHistoryItemDTO
     {
@@ -80,7 +80,7 @@ namespace CheckinAPI.DTOs
     }
 
     // ==========================================
-    // UC_8.10 Reissue History DTOs
+    // Reissue History DTOs
     // ==========================================
     public class ReissueHistoryItemDTO
     {
@@ -130,7 +130,7 @@ namespace CheckinAPI.DTOs
     }
 
     // ==========================================
-    // UC_14.5 & UC_14.6 Offline Check-in DTOs
+    // Offline Check-in DTOs
     // ==========================================
     public class OfflineTicketItemDTO
     {

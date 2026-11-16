@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IncidentAPI.Services;
 
-// Triển khai toàn bộ nghiệp vụ Incident Management cho 5 Use Case (UC_16.1 - UC_16.5)
+// Triển khai toàn bộ nghiệp vụ Incident Management cho 5 Use Case ()
 public class IncidentService : IIncidentService
 {
     private readonly IncidentDbContext _db;
@@ -17,7 +17,7 @@ public class IncidentService : IIncidentService
         _logger = logger;
     }
 
-    // UC_16.1: Staff báo cáo sự cố mới tại hiện trường
+    // Staff báo cáo sự cố mới tại hiện trường
     public async Task<IncidentDetailDto> CreateIncidentAsync(
         CreateIncidentRequest req, int reporterId, string reporterName, CancellationToken ct = default)
     {
@@ -55,7 +55,7 @@ public class IncidentService : IIncidentService
         _db.Incidents.Add(incident);
         await _db.SaveChangesAsync(ct);
 
-        // Ghi nhật ký ban đầu (UC_16.3)
+        // Ghi nhật ký ban đầu
         var initialUpdate = new IncidentUpdate
         {
             IncidentId = incident.Id,
@@ -155,7 +155,7 @@ public class IncidentService : IIncidentService
         return items;
     }
 
-    // UC_16.3: Cập nhật thông tin chi tiết sự cố và tiến độ
+    // Cập nhật thông tin chi tiết sự cố và tiến độ
     public async Task<IncidentDetailDto> UpdateIncidentAsync(
         int id, UpdateIncidentRequest req, int updatedBy, string updaterName, bool isAdmin, CancellationToken ct = default)
     {
@@ -238,7 +238,7 @@ public class IncidentService : IIncidentService
         return await GetDetailAsync(id, updatedBy, true, ct);
     }
 
-    // UC_16.4: Chuyển cấp / Leo thang sự cố lên Admin
+    // Chuyển cấp / Leo thang sự cố lên Admin
     public async Task<IncidentDetailDto> EscalateIncidentAsync(
         int id, EscalateIncidentRequest req, int staffId, string staffName, CancellationToken ct = default)
     {
@@ -278,7 +278,7 @@ public class IncidentService : IIncidentService
         return await GetDetailAsync(id, staffId, true, ct);
     }
 
-    // UC_16.5: Admin giải quyết sự cố
+    // Admin giải quyết sự cố
     public async Task<IncidentDetailDto> ResolveIncidentAsync(
         int id, ResolveIncidentRequest req, int adminId, string adminName, CancellationToken ct = default)
     {
@@ -315,7 +315,7 @@ public class IncidentService : IIncidentService
         return await GetDetailAsync(id, adminId, true, ct);
     }
 
-    // UC_16.5: Xem thông tin giải quyết sự cố
+    // Xem thông tin giải quyết sự cố
     public async Task<ResolutionDto> GetResolutionAsync(int id, CancellationToken ct = default)
     {
         var incident = await _db.Incidents

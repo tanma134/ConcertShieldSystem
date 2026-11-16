@@ -1,5 +1,5 @@
 // ==========================================
-// IndexedDB Storage Layer for Offline Check-in (UC_14.5 & UC_14.6)
+// IndexedDB Storage Layer for Offline Check-in
 // ==========================================
 
 const DB_NAME = "ConcertShieldOfflineCheckin";
@@ -43,7 +43,7 @@ function openDb() {
 }
 
 export const offlineCheckinDb = {
-  // UC_14.5: Save downloaded ticket package into IndexedDB
+  // Save downloaded ticket package into IndexedDB
   async saveOfflinePackage(eventId, packageData) {
     const db = await openDb();
     const eventIdNum = Number(eventId);
@@ -109,7 +109,7 @@ export const offlineCheckinDb = {
     });
   },
 
-  // UC_14.5: Verify and perform check-in locally in IndexedDB
+  // Verify and perform check-in locally in IndexedDB
   async verifyOfflineTicket(eventId, rawPayload, gateId = "GATE_A", staffUserId = 1) {
     const db = await openDb();
     const eventIdNum = Number(eventId);

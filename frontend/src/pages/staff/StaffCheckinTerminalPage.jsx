@@ -76,7 +76,7 @@ export default function StaffCheckinTerminalPage() {
     successRate: 100,
   });
 
-  // UC_14.5 & UC_14.6: Offline Check-in Mode State
+  // Offline Check-in Mode State
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [isNetworkOnline, setIsNetworkOnline] = useState(navigator.onLine);
   const [offlinePackageMeta, setOfflinePackageMeta] = useState(null);
@@ -165,7 +165,7 @@ export default function StaffCheckinTerminalPage() {
     };
   }, [currentEventId]);
 
-  // UC_14.5: Always auto-preload and keep offline ticket package ready in IndexedDB
+  // Always auto-preload and keep offline ticket package ready in IndexedDB
   const autoPreloadOfflinePackage = async (evtId) => {
     setDownloadingPackage(true);
     try {
@@ -214,7 +214,7 @@ export default function StaffCheckinTerminalPage() {
     }
   };
 
-  // UC_14.5: Manual re-download / refresh offline ticket package if desired
+  // Manual re-download / refresh offline ticket package if desired
   const handleDownloadOfflinePackage = async () => {
     setDownloadingPackage(true);
     try {
@@ -241,7 +241,7 @@ export default function StaffCheckinTerminalPage() {
     }
   };
 
-  // UC_14.6: Sync Offline Scans to Backend (Supports both manual click & automatic background sync)
+  // Sync Offline Scans to Backend (Supports both manual click & automatic background sync)
   const handleSyncOfflineScans = async (isSilent = false) => {
     if (syncingOfflineRef.current) return;
     if (!navigator.onLine) {
@@ -346,7 +346,7 @@ export default function StaffCheckinTerminalPage() {
     } catch (e) {}
   };
 
-  // UC_14.5: Execute Offline Scan against local IndexedDB
+  // Execute Offline Scan against local IndexedDB
   const executeOfflineScan = async (rawCode, isAutoFallback = false) => {
     try {
       const offlineResult = await offlineCheckinDb.verifyOfflineTicket(
@@ -424,7 +424,7 @@ export default function StaffCheckinTerminalPage() {
       setScanning(true);
       setScanResult(null);
 
-      // UC_14.5: If in offline mode OR device has no internet connection, verify locally immediately
+      // If in offline mode OR device has no internet connection, verify locally immediately
       if (isOfflineMode || !navigator.onLine) {
         await executeOfflineScan(payload, false);
         return;
@@ -1007,7 +1007,7 @@ export default function StaffCheckinTerminalPage() {
             <span>Camera Active</span>
           </div>
 
-          {/* UC_14.5: Offline Mode Toggle */}
+          {/* Offline Mode Toggle */}
           <button
             type="button"
             className={`btn-mode-toggle ${isOfflineMode ? "mode-offline" : "mode-online"}`}
@@ -1022,7 +1022,7 @@ export default function StaffCheckinTerminalPage() {
             {isOfflineMode ? "Offline Mode" : "Online Mode"}
           </button>
 
-          {/* UC_14.6: Compact Auto-Sync Indicator in Header */}
+          {/* Compact Auto-Sync Indicator in Header */}
           {offlineQueueCount > 0 && (
             <button
               type="button"
@@ -1752,14 +1752,14 @@ export default function StaffCheckinTerminalPage() {
         </div>
       )}
 
-      {/* TAB 5: Offline Admission Mode & Edge Sync (UC 14.5, 14.6, 14.7) */}
+      {/* TAB 5: Offline Admission Mode & Edge Sync */}
       {activeTab === "OFFLINE" && (
         <div className="terminal-offline-tab">
           <div className="card-offline-control">
             <div className="offline-card-header">
               <h2>Offline Check-in Mode & Edge Sync</h2>
               <p className="card-subtext">
-                UC_14.5, UC_14.6, UC_14.7: Edge admission redundancy allows gates to verify tickets without cloud internet connection using IndexedDB cached packages.
+                Edge admission redundancy allows gates to verify tickets without cloud internet connection using IndexedDB cached packages.
               </p>
             </div>
 

@@ -159,15 +159,10 @@
 .rr-event-select-wrapper {
   display: flex;
   align-items: center;
-  background: #faf5ff;
-  border: 1px solid rgba(148,110,200,0.14);
-  border-radius: 10px;
-  padding: 2px 10px 2px 12px;
-  gap: 8px;
-}
-
-.rr-event-select-icon {
-  font-size: 14px;
+  background: #ffffff;
+  border: 1px solid rgba(148, 110, 200, 0.2);
+  border-radius: 8px;
+  padding: 0 6px;
 }
 
 .rr-event-select {
@@ -183,40 +178,37 @@
 }
 
 .rr-event-select option {
-  background: #faf5ff;
+  background: #ffffff;
   color: #3c3552;
 }
 
 .rr-event-select:focus {
-  color: #cc6fe0;
+  color: #7e22ce;
 }
 
 .rr-customer-main {
   display: flex;
   align-items: center;
   gap: 6px;
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+.rr-dot-separator {
+  color: #94a3b8;
+  font-size: 12px;
 }
 
 .rr-event-subtag {
-  margin-top: 4px;
-  font-size: 11.5px;
-  color: #6d28d9;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: #f3e8ff;
-  padding: 2px 8px;
-  border-radius: 6px;
-  border: 1px solid #d8b4fe;
-  max-width: 280px;
+  margin-top: 3px;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+  display: block;
+  max-width: 360px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-weight: 600;
-}
-
-.rr-event-tag-icon {
-  font-size: 11px;
 }
 
 .rr-search-icon {
@@ -341,22 +333,25 @@
 
 .rr-table th {
   background: #faf5ff;
-  color: #746d88;
+  color: #64748b;
   font-weight: 600;
-  padding: 14px 18px;
-  border-bottom: 1px solid rgba(148,110,200,0.14);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(148, 110, 200, 0.16);
   white-space: nowrap;
 }
 
 .rr-table td {
-  padding: 16px 18px;
-  border-bottom: 1px solid rgba(148,110,200,0.11);
-  color: #4a4458;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(148, 110, 200, 0.1);
+  color: #334155;
   vertical-align: middle;
 }
 
 .rr-table tr:hover td {
-  background: rgba(148,110,200,0.04);
+  background: rgba(148, 110, 200, 0.04);
 }
 
 .rr-table tr:last-child td {
@@ -371,21 +366,28 @@
 }
 
 .rr-cell-id {
+  white-space: nowrap;
+}
+
+.rr-cell-id strong {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  color: #3c3552;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .rr-type-pill {
-  font-size: 11px;
-  padding: 2px 7px;
-  border-radius: 6px;
-  background: #faf5ff;
-  color: #7a7392;
-  font-family: inherit;
+  font-size: 10px;
+  margin-left: 6px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #475569;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: inline-block;
 }
 
 .rr-cell-customer {
@@ -398,29 +400,33 @@
 }
 
 .rr-name {
-  color: #1e1b2e;
+  color: #0f172a;
   font-weight: 600;
 }
 
 .rr-cell-amount {
-  color: #1d1730;
-  font-size: 14px;
+  color: #0f172a;
+  font-size: 13.5px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .rr-cell-date {
-  color: #524b68;
+  color: #64748b;
   white-space: nowrap;
+  font-size: 13px;
 }
 
 /* Badges */
 .rr-badge {
-  display: inline-block;
-  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
   border-radius: 9999px;
   font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
 .rr-badge.status-completed,
@@ -469,6 +475,24 @@
 .rr-action-link:hover {
   color: #5fb8e8;
   text-decoration: underline;
+}
+
+.rr-action-process-btn {
+  background: #2563eb;
+  border: 1px solid #1d4ed8;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 12.5px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-right: 8px;
+  transition: all 0.15s;
+}
+
+.rr-action-process-btn:hover {
+  background: #1d4ed8;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
 }
 
 .rr-action-retry-btn {
