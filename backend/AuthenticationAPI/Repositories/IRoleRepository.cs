@@ -7,6 +7,7 @@ namespace AuthenticationAPI.Repositories
         Task<List<Role>> GetAllAsync();
         Task<Role?> GetByIdAsync(int id);
         Task<bool> ExistsByNameAsync(string roleName, int? excludeId = null);
+        Task<bool> HasAssignedUsersAsync(int roleId);
         Task AddAsync(Role role);
         void Delete(Role role);
         Task SaveChangesAsync();

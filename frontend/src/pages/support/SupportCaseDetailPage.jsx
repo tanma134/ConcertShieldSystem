@@ -223,13 +223,17 @@ export default function SupportCaseDetailPage() {
               ← Back to List
             </Link>
 
-            {/* Assign Staff (Admin only, disabled if Closed) */}
+            {/* Assign Staff (Admin only) */}
             {isAdminPath && (
               <button
                 type="button"
-                className="sc-btn sc-btn-secondary"
-                onClick={handleOpenAssignModal}
-                disabled={isClosed}
+                className={`sc-btn sc-btn-secondary ${isClosed ? "sc-btn-disabled" : ""}`}
+                onClick={
+                  isClosed
+                    ? () => toast.info("This case has been resolved and closed. Closed cases cannot be reassigned.")
+                    : handleOpenAssignModal
+                }
+                style={isClosed ? { opacity: 0.5, cursor: "not-allowed" } : {}}
                 title={isClosed ? "Closed case cannot be reassigned" : "Assign staff member"}
               >
                 {detail.assignedStaffName ? "Reassign Staff" : "Assign Staff"}
@@ -262,10 +266,10 @@ export default function SupportCaseDetailPage() {
                   </svg>
                   Recorded Resolution
                 </div>
-                <div style={{ color: "#d1fae5", fontSize: "14px", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                <div style={{ color: "#065f46", fontSize: "14px", fontWeight: 500, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
                   {detail.resolution}
                 </div>
-                <div style={{ fontSize: "12px", color: "#6ee7b7", marginTop: "10px" }}>
+                <div style={{ fontSize: "12px", color: "#047857", marginTop: "10px", fontWeight: 600 }}>
                   Resolved by <strong>{detail.resolvedByName || "Staff"}</strong> on{" "}
                   {formatDate(detail.resolvedAt)}
                 </div>
@@ -279,7 +283,8 @@ export default function SupportCaseDetailPage() {
                 style={{
                   fontSize: "14px",
                   lineHeight: 1.7,
-                  color: "#f3f4f6",
+                  color: "#1d1730",
+                  fontWeight: 500,
                   whiteSpace: "pre-wrap",
                   background: "var(--sc-bg-surface)",
                   padding: "16px 20px",
@@ -308,13 +313,13 @@ export default function SupportCaseDetailPage() {
                       <div className="sc-timeline-dot" />
                       <div className="sc-timeline-meta">
                         <div>
-                          <strong style={{ color: "#fff" }}>{n.authorName}</strong>{" "}
+                          <strong style={{ color: "#1d1730" }}>{n.authorName}</strong>{" "}
                           <span style={{ color: "var(--sc-text-muted)" }}>({n.authorRole})</span>
                           {n.noteType && n.noteType !== "Comment" && (
                             <span
                               style={{
                                 marginLeft: "8px",
-                                background: "#334155",
+                                background: "#dcd3e8",
                                 padding: "2px 6px",
                                 borderRadius: "4px",
                                 fontSize: "11px",
@@ -363,7 +368,7 @@ export default function SupportCaseDetailPage() {
           <div>
             {/* Customer Information Card */}
             <div className="sc-meta-card">
-              <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 12px 0", color: "#fff" }}>
+              <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 12px 0", color: "#1d1730" }}>
                 Customer Information
               </h3>
               <div className="sc-meta-row">
@@ -388,7 +393,7 @@ export default function SupportCaseDetailPage() {
 
             {/* Related Context Card */}
             <div className="sc-meta-card">
-              <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 12px 0", color: "#fff" }}>
+              <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 12px 0", color: "#1d1730" }}>
                 Context References
               </h3>
               <div className="sc-meta-row">
@@ -401,7 +406,7 @@ export default function SupportCaseDetailPage() {
                       rel="noopener noreferrer"
                       title="Open order details in a new tab"
                       style={{
-                        color: "#60a5fa",
+                        color: "#4f8fe0",
                         textDecoration: "underline",
                         display: "inline-flex",
                         alignItems: "center",
@@ -425,7 +430,7 @@ export default function SupportCaseDetailPage() {
                     marginTop: "8px",
                     marginBottom: "12px",
                     width: "100%",
-                    background: "linear-gradient(135deg, #ec4899 0%, #a855f7 100%)",
+                    background: "linear-gradient(135deg, #e8439c 0%, #a855f7 100%)",
                     border: "none",
                     color: "#fff",
                     padding: "7px 12px",
@@ -453,7 +458,7 @@ export default function SupportCaseDetailPage() {
                       rel="noopener noreferrer"
                       title="Open ticket details in a new tab"
                       style={{
-                        color: "#60a5fa",
+                        color: "#2563eb",
                         textDecoration: "underline",
                         display: "inline-flex",
                         alignItems: "center",
@@ -473,7 +478,7 @@ export default function SupportCaseDetailPage() {
                 <span className="sc-meta-label">Payment Reference</span>
                 <span className="sc-meta-val">
                   {detail.paymentReference ? (
-                    <code style={{ color: "#a5b4fc" }}>{detail.paymentReference}</code>
+                    <code style={{ color: "#4338ca", fontWeight: 600 }}>{detail.paymentReference}</code>
                   ) : (
                     <span style={{ color: "var(--sc-text-muted)" }}>None</span>
                   )}
@@ -483,12 +488,12 @@ export default function SupportCaseDetailPage() {
 
             {/* Assignment & Timestamps Card */}
             <div className="sc-meta-card">
-              <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 12px 0", color: "#fff" }}>
+              <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 12px 0", color: "#1d1730" }}>
                 Assignment & Timestamps
               </h3>
               <div className="sc-meta-row">
                 <span className="sc-meta-label">Assigned Staff</span>
-                <span className="sc-meta-val" style={{ color: detail.assignedStaffName ? "#93c5fd" : "#9ca3af" }}>
+                <span className="sc-meta-val" style={{ color: detail.assignedStaffName ? "#1d4ed8" : "#4b5563", fontWeight: 600 }}>
                   {detail.assignedStaffName || "Unassigned"}
                 </span>
               </div>
@@ -519,7 +524,7 @@ export default function SupportCaseDetailPage() {
                 <button
                   type="button"
                   onClick={() => setShowAssignModal(false)}
-                  style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: "18px" }}
+                  style={{ background: "none", border: "none", color: "#7e7694", cursor: "pointer", fontSize: "18px" }}
                 >
                   ✕
                 </button>
@@ -596,7 +601,7 @@ export default function SupportCaseDetailPage() {
                 <button
                   type="button"
                   onClick={() => setShowResolveModal(false)}
-                  style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: "18px" }}
+                  style={{ background: "none", border: "none", color: "#7e7694", cursor: "pointer", fontSize: "18px" }}
                 >
                   ✕
                 </button>
@@ -604,7 +609,7 @@ export default function SupportCaseDetailPage() {
 
               <form onSubmit={handleResolveCase}>
                 <div className="sc-modal-body">
-                  <div style={{ background: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245, 158, 11, 0.3)", padding: "12px", borderRadius: "8px", fontSize: "12px", color: "#fcd34d" }}>
+                  <div style={{ background: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245, 158, 11, 0.3)", padding: "12px", borderRadius: "8px", fontSize: "12px", color: "#e8b82e" }}>
                     <strong>Notice:</strong> Closing this case strictly requires a detailed resolution to be recorded. Closed cases cannot be reopened or reassigned.
                   </div>
 

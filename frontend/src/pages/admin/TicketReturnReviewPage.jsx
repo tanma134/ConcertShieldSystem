@@ -99,7 +99,11 @@ function ReturnQueue({ isAdmin }) {
                 : " Only requests of concerts where the organizer assigned you to review returns are listed. Approving releases the seat back to sale and pays the refund; rejecting needs a reason."}
             </p>
           </div>
-          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+          <select
+            className="modern-select"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+          >
             <option>Pending</option>
             <option>Approved</option>
             <option>Refunded</option>
@@ -141,7 +145,7 @@ function ReturnQueue({ isAdmin }) {
                     <td>
                       {r.status === "Pending" ? (
                         <>
-                          <button className="tb-btn tb-btn-primary" onClick={() => openDecision(r, true)}>Approve</button>{" "}
+                          <button className="tb-btn tb-btn-primary" onClick={() => openDecision(r, true)}>Approve & refund</button>{" "}
                           <button className="tb-btn tb-btn-outline" onClick={() => openDecision(r, false)}>Reject</button>
                         </>
                       ) : r.canRetryRefund ? (
@@ -182,7 +186,7 @@ function ReturnQueue({ isAdmin }) {
             <div className="rp-modal-actions">
               <button className="tb-btn tb-btn-outline" disabled={decision.busy} onClick={() => setDecision(null)}>Cancel</button>
               <button className="tb-btn tb-btn-primary" disabled={decision.busy} onClick={confirmDecision}>
-                {decision.busy ? "Saving..." : decision.approve ? "Approve" : "Reject"}
+                {decision.busy ? "Saving..." : decision.approve ? "Approve & refund" : "Reject"}
               </button>
             </div>
           </div>

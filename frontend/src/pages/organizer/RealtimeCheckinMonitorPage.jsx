@@ -127,7 +127,7 @@ export default function RealtimeCheckinMonitorPage() {
       <div className="rcm-container" style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
         <div style={{ textAlign: "center" }}>
           <div className="rcm-pulse-dot" style={{ width: "24px", height: "24px", margin: "0 auto 16px" }}></div>
-          <h2 style={{ fontSize: "18px", fontWeight: 700, color: "#94a3b8" }}>Connecting to Real-time Check-in Telemetry...</h2>
+          <h2 style={{ fontSize: "18px", fontWeight: 700, color: "#7a7392" }}>Connecting to Real-time Check-in Telemetry...</h2>
         </div>
       </div>
     );
@@ -137,8 +137,8 @@ export default function RealtimeCheckinMonitorPage() {
     return (
       <div className="rcm-container" style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
         <div className="rcm-card" style={{ maxWidth: "480px", textAlign: "center", padding: "40px 24px" }}>
-          <h2 style={{ fontSize: "20px", fontWeight: 800, color: "#f87171", margin: "0 0 12px" }}>Access Denied (BR-398 / BR-61)</h2>
-          <p style={{ fontSize: "14px", color: "#cbd5e1", lineHeight: 1.6, margin: "0 0 24px" }}>
+          <h2 style={{ fontSize: "20px", fontWeight: 800, color: "#d64545", margin: "0 0 12px" }}>Access Denied (BR-398 / BR-61)</h2>
+          <p style={{ fontSize: "14px", color: "#5f587a", lineHeight: 1.6, margin: "0 0 24px" }}>
             {error || "You do not have authorization to view the real-time check-in monitoring dashboard for this concert."}
           </p>
           <button className="rcm-btn rcm-btn-primary" onClick={() => navigate("/organizer/dashboard")}>
@@ -197,8 +197,8 @@ export default function RealtimeCheckinMonitorPage() {
             className="rcm-btn"
             style={{
               background: pendingConflictsCount > 0 ? "rgba(245, 158, 11, 0.25)" : undefined,
-              borderColor: pendingConflictsCount > 0 ? "#f59e0b" : undefined,
-              color: pendingConflictsCount > 0 ? "#fbbf24" : undefined,
+              borderColor: pendingConflictsCount > 0 ? "#d98f14" : undefined,
+              color: pendingConflictsCount > 0 ? "#d99a16" : undefined,
               fontWeight: 700,
             }}
             onClick={() => setShowConflictModal(true)}
@@ -237,9 +237,9 @@ export default function RealtimeCheckinMonitorPage() {
 
       <main className="rcm-content">
         {error && (
-          <div style={{ background: "rgba(239, 68, 68, 0.2)", border: "1px solid #f87171", color: "#f87171", padding: "12px 18px", borderRadius: "10px", marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ background: "rgba(239, 68, 68, 0.2)", border: "1px solid #d64545", color: "#d64545", padding: "12px 18px", borderRadius: "10px", marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span>{error}</span>
-            <button onClick={() => setError("")} style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontWeight: 800 }}>Close</button>
+            <button onClick={() => setError("")} style={{ background: "none", border: "none", color: "#d64545", cursor: "pointer", fontWeight: 800 }}>Close</button>
           </div>
         )}
 
@@ -251,7 +251,7 @@ export default function RealtimeCheckinMonitorPage() {
               <span>1. Total Tickets Issued</span>
             </div>
             <div className="rcm-metric-value">{totalIssued.toLocaleString()}</div>
-            <div style={{ fontSize: "12px", color: "#94a3b8" }}>Total sold/issued tickets</div>
+            <div style={{ fontSize: "12px", color: "#7a7392" }}>Total sold/issued tickets</div>
             <div className="rcm-progress-bar-bg">
               <div className="rcm-progress-bar-fill fill-purple" style={{ width: "100%" }}></div>
             </div>
@@ -262,8 +262,8 @@ export default function RealtimeCheckinMonitorPage() {
             <div className="rcm-metric-label">
               <span>2. Checked-in</span>
             </div>
-            <div className="rcm-metric-value" style={{ color: "#34d399" }}>{checkedIn.toLocaleString()}</div>
-            <div style={{ fontSize: "12px", color: "#94a3b8" }}>Attendees passed gate</div>
+            <div className="rcm-metric-value" style={{ color: "#21a87b" }}>{checkedIn.toLocaleString()}</div>
+            <div style={{ fontSize: "12px", color: "#7a7392" }}>Attendees passed gate</div>
             <div className="rcm-progress-bar-bg">
               <div className="rcm-progress-bar-fill fill-emerald" style={{ width: `${Math.min(100, occupancyRate)}%` }}></div>
             </div>
@@ -274,8 +274,8 @@ export default function RealtimeCheckinMonitorPage() {
             <div className="rcm-metric-label">
               <span>3. Pending Admission</span>
             </div>
-            <div className="rcm-metric-value" style={{ color: "#fbbf24" }}>{pending.toLocaleString()}</div>
-            <div style={{ fontSize: "12px", color: "#94a3b8" }}>Tickets yet to enter</div>
+            <div className="rcm-metric-value" style={{ color: "#d99a16" }}>{pending.toLocaleString()}</div>
+            <div style={{ fontSize: "12px", color: "#7a7392" }}>Tickets yet to enter</div>
             <div className="rcm-progress-bar-bg">
               <div className="rcm-progress-bar-fill fill-amber" style={{ width: `${totalIssued > 0 ? (pending / totalIssued) * 100 : 0}%` }}></div>
             </div>
@@ -286,8 +286,8 @@ export default function RealtimeCheckinMonitorPage() {
             <div className="rcm-metric-label">
               <span>4. Occupancy Rate</span>
             </div>
-            <div className="rcm-metric-value" style={{ color: "#c084fc" }}>{occupancyRate}%</div>
-            <div style={{ fontSize: "12px", color: "#94a3b8" }}>(Checked-in / Total Issued) * 100</div>
+            <div className="rcm-metric-value" style={{ color: "#a855f7" }}>{occupancyRate}%</div>
+            <div style={{ fontSize: "12px", color: "#7a7392" }}>(Checked-in / Total Issued) * 100</div>
             <div className="rcm-progress-bar-bg">
               <div className="rcm-progress-bar-fill fill-pink" style={{ width: `${Math.min(100, occupancyRate)}%` }}></div>
             </div>
@@ -339,7 +339,7 @@ export default function RealtimeCheckinMonitorPage() {
             </div>
 
             {gates.length === 0 ? (
-              <div style={{ color: "#94a3b8", textAlign: "center", padding: "20px" }}>No gate data available.</div>
+              <div style={{ color: "#7a7392", textAlign: "center", padding: "20px" }}>No gate data available.</div>
             ) : (
               gates.map((g) => (
                 <div key={g.gateId} className="rcm-gate-item">
@@ -380,13 +380,13 @@ export default function RealtimeCheckinMonitorPage() {
             </div>
 
             {zones.length === 0 ? (
-              <div style={{ color: "#94a3b8", textAlign: "center", padding: "20px" }}>No zone breakdown available.</div>
+              <div style={{ color: "#7a7392", textAlign: "center", padding: "20px" }}>No zone breakdown available.</div>
             ) : (
               zones.map((z) => (
                 <div key={z.zoneName} className="rcm-zone-item">
                   <div className="rcm-gate-top">
                     <span className="rcm-gate-name">{z.zoneName}</span>
-                    <span style={{ fontSize: "12px", color: "#c084fc", fontWeight: 700 }}>
+                    <span style={{ fontSize: "12px", color: "#a855f7", fontWeight: 700 }}>
                       {z.checkedIn} / {z.totalIssued} checked in
                     </span>
                   </div>
@@ -409,7 +409,7 @@ export default function RealtimeCheckinMonitorPage() {
             <div className="rcm-card-title">
               <span>Recent Scan Telemetry Stream</span>
             </div>
-            <span style={{ fontSize: "12px", color: "#94a3b8" }}>Showing latest entrance scans</span>
+            <span style={{ fontSize: "12px", color: "#7a7392" }}>Showing latest entrance scans</span>
           </div>
 
           <div className="rcm-table-wrap">
@@ -429,19 +429,19 @@ export default function RealtimeCheckinMonitorPage() {
               <tbody>
                 {recentScans.length === 0 ? (
                   <tr>
-                    <td colSpan="8" style={{ textAlign: "center", padding: "20px", color: "#94a3b8" }}>
+                    <td colSpan="8" style={{ textAlign: "center", padding: "20px", color: "#7a7392" }}>
                       No scan events logged yet.
                     </td>
                   </tr>
                 ) : (
                   recentScans.map((s) => (
                     <tr key={s.scanId}>
-                      <td style={{ fontFamily: "monospace", color: "#c084fc" }}>{s.scanId}</td>
+                      <td style={{ fontFamily: "monospace", color: "#a855f7" }}>{s.scanId}</td>
                       <td style={{ fontWeight: 700 }}>{s.ticketCode}</td>
                       <td>{s.customerName}</td>
                       <td>{s.zoneName}</td>
                       <td>{s.gateName}</td>
-                      <td style={{ color: "#94a3b8" }}>{new Date(s.scannedAt).toLocaleTimeString()}</td>
+                      <td style={{ color: "#7a7392" }}>{new Date(s.scannedAt).toLocaleTimeString()}</td>
                       <td>{s.scanMethod}</td>
                       <td>
                         <span className={`rcm-status-tag tag-${s.status.toLowerCase()}`}>

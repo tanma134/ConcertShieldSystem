@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
-  color: #f3f4f6;
+  color: #1e1b2e;
   max-width: 1280px;
   margin: 0 auto;
 }
@@ -18,13 +18,13 @@
 .rr-header h1 {
   font-size: 26px;
   font-weight: 800;
-  color: #ffffff;
+  color: #3c3552;
   margin: 0 0 6px;
   letter-spacing: -0.02em;
 }
 
 .rr-header p {
-  color: #9ca3af;
+  color: #6b6480;
   margin: 0;
   font-size: 14px;
 }
@@ -36,9 +36,9 @@
 }
 
 .rr-btn-export-csv {
-  background: #1e242d;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #e5e7eb;
+  background: #faf5ff;
+  border: 1px solid rgba(148,110,200,0.17);
+  color: #4a4458;
   font-weight: 600;
   font-size: 13px;
   padding: 10px 16px;
@@ -52,14 +52,14 @@
 }
 
 .rr-btn-export-csv:hover {
-  background: #2b323e;
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.25);
+  background: #faf5ff;
+  color: #3c3552;
+  border-color: rgba(148,110,200,0.23);
   transform: translateY(-1px);
 }
 
 .rr-btn-new-refund {
-  background: linear-gradient(135deg, #ec4899 0%, #a855f7 100%);
+  background: linear-gradient(135deg, #c2185b 0%, #a855f7 100%);
   border: none;
   color: #ffffff;
   font-weight: 700;
@@ -86,36 +86,36 @@
 }
 
 .rr-kpi-card {
-  background: #15181e;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #faf5ff;
+  border: 1px solid rgba(148,110,200,0.14);
   border-radius: 14px;
   padding: 20px 22px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 16px rgba(80,50,120,0.15);
 }
 
 .rr-kpi-label {
   font-size: 13px;
-  color: #9ca3af;
+  color: #6b6480;
   font-weight: 600;
 }
 
 .rr-kpi-val {
   font-size: 30px;
   font-weight: 800;
-  color: #ffffff;
+  color: #3c3552;
   letter-spacing: -0.02em;
   line-height: 1.1;
 }
 
 .rr-kpi-val.green {
-  color: #34d399;
+  color: #21a87b;
 }
 
 .rr-kpi-val.orange {
-  color: #f97316;
+  color: #fa822f;
 }
 
 .rr-kpi-trend {
@@ -124,12 +124,12 @@
 }
 
 .rr-kpi-trend.up {
-  color: #34d399;
+  color: #047857;
 }
 
 .rr-kpi-sub {
   font-size: 12px;
-  color: #6b7280;
+  color: #524b68;
 }
 
 /* Toolbar: Search and Filter Tabs */
@@ -159,8 +159,8 @@
 .rr-event-select-wrapper {
   display: flex;
   align-items: center;
-  background: #15181e;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #faf5ff;
+  border: 1px solid rgba(148,110,200,0.14);
   border-radius: 10px;
   padding: 2px 10px 2px 12px;
   gap: 8px;
@@ -173,7 +173,7 @@
 .rr-event-select {
   background: transparent;
   border: none;
-  color: #f3f4f6;
+  color: #1e1b2e;
   font-size: 13px;
   font-weight: 500;
   padding: 8px 4px;
@@ -183,12 +183,12 @@
 }
 
 .rr-event-select option {
-  background: #1a1e24;
-  color: #ffffff;
+  background: #faf5ff;
+  color: #3c3552;
 }
 
 .rr-event-select:focus {
-  color: #d946ef;
+  color: #cc6fe0;
 }
 
 .rr-customer-main {
@@ -200,18 +200,19 @@
 .rr-event-subtag {
   margin-top: 4px;
   font-size: 11.5px;
-  color: #c084fc;
+  color: #6d28d9;
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: rgba(192, 132, 252, 0.1);
+  background: #f3e8ff;
   padding: 2px 8px;
   border-radius: 6px;
-  border: 1px solid rgba(192, 132, 252, 0.2);
+  border: 1px solid #d8b4fe;
   max-width: 280px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-weight: 600;
 }
 
 .rr-event-tag-icon {
@@ -224,17 +225,17 @@
   top: 50%;
   transform: translateY(-50%);
   font-size: 14px;
-  color: #9ca3af;
+  color: #6b6480;
   pointer-events: none;
 }
 
 .rr-search-input {
   width: 100%;
-  background: #15181e;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #faf5ff;
+  border: 1px solid rgba(148,110,200,0.14);
   border-radius: 10px;
   padding: 10px 36px 10px 38px;
-  color: #ffffff;
+  color: #3c3552;
   font-size: 13.5px;
   outline: none;
   box-sizing: border-box;
@@ -252,29 +253,29 @@
   transform: translateY(-50%);
   background: none;
   border: none;
-  color: #6b7280;
+  color: #82848b;
   cursor: pointer;
   padding: 4px;
   font-size: 12px;
 }
 
 .rr-search-clear:hover {
-  color: #ffffff;
+  color: #3c3552;
 }
 
 .rr-filter-tabs {
   display: flex;
   gap: 8px;
-  background: #15181e;
+  background: #faf5ff;
   padding: 4px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(148,110,200,0.13);
 }
 
 .rr-filter-btn {
   background: transparent;
   border: none;
-  color: #9ca3af;
+  color: #6b6480;
   padding: 8px 18px;
   border-radius: 8px;
   font-size: 13px;
@@ -284,12 +285,12 @@
 }
 
 .rr-filter-btn:hover {
-  color: #ffffff;
+  color: #3c3552;
 }
 
 .rr-filter-btn.active {
-  background: #252a32;
-  color: #ffffff;
+  background: #faf5ff;
+  color: #3c3552;
   border: 1px solid #d946ef;
   box-shadow: 0 0 10px rgba(217, 70, 239, 0.25);
 }
@@ -301,7 +302,7 @@
   gap: 10px;
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid rgba(16, 185, 129, 0.3);
-  color: #6ee7b7;
+  color: #39785f;
   padding: 12px 18px;
   border-radius: 10px;
   font-size: 13.5px;
@@ -316,7 +317,7 @@
 .rr-error-alert {
   background: rgba(239, 68, 68, 0.12);
   border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #fca5a5;
+  color: #a77373;
   padding: 12px 16px;
   border-radius: 10px;
   font-size: 13.5px;
@@ -324,11 +325,11 @@
 
 /* Table */
 .rr-table-wrapper {
-  background: #15181e;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #faf5ff;
+  border: 1px solid rgba(148,110,200,0.14);
   border-radius: 14px;
   overflow: hidden;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 16px rgba(80,50,120,0.10);
 }
 
 .rr-table {
@@ -339,23 +340,23 @@
 }
 
 .rr-table th {
-  background: #1a1e24;
-  color: #9ca3af;
+  background: #faf5ff;
+  color: #746d88;
   font-weight: 600;
   padding: 14px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(148,110,200,0.14);
   white-space: nowrap;
 }
 
 .rr-table td {
   padding: 16px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  color: #e5e7eb;
+  border-bottom: 1px solid rgba(148,110,200,0.11);
+  color: #4a4458;
   vertical-align: middle;
 }
 
 .rr-table tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(148,110,200,0.04);
 }
 
 .rr-table tr:last-child td {
@@ -365,13 +366,13 @@
 .rr-table-empty {
   text-align: center;
   padding: 40px !important;
-  color: #9ca3af;
+  color: #6b6480;
   font-size: 14px;
 }
 
 .rr-cell-id {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  color: #ffffff;
+  color: #3c3552;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -381,33 +382,34 @@
   font-size: 11px;
   padding: 2px 7px;
   border-radius: 6px;
-  background: #2a2f3a;
-  color: #94a3b8;
+  background: #faf5ff;
+  color: #7a7392;
   font-family: inherit;
   font-weight: 600;
 }
 
 .rr-cell-customer {
-  color: #d1d5db;
+  color: #4b4564;
 }
 
 .rr-order-tag {
-  color: #d946ef;
-  font-weight: 600;
+  color: #7e22ce;
+  font-weight: 700;
 }
 
 .rr-name {
-  color: #f3f4f6;
-  font-weight: 500;
+  color: #1e1b2e;
+  font-weight: 600;
 }
 
 .rr-cell-amount {
-  color: #ffffff;
+  color: #1d1730;
   font-size: 14px;
+  font-weight: 700;
 }
 
 .rr-cell-date {
-  color: #9ca3af;
+  color: #524b68;
   white-space: nowrap;
 }
 
@@ -423,24 +425,28 @@
 
 .rr-badge.status-completed,
 .rr-badge.match-completed {
-  background: rgba(16, 185, 129, 0.15);
-  color: #34d399;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
 }
 
 .rr-badge.status-pending,
 .rr-badge.match-pending {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
+  background: #fefce8;
+  color: #854d0e;
+  border: 1px solid #fef08a;
 }
 
 .rr-badge.status-failed {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
 }
 
 .rr-badge.match-mismatched {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
 }
 
 /* Actions */
@@ -451,7 +457,7 @@
 .rr-action-link {
   background: none;
   border: none;
-  color: #38bdf8;
+  color: #2fa4e0;
   font-weight: 600;
   font-size: 13px;
   cursor: pointer;
@@ -461,14 +467,14 @@
 }
 
 .rr-action-link:hover {
-  color: #7dd3fc;
+  color: #5fb8e8;
   text-decoration: underline;
 }
 
 .rr-action-retry-btn {
   background: rgba(239, 68, 68, 0.15);
   border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #f87171;
+  color: #d64545;
   font-weight: 600;
   font-size: 12.5px;
   padding: 5px 12px;
@@ -480,5 +486,5 @@
 
 .rr-action-retry-btn:hover {
   background: rgba(239, 68, 68, 0.25);
-  color: #ffffff;
+  color: #3c3552;
 }

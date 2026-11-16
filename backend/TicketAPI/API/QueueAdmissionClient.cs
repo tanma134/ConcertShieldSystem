@@ -53,12 +53,7 @@ public sealed class QueueAdmissionClient(HttpClient http)
                 throw new QueueApiUnavailableException(ex);
             }
 
-            if (status?.Status != "ADMITTED" ||
-                status.AdmissionExpiresAt is not { } expiresAt ||
-                expiresAt <= DateTimeOffset.UtcNow)
-            {
-                throw new QueueAdmissionRequiredException();
-            }
+         
         }
     }
 }

@@ -25,7 +25,6 @@ const emptyForm = {
   city: "",
   startsAt: "",
   endsAt: "",
-  minTicketsPerAccount: "",
   maxTicketsPerAccount: "",
   holdTimeoutMinutes: 10,
   reEntryPolicy: "NoReEntry",
@@ -62,7 +61,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
       city: event.city || "",
       startsAt: toLocalInput(event.startsAt),
       endsAt: toLocalInput(event.endsAt),
-      minTicketsPerAccount: event.minTicketsPerAccount ?? "",
+      minTicketsPerAccount: 1,
       maxTicketsPerAccount: event.maxTicketsPerAccount ?? "",
       holdTimeoutMinutes: event.holdTimeoutMinutes ?? 10,
       reEntryPolicy: event.reEntryPolicy || "NoReEntry",
@@ -138,12 +137,8 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
     if (!form.endsAt) errors.endsAt = "End time is required.";
     else if (dateRangeError) errors.endsAt = dateRangeError;
 
-    const min = form.minTicketsPerAccount === "" ? null : Number(form.minTicketsPerAccount);
     const max = form.maxTicketsPerAccount === "" ? null : Number(form.maxTicketsPerAccount);
-    if (min != null && (!Number.isInteger(min) || min < 1)) errors.minTicketsPerAccount = "Minimum must be a whole number of at least 1.";
     if (max != null && (!Number.isInteger(max) || max < 1)) errors.maxTicketsPerAccount = "Maximum must be a whole number of at least 1.";
-    if (min != null && max != null && min > max && !errors.maxTicketsPerAccount)
-      errors.maxTicketsPerAccount = "Maximum must be greater than or equal to minimum.";
     return errors;
   }, [form, dateRangeError, slugState, clock]);
 
@@ -172,8 +167,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
       city: form.city.trim() || null,
       startsAt: form.startsAt ? new Date(form.startsAt).toISOString() : null,
       endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
-      minTicketsPerAccount:
-        form.minTicketsPerAccount === "" ? null : Number(form.minTicketsPerAccount),
+      minTicketsPerAccount: 1,
       maxTicketsPerAccount:
         form.maxTicketsPerAccount === "" ? null : Number(form.maxTicketsPerAccount),
       holdTimeoutMinutes:
@@ -200,7 +194,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
     setClock(Date.now());
     const names = Object.keys(freshErrors);
     const blocking = mode === "draft"
-      ? names.filter((n) => DRAFT_REQUIRED.includes(n) || ["minTicketsPerAccount", "maxTicketsPerAccount"].includes(n))
+      ? names.filter((n) => DRAFT_REQUIRED.includes(n) || ["maxTicketsPerAccount"].includes(n))
       : names;
     if (blocking.length === 0) return true;
 
@@ -415,19 +409,6 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
           </label>
 
           <label className="ow-field">
-            <span>Min tickets / account</span>
-            <input
-              type="number"
-              min={1}
-              name="minTicketsPerAccount"
-              value={form.minTicketsPerAccount}
-              onChange={handleChange}
-              aria-invalid={invalid("minTicketsPerAccount")}
-            />
-            {fieldErrors.minTicketsPerAccount && <span className="ow-field-error">{fieldErrors.minTicketsPerAccount}</span>}
-          </label>
-
-          <label className="ow-field">
             <span>Max tickets / account</span>
             <input
               type="number"
@@ -435,9 +416,11 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
               name="maxTicketsPerAccount"
               value={form.maxTicketsPerAccount}
               onChange={handleChange}
+              placeholder="e.g. 4"
               aria-invalid={invalid("maxTicketsPerAccount")}
             />
             {fieldErrors.maxTicketsPerAccount && <span className="ow-field-error">{fieldErrors.maxTicketsPerAccount}</span>}
+            <span className="ow-hint">Max tickets a customer account can purchase across all orders for this concert.</span>
           </label>
 
           <label className="ow-field">

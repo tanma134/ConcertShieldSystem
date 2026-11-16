@@ -4,6 +4,8 @@ import QRCode from "qrcode";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import ticketApi from "../../api/ticketApi";
+import ticketReturnApi from "../../api/ticketReturnApi";
+import { useToast } from "../../components/ToastProvider";
 import "./TicketDetailsPage.css";
 
 function getValidDate(value) {
@@ -124,6 +126,11 @@ export default function TicketDetailsPage() {
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState("");
+
+  const toast = useToast();
+  const [returnModalOpen, setReturnModalOpen] = useState(false);
+  const [returnReason, setReturnReason] = useState("");
+  const [submittingReturn, setSubmittingReturn] = useState(false);
 
   const [qrOpen, setQrOpen] = useState(false);
   const [qrImage, setQrImage] = useState("");
@@ -333,6 +340,29 @@ export default function TicketDetailsPage() {
     String(ticket.status || "").toLowerCase() === "active" &&
     !ticket.checkedInAt;
 
+  const canRequestReturn =
+    String(ticket.orderStatus || "").toLowerCase() === "paid" &&
+    String(ticket.status || "").toLowerCase() === "active" &&
+    !ticket.checkedInAt;
+
+  const handleSubmitReturn = async () => {
+    if (returnReason.trim().length < 10) {
+      toast.error("Please enter a reason with at least 10 characters.");
+      return;
+    }
+    setSubmittingReturn(true);
+    try {
+      await ticketReturnApi.submit(ticket.ticketId, returnReason.trim());
+      toast.success("Refund request submitted successfully! Staff will review shortly.");
+      setReturnModalOpen(false);
+      window.location.reload();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Could not submit refund request.");
+    } finally {
+      setSubmittingReturn(false);
+    }
+  };
+
   const hasPurchaseInfo = Boolean(purchaseDate || amountPaid);
 
   return (
@@ -453,15 +483,35 @@ export default function TicketDetailsPage() {
             <div className="ticket-detail-footer">
               <p>Show your QR code at the entrance to check in.</p>
 
-              {canShowQr && (
-                <button
-                  type="button"
-                  className="ticket-show-qr-button"
-                  onClick={handleShowQr}
-                >
-                  Show QR Code
-                </button>
-              )}
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center" }}>
+                {ticket.orderId && (
+                  <Link
+                    to={`/my-orders/${ticket.orderId}`}
+                    className="ticket-help-link"
+                    title="Get help or dispute issues regarding this order"
+                  >
+                    💬 Need Help?
+                  </Link>
+                )}
+                {canRequestReturn && (
+                  <button
+                    type="button"
+                    className="ticket-refund-btn"
+                    onClick={() => setReturnModalOpen(true)}
+                  >
+                    ↺ Request Ticket Refund
+                  </button>
+                )}
+                {canShowQr && (
+                  <button
+                    type="button"
+                    className="ticket-show-qr-button"
+                    onClick={handleShowQr}
+                  >
+                    Show QR Code
+                  </button>
+                )}
+              </div>
             </div>
           </section>
 
@@ -600,6 +650,71 @@ export default function TicketDetailsPage() {
               Keep this screen open while your ticket is being scanned.
             </p>
           </section>
+        </div>
+      )}
+
+      {returnModalOpen && (
+        <div className="ticket-modal-overlay" onClick={() => !submittingReturn && setReturnModalOpen(false)}>
+          <div className="ticket-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="ticket-modal-header">
+              <div className="ticket-modal-icon">↺</div>
+              <div>
+                <h3 className="ticket-modal-title">Ticket Refund Request</h3>
+                <p className="ticket-modal-subtitle">Step 11 · Customer ticket refund submission</p>
+              </div>
+            </div>
+
+            <div className="ticket-modal-info-box">
+              <div className="ticket-modal-info-row">
+                <span>Event</span>
+                <strong>{ticket.eventName}</strong>
+              </div>
+              <div className="ticket-modal-info-row">
+                <span>Ticket Type</span>
+                <strong>{ticket.ticketTypeName} ({formatPrice(ticket.unitPrice || 2500000)})</strong>
+              </div>
+              <div className="ticket-modal-info-row">
+                <span>Payment Method</span>
+                <strong>{ticket.paymentMethod || "VNPay"}</strong>
+              </div>
+              <div className="ticket-modal-policy-badge">
+                ✓ 100% Refund Eligible (Policy Active)
+              </div>
+            </div>
+
+            <label className="ticket-modal-label">
+              <span>Reason for Refund *</span>
+              <span className="ticket-modal-char-count">
+                {returnReason.trim().length}/10 min characters
+              </span>
+            </label>
+            <textarea
+              className="ticket-modal-textarea"
+              rows={4}
+              placeholder="e.g. Schedule conflict, family emergency, or unexpected travel..."
+              value={returnReason}
+              onChange={(e) => setReturnReason(e.target.value)}
+            />
+
+            <div className="ticket-modal-actions">
+              <button
+                type="button"
+                className="ticket-modal-cancel-btn"
+                onClick={() => setReturnModalOpen(false)}
+                disabled={submittingReturn}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="ticket-modal-submit-btn"
+                disabled={submittingReturn || returnReason.trim().length < 10}
+                onClick={handleSubmitReturn}
+              >
+                {submittingReturn ? "Submitting..." : "Submit Refund Request"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

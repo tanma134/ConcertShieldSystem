@@ -1,12 +1,12 @@
 :root {
-  --home-bg: #0d0d0d;
-  --home-card: #161616;
-  --home-line: #2a2a2a;
-  --home-primary: #e84393;
-  --home-primary-dark: #d43585;
-  --home-text: #ffffff;
-  --home-text-muted: #888888;
-  --home-text-faint: #555555;
+  --home-bg: #f8f4fc;
+  --home-card: #ffffff;
+  --home-line: #e3d6f0;
+  --home-primary: #e051a0;
+  --home-primary-dark: #c2185b;
+  --home-text: #565462;
+  --home-text-muted: #5a5470;
+  --home-text-faint: #b8aed0;
   --home-radius: 16px;
 }
 
@@ -31,7 +31,7 @@
   right: -80px;
   width: 380px;
   height: 380px;
-  background: #7c3aed;
+  background: #9333ea;
   opacity: 0.07;
   border-radius: 50%;
   pointer-events: none;
@@ -67,13 +67,13 @@
   height: 64px;
   margin: 0 auto 20px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--home-primary), #7c3aed);
+  background: linear-gradient(135deg, var(--home-primary), #9333ea);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 26px;
   font-weight: 700;
-  color: #fff;
+  color: #ffffff;
 }
 
 .home-greeting {
@@ -113,7 +113,7 @@
 
 .home-button--primary {
   background: var(--home-primary);
-  color: #fff;
+  color: #3c3552;
 }
 
 .home-button--primary:hover {
@@ -128,7 +128,7 @@
 
 .home-button--ghost:hover {
   border-color: var(--home-text-muted);
-  background: #1e1e1e;
+  background: #ffffff;
 }
 
 .home-button:active {

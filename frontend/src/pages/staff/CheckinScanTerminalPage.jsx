@@ -80,7 +80,7 @@ export default function CheckinScanTerminalPage() {
           <h1 style={{ fontSize: "1.75rem", fontWeight: "700", marginBottom: "8px" }}>
             Gate Check-in Terminal
           </h1>
-          <p style={{ color: "#6b7280" }}>
+          <p style={{ color: "#655d7e" }}>
             Scan QR codes or enter ticket identifiers to validate entry and exit according to event policy.
           </p>
         </div>
@@ -90,7 +90,7 @@ export default function CheckinScanTerminalPage() {
           style={{
             background: "#ffffff",
             borderRadius: "12px",
-            border: "1px solid #e5e7eb",
+            border: "1px solid #4a4458",
             padding: "24px",
             boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
             marginBottom: "24px",
@@ -108,7 +108,7 @@ export default function CheckinScanTerminalPage() {
                   width: "100%",
                   padding: "10px 12px",
                   borderRadius: "8px",
-                  border: "1px solid #d1d5db",
+                  border: "1px solid #8b83a0",
                   fontSize: "1rem",
                 }}
               >
@@ -131,9 +131,9 @@ export default function CheckinScanTerminalPage() {
                     flex: 1,
                     padding: "10px",
                     borderRadius: "8px",
-                    border: scanType === "Entry" ? "2px solid #10b981" : "1px solid #d1d5db",
-                    background: scanType === "Entry" ? "#ecfdf5" : "#ffffff",
-                    color: scanType === "Entry" ? "#065f46" : "#374151",
+                    border: scanType === "Entry" ? "2px solid #0e9e78" : "1px solid #8b83a0",
+                    background: scanType === "Entry" ? "#e8faf1" : "#ffffff",
+                    color: scanType === "Entry" ? "#17856a" : "#d8d0e6",
                     fontWeight: "600",
                     cursor: "pointer",
                   }}
@@ -147,9 +147,9 @@ export default function CheckinScanTerminalPage() {
                     flex: 1,
                     padding: "10px",
                     borderRadius: "8px",
-                    border: scanType === "Exit" ? "2px solid #f59e0b" : "1px solid #d1d5db",
+                    border: scanType === "Exit" ? "2px solid #d98f14" : "1px solid #8b83a0",
                     background: scanType === "Exit" ? "#fffbeb" : "#ffffff",
-                    color: scanType === "Exit" ? "#92400e" : "#374151",
+                    color: scanType === "Exit" ? "#96500c" : "#d8d0e6",
                     fontWeight: "600",
                     cursor: "pointer",
                   }}
@@ -181,7 +181,7 @@ export default function CheckinScanTerminalPage() {
               disabled={loading || !ticketInput.trim()}
               style={{
                 padding: "12px 24px",
-                background: scanType === "Entry" ? "#10b981" : "#f59e0b",
+                background: scanType === "Entry" ? "#0e9e78" : "#d98f14",
                 color: "#ffffff",
                 border: "none",
                 borderRadius: "8px",
@@ -202,24 +202,24 @@ export default function CheckinScanTerminalPage() {
               padding: "24px",
               borderRadius: "12px",
               marginBottom: "24px",
-              background: lastResult.success ? "#f0fdf4" : "#fef2f2",
-              border: `2px solid ${lastResult.success ? "#22c55e" : "#ef4444"}`,
+              background: lastResult.success ? "#f0fdf4" : "#fdeaea",
+              border: `2px solid ${lastResult.success ? "#1eaa55" : "#d63a3a"}`,
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px" }}>
-              <span style={{ fontSize: "1.1rem", fontWeight: "800", color: lastResult.success ? "#15803d" : "#b91c1c" }}>{lastResult.success ? "SUCCESS" : "REJECTED"}</span>
+              <span style={{ fontSize: "1.1rem", fontWeight: "800", color: lastResult.success ? "#1e9a55" : "#a82424" }}>{lastResult.success ? "SUCCESS" : "REJECTED"}</span>
               <div>
                 <h2
                   style={{
                     fontSize: "1.35rem",
                     fontWeight: "800",
-                    color: lastResult.success ? "#15803d" : "#b91c1c",
+                    color: lastResult.success ? "#1e9a55" : "#a82424",
                     margin: 0,
                   }}
                 >
                   {lastResult.success ? "SCAN SUCCESSFUL" : "SCAN REJECTED"} ({lastResult.resultCode})
                 </h2>
-                <p style={{ margin: "4px 0 0", fontSize: "1.05rem", fontWeight: "600", color: "#374151" }}>
+                <p style={{ margin: "4px 0 0", fontSize: "1.05rem", fontWeight: "600", color: "#d8d0e6" }}>
                   {lastResult.message}
                 </p>
               </div>
@@ -233,18 +233,18 @@ export default function CheckinScanTerminalPage() {
                   gap: "12px",
                   marginTop: "16px",
                   paddingTop: "16px",
-                  borderTop: "1px dashed #d1d5db",
+                  borderTop: "1px dashed #8b83a0",
                   fontSize: "0.95rem",
                 }}
               >
                 <div>
-                  <span style={{ color: "#6b7280" }}>Attendee:</span> <strong>{lastResult.ownerName}</strong>
+                  <span style={{ color: "#655d7e" }}>Attendee:</span> <strong>{lastResult.ownerName}</strong>
                 </div>
                 <div>
-                  <span style={{ color: "#6b7280" }}>Ticket Type:</span> <strong>{lastResult.ticketTypeName}</strong>
+                  <span style={{ color: "#655d7e" }}>Ticket Type:</span> <strong>{lastResult.ticketTypeName}</strong>
                 </div>
                 <div>
-                  <span style={{ color: "#6b7280" }}>Seat:</span> <strong>{lastResult.seatId ? `Seat #${lastResult.seatId}` : "General Admission"}</strong>
+                  <span style={{ color: "#655d7e" }}>Seat:</span> <strong>{lastResult.seatId ? `Seat #${lastResult.seatId}` : "General Admission"}</strong>
                 </div>
               </div>
             )}
@@ -256,7 +256,7 @@ export default function CheckinScanTerminalPage() {
           style={{
             background: "#ffffff",
             borderRadius: "12px",
-            border: "1px solid #e5e7eb",
+            border: "1px solid #4a4458",
             padding: "20px",
           }}
         >
@@ -264,12 +264,12 @@ export default function CheckinScanTerminalPage() {
             Recent Scan History
           </h3>
           {recentScans.length === 0 ? (
-            <p style={{ color: "#9ca3af", fontStyle: "italic", margin: 0 }}>No scans recorded in this session yet.</p>
+            <p style={{ color: "#7e7694", fontStyle: "italic", margin: 0 }}>No scans recorded in this session yet.</p>
           ) : (
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
                 <thead>
-                  <tr style={{ borderBottom: "2px solid #e5e7eb", textAlign: "left", color: "#6b7280" }}>
+                  <tr style={{ borderBottom: "2px solid #4a4458", textAlign: "left", color: "#655d7e" }}>
                     <th style={{ padding: "8px 12px" }}>Time</th>
                     <th style={{ padding: "8px 12px" }}>Ticket Code</th>
                     <th style={{ padding: "8px 12px" }}>Gate</th>
@@ -280,7 +280,7 @@ export default function CheckinScanTerminalPage() {
                 </thead>
                 <tbody>
                   {recentScans.map((s, idx) => (
-                    <tr key={idx} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                    <tr key={idx} style={{ borderBottom: "1px solid #eee9f5" }}>
                       <td style={{ padding: "8px 12px" }}>{s.time}</td>
                       <td style={{ padding: "8px 12px", fontFamily: "monospace" }}>{s.code}</td>
                       <td style={{ padding: "8px 12px" }}>{s.gate}</td>
@@ -292,7 +292,7 @@ export default function CheckinScanTerminalPage() {
                             fontSize: "0.8rem",
                             fontWeight: "600",
                             background: s.type === "Entry" ? "#d1fae5" : "#fef3c7",
-                            color: s.type === "Entry" ? "#065f46" : "#92400e",
+                            color: s.type === "Entry" ? "#17856a" : "#96500c",
                           }}
                         >
                           {s.type}
@@ -306,13 +306,13 @@ export default function CheckinScanTerminalPage() {
                             fontSize: "0.8rem",
                             fontWeight: "700",
                             background: s.success ? "#dcfce7" : "#fee2e2",
-                            color: s.success ? "#166534" : "#991b1b",
+                            color: s.success ? "#1f8a50" : "#962020",
                           }}
                         >
                           {s.resultCode}
                         </span>
                       </td>
-                      <td style={{ padding: "8px 12px", color: "#4b5563" }}>{s.message}</td>
+                      <td style={{ padding: "8px 12px", color: "#574f72" }}>{s.message}</td>
                     </tr>
                   ))}
                 </tbody>

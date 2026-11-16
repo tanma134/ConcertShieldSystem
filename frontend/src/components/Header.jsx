@@ -189,14 +189,19 @@ export default function Header() {
               />
               <defs>
                 <linearGradient id="tb-shield-grad" x1="3" y1="2" x2="21" y2="22">
-                  <stop offset="0" stopColor="#7c3aed" />
+                  <stop offset="0" stopColor="#a855f7" />
                   <stop offset="0.55" stopColor="#c026d3" />
-                  <stop offset="1" stopColor="#ec4899" />
+                  <stop offset="1" stopColor="#e8439c" />
                 </linearGradient>
               </defs>
             </svg>
           </span>
-          Concert<span>Shield</span>
+          <span className="tb-logo-text">
+            <span className="tb-logo-name">
+              Concert<span>Shield</span>
+            </span>
+            <span className="tb-logo-tagline">Fair Ticketing</span>
+          </span>
         </Link>
 
         <div className="tb-search-wrap" ref={searchRef}>
@@ -322,12 +327,36 @@ export default function Header() {
             </>
           )}
 
-          {/* Notification Bell Dropdown (logged-in Customer and Organizer only) */}
+          {isAuthenticated && (
+            <Link to="/my-tickets" className="tb-header-link">
+              My Tickets
+            </Link>
+          )}
+
+          {isStaff && (
+            <Link to="/staff/gate-assignment" className="tb-header-link" style={{ color: "#21a87b", fontWeight: 600 }}>
+              Staff Portal
+            </Link>
+          )}
+
+          {isAdmin && (
+            <Link to="/admin" className="tb-header-link">
+              Admin
+            </Link>
+          )}
+
+          {isAuthenticated && (isStaff || isAdmin) && (
+            <Link to={isAdmin ? "/admin/incidents" : "/staff/incidents"} className="tb-header-link">
+              Incidents
+            </Link>
+          )}
+
+          {/* Notification Bell Dropdown (Chỉ icon chuông, đặt bên trái User Account Menu) */}
           {isAuthenticated && !isAdmin && (
             <div className="tb-notif-wrap" ref={notifRef}>
               <button
                 type="button"
-                className="tb-header-link tb-notif-btn"
+                className="tb-notif-btn tb-notif-icon-only"
                 aria-haspopup="true"
                 aria-expanded={notifOpen}
                 onClick={() => {
@@ -336,8 +365,12 @@ export default function Header() {
                   if (next) fetchHeaderNotifications();
                 }}
                 title="Notifications"
+                aria-label="Notifications"
               >
-                🔔 Notifications
+                <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
                 {unreadCount > 0 && (
                   <span className="tb-notif-badge">{unreadCount > 99 ? "99+" : unreadCount}</span>
                 )}
@@ -429,30 +462,6 @@ export default function Header() {
             </div>
           )}
 
-          {isAuthenticated && (
-            <Link to="/my-tickets" className="tb-header-link">
-              My Tickets
-            </Link>
-          )}
-
-          {isStaff && (
-            <Link to="/staff/gate-assignment" className="tb-header-link" style={{ color: "#34d399", fontWeight: 600 }}>
-              Staff Portal
-            </Link>
-          )}
-
-          {isAdmin && (
-            <Link to="/admin" className="tb-header-link">
-              Admin
-            </Link>
-          )}
-
-          {isAuthenticated && (isStaff || isAdmin) && (
-            <Link to={isAdmin ? "/admin/incidents" : "/staff/incidents"} className="tb-header-link">
-              Incidents
-            </Link>
-          )}
-
           <div className="tb-account" ref={accountRef}>
             {isAuthenticated ? (
               <>
@@ -463,7 +472,33 @@ export default function Header() {
                   aria-expanded={menuOpen}
                   onClick={() => setMenuOpen((v) => !v)}
                 >
-                  {user?.fullName || user?.email || "Account"}
+                  {(() => {
+                    const label = user?.fullName || user?.email || "Account";
+                    const initials = label
+                      .split(/\s+/)
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .map((part) => part[0])
+                      .join("")
+                      .toUpperCase();
+                    return (
+                      <>
+                        <span className="tb-account-avatar" aria-hidden="true">
+                          {initials}
+                        </span>
+                        <span className="tb-account-info">
+                          <span className="tb-account-name">{label}</span>
+                          <span className="tb-account-sub">
+                            <svg viewBox="0 0 20 20" width="11" height="11" fill="none">
+                              <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.5" />
+                              <path d="m6.8 10.2 2 2 4.4-4.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            eKYC Verified
+                          </span>
+                        </span>
+                      </>
+                    );
+                  })()}
                   <svg
                     viewBox="0 0 20 20"
                     width="12"

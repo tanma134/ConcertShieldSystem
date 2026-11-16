@@ -87,7 +87,7 @@ export default function OrganizerDashboardPage() {
           {isOrganizer && (
             <div style={{ display: "flex", gap: "10px" }}>
               <Link to="/organizer/vouchers" className="tb-btn tb-btn-outline">
-                🎟️ Quản lý Voucher
+                🎟️ Voucher Management
               </Link>
               <Link to="/organizer/events/new" className="tb-btn tb-btn-primary">
                 + Create New Event

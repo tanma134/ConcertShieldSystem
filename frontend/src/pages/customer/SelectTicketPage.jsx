@@ -8,16 +8,16 @@ import Footer from "../../components/Footer";
 import { useToast } from "../../components/ToastProvider";
 
 const ZONE_PALETTE = [
-  "#f59e0b",
-  "#14b8a6",
+  "#d98f14",
+  "#14a89a",
   "#a855f7",
   "#3b82f6",
-  "#ef4444",
-  "#22c55e",
-  "#ec4899",
-  "#84cc16",
-  "#06b6d4",
-  "#f97316",
+  "#d63a3a",
+  "#1eaa55",
+  "#e8439c",
+  "#78b014",
+  "#1da8c8",
+  "#e06a1a",
 ];
 
 const formatPrice = (price) =>
@@ -44,8 +44,32 @@ function parseShape(shapeJson) {
   }
 }
 
-function getZonePosition(shapeJson) {
-  const shape = parseShape(shapeJson);
+function autoRectangle(index, total) {
+  const cols = Math.min(4, Math.max(total, 1));
+  const col = index % cols;
+  const row = Math.floor(index / cols);
+  const w = 90 / cols - 3;
+  return { type: "rectangle", x: 5 + col * (90 / cols), y: 28 + row * 22, w, h: 16, rot: 0 };
+}
+
+function getZonePosition(shapeJson, index = 0, total = 1) {
+  let shape = parseShape(shapeJson);
+
+  // If no valid shape found in shapeJson, fallback to autoRectangle so zones don't pile up at (0, 0)
+  const hasPolygon =
+    shape?.type === "polygon" &&
+    Array.isArray(shape.points) &&
+    shape.points.length > 2;
+  const hasRect =
+    shape &&
+    typeof shape.x === "number" &&
+    typeof shape.y === "number" &&
+    typeof shape.w === "number" &&
+    typeof shape.h === "number";
+
+  if (!hasPolygon && !hasRect) {
+    shape = autoRectangle(index, total);
+  }
 
   if (
     shape.type === "polygon" &&
@@ -82,7 +106,7 @@ function getZonePosition(shapeJson) {
     left: `${Number(shape.x) || 0}%`,
     top: `${Number(shape.y) || 0}%`,
     width: `${Number(shape.w) || 20}%`,
-    height: `${Number(shape.h) || 18}%`,
+    height: `${Number(shape.h) || 16}%`,
     transform: `rotate(${Number(shape.rot) || 0}deg)`,
   };
 }
@@ -223,6 +247,37 @@ export default function SelectTicketPage() {
     return ticket?.colorCode || ZONE_PALETTE[paletteIndex];
   }
 
+  function getTicketSalesStatus(ticket) {
+    if (!ticket) return { isOnSale: true };
+    const now = Date.now();
+    if (ticket.salesStartsAt) {
+      const start = new Date(ticket.salesStartsAt).getTime();
+      if (start > now) {
+        const d = new Date(start);
+        const pad = (n) => String(n).padStart(2, "0");
+        const dateStr = `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        return {
+          isOnSale: false,
+          isUpcoming: true,
+          label: `Opens ${dateStr}`,
+          fullLabel: `Opens at ${d.toLocaleString()}`,
+        };
+      }
+    }
+    if (ticket.salesEndsAt) {
+      const end = new Date(ticket.salesEndsAt).getTime();
+      if (end <= now) {
+        return {
+          isOnSale: false,
+          isClosed: true,
+          label: "Sales closed",
+          fullLabel: "Sales closed",
+        };
+      }
+    }
+    return { isOnSale: true };
+  }
+
   function getTicketAvailable(ticket) {
     return Math.max(
       0,
@@ -354,6 +409,8 @@ export default function SelectTicketPage() {
 
   function getZoneMax(zone) {
     const ticket = getTicket(zone.ticketTypeId);
+    const status = getTicketSalesStatus(ticket);
+    if (!status.isOnSale) return 0;
 
     return Math.min(
       getZoneAvailable(zone),
@@ -363,6 +420,9 @@ export default function SelectTicketPage() {
   }
 
   function getTicketMax(ticket) {
+    const status = getTicketSalesStatus(ticket);
+    if (!status.isOnSale) return 0;
+
     return Math.min(
       getTicketAvailable(ticket),
       Number(ticket?.maxPerOrder || maxPerAccount),
@@ -620,6 +680,22 @@ export default function SelectTicketPage() {
     <div className="tb-select-ticket-page">
       <div className="tb-container tb-select-layout">
         <main className="tb-col-7">
+          <div className="tb-select-back-bar" style={{ marginBottom: "14px" }}>
+            <Link
+              to={event?.slug ? `/events/${event.slug}` : "/"}
+              className="tb-section-link"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                fontSize: "13.5px",
+                fontWeight: "700",
+                textDecoration: "none"
+              }}
+            >
+              ← Back to Event Details
+            </Link>
+          </div>
           <div className="tb-section-header">
             <h2 className="tb-section-title">
               {isStandingZones
@@ -663,10 +739,13 @@ export default function SelectTicketPage() {
               <div className="tb-zone-map-wrapper">
                 <div className="tb-zone-map">
                   <div className="tb-map-stage">STAGE</div>
+                  <div className="tb-map-foh">FOH</div>
 
-                  {zones.map((zone) => {
+                  {zones.map((zone, index) => {
                     const ticket = getTicket(zone.ticketTypeId);
                     const color = getTicketColor(zone.ticketTypeId);
+                    const salesStatus = getTicketSalesStatus(ticket);
+                    const notOnSale = !salesStatus.isOnSale;
                     const soldOut = getZoneAvailable(zone) <= 0;
                     const quantity = Number(
                       zoneQuantities[zone.seatZoneId] || 0
@@ -678,17 +757,18 @@ export default function SelectTicketPage() {
                         key={zone.seatZoneId}
                         className={`tb-zone ${
                           quantity > 0 ? "tb-zone-selected" : ""
-                        } ${soldOut ? "tb-zone-sold-out" : ""}`}
+                        } ${soldOut ? "tb-zone-sold-out" : ""} ${notOnSale ? "tb-zone-locked" : ""}`}
                         style={{
-                          ...getZonePosition(zone.shapeJson),
-                          "--zone-color": soldOut ? "#71717a" : color,
+                          ...getZonePosition(zone.shapeJson, index, zones.length),
+                          "--zone-color": soldOut || notOnSale ? "#94a3b8" : color,
                         }}
-                        disabled={soldOut}
+                        disabled={soldOut || notOnSale}
+                        title={notOnSale ? `${zone.zoneName} (${salesStatus.fullLabel})` : undefined}
                         onClick={() => openZonePicker(zone)}
                       >
                         <span className="tb-zone-name">{zone.zoneName}</span>
                         <span className="tb-zone-price">
-                          {soldOut ? "Sold out" : formatPrice(ticket?.price)}
+                          {soldOut ? "Sold out" : notOnSale ? salesStatus.label : formatPrice(ticket?.price)}
                         </span>
                         {quantity > 0 && (
                           <span className="tb-zone-selected-count">
@@ -712,7 +792,7 @@ export default function SelectTicketPage() {
               <div className="tb-seat-canvas">
                 <div className="tb-seat-stage">STAGE</div>
 
-                {zones.map((zone) => {
+                {zones.map((zone, index) => {
                   const color = getTicketColor(zone.ticketTypeId);
                   const seats = zone.seats ?? [];
                   const columns = Math.max(
@@ -733,7 +813,7 @@ export default function SelectTicketPage() {
                       key={zone.seatZoneId}
                       className="tb-seat-zone"
                       style={{
-                        ...getZonePosition(zone.shapeJson),
+                        ...getZonePosition(zone.shapeJson, index, zones.length),
                         "--zone-color": color,
                         "--seat-columns": columns,
                         "--seat-rows": rows,
@@ -756,6 +836,9 @@ export default function SelectTicketPage() {
                           const held = heldSeatIds.includes(seatId);
                           const selected =
                             selectedSeatIds.includes(seatId);
+                          const zoneTicket = getTicket(zone.ticketTypeId);
+                          const zoneSalesStatus = getTicketSalesStatus(zoneTicket);
+                          const notOnSale = !zoneSalesStatus.isOnSale;
 
                           const statusClass = sold
                             ? "is-sold"
@@ -763,7 +846,9 @@ export default function SelectTicketPage() {
                               ? "is-held"
                               : selected
                                 ? "is-selected"
-                                : "is-available";
+                                : notOnSale
+                                  ? "is-locked"
+                                  : "is-available";
 
                           const statusText = sold
                             ? "sold"
@@ -771,7 +856,9 @@ export default function SelectTicketPage() {
                               ? "on hold"
                               : selected
                                 ? "selected"
-                                : "available";
+                                : notOnSale
+                                  ? zoneSalesStatus.label
+                                  : "available";
 
                           return (
                             <button
@@ -789,6 +876,7 @@ export default function SelectTicketPage() {
                               disabled={
                                 sold ||
                                 held ||
+                                notOnSale ||
                                 Boolean(availabilityError) ||
                                 isHolding
                               }
@@ -810,16 +898,24 @@ export default function SelectTicketPage() {
                 const quantity = Number(
                   ticketQuantities[ticket.ticketTypeId] || 0
                 );
+                const salesStatus = getTicketSalesStatus(ticket);
+                const notOnSale = !salesStatus.isOnSale;
                 const available = getTicketAvailable(ticket);
                 const max = getTicketMax(ticket);
 
                 return (
-                  <div className="tb-ticket-row" key={ticket.ticketTypeId}>
+                  <div className={`tb-ticket-row ${notOnSale ? "is-not-on-sale" : ""}`} key={ticket.ticketTypeId}>
                     <div className="tb-ticket-info">
                       <div className="tb-ticket-name">{ticket.typeName}</div>
-                      <div className="tb-ticket-avail">
-                        {available} ticket(s) available
-                      </div>
+                      {notOnSale ? (
+                        <div className="tb-ticket-avail" style={{ color: salesStatus.isUpcoming ? "#d97706" : "#dc2626", fontWeight: 600 }}>
+                          {salesStatus.isUpcoming ? `⏳ ${salesStatus.label}` : `🔒 ${salesStatus.label}`}
+                        </div>
+                      ) : (
+                        <div className="tb-ticket-avail">
+                          {available} ticket(s) available
+                        </div>
+                      )}
                     </div>
 
                     <div className="tb-ticket-price">
@@ -832,7 +928,7 @@ export default function SelectTicketPage() {
                         onClick={() =>
                           updateTicketQuantity(ticket, quantity - 1)
                         }
-                        disabled={quantity <= 0}
+                        disabled={notOnSale || quantity <= 0}
                       >
                         −
                       </button>
@@ -841,6 +937,7 @@ export default function SelectTicketPage() {
                         min="0"
                         max={max}
                         value={quantity}
+                        disabled={notOnSale}
                         onChange={(e) =>
                           updateTicketQuantity(
                             ticket,
@@ -853,7 +950,7 @@ export default function SelectTicketPage() {
                         onClick={() =>
                           updateTicketQuantity(ticket, quantity + 1)
                         }
-                        disabled={quantity >= max}
+                        disabled={notOnSale || quantity >= max}
                       >
                         +
                       </button>

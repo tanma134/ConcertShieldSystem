@@ -11,6 +11,13 @@ const seatingApi = {
   // Creates or replaces the whole layout.
   build: (eventId, dto) => axiosClient.post(`/seating/event/${eventId}`, dto),
 
+  // Updates layout metadata (stage shape, FOH technical booth, dimensions).
+  updateLayout: (eventId, layoutJson) =>
+    axiosClient.put(`/seating/event/${eventId}/layout`, {
+      layoutJson:
+        typeof layoutJson === "string" ? layoutJson : JSON.stringify(layoutJson),
+    }),
+
   addZone: (eventId, dto) =>
     axiosClient.post(`/seating/event/${eventId}/zones`, dto),
   updateZone: (seatZoneId, dto) =>

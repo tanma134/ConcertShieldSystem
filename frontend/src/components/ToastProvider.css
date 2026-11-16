@@ -14,16 +14,16 @@
   gap: 10px;
   padding: 12px 14px;
   border-radius: 10px;
-  color: #fff;
+  color: #3c3552;
   font-size: 14px;
   line-height: 1.4;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 12px 30px -14px rgba(80,50,120,0.45);
   border-left: 4px solid transparent;
   animation: app-toast-in 0.18s ease-out;
 }
-.app-toast-success { background: #14532d; border-left-color: #22c55e; }
-.app-toast-error { background: #7f1d1d; border-left-color: #ef4444; }
-.app-toast-info { background: #1e3a8a; border-left-color: #60a5fa; }
+.app-toast-success { background: #e8faf1; border-left-color: #0e9e78; color: #0b6b52; }
+.app-toast-error { background: #fdeaea; border-left-color: #d63a3a; color: #9c2b2b; }
+.app-toast-info { background: #f1e9fb; border-left-color: #a855f7; color: #5c3a86; }
 .app-toast-msg { flex: 1; }
 .app-toast-close {
   background: none;

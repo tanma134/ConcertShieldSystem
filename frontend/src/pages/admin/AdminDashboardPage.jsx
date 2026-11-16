@@ -79,9 +79,9 @@ export default function AdminDashboardPage() {
 
   const stats = [
     { label: "Total Users", value: totalUsers, color: "#3b82f6" },
-    { label: "Active Users", value: activeUsers, color: "#10b981" },
+    { label: "Active Users", value: activeUsers, color: "#0e9e78" },
     { label: "Total Roles", value: totalRoles, color: "#8b5cf6" },
-    { label: "Admins", value: adminCount, color: "#f59e0b" },
+    { label: "Admins", value: adminCount, color: "#d98f14" },
   ];
 
   return (

@@ -387,7 +387,7 @@ export default function IncidentDetailPage() {
       <Shell title="Incident Dossier">
         <div className="inc-container">
           <div className="inc-empty-state">
-            <div className="inc-empty-icon" style={{ color: "#ef4444" }}>
+            <div className="inc-empty-icon" style={{ color: "#d63a3a" }}>
               <AlertTriangleIcon />
             </div>
             <div className="inc-empty-title">Incident #{id} Not Found</div>
@@ -468,10 +468,10 @@ export default function IncidentDetailPage() {
               <div
                 style={{
                   fontSize: "12px",
-                  fontWeight: 600,
-                  color: "#fca5a5",
-                  background: "#2d1519",
-                  border: "1px solid #7f1d1d",
+                  fontWeight: 700,
+                  color: "#991b1b",
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
                   borderRadius: "6px",
                   padding: "6px 12px",
                   display: "inline-flex",
@@ -517,7 +517,7 @@ export default function IncidentDetailPage() {
                 <h3>Incident Resolution Documentation</h3>
                 <div className="inc-resolution-meta">
                   Resolved By:{" "}
-                  <strong style={{ color: "#fff" }}>
+                  <strong style={{ color: "#065f46" }}>
                     {incident.resolvedByName || resolution?.resolvedByName || "System Administrator"}
                   </strong>
                   {" • "}
@@ -590,7 +590,7 @@ export default function IncidentDetailPage() {
                   <div className="inc-info-label">
                     Venue Location
                   </div>
-                  <div className="inc-info-val" style={{ color: "#fcd34d" }}>
+                  <div className="inc-info-val" style={{ color: "#92400e", fontWeight: 600 }}>
                     {incident.location}
                   </div>
                 </div>
@@ -630,7 +630,7 @@ export default function IncidentDetailPage() {
               <div className="inc-card-title">
                 <div className="inc-card-title-left">
                   <span>Attached Evidence Vault</span>
-                  <span style={{ fontSize: "11px", background: "#374151", color: "#e5e7eb", padding: "2px 8px", borderRadius: "4px", fontWeight: 600 }}>
+                  <span style={{ fontSize: "11px", background: "#d8d0e6", color: "#4a4458", padding: "2px 8px", borderRadius: "4px", fontWeight: 600 }}>
                     {evidences.length} {evidences.length === 1 ? "file" : "files"}
                   </span>
                 </div>
@@ -778,7 +778,7 @@ export default function IncidentDetailPage() {
                             })}
                           </span>
                         </div>
-                        <div style={{ fontSize: "11px", fontWeight: 700, color: "#818cf8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "4px" }}>
+                        <div style={{ fontSize: "11px", fontWeight: 700, color: "#4f46e5", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "4px" }}>
                           {item.actionType}
                           {item.newStatus && ` ➔ ${item.newStatus}`}
                         </div>
@@ -1024,17 +1024,18 @@ export default function IncidentDetailPage() {
                 <div className="inc-modal-body">
                   <div
                     style={{
-                      background: "#2d1519",
-                      border: "1px solid #7f1d1d",
+                      background: "#fef2f2",
+                      border: "1px solid #fecaca",
                       borderRadius: "6px",
                       padding: "12px 14px",
                       marginBottom: "16px",
-                      color: "#fecdd3",
+                      color: "#991b1b",
                       fontSize: "13px",
                       lineHeight: "1.5",
+                      fontWeight: 500,
                     }}
                   >
-                    <strong style={{ color: "#fda4af" }}>Notice:</strong> Escalating notifies administration and requests intervention for this incident.
+                    <strong style={{ color: "#7f1d1d" }}>Notice:</strong> Escalating notifies administration and requests intervention for this incident.
                   </div>
 
                   <div className="inc-form-group">
@@ -1091,12 +1092,12 @@ export default function IncidentDetailPage() {
                 <div className="inc-modal-body">
                   <div
                     style={{
-                      background: "#11261d",
-                      border: "1px solid #059669",
+                      background: "#d3f5e7",
+                      border: "1px solid #0e9e78",
                       borderRadius: "6px",
                       padding: "12px 14px",
                       marginBottom: "16px",
-                      color: "#a7f3d0",
+                      color: "#0b6b52",
                       fontSize: "13px",
                       lineHeight: "1.5",
                     }}

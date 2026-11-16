@@ -94,7 +94,15 @@ namespace AuthenticationAPI.Controllers
 
             if (!result.Success)
             {
-                return NotFound(new
+                if (result.Message == "Role not found.")
+                {
+                    return NotFound(new
+                    {
+                        message = result.Message
+                    });
+                }
+
+                return Conflict(new
                 {
                     message = result.Message
                 });

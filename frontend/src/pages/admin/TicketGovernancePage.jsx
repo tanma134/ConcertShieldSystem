@@ -472,7 +472,7 @@ export default function TicketGovernancePage() {
                           backgroundColor: "#fff1f0",
                           border: "1.5px solid #ffa39e",
                           borderRadius: "6px",
-                          color: "#cf1322",
+                          color: "#b81a2a",
                           fontWeight: "bold",
                           fontSize: "1.05rem"
                         }}>
@@ -531,7 +531,7 @@ export default function TicketGovernancePage() {
                     disabled={submittingBulk}
                   />
                   {!reasonNote.trim() && (
-                    <small style={{ color: "#cf1322", display: "block", marginTop: "6px", fontWeight: "500" }}>
+                    <small style={{ color: "#b81a2a", display: "block", marginTop: "6px", fontWeight: "500" }}>
                       * Bắt buộc phải nhập lý do thu hồi (Revocation Reason) mới có thể bấm nút xác nhận.
                     </small>
                   )}

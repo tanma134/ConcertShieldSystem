@@ -2,6 +2,11 @@ using System.ComponentModel.DataAnnotations;
 
 namespace EventAPI.DTOs
 {
+    public class UpdateLayoutDTO
+    {
+        public string? LayoutJson { get; set; }
+    }
+
     public class BuildSeatingChartDTO
     {
         [Required]

@@ -59,7 +59,6 @@ namespace EventAPI.Controllers
         // PUBLIC READS — Published concerts only
         // =====================================================================
 
-        /// <summary>Public list/search/filter. Only Published concerts are returned.</summary>
         [HttpGet]
         [AllowAnonymous]
         public async Task<IActionResult> GetList([FromQuery] EventFilterDTO filter)
@@ -309,6 +308,7 @@ namespace EventAPI.Controllers
         public async Task<IActionResult> AdminGetAll([FromQuery] EventFilterDTO filter)
         {
             filter.PublishedOnly = false;
+            filter.ExcludeDrafts = true;
             var result = await _eventService.GetFilteredAsync(filter);
             return Ok(ApiResponseDTO<PagedResultDTO<EventListDTO>>.SuccessResponse(result));
         }
@@ -320,8 +320,9 @@ namespace EventAPI.Controllers
             => await GetPending(page, pageSize);
 
         /// <summary>
-        /// Full detail of any concert regardless of status, so the Admin can review
-        /// a Pending submission before deciding.
+        /// Full detail of any submitted/moderated concert, so the Admin can review
+        /// a Pending submission before deciding, or view active/past events.
+        /// Drafts in organizers' workspaces are private and excluded.
         /// </summary>
         [HttpGet("admin/{id:int}")]
         [Authorize(Policy = "RequireAdmin")]
@@ -330,6 +331,10 @@ namespace EventAPI.Controllers
             try
             {
                 var result = await _eventService.GetByIdAsync(id, incrementView: false, publicOnly: false);
+                if (result.Status == EventStatus.Draft)
+                {
+                    return NotFound(ApiResponseDTO<object>.FailResponse("Event not found or is still in organizer draft."));
+                }
                 return Ok(ApiResponseDTO<EventResponseDTO>.SuccessResponse(result));
             }
             catch (Exception ex) { return HandleException(ex); }

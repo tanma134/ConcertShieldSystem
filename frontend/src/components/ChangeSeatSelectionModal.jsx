@@ -437,7 +437,7 @@ export default function ChangeSeatSelectionModal({
           <div
             style={{
               padding: "16px",
-              borderTop: "1px solid #333",
+              borderTop: "1px solid #ece0f8",
             }}
           >
             <h3 style={{ margin: "0 0 12px" }}>

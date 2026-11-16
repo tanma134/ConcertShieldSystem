@@ -62,6 +62,7 @@ namespace EventAPI.Services
                     $"A pricing rule named '{dto.RuleName}' already exists for ticket type '{ticketType.TypeName}'.");
 
             ValidateRuleShape(dto.RuleType, dto.AdjustedPrice, dto.DiscountPercent, dto.TriggerFrom, dto.TriggerTo, dto.QuantityThreshold);
+            await EnsureDiscountOnlyIfPublishedAsync(ticketTypeId, dto.AdjustedPrice, dto.DiscountPercent);
             await ValidateScheduleAsync(ticketType, dto.RuleType, dto.TriggerFrom, dto.TriggerTo, true);
 
             var entity = new PricingRule
@@ -107,6 +108,7 @@ namespace EventAPI.Services
             ValidateRuleShape(entity.RuleType, entity.AdjustedPrice, entity.DiscountPercent,
                 entity.TriggerFrom, entity.TriggerTo, entity.QuantityThreshold);
 
+            await EnsureDiscountOnlyIfPublishedAsync(entity.TicketTypeId, entity.AdjustedPrice, entity.DiscountPercent);
             await ValidateScheduleAsync(ticketType, entity.RuleType, entity.TriggerFrom, entity.TriggerTo, scheduleChanged);
             await _pricingRuleRepository.UpdateAsync(entity);
             return Map(entity);
@@ -154,9 +156,8 @@ namespace EventAPI.Services
         }
 
         // Ownership + status gate, reached through the ticket type's parent event.
-        // Pricing rules are only configurable while the concert is Draft or Rejected
-        // (an Admin may override) — the same rule already applied to ticket types
-        // and refund policies.
+        // Draft / Rejected: full editing. Published: discount-only rules allowed
+        // so organisers can add LastMinute sales to move unsold inventory.
 
         private async Task<TicketType> GetEditableTicketTypeAsync(int ticketTypeId, int callerId, bool isAdmin)
         {
@@ -170,11 +171,31 @@ namespace EventAPI.Services
                 throw new UnauthorizedAccessException("You do not own this concert.");
 
             var status = EventStatus.Normalize(ev.Status);
-            if (!isAdmin && !EventStatus.Editable.Contains(status))
+            if (!isAdmin && !EventStatus.Editable.Contains(status) && status != EventStatus.Published)
                 throw new InvalidOperationException(
-                    $"Pricing rules can only be changed while the concert is Draft or Rejected. Current status: '{status}'.");
+                    $"Pricing rules can only be changed while the concert is Draft, Rejected, or Published. Current status: '{status}'.");
 
             return ticketType;
+        }
+
+        // When the event is Published, only discount rules are permitted — the organiser
+        // must not be able to raise ticket prices on customers who already saw them.
+        private async Task EnsureDiscountOnlyIfPublishedAsync(int ticketTypeId, long? adjustedPrice, decimal? discountPercent)
+        {
+            var ticketType = await _ticketTypeRepository.GetByIdAsync(ticketTypeId);
+            if (ticketType == null) return;
+
+            var ev = await _eventRepository.GetByIdAsync(ticketType.EventId);
+            if (ev == null) return;
+
+            var status = EventStatus.Normalize(ev.Status);
+            if (status != EventStatus.Published) return;
+
+            // DiscountPercent is always a discount (0–100%), so that's fine.
+            // AdjustedPrice must be BELOW the ticket's base price.
+            if (adjustedPrice.HasValue && adjustedPrice.Value >= ticketType.Price)
+                throw new InvalidOperationException(
+                    $"Published events only allow discounts. Adjusted price ({adjustedPrice.Value:N0}) must be lower than the base price ({ticketType.Price:N0}).");
         }
 
         // Đọc lịch concert hiện tại trước khi chấp nhận cấu hình giảm giá.

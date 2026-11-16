@@ -419,10 +419,10 @@ export default function VoucherManagementPage() {
       <section className={isAdminView ? "admin-panel" : "organizer-voucher-card"}>
         <div className="panel-header" style={{ marginBottom: "20px" }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: "22px", fontWeight: 800, color: isAdminView ? "var(--admin-ink)" : "#0f172a" }}>
+            <h2 style={{ margin: 0, fontSize: "22px", fontWeight: 800, color: isAdminView ? "var(--admin-ink)" : "#f3ecfa" }}>
               {isAdminView ? "System & Event Voucher Management" : "Voucher Management"}
             </h2>
-            <p style={{ margin: "6px 0 0", fontSize: "13.5px", color: isAdminView ? "var(--admin-muted)" : "#475569" }}>
+            <p style={{ margin: "6px 0 0", fontSize: "13.5px", color: isAdminView ? "var(--admin-muted)" : "#574f72" }}>
               {isAdminView
                 ? "Configure and manage platform-wide (SYSTEM), organizer-specific, and event vouchers."
                 : "Create and manage promotional discount vouchers for your events."}
@@ -509,7 +509,7 @@ export default function VoucherManagementPage() {
             <div className="organizer-search-field">
               <span className="organizer-field-label">Search Code</span>
               <div className="organizer-input-box">
-                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ color: "#64748b" }}>
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ color: "#6b6480" }}>
                   <path d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11zM17 17l-3.5-3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                 </svg>
                 <input
@@ -586,15 +586,15 @@ export default function VoucherManagementPage() {
                       <td>
                         {v.discountType === "PERCENT" ? (
                           <div>
-                            <strong style={{ color: "#7c3aed" }}>{v.discountPercent}% OFF</strong>
+                            <strong style={{ color: "#9333ea" }}>{v.discountPercent}% OFF</strong>
                             {v.maxDiscountAmount ? (
-                              <div style={{ fontSize: "11px", color: "var(--admin-muted, #6b7280)" }}>
+                              <div style={{ fontSize: "11px", color: "var(--admin-muted, #655d7e)" }}>
                                 Max {formatPrice(v.maxDiscountAmount)}
                               </div>
                             ) : null}
                           </div>
                         ) : (
-                          <strong style={{ color: "#059669" }}>{formatPrice(v.discountAmount)} OFF</strong>
+                          <strong style={{ color: "#0e9e78" }}>{formatPrice(v.discountAmount)} OFF</strong>
                         )}
                       </td>
                       <td>{formatPrice(v.minOrderAmount)}</td>
@@ -614,7 +614,7 @@ export default function VoucherManagementPage() {
                       </td>
                       <td style={{ fontSize: "12px", whiteSpace: "nowrap" }}>
                         <div>{formatDateTime(v.startsAt)}</div>
-                        <div style={{ color: "var(--admin-muted, #6b7280)" }}>to {formatDateTime(v.endsAt)}</div>
+                        <div style={{ color: "var(--admin-muted, #655d7e)" }}>to {formatDateTime(v.endsAt)}</div>
                       </td>
                       <td>
                         <span className={`badge-status ${v.status.toLowerCase()}`}>
@@ -723,7 +723,7 @@ export default function VoucherManagementPage() {
                   onChange={(e) => handleFieldChange("code", e.target.value.replace(/\s+/g, "").toUpperCase())}
                 />
                 {modal === "edit" ? (
-                  <span className="form-hint" style={{ color: "#d97706" }}>Immutable: Voucher code cannot be edited after creation.</span>
+                  <span className="form-hint" style={{ color: "#c06a0a" }}>Immutable: Voucher code cannot be edited after creation.</span>
                 ) : (
                   <span className="form-hint">Uppercase letters and numbers, no spaces (e.g. VIP2026).</span>
                 )}
@@ -738,7 +738,7 @@ export default function VoucherManagementPage() {
                   onChange={(e) => handleFieldChange("scope", e.target.value)}
                   style={{
                     padding: "9px 10px",
-                    border: "1px solid var(--admin-line, #d1d5db)",
+                    border: "1px solid var(--admin-line, #8b83a0)",
                     borderRadius: "6px",
                     fontSize: "13px",
                   }}
@@ -751,7 +751,7 @@ export default function VoucherManagementPage() {
                     {isAdminView ? "Event-specific (Single event)" : "Specific Event (Valid for one event only)"}
                   </option>
                 </select>
-                {isIssued && <span className="form-hint" style={{ color: "#d97706" }}>Scope cannot be changed once voucher has been used.</span>}
+                {isIssued && <span className="form-hint" style={{ color: "#c06a0a" }}>Scope cannot be changed once voucher has been used.</span>}
                 {fieldErrors.scope && <span className="field-error-text">{fieldErrors.scope}</span>}
               </label>
 
@@ -772,7 +772,7 @@ export default function VoucherManagementPage() {
                     {fieldErrors.organizer_id && <span className="field-error-text">{fieldErrors.organizer_id}</span>}
                   </label>
                 ) : (
-                  <div className="full-width" style={{ padding: "10px 14px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "13px", color: "#475569" }}>
+                  <div className="full-width" style={{ padding: "10px 14px", background: "#f8f1fe", borderRadius: "8px", border: "1px solid #e3d6f0", fontSize: "13px", color: "#574f72" }}>
                     ✓ This voucher will automatically apply to <strong>all events</strong> hosted under your organizer account (User ID: #{currentUserId || "..."}).
                   </div>
                 )
@@ -804,7 +804,7 @@ export default function VoucherManagementPage() {
                   onChange={(e) => handleFieldChange("discount_type", e.target.value)}
                   style={{
                     padding: "9px 10px",
-                    border: "1px solid var(--admin-line, #d1d5db)",
+                    border: "1px solid var(--admin-line, #8b83a0)",
                     borderRadius: "6px",
                     fontSize: "13px",
                   }}
@@ -812,7 +812,7 @@ export default function VoucherManagementPage() {
                   <option value="PERCENT">Percentage Discount (%)</option>
                   <option value="FIXED">Fixed Amount Discount (VNĐ)</option>
                 </select>
-                {isIssued && <span className="form-hint" style={{ color: "#d97706" }}>Discount type cannot be changed once used.</span>}
+                {isIssued && <span className="form-hint" style={{ color: "#c06a0a" }}>Discount type cannot be changed once used.</span>}
               </label>
 
               {formData.discount_type === "PERCENT" ? (
@@ -831,7 +831,7 @@ export default function VoucherManagementPage() {
                       value={formData.discount_percent}
                       onChange={(e) => handleFieldChange("discount_percent", e.target.value)}
                     />
-                    {isIssued && <span className="form-hint" style={{ color: "#d97706" }}>Discount percentage cannot be changed once used.</span>}
+                    {isIssued && <span className="form-hint" style={{ color: "#c06a0a" }}>Discount percentage cannot be changed once used.</span>}
                     {fieldErrors.discount_percent && <span className="field-error-text">{fieldErrors.discount_percent}</span>}
                   </label>
                   <label>
@@ -861,7 +861,7 @@ export default function VoucherManagementPage() {
                     value={formData.discount_amount}
                     onChange={(e) => handleFieldChange("discount_amount", e.target.value)}
                   />
-                  {isIssued && <span className="form-hint" style={{ color: "#d97706" }}>Fixed discount amount cannot be changed once used.</span>}
+                  {isIssued && <span className="form-hint" style={{ color: "#c06a0a" }}>Fixed discount amount cannot be changed once used.</span>}
                   {fieldErrors.discount_amount && <span className="field-error-text">{fieldErrors.discount_amount}</span>}
                 </label>
               )}
@@ -1028,7 +1028,7 @@ export default function VoucherManagementPage() {
               <p>
                 Are you sure you want to delete voucher <strong>{selectedVoucher.code}</strong>?
               </p>
-              <p style={{ fontSize: "12px", color: "var(--admin-muted, #6b7280)", margin: "8px 0 0" }}>
+              <p style={{ fontSize: "12px", color: "var(--admin-muted, #655d7e)", margin: "8px 0 0" }}>
                 This action will deactivate the voucher. Customers will no longer be able to apply this code at checkout.
               </p>
             </div>

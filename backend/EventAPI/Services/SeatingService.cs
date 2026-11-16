@@ -151,6 +151,17 @@ namespace EventAPI.Services
             var validTicketTypeIds = ticketTypes.Select(t => t.TicketTypeId).ToHashSet();
             var errors = ValidateZones(dto.Zones, validTicketTypeIds);
 
+            foreach (var tt in ticketTypes)
+            {
+                var requestedCap = dto.Zones
+                    .Where(z => z.TicketTypeId == tt.TicketTypeId)
+                    .Sum(DtoCapacity);
+                if (requestedCap > tt.Quantity)
+                {
+                    errors.Add($"Layout allocates {requestedCap} seats to '{tt.TypeName}', which exceeds its declared quota ({tt.Quantity}).");
+                }
+            }
+
             if (errors.Count > 0)
                 throw new ArgumentException(string.Join(" | ", errors));
 
@@ -217,6 +228,19 @@ namespace EventAPI.Services
 
             if (map.SeatZones.Any(z => string.Equals(z.ZoneName, dto.ZoneName, StringComparison.OrdinalIgnoreCase)))
                 errors.Add($"A zone named '{dto.ZoneName}' already exists on this layout.");
+
+            var targetTicket = ticketTypes.FirstOrDefault(t => t.TicketTypeId == dto.TicketTypeId);
+            if (targetTicket != null)
+            {
+                var currentAllocated = map.SeatZones
+                    .Where(z => z.TicketTypeId == dto.TicketTypeId)
+                    .Sum(ZoneCapacity);
+                var newZoneCap = DtoCapacity(dto);
+                if (currentAllocated + newZoneCap > targetTicket.Quantity)
+                {
+                    errors.Add($"Cannot allocate {newZoneCap} seats to '{targetTicket.TypeName}'. Total zone capacity ({currentAllocated + newZoneCap}) would exceed declared quota ({targetTicket.Quantity}).");
+                }
+            }
 
             if (errors.Count > 0)
                 throw new ArgumentException(string.Join(" | ", errors));
@@ -357,6 +381,20 @@ namespace EventAPI.Services
                 await SynchronizeTicketQuantitiesAsync(ticketTypes, remaining);
         }
 
+        public async Task<SeatingChartResponseDTO> UpdateLayoutAsync(int eventId, string layoutJson, int callerId, bool isAdmin)
+        {
+            await GetEditableEventAsync(eventId, callerId, isAdmin);
+            var map = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: false)
+                ?? throw new KeyNotFoundException($"No seating chart found for event {eventId}.");
+
+            map.LayoutJson = layoutJson;
+            map.UpdatedAt = DateTime.UtcNow;
+            await _seatingRepository.UpdateSeatMapAsync(map);
+
+            var reloaded = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: true);
+            return MapChart(reloaded!, includeSeats: true);
+        }
+
         public async Task DeleteAsync(int eventId, int callerId, bool isAdmin)
         {
             var ev = await GetEditableEventAsync(eventId, callerId, isAdmin);
@@ -476,20 +514,12 @@ namespace EventAPI.Services
                 : zone.Capacity;
         }
 
-        private async Task SynchronizeTicketQuantitiesAsync(List<TicketType> ticketTypes, SeatMap map)
+        private static Task SynchronizeTicketQuantitiesAsync(List<TicketType> ticketTypes, SeatMap map)
         {
-            foreach (var ticketType in ticketTypes)
-            {
-                var capacity = map.SeatZones
-                    .Where(z => z.TicketTypeId == ticketType.TicketTypeId)
-                    .Sum(ZoneCapacity);
-                if (capacity == 0 || capacity == ticketType.Quantity) continue;
-                if (capacity < ticketType.SoldQuantity)
-                    throw new InvalidOperationException(
-                        $"Cannot reduce '{ticketType.TypeName}' below {ticketType.SoldQuantity} sold tickets.");
-                ticketType.Quantity = capacity;
-                await _ticketTypeRepository.UpdateAsync(ticketType);
-            }
+            // TicketType.Quantity is the organizer's declared quota configured in Step 2.
+            // Multiple zones can allocate against this quota (e.g. 2 zones of 250 for a 500 quota).
+            // We do NOT overwrite ticketType.Quantity with zone capacity, preserving the organizer's plan.
+            return Task.CompletedTask;
         }
 
         /// <summary>Seated zones: any non-Available seat. Standing zones: any sold ticket.</summary>

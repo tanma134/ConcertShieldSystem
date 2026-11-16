@@ -1,4 +1,4 @@
-﻿using EventAPI.Common;
+using EventAPI.Common;
 using EventAPI.Data;
 using EventAPI.DTOs;
 using EventAPI.Models;
@@ -87,6 +87,17 @@ namespace EventAPI.Repositories
             {
                 query = query.Where(e =>
                     e.Status == EventStatus.Published || e.Status == EventStatus.LegacyApproved);
+            }
+            else if (filter.ExcludeDrafts)
+            {
+                query = query.Where(e => e.Status != EventStatus.Draft);
+                if (!string.IsNullOrWhiteSpace(filter.Status))
+                {
+                    var status = EventStatus.Normalize(filter.Status);
+                    query = status == EventStatus.Published
+                        ? query.Where(e => e.Status == EventStatus.Published || e.Status == EventStatus.LegacyApproved)
+                        : query.Where(e => e.Status == status);
+                }
             }
             else if (!string.IsNullOrWhiteSpace(filter.Status))
             {

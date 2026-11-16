@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import AdminShell from "./AdminShell";
 import eventApi from "../../api/eventApi";
 import { formatDateRange } from "../../utils/format";
+import { useToast } from "../../components/ToastProvider";
 import "../organizer/OrganizerWizard.css";
 import "./AdminPages.css";
 import GovernancePanel from "../../components/GovernancePanel";
@@ -11,6 +12,7 @@ import StepTicketsSeating from "../organizer/steps/StepTicketsSeating";
 export default function AdminEventDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [event, setEvent] = useState(null);
   const [complianceReady, setComplianceReady] = useState(false);
@@ -18,6 +20,7 @@ export default function AdminEventDetailPage() {
   const [error, setError] = useState("");
 
   const [showReject, setShowReject] = useState(false);
+  const [showApproveConfirm, setShowApproveConfirm] = useState(false);
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null); // { type: "approved"|"rejected", message }
@@ -39,15 +42,32 @@ export default function AdminEventDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const handleApprove = async () => {
+  const requestApprove = () => {
     if (!complianceReady) { setError("Review and approve the current compliance documents first."); return; }
-    if (!window.confirm("Approve this event and publish it?")) return;
+    setError("");
+    setShowApproveConfirm(true);
+  };
+
+  const handleApprove = async () => {
+    setShowApproveConfirm(false);
     setSubmitting(true);
     setError("");
     try {
       const res = await eventApi.approve(id);
-      setEvent(res.data?.data || event);
-      setResult({ type: "approved", message: res.data?.message });
+      const updated = res.data?.data || event;
+      setEvent(updated);
+      const rawMsg = res.data?.message || "";
+      const isRoleWarn = rawMsg.includes("Organizer role could not be granted");
+      const cleanMsg = isRoleWarn
+        ? "Concert approved and published successfully. (Note: Owner already has or is pending Organizer verification)."
+        : (rawMsg || "Concert approved and published successfully.");
+
+      setResult({
+        type: isRoleWarn ? "warning" : "approved",
+        title: "Event Approved & Published",
+        message: cleanMsg
+      });
+      toast.success("Event approved and published successfully!");
     } catch (err) {
       setError(err.response?.data?.message || "Could not approve this event.");
     } finally {
@@ -66,8 +86,13 @@ export default function AdminEventDetailPage() {
     try {
       const res = await eventApi.reject(id, reason.trim());
       setEvent(res.data?.data || event);
-      setResult({ type: "rejected", message: res.data?.message });
+      setResult({
+        type: "rejected",
+        title: "Event Rejected",
+        message: res.data?.message || "Event has been rejected and returned to Draft."
+      });
       setShowReject(false);
+      toast.info("Event rejection sent to organizer.");
     } catch (err) {
       setError(err.response?.data?.message || "Could not reject this event.");
     } finally {
@@ -75,20 +100,34 @@ export default function AdminEventDetailPage() {
     }
   };
 
-  const canDecide = event?.status === "Pending";
+  const isPending = event?.status === "Pending";
+
+  const pageTitle = isPending
+    ? "Review Event"
+    : `Event Details (${event?.status || ""})`;
+
+  const pageSubtitle = isPending
+    ? "Check everything below, then approve or reject this submission."
+    : "Review the event overview, seating chart, and compliance information.";
+
+  const activeSubnav = isPending ? "/admin/events" : "/admin/events/all";
+
+  const canDecide = isPending;
 
   return (
-    <AdminShell title="Review Event">
+    <AdminShell title={pageTitle} activeSubnavPath={activeSubnav}>
       <div className="ow-wrap">
         <div className="ow-head">
           <div>
-            <h1>Review Event</h1>
-            <p className="ow-sub">
-              Check everything below, then approve or reject this submission.
-            </p>
+            <h1>{pageTitle}</h1>
+            <p className="ow-sub">{pageSubtitle}</p>
           </div>
-          <Link to="/admin/events" className="tb-btn tb-btn-outline">
-            ← Back to queue
+          <Link
+            to={isPending ? "/admin/events" : "/admin/events/all"}
+            className="tb-btn tb-btn-outline"
+            style={{ textDecoration: "none" }}
+          >
+            {isPending ? "← Back to queue" : "← Back to all events"}
           </Link>
         </div>
 
@@ -96,18 +135,14 @@ export default function AdminEventDetailPage() {
         {loading && <div className="tb-loading">Loading...</div>}
 
         {result && (
-          <div
-            className={
-              "ow-banner " +
-              (result.type === "approved"
-                ? "ow-banner-published"
-                : "ow-banner-rejected")
-            }
-          >
-            <strong>
-              {result.type === "approved" ? "Approved." : "Rejected."}
-            </strong>{" "}
-            {result.message}
+          <div className={`admin-result-banner is-${result.type === "approved" ? "success" : result.type === "warning" ? "warning" : "danger"}`}>
+            <div className="admin-result-icon">
+              {result.type === "approved" ? "✅" : result.type === "warning" ? "⚠️" : "❌"}
+            </div>
+            <div className="admin-result-content">
+              <strong>{result.title}</strong>
+              <span>{result.message}</span>
+            </div>
           </div>
         )}
 
@@ -153,9 +188,23 @@ export default function AdminEventDetailPage() {
             {(event.bannerUrl || event.images?.length > 0) && (
               <section className="ow-section">
                 <h3>Organizer Images</h3>
-                {event.bannerUrl && <img className="admin-event-banner" src={event.bannerUrl} alt="Event banner" />}
+                {event.bannerUrl && (
+                  <img
+                    className="admin-event-banner"
+                    src={event.bannerUrl}
+                    alt=""
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
+                )}
                 <div className="admin-event-gallery">
-                  {(event.images || []).map((image) => <img key={image.imageId} src={image.imageUrl} alt="Organizer upload" />)}
+                  {(event.images || []).map((image) => (
+                    <img
+                      key={image.imageId}
+                      src={image.imageUrl}
+                      alt=""
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  ))}
                 </div>
               </section>
             )}
@@ -163,16 +212,12 @@ export default function AdminEventDetailPage() {
             <section className="ow-section admin-seating-editor">
               <h3>Seating Chart, Tickets &amp; Pricing</h3>
               <p className="ow-hint">
-                Full editor — build/edit the seating chart on the canvas,
-                apply or save templates, and configure ticket classes,
-                dynamic pricing and refund policy, the same tools the
-                organizer uses. As Admin you can adjust these regardless of
-                the event's current status.
+                Review the seating chart, ticket classes, dynamic pricing and refund policy configured by the organizer.
               </p>
               <StepTicketsSeating
                 eventId={Number(id)}
                 event={event}
-                forceEditable
+                readOnly
                 standalone
                 onRefresh={load}
                 onSaved={load}
@@ -200,11 +245,48 @@ export default function AdminEventDetailPage() {
                 <button
                   type="button"
                   className="tb-btn tb-btn-primary"
-                  onClick={handleApprove}
+                  onClick={requestApprove}
                   disabled={submitting || !complianceReady}
                 >
                   {submitting ? "Working..." : "✓ Approve & Publish"}
                 </button>
+              </div>
+            )}
+
+            {showApproveConfirm && (
+              <div className="admin-confirm-modal-overlay" onClick={() => setShowApproveConfirm(false)}>
+                <div className="admin-confirm-modal" onClick={(e) => e.stopPropagation()}>
+                  <div className="admin-confirm-modal-header">
+                    <div className="admin-confirm-modal-icon">🎉</div>
+                    <div>
+                      <h3 className="admin-confirm-modal-title">Publish Event Confirmation</h3>
+                      <p className="admin-confirm-modal-body" style={{ margin: 0 }}>
+                        Are you sure you want to approve and publish <strong>"{event.title}"</strong>?
+                      </p>
+                    </div>
+                  </div>
+                  <p className="admin-confirm-modal-body">
+                    Once published, tickets will become available to the public according to your configured sales schedule. Base ticket price, total quantity, and seating chart will be locked.
+                  </p>
+                  <div className="admin-confirm-modal-actions">
+                    <button
+                      type="button"
+                      className="tb-btn tb-btn-outline ow-btn-sm"
+                      onClick={() => setShowApproveConfirm(false)}
+                      disabled={submitting}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="tb-btn tb-btn-primary ow-btn-sm"
+                      onClick={handleApprove}
+                      disabled={submitting}
+                    >
+                      {submitting ? "Publishing..." : "Yes, Approve & Publish"}
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 

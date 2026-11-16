@@ -182,12 +182,12 @@ export default function PlatformPolicyModal({ isOpen, onClose, onAgree }) {
         </div>
 
         <div className="policy-modal-body">
-          <p style={{ margin: "0 0 16px 0", color: "#94a3b8", fontSize: "0.88rem", lineHeight: 1.5 }}>
+          <p style={{ margin: "0 0 16px 0", color: "#7a7392", fontSize: "0.88rem", lineHeight: 1.5 }}>
             Please review the active platform policies and terms governing ConcertShield. Continuing to register or use our services constitutes acceptance of these terms and conditions.
           </p>
 
           {loading ? (
-            <div style={{ textAlign: "center", padding: "24px", color: "#94a3b8" }}>
+            <div style={{ textAlign: "center", padding: "24px", color: "#7a7392" }}>
               Loading active policy versions...
             </div>
           ) : (
@@ -199,7 +199,7 @@ export default function PlatformPolicyModal({ isOpen, onClose, onAgree }) {
                   </span>
                   <span className="policy-version-badge">{p.version} Active</span>
                 </div>
-                <div style={{ fontSize: "0.78rem", color: "#64748b", marginBottom: "6px" }}>
+                <div style={{ fontSize: "0.78rem", color: "#6b6480", marginBottom: "6px" }}>
                   Effective: {p.effectiveDate} · Scope: {p.scope}
                 </div>
                 <p className="policy-cat-desc">{p.summary}</p>
@@ -213,7 +213,7 @@ export default function PlatformPolicyModal({ isOpen, onClose, onAgree }) {
             type="button"
             className="tb-btn tb-btn-outline"
             onClick={onClose}
-            style={{ padding: "8px 16px", fontSize: "0.85rem", color: "#94a3b8", borderColor: "#334155" }}
+            style={{ padding: "8px 16px", fontSize: "0.85rem", color: "#7a7392", borderColor: "#dcd3e8" }}
           >
             Close
           </button>

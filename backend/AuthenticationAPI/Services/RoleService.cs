@@ -117,6 +117,18 @@ namespace AuthenticationAPI.Services
                 return (false, "Role not found.");
             }
 
+            if (role.RoleName.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+            {
+                return (false, "The Admin role cannot be deleted.");
+            }
+
+            if (await _roleRepository.HasAssignedUsersAsync(id))
+            {
+                return (
+                    false,
+                    $"There are currently users assigned to the {role.RoleName} role. Please reassign them to another role before deleting it.");
+            }
+
             _roleRepository.Delete(role);
             await _roleRepository.SaveChangesAsync();
 
