@@ -8,8 +8,8 @@ const queueAdminApi = {
   unrevokeSession: (sessionId) => axiosClient.post(`/queue/admin/sessions/${sessionId}/unrevoke`),
   getAlerts: (params = {}) => axiosClient.get("/queue/admin/abuse-alerts", { params }),
   getAlert: (id) => axiosClient.get(`/queue/admin/abuse-alerts/${id}`),
-  flag: (sessionId, reason) => axiosClient.post(`/queue/admin/sessions/${sessionId}/flag`, { reason }),
-  block: (sessionId, reason) => axiosClient.post(`/queue/admin/sessions/${sessionId}/block`, { reason }),
-  unblock: (sessionId) => axiosClient.post(`/queue/admin/sessions/${sessionId}/unblock`),
+  flag: (sessionId, reason, alertId) => axiosClient.post(`/queue/admin/sessions/${sessionId}/flag`, { reason, alertId }),
+  block: (sessionId, reason, alertId) => axiosClient.post(`/queue/admin/sessions/${sessionId}/block`, { reason, alertId }),
+  unblock: (sessionId, alertId) => axiosClient.post(`/queue/admin/sessions/${sessionId}/unblock`, null, { params: { alertId } }),
 };
 export default queueAdminApi;

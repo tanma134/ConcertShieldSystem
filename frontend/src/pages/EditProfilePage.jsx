@@ -19,7 +19,39 @@ export default function EditProfilePage() {
   useEffect(() => { authApi.getProfile().then((response) => { setForm({ email: response.data.email || "", fullName: response.data.fullName || "", phoneNumber: response.data.phoneNumber || "" }); setPreview(response.data.avatarUrl || ""); }).catch((requestError) => setError(requestError.response?.data?.message || "Failed to load profile.")).finally(() => setLoading(false)); }, []);
   const change = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   const chooseAvatar = (event) => { const file = event.target.files?.[0]; if (!file) return; const allowed = ["image/jpeg", "image/png", "image/webp"]; if (!allowed.includes(file.type) || file.size > 5 * 1024 * 1024) return setError("Choose a JPG, PNG, or WEBP image up to 5 MB."); setError(""); setAvatar(file); setPreview(URL.createObjectURL(file)); };
-  const save = async (event) => { event.preventDefault(); try { setSaving(true); setError(""); const profileResponse = await authApi.updateProfile(form); let nextProfile = profileResponse.data; if (avatar) { try { setUploading(true); nextProfile = (await authApi.uploadAvatar(avatar)).data; } catch (uploadError) { updateUser(nextProfile); setError(uploadError.response?.data?.message || "Profile information was saved, but avatar upload failed."); return; } } updateUser(nextProfile); setSuccess("Profile updated successfully."); setAvatar(null); setTimeout(() => navigate("/profile"), 500); } catch (requestError) { setError(requestError.response?.data?.message || "Failed to update profile."); } finally { setSaving(false); setUploading(false); } };
+  const save = async (event) => {
+    event.preventDefault();
+    try {
+      setSaving(true);
+      setError("");
+      const profileResponse = await authApi.updateProfile(form);
+      let nextProfile = profileResponse.data;
+
+      if (avatar) {
+        try {
+          setUploading(true);
+          nextProfile = (await authApi.uploadAvatar(avatar)).data;
+        } catch (uploadError) {
+          updateUser(nextProfile);
+          setError(
+            uploadError.response?.data?.message ||
+              "Profile information was saved, but avatar upload failed."
+          );
+          return;
+        }
+      }
+
+      updateUser(nextProfile);
+      setSuccess("Profile updated successfully.");
+      setAvatar(null);
+      setTimeout(() => navigate("/profile"), 500);
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || "Failed to update profile.");
+    } finally {
+      setSaving(false);
+      setUploading(false);
+    }
+  };
 
 return (
     <div className="profile-page">

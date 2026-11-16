@@ -6,10 +6,6 @@ namespace QueueAPI.Services;
 
 public sealed class QueueAdmissionWorker(IServiceScopeFactory scopeFactory, ILogger<QueueAdmissionWorker> logger) : BackgroundService
 {
-    private static readonly TimeSpan AbuseWindow = TimeSpan.FromMinutes(5);
-    private const int MaxUserSessionsInWindow = 2;
-    private const int MaxEventSessionsInWindow = 3;
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -20,7 +16,6 @@ public sealed class QueueAdmissionWorker(IServiceScopeFactory scopeFactory, ILog
                 var db = scope.ServiceProvider.GetRequiredService<QueueDbContext>();
                 var redis = scope.ServiceProvider.GetRequiredService<IRedisQueueStore>();
                 var now = QueueTimeZone.Now;
-                await ScanRegistrationAbuseAsync(db, now, stoppingToken);
                 // timestamp without time zone values are Vietnam local wall-clock values.
                 var configs = await db.QueueConfigurations.AsNoTracking()
                     .Where(x => x.PreQueueEndTime <= now)
@@ -105,63 +100,4 @@ public sealed class QueueAdmissionWorker(IServiceScopeFactory scopeFactory, ILog
         }
     }
 
-    private async Task ScanRegistrationAbuseAsync(QueueDbContext db, DateTime now, CancellationToken cancellationToken)
-    {
-        var windowStart = now - AbuseWindow;
-        var sessions = await db.QueueSessions.AsNoTracking()
-            .Where(x => x.CreatedAt >= windowStart &&
-                x.Status != "LEFT" && x.Status != "EXPIRED" &&
-                x.Status != "REVOKED" && x.Status != "BLOCKED")
-            .ToListAsync(cancellationToken);
-
-        var userGroups = sessions.GroupBy(x => x.UserId).Where(x => x.Count() > MaxUserSessionsInWindow);
-        foreach (var group in userGroups)
-        {
-            var current = group.OrderByDescending(x => x.CreatedAt).First();
-            await CreateAlertIfMissingAsync(db, current, "MULTIPLE_USER_SESSIONS",
-                $"RULE: User created {group.Count()} queue sessions within 5 minutes (limit: {MaxUserSessionsInWindow}).",
-                windowStart, cancellationToken);
-        }
-
-        var eventGroups = sessions.GroupBy(x => x.EventId).Where(x => x.Count() > MaxEventSessionsInWindow);
-        foreach (var group in eventGroups)
-        {
-            var current = group.OrderByDescending(x => x.CreatedAt).First();
-            await CreateAlertIfMissingAsync(db, current, "EVENT_SESSION_SPIKE",
-                $"RULE: Event received {group.Count()} queue sessions within 5 minutes (limit: {MaxEventSessionsInWindow}).",
-                windowStart, cancellationToken);
-        }
-    }
-
-    private async Task CreateAlertIfMissingAsync(
-        QueueDbContext db,
-        QueueAPI.Models.QueueSession session,
-        string alertType,
-        string behavior,
-        DateTime windowStart,
-        CancellationToken cancellationToken)
-    {
-        var exists = await db.AbuseAlerts.AnyAsync(x =>
-            x.SessionId == session.SessionId &&
-            x.AlertType == alertType &&
-            x.CreatedAt >= windowStart, cancellationToken);
-        if (exists) return;
-
-        db.AbuseAlerts.Add(new QueueAPI.Models.AbuseAlert
-        {
-            EventId = session.EventId,
-            UserId = session.UserId,
-            SessionId = session.SessionId,
-            QueueToken = session.QueueToken,
-            AlertType = alertType,
-            Severity = "HIGH",
-            Status = "OPEN",
-            DetectedBehavior = behavior,
-            CreatedAt = QueueTimeZone.Now
-        });
-        await db.SaveChangesAsync(cancellationToken);
-        logger.LogWarning(
-            "Automatic queue abuse alert created type={AlertType} eventId={EventId} userId={UserId} sessionId={SessionId}",
-            alertType, session.EventId, session.UserId, session.SessionId);
-    }
 }

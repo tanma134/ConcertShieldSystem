@@ -59,4 +59,5 @@ public class RoleServiceTests
         repository.Verify(r => r.Delete(role), Times.Once);
         repository.Verify(r => r.SaveChangesAsync(), Times.Once);
     }
+
 }

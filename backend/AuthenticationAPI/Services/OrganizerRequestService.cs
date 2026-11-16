@@ -10,6 +10,7 @@ namespace AuthenticationAPI.Services
         private readonly IOrganizerRequestRepository _requestRepository;
         private readonly IUserRepository _userRepository;
         private readonly ILogger<OrganizerRequestService> _logger;
+        private readonly IOrganizerApprovalNotifier? _approvalNotifier;
 
         private const string RoleOrganizer = "Organizer";
         private const string StatusPending = "Pending";
@@ -19,11 +20,13 @@ namespace AuthenticationAPI.Services
         public OrganizerRequestService(
             IOrganizerRequestRepository requestRepository,
             IUserRepository userRepository,
-            ILogger<OrganizerRequestService> logger)
+            ILogger<OrganizerRequestService> logger,
+            IOrganizerApprovalNotifier? approvalNotifier = null)
         {
             _requestRepository = requestRepository;
             _userRepository = userRepository;
             _logger = logger;
+            _approvalNotifier = approvalNotifier;
         }
 
         public async Task<OrganizerRequestResponseDTO> CreateRequestAsync(int userId, CreateOrganizerRequestDTO dto)
@@ -138,63 +141,70 @@ namespace AuthenticationAPI.Services
             if (dto.Status == StatusApproved)
             {
                 var targetUserId = request.UserId;
-                _ = Task.Run(async () =>
+                if (_approvalNotifier != null)
                 {
-                    // 1. Direct persistence to notification_db
-                    try
+                    _ = _approvalNotifier.NotifyApprovedAsync(requestId, targetUserId);
+                }
+                else
+                {
+                    _ = Task.Run(async () =>
                     {
-                        using var conn = new Npgsql.NpgsqlConnection("Host=localhost;Port=5432;Database=notification_db;Username=postgres;Password=123456");
-                        await conn.OpenAsync();
-                        using var cmd = new Npgsql.NpgsqlCommand(
-                            "INSERT INTO notifications (user_id, title, message, content, type, category, target_url, is_read, created_at, is_deleted) VALUES (@uid, @title, @msg, @content, @type, @cat, @url, false, NOW(), false);", conn);
-                        cmd.Parameters.AddWithValue("uid", targetUserId);
-                        cmd.Parameters.AddWithValue("title", "Yêu cầu nâng cấp Organizer đã được duyệt");
-                        var msg = "Chúc mừng! Yêu cầu đăng ký làm Nhà tổ chức sự kiện (Organizer) của bạn đã được Admin phê duyệt.";
-                        cmd.Parameters.AddWithValue("msg", msg);
-                        cmd.Parameters.AddWithValue("content", msg);
-                        cmd.Parameters.AddWithValue("type", "organizer_approved");
-                        cmd.Parameters.AddWithValue("cat", "organizer_approved");
-                        cmd.Parameters.AddWithValue("url", "/organizer/dashboard");
-                        await cmd.ExecuteNonQueryAsync();
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Direct DB notification failed for organizer request {RequestId}", requestId);
-                    }
-
-                    // 2. HTTP Realtime ping
-                    try
-                    {
-                        var handler = new HttpClientHandler
+                        // 1. Direct persistence to notification_db
+                        try
                         {
-                            ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true
-                        };
-                        using var httpClient = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(3) };
-                        var payload = new
-                        {
-                            userId = targetUserId,
-                            title = "Yêu cầu nâng cấp Organizer đã được duyệt",
-                            message = "Chúc mừng! Yêu cầu đăng ký làm Nhà tổ chức sự kiện (Organizer) của bạn đã được Admin phê duyệt.",
-                            category = "organizer_approved",
-                            targetUrl = "/organizer/dashboard"
-                        };
-                        var content = new StringContent(System.Text.Json.JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
-                        var endpoints = new[] { "https://localhost:7197/api/notifications", "http://localhost:5174/api/notifications" };
-                        foreach (var ep in endpoints)
-                        {
-                            try
-                            {
-                                var res = await httpClient.PostAsync(ep, content);
-                                if (res.IsSuccessStatusCode) break;
-                            }
-                            catch { }
+                            using var conn = new Npgsql.NpgsqlConnection("Host=localhost;Port=5432;Database=notification_db;Username=postgres;Password=123456");
+                            await conn.OpenAsync();
+                            using var cmd = new Npgsql.NpgsqlCommand(
+                                "INSERT INTO notifications (user_id, title, message, content, type, category, target_url, is_read, created_at, is_deleted) VALUES (@uid, @title, @msg, @content, @type, @cat, @url, false, NOW(), false);", conn);
+                            cmd.Parameters.AddWithValue("uid", targetUserId);
+                            cmd.Parameters.AddWithValue("title", "Yêu cầu nâng cấp Organizer đã được duyệt");
+                            var msg = "Chúc mừng! Yêu cầu đăng ký làm Nhà tổ chức sự kiện (Organizer) của bạn đã được Admin phê duyệt.";
+                            cmd.Parameters.AddWithValue("msg", msg);
+                            cmd.Parameters.AddWithValue("content", msg);
+                            cmd.Parameters.AddWithValue("type", "organizer_approved");
+                            cmd.Parameters.AddWithValue("cat", "organizer_approved");
+                            cmd.Parameters.AddWithValue("url", "/organizer/dashboard");
+                            await cmd.ExecuteNonQueryAsync();
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to send HTTP notification for approved organizer request {RequestId}", requestId);
-                    }
-                });
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Direct DB notification failed for organizer request {RequestId}", requestId);
+                        }
+
+                        // 2. HTTP Realtime ping
+                        try
+                        {
+                            var handler = new HttpClientHandler
+                            {
+                                ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true
+                            };
+                            using var httpClient = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(3) };
+                            var payload = new
+                            {
+                                userId = targetUserId,
+                                title = "Yêu cầu nâng cấp Organizer đã được duyệt",
+                                message = "Chúc mừng! Yêu cầu đăng ký làm Nhà tổ chức sự kiện (Organizer) của bạn đã được Admin phê duyệt.",
+                                category = "organizer_approved",
+                                targetUrl = "/organizer/dashboard"
+                            };
+                            var content = new StringContent(System.Text.Json.JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
+                            var endpoints = new[] { "https://localhost:7197/api/notifications", "http://localhost:5174/api/notifications" };
+                            foreach (var ep in endpoints)
+                            {
+                                try
+                                {
+                                    var res = await httpClient.PostAsync(ep, content);
+                                    if (res.IsSuccessStatusCode) break;
+                                }
+                                catch { }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to send HTTP notification for approved organizer request {RequestId}", requestId);
+                        }
+                    });
+                }
             }
 
             return MapToDto(request, request.User);

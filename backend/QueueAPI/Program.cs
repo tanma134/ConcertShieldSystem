@@ -42,6 +42,14 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddDbContext<QueueDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"), npgsql => npgsql.EnableRetryOnFailure()));
 builder.Services.AddSingleton<IRedisQueueStore, RedisQueueStore>();
 builder.Services.AddScoped<IQueueService, QueueService>();
+builder.Services.AddHttpClient<IQueueAuditLogClient, QueueAuditLogClient>((serviceProvider, client) =>
+{
+    var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+    client.BaseAddress = new Uri(configuration["AdminApi:BaseUrl"] ?? "https://localhost:7076");
+    var internalKey = configuration["AdminApi:InternalKey"] ?? configuration["InternalApi:Key"];
+    if (!string.IsNullOrEmpty(internalKey))
+        client.DefaultRequestHeaders.Add("X-Internal-Api-Key", internalKey);
+});
 var eventApiBaseUrl = builder.Configuration["Services:EventAPI"] ?? "https://localhost:7289";
 builder.Services.AddHttpClient("EventAPI", client =>
 {
@@ -74,6 +82,22 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<QueueDbContext>();
     await db.Database.EnsureCreatedAsync();
+    await db.Database.ExecuteSqlRawAsync("""
+        UPDATE queue_abuse_alerts
+        SET queue_token = 'md5:' || md5(queue_token)
+        WHERE queue_token <> ''
+          AND queue_token NOT LIKE 'sha256:%'
+          AND queue_token NOT LIKE 'md5:%'
+        """);
+    await db.Database.ExecuteSqlRawAsync("""
+        CREATE UNIQUE INDEX IF NOT EXISTS ux_queue_abuse_alerts_session_type
+        ON queue_abuse_alerts (session_id, alert_type)
+        WHERE alert_type IN (
+            'MULTIPLE_REGISTRATION_ATTEMPTS',
+            'AUTOMATED_REQUEST_PATTERN',
+            'TOKEN_REPLAY'
+        )
+        """);
 }
 
 // Configure the HTTP request pipeline.

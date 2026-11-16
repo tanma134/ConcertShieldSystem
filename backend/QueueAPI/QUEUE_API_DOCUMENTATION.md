@@ -317,23 +317,18 @@ UpdatedAt
 
 ## 6.3 AbuseAlert
 
-Lưu các cảnh báo do thao tác security/admin tạo ra.
+Lưu evidence cho đúng ba rule phát hiện:
 
-Ví dụ alert type:
+| Severity | Alert type | Điều kiện |
+|---|---|---|
+| LOW | `MULTIPLE_REGISTRATION_ATTEMPTS` | 3 lần đăng ký lại cho cùng user/event trong 5 phút khi session còn hoạt động |
+| MEDIUM | `AUTOMATED_REQUEST_PATTERN` | 30 POST đăng ký trong 1 phút, với hệ số biến thiên của khoảng cách giữa các request không quá 10% |
+| HIGH | `TOKEN_REPLAY` | 25 lần dùng lại queue token đã revoke trong 2 phút |
 
-```text
-MANUAL_FLAG
-SESSION_BLOCKED
-```
-
-Severity:
-
-```text
-LOW
-MEDIUM
-HIGH
-CRITICAL
-```
+Chỉ POST đăng ký được tính cho rule MEDIUM; các lần polling trạng thái không
+được tính. Tạo alert không tự động block session. Alert evidence lưu dạng JSON
+trong `DetectedBehavior`. Cột queue token của alert chỉ chứa fingerprint đã
+hash; các giá trị token cũ được chuyển thành fingerprint khi QueueAPI khởi động.
 
 ---
 
@@ -671,14 +666,12 @@ GET /api/queue/admin/abuse-alerts
 GET /api/queue/admin/abuse-alerts/{id}
 ```
 
-Queue registration also runs two rule-based abuse checks over a rolling
-five-minute window:
-
-- More than 2 active sessions for the same user: `MULTIPLE_USER_SESSIONS`.
-- More than 3 active sessions for the same event: `EVENT_SESSION_SPIKE`.
-
-Matching alerts are created automatically with `Severity = HIGH`,
-`Status = OPEN`, and a `DetectedBehavior` message beginning with `RULE:`.
+Ba rule abuse được đánh giá tại thời điểm gọi queue registration hoặc dùng lại
+token đã revoke. Bộ đếm request nằm trong Redis theo event/user (hoặc theo
+fingerprint token), có TTL bằng detection window. Alert được lưu trong
+`queue_abuse_alerts`; ràng buộc unique theo session và alert type ngăn tạo
+alert trùng cho cùng incident. Nếu DB lưu alert lỗi sau khi Redis đã ghi nhận
+attempt, lần thử tiếp theo sẽ đánh giá lại bộ đếm và thử lưu alert lần nữa.
 
 ### Flag/block/unblock
 
@@ -692,7 +685,18 @@ Khi block:
 
 - Revoke Redis state.
 - Đổi session thành `BLOCKED`.
-- Tạo abuse alert.
+- Cập nhật trạng thái của alert đang được xem thành `BLOCKED`; không tạo alert
+  thủ công mới.
+
+Flag chỉ cập nhật trạng thái alert, không đổi trạng thái queue session.
+Unblock đổi queue session thành `LEFT` để người dùng có thể đăng ký lại và đưa
+alert liên quan về `OPEN`. Hai trạng thái được lưu độc lập.
+
+Các thao tác Flag/Block/Unblock được gửi best-effort tới internal audit endpoint
+của AdminAPI. QueueAPI dùng `AdminApi:BaseUrl` (mặc định
+`https://localhost:7076`) và `AdminApi:InternalKey` hoặc `InternalApi:Key`;
+nếu audit service không khả dụng, QueueAPI ghi warning và không làm hỏng thao
+tác quản trị đã hoàn thành.
 
 ---
 

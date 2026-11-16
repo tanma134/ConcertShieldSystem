@@ -13,8 +13,17 @@ namespace QueueAPI.Controllers;
 [ApiController]
 [Route("api/queue/admin")]
 [Authorize(Policy = "QueueAdmin")]
-public sealed class QueueAdminController(QueueDbContext db, IRedisQueueStore redis) : ControllerBase
+public sealed class QueueAdminController(QueueDbContext db, IRedisQueueStore redis, IQueueAuditLogClient auditLog) : ControllerBase
 {
+    private static readonly string[] SupportedAlertTypes =
+    [
+        "MULTIPLE_REGISTRATION_ATTEMPTS",
+        "AUTOMATED_REQUEST_PATTERN",
+        "TOKEN_REPLAY"
+    ];
+
+    private static readonly string[] SupportedSeverities = ["LOW", "MEDIUM", "HIGH"];
+
     private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub") ?? "0");
 
     [HttpGet("sessions")]
@@ -33,7 +42,7 @@ public sealed class QueueAdminController(QueueDbContext db, IRedisQueueStore red
         if (session == null) return NotFound(new { code = "TOKEN_INVALID" });
         var config = await db.QueueConfigurations.SingleOrDefaultAsync(x => x.EventId == session.EventId);
         if (config == null) return NotFound(new { code = "EVENT_NOT_FOUND" });
-        await redis.RevokeAsync(session.EventId, session.UserId, token, config.PreQueueEndTime.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture), CancellationToken.None);
+        await redis.RevokeAsync(session.EventId, session.UserId, session.SessionId, token, config.PreQueueEndTime.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture), CancellationToken.None);
         session.Status = "REVOKED";
         session.UpdatedAt = QueueTimeZone.Now;
         await db.SaveChangesAsync();
@@ -47,7 +56,7 @@ public sealed class QueueAdminController(QueueDbContext db, IRedisQueueStore red
         if (session == null) return NotFound(new { code = "TOKEN_INVALID" });
         var config = await db.QueueConfigurations.SingleOrDefaultAsync(x => x.EventId == session.EventId);
         if (config == null) return NotFound(new { code = "EVENT_NOT_FOUND" });
-        await redis.RevokeAsync(session.EventId, session.UserId, session.QueueToken, config.PreQueueEndTime.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture), CancellationToken.None);
+        await redis.RevokeAsync(session.EventId, session.UserId, session.SessionId, session.QueueToken, config.PreQueueEndTime.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture), CancellationToken.None);
         session.Status = "REVOKED";
         session.UpdatedAt = QueueTimeZone.Now;
         await db.SaveChangesAsync();
@@ -73,9 +82,10 @@ public sealed class QueueAdminController(QueueDbContext db, IRedisQueueStore red
     [HttpGet("abuse-alerts")]
     public async Task<ActionResult<IEnumerable<AbuseAlertResponse>>> Alerts([FromQuery] string? severity = null, [FromQuery] string? status = null)
     {
-        var query = db.AbuseAlerts.AsNoTracking().AsQueryable();
-        if (!string.IsNullOrWhiteSpace(severity)) query = query.Where(x => x.Severity == severity.ToUpper());
-        if (!string.IsNullOrWhiteSpace(status)) query = query.Where(x => x.Status == status.ToUpper());
+        var query = db.AbuseAlerts.AsNoTracking()
+            .Where(x => SupportedAlertTypes.Contains(x.AlertType) && SupportedSeverities.Contains(x.Severity));
+        if (!string.IsNullOrWhiteSpace(severity)) query = query.Where(x => x.Severity == severity.ToUpperInvariant());
+        if (!string.IsNullOrWhiteSpace(status)) query = query.Where(x => x.Status == status.ToUpperInvariant());
         var alerts = await query.OrderByDescending(x => x.CreatedAt).Take(500).ToListAsync();
         return Ok(alerts.Select(ToResponse));
     }
@@ -83,43 +93,114 @@ public sealed class QueueAdminController(QueueDbContext db, IRedisQueueStore red
     [HttpGet("abuse-alerts/{id:long}")]
     public async Task<ActionResult<AbuseAlertResponse>> Alert(long id)
     {
-        var alert = await db.AbuseAlerts.AsNoTracking().SingleOrDefaultAsync(x => x.AbuseAlertId == id);
+        var alert = await db.AbuseAlerts.AsNoTracking().SingleOrDefaultAsync(x =>
+            x.AbuseAlertId == id &&
+            SupportedAlertTypes.Contains(x.AlertType) &&
+            SupportedSeverities.Contains(x.Severity));
         return alert == null ? NotFound() : Ok(ToResponse(alert));
     }
 
     [HttpPost("sessions/{sessionId}/flag")]
-    public Task<IActionResult> Flag(string sessionId, SessionActionRequest request) => RecordAlert(sessionId, "FLAGGED", "MEDIUM", request.Reason);
+    public Task<IActionResult> Flag(string sessionId, SessionActionRequest request) =>
+        RecordSessionAction(sessionId, "FLAGGED", request.AlertId);
 
     [HttpPost("sessions/{sessionId}/block")]
-    public Task<IActionResult> Block(string sessionId, SessionActionRequest request) => RecordAlert(sessionId, "BLOCKED", "HIGH", request.Reason);
+    public Task<IActionResult> Block(string sessionId, SessionActionRequest request) =>
+        RecordSessionAction(sessionId, "BLOCKED", request.AlertId);
 
     [HttpPost("sessions/{sessionId}/unblock")]
-    public async Task<IActionResult> Unblock(string sessionId)
+    public async Task<IActionResult> Unblock(string sessionId, [FromQuery] long? alertId = null)
     {
         var session = await db.QueueSessions.SingleOrDefaultAsync(x => x.SessionId == sessionId);
         if (session == null) return NotFound();
+        var alert = await FindRelatedAlertAsync(sessionId, alertId);
+        if (alertId.HasValue && alert == null) return NotFound();
+        var oldSessionStatus = session.Status;
+        var oldAlertStatus = alert?.Status;
         session.Status = "LEFT";
         session.UpdatedAt = QueueTimeZone.Now;
+        if (alert != null) alert.Status = "OPEN";
         await db.SaveChangesAsync();
-        return Ok();
+        await WriteAuditLogAsync(
+            "QUEUE_ABUSE_ALERT_UNBLOCKED",
+            alert,
+            session,
+            new { alertStatus = oldAlertStatus, sessionStatus = oldSessionStatus },
+            new { alertStatus = alert?.Status, sessionStatus = session.Status });
+        return Ok(new { status = "OPEN", sessionStatus = session.Status });
     }
 
-    private async Task<IActionResult> RecordAlert(string sessionId, string status, string severity, string? reason)
+    private async Task<IActionResult> RecordSessionAction(string sessionId, string status, long? alertId)
     {
         var session = await db.QueueSessions.SingleOrDefaultAsync(x => x.SessionId == sessionId);
         if (session == null) return NotFound();
+        var alert = await FindRelatedAlertAsync(sessionId, alertId);
+        if (alertId.HasValue && alert == null) return NotFound();
+        var oldSessionStatus = session.Status;
+        var oldAlertStatus = alert?.Status;
         if (status == "BLOCKED")
         {
             var config = await db.QueueConfigurations.SingleOrDefaultAsync(x => x.EventId == session.EventId);
             if (config == null) return NotFound(new { code = "EVENT_NOT_FOUND" });
-            await redis.RevokeAsync(session.EventId, session.UserId, session.QueueToken, config.PreQueueEndTime.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture), CancellationToken.None);
+            await redis.RevokeAsync(session.EventId, session.UserId, session.SessionId, session.QueueToken, config.PreQueueEndTime.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture), CancellationToken.None);
+            session.Status = "BLOCKED";
         }
-        session.Status = status;
         session.UpdatedAt = QueueTimeZone.Now;
-        db.AbuseAlerts.Add(new AbuseAlert { EventId = session.EventId, UserId = session.UserId, SessionId = session.SessionId, QueueToken = session.QueueToken, AlertType = status == "BLOCKED" ? "SESSION_BLOCKED" : "MANUAL_FLAG", Severity = severity, Status = "OPEN", DetectedBehavior = reason ?? "Manual review" });
+        if (alert != null) alert.Status = status;
         await db.SaveChangesAsync();
-        return Ok(new { status });
+        await WriteAuditLogAsync(
+            status == "BLOCKED" ? "QUEUE_ABUSE_ALERT_BLOCKED" : "QUEUE_ABUSE_ALERT_FLAGGED",
+            alert,
+            session,
+            new { alertStatus = oldAlertStatus, sessionStatus = oldSessionStatus },
+            new { alertStatus = alert?.Status, sessionStatus = session.Status });
+        return Ok(new { status, sessionStatus = session.Status });
     }
 
-    private static AbuseAlertResponse ToResponse(AbuseAlert x) => new(x.AbuseAlertId, x.EventId, x.UserId, x.SessionId, x.QueueToken[..8] + "...", x.AlertType, x.Severity, x.Status, x.DetectedBehavior, QueueTimeZone.AsVietnamOffset(x.CreatedAt));
+    private Task WriteAuditLogAsync(
+        string action,
+        AbuseAlert? alert,
+        QueueSession session,
+        object oldValue,
+        object newValue) =>
+        auditLog.LogAsync(
+            UserId,
+            action,
+            alert == null ? "QueueSession" : "QueueAbuseAlert",
+            alert?.AbuseAlertId.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? session.SessionId,
+            oldValue,
+            newValue,
+            HttpContext.Connection.RemoteIpAddress?.ToString(),
+            HttpContext.TraceIdentifier,
+            Request.Headers.UserAgent.ToString());
+
+    private Task<AbuseAlert?> FindRelatedAlertAsync(string sessionId, long? alertId)
+    {
+        var query = db.AbuseAlerts.Where(x =>
+            x.SessionId == sessionId &&
+            SupportedAlertTypes.Contains(x.AlertType) &&
+            SupportedSeverities.Contains(x.Severity));
+        return alertId.HasValue
+            ? query.SingleOrDefaultAsync(x => x.AbuseAlertId == alertId.Value)
+            : query.OrderByDescending(x => x.CreatedAt).FirstOrDefaultAsync();
+    }
+
+    private static AbuseAlertResponse ToResponse(AbuseAlert alert)
+    {
+        var tokenFingerprint = alert.TokenFingerprint.StartsWith("sha256:", StringComparison.Ordinal) ||
+            alert.TokenFingerprint.StartsWith("md5:", StringComparison.Ordinal)
+            ? alert.TokenFingerprint
+            : QueueAbuseDetection.TokenFingerprint(alert.TokenFingerprint);
+        return new(
+            alert.AbuseAlertId,
+            alert.EventId,
+            alert.UserId,
+            alert.SessionId,
+            tokenFingerprint,
+            alert.AlertType,
+            alert.Severity,
+            alert.Status,
+            alert.DetectedBehavior,
+            QueueTimeZone.AsVietnamOffset(alert.CreatedAt));
+    }
 }

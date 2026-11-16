@@ -8,8 +8,9 @@ namespace AuthenticationAPI.Services
     public class ProfileService : IProfileService
     {
         private static readonly Regex ValidFullName =
-            new(@"^[\p{L} ]+$", RegexOptions.CultureInvariant | RegexOptions.Compiled);
-        private static readonly Regex ValidPhoneNumber =
+            new(@"^[\p{L} ]+$", RegexOptions.CultureInvariant | RegexOptions.Compiled);// tim hieu them
+
+        private static readonly Regex ValidPhoneNumber = 
             new(@"^0[35789][0-9]{8,13}$", RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
         private readonly IUserRepository _userRepository;
@@ -59,75 +60,61 @@ namespace AuthenticationAPI.Services
             if (dto == null)
                 return (false, "Profile update request is required.", null);
 
-            if (string.IsNullOrWhiteSpace(dto.Email))
-                return (false, "Email is required.", null);
+            var normalizedEmail = string.IsNullOrWhiteSpace(dto.Email)
+                ? null
+                : dto.Email.Trim().ToLowerInvariant();
+            var fullName = string.IsNullOrWhiteSpace(dto.FullName)
+                ? null
+                : dto.FullName.Normalize(NormalizationForm.FormC).Trim();
+            var phoneNumber = string.IsNullOrWhiteSpace(dto.PhoneNumber)
+                ? null
+                : dto.PhoneNumber;
+            var avatarUrl = string.IsNullOrWhiteSpace(dto.AvatarUrl)
+                ? null
+                : dto.AvatarUrl.Trim();
 
-            var normalizedFullName = dto.FullName?.Normalize(NormalizationForm.FormC);
-            if (string.IsNullOrWhiteSpace(normalizedFullName))
-                return (false, "Full name is required.", null);
-
-            var fullName = normalizedFullName.Trim();
-            if (normalizedFullName.Length is < 2 or > 100 ||
-                fullName.Length is < 2 or > 100 ||
-                !ValidFullName.IsMatch(fullName))
+            if (fullName != null &&
+                (fullName.Length is < 2 or > 100 || !ValidFullName.IsMatch(fullName)))
                 return (false, "Full name must be 2 to 100 letters and spaces only.", null);
 
-            if (string.IsNullOrWhiteSpace(dto.PhoneNumber))
-                return (false, "Phone number is required.", null);
-
-            if (!ValidPhoneNumber.IsMatch(dto.PhoneNumber))
+            if (phoneNumber != null && !ValidPhoneNumber.IsMatch(phoneNumber))
                 return (false, "Phone number must be 10 to 15 digits and start with 03, 05, 07, 08, or 09.", null);
 
             var user = await GetCurrentUserAsync(email, userId);
 
             if (user == null)
+                return (false, "User not found.", null);
+
+            var emailToUpdate = normalizedEmail != null &&
+                !string.Equals(normalizedEmail, user.Email, StringComparison.OrdinalIgnoreCase)
+                    ? normalizedEmail
+                    : null;
+            if (emailToUpdate != null)
             {
-                return (
-                    false,
-                    "User not found.",
-                    null
-                );
+                var existingEmail = await _userRepository.GetByEmailAsync(emailToUpdate);
+                if (existingEmail != null && existingEmail.UserId != user.UserId)
+                    return (false, "Email already exists.", null);
             }
 
-            if (!string.Equals(
-                dto.Email.Trim(),
-                user.Email,
-                StringComparison.OrdinalIgnoreCase))
+            if (phoneNumber != null && phoneNumber != user.PhoneNumber)
             {
-                return (false, "Email cannot be changed.", null);
+                var existingPhone = await _userRepository.GetByPhoneAsync(phoneNumber);
+                if (existingPhone != null && existingPhone.UserId != user.UserId)
+                    return (false, "Phone number already exists.", null);
             }
 
-            // ==========================================
-            // CHECK PHONE
-            // ==========================================
-            if (dto.PhoneNumber != user.PhoneNumber)
-            {
-                var existingPhone =
-                    await _userRepository.GetByPhoneAsync(
-                        dto.PhoneNumber);
-
-                if (existingPhone != null &&
-                    existingPhone.UserId != user.UserId)
-                {
-                    return (
-                        false,
-                        "Phone number already exists.",
-                        null
-                    );
-                }
-
-                user.PhoneNumber = dto.PhoneNumber;
-            }
-
-            user.FullName = fullName;
+            if (emailToUpdate != null)
+                user.Email = emailToUpdate;
+            if (phoneNumber != null)
+                user.PhoneNumber = phoneNumber;
+            if (fullName != null)
+                user.FullName = fullName;
+            if (avatarUrl != null)
+                user.AvatarUrl = avatarUrl;
 
             await _userRepository.SaveChangesAsync();
 
-            return (
-                true,
-                "Profile updated successfully.",
-                MapToProfileDTO(user)
-            );
+            return (true, "Profile updated successfully.", MapToProfileDTO(user));
         }
 
         // ==========================================
