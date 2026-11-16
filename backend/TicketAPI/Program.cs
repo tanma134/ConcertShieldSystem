@@ -83,6 +83,7 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<ITicketRepository, TicketRepository>();
 builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<ITicketReturnService, TicketReturnService>();
+builder.Services.AddScoped<IRiskTicketAdminService, RiskTicketAdminService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<ICheckinService, CheckinService>();
 builder.Services.AddScoped<IStatusHistoryRepository, StatusHistoryRepository>();

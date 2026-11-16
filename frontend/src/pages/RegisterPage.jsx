@@ -4,6 +4,8 @@ import authApi from "../api/authApi";
 import PlatformPolicyModal from "../components/PlatformPolicyModal";
 import "../styles/auth.css";
 
+const MIN_PASSWORD_LENGTH = 8;
+
 export default function RegisterPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
@@ -25,7 +27,12 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
 
-    // Check policy agreement
+    if (form.password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+      return;
+    }
+
+    // UC 11.1 & 11.2: Check policy agreement
     if (!agreedPolicies) {
       setError("Vui lòng đọc và tích chọn đồng ý với Điều khoản Dịch vụ & Chính sách nền tảng để tiếp tục.");
       return;
@@ -97,8 +104,11 @@ export default function RegisterPage() {
                 name="password"
                 value={form.password}
                 onChange={handleChange}
+                minLength={MIN_PASSWORD_LENGTH}
+                maxLength={72}
                 required
               />
+              <small className="auth-hint">At least {MIN_PASSWORD_LENGTH} characters.</small>
             </div>
 
             {/* Policy Agreement Checkbox */}

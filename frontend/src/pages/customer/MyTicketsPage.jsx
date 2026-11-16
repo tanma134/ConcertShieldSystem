@@ -5,6 +5,8 @@ import Footer from "../../components/Footer";
 import ticketApi from "../../api/ticketApi";
 import ticketReturnApi from "../../api/ticketReturnApi";
 import { useToast } from "../../components/ToastProvider";
+import appealApi from "../../api/appealApi";
+
 import "./MyTicketsPage.css";
 
 const REFUND_CATEGORIES = {
@@ -21,14 +23,17 @@ const TABS = [
   { id: "success", label: "Successful" },
   { id: "processing", label: "Processing" },
   { id: "cancelled", label: "Cancelled" },
+  { id: "restricted", label: "Restricted" },
 ];
 
 const normalize = (value) =>
   String(value || "").replace(/[\s_-]/g, "").toLowerCase();
 
-function getTicketCategory(ticket) {
+function getTicketCategory(ticket, restricted = false) {
   const orderStatus = normalize(ticket.orderStatus);
   const ticketStatus = normalize(ticket.status);
+
+  if (restricted || ticketStatus === "blocked") return "restricted";
 
   const processingStatuses = [
     "refundpending",
@@ -73,6 +78,7 @@ function getStatusLabel(category, ticket) {
   if (category === "success") return "Successful";
   if (category === "processing") return "Refund processing";
   if (category === "cancelled") return "Refunded";
+  if (category === "restricted") return "Blocked";
 
   return ticket.status || ticket.orderStatus || "Status unavailable";
 }
@@ -122,6 +128,7 @@ function groupTicketsByOrder(tickets) {
 export default function MyTicketsPage() {
   const toast = useToast();
   const [tickets, setTickets] = useState([]);
+  const [restrictions, setRestrictions] = useState([]);
   const [activeTab, setActiveTab] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -212,14 +219,21 @@ export default function MyTicketsPage() {
         setLoading(true);
         setError("");
 
-        const response = await ticketApi.getMyTickets();
+        const [response, decisionResponse] = await Promise.all([
+          ticketApi.getMyTickets(),
+          appealApi.getMyDecisions().catch(() => ({ data: [] })),
+        ]);
         const data = response.data?.data ?? response.data;
 
         if (!Array.isArray(data)) {
           throw new Error("The ticket response is invalid.");
         }
 
-        if (!cancelled) setTickets(data);
+        const decisionData = decisionResponse.data?.data ?? decisionResponse.data;
+        if (!cancelled) {
+          setTickets(data);
+          setRestrictions(Array.isArray(decisionData) ? decisionData : []);
+        }
       } catch (err) {
         if (!cancelled) {
           setError(
@@ -238,13 +252,28 @@ export default function MyTicketsPage() {
     };
   }, []);
 
+  // Active ticket blocks are joined from AdminAPI by ticket id. TicketAPI owns the
+  // ticket status and AdminAPI owns the appeal, so the customer screen combines both.
+  const restrictionByTicketId = useMemo(() => {
+    const map = new Map();
+    for (const d of restrictions) {
+      if (d.ticketId == null) continue;
+      const active = d.status === "Active" &&
+        (!d.expiresAt || new Date(d.expiresAt).getTime() > Date.now());
+      if (!active && d.existingAppealId == null) continue;
+      map.set(Number(d.ticketId), d);
+    }
+    return map;
+  }, [restrictions]);
+
+  const categoryOf = (ticket) =>
+    getTicketCategory(ticket, restrictionByTicketId.has(Number(ticket.ticketId)));
+
   const visibleTickets = useMemo(() => {
     if (activeTab === "all") return tickets;
 
-    return tickets.filter(
-      (ticket) => getTicketCategory(ticket) === activeTab
-    );
-  }, [tickets, activeTab]);
+    return tickets.filter((ticket) => categoryOf(ticket) === activeTab);
+  }, [tickets, activeTab, restrictionByTicketId]);
 
   const visibleOrders = useMemo(
     () => groupTicketsByOrder(visibleTickets),
@@ -254,9 +283,7 @@ export default function MyTicketsPage() {
   function getTabCount(tabId) {
     if (tabId === "all") return tickets.length;
 
-    return tickets.filter(
-      (ticket) => getTicketCategory(ticket) === tabId
-    ).length;
+    return tickets.filter((ticket) => categoryOf(ticket) === tabId).length;
   }
 
   return (
@@ -355,7 +382,8 @@ export default function MyTicketsPage() {
 
                   <div className="mt-order-tickets">
                     {order.tickets.map((ticket) => {
-                      const category = getTicketCategory(ticket);
+                      const restriction = restrictionByTicketId.get(Number(ticket.ticketId));
+                      const category = getTicketCategory(ticket, !!restriction);
 
                       return (
                         <article className="mt-ticket" key={ticket.ticketId}>
@@ -405,6 +433,31 @@ export default function MyTicketsPage() {
                             <span className={`mt-status ${category}`}>
                               {getStatusLabel(category, ticket)}
                             </span>
+
+                            {restriction && (
+                              <div className="mt-restriction-note">
+                                {restriction.existingAppealId ? (
+                                  <span>
+                                    Appeal #{restriction.existingAppealId}: <b>{restriction.existingAppealStatus}</b>
+                                  </span>
+                                ) : (
+                                  <span>
+                                    Under risk review
+                                    {restriction.appealDeadlineAt
+                                      ? ` · appeal by ${formatDate(restriction.appealDeadlineAt)}`
+                                      : ""}
+                                  </span>
+                                )}
+                                {(restriction.canAppeal || restriction.existingAppealId != null) && (
+                                  <Link
+                                    className="mt-appeal-link"
+                                    to={`/risk/decisions/${restriction.riskDecisionId}/appeal`}
+                                  >
+                                    {restriction.existingAppealId ? "View appeal" : "Submit appeal"}
+                                  </Link>
+                                )}
+                              </div>
+                            )}
 
                             <Link
                               className="mt-details-link"

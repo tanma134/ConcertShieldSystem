@@ -45,7 +45,8 @@ namespace AdminAPI.Controllers
         {
             try
             {
-                var canViewFull = (await _authz.AuthorizeAsync(User, "CanReviewFraud")).Succeeded;
+                // Staff reviewing a fraud case need the full decision (not the customer view).
+                var canViewFull = (await _authz.AuthorizeAsync(User, "CanReviewFraudCases")).Succeeded;
                 if (canViewFull)
                     return Ok(await _service.GetAdminDecisionAsync(id, ct));
 

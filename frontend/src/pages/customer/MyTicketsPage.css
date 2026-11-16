@@ -252,6 +252,41 @@
   font-weight: 700;
 }
 
+.mt-status.restricted {
+  color: #b91c1c;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+}
+
+/* A ticket blocked by the risk engine: the customer needs a visible reason and
+   a direct route to the appeal form. */
+.mt-restriction-note {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+  font-size: 12px;
+  color: #9f1239;
+  white-space: normal;
+  text-align: right;
+}
+
+.mt-appeal-link {
+  color: #9f1239;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.mt-appeal-link:hover {
+  color: #4c0519;
+}
+
+.mt-appeal-link:focus-visible {
+  outline: 2px solid #9f1239;
+  outline-offset: 2px;
+
+}
+
 .mt-details-link {
   display: inline-flex;
   align-items: center;

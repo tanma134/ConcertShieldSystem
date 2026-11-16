@@ -356,6 +356,22 @@ namespace CheckinAPI.Services
                     };
                 }
 
+                // Risk Engine: a ticket under fraud review is temporarily blocked.
+                if (status.Equals("BLOCKED", StringComparison.OrdinalIgnoreCase))
+                {
+                    await RecordScanLogAsync(conn, ticketCode, ownerName, zoneName, request.GateId, gateName, "Dynamic QR", "BLOCKED", staffUserId, request.EventId);
+                    return new ScanResultResponseDTO
+                    {
+                        Success = false,
+                        Status = "BLOCKED",
+                        Message = "BLOCKED: This ticket is temporarily blocked pending a risk review.",
+                        TicketCode = ticketCode,
+                        CustomerName = ownerName,
+                        ZoneName = zoneName,
+                        ScannedAt = DateTime.UtcNow
+                    };
+                }
+
                 // Check if Ticket is Revoked (via ticket status or QR token status)
                 if (status.Equals("REVOKED", StringComparison.OrdinalIgnoreCase) || qrIsRevoked)
                 {
@@ -579,6 +595,19 @@ namespace CheckinAPI.Services
 
                 await reader.CloseAsync();
 
+                if (status.Equals("BLOCKED", StringComparison.OrdinalIgnoreCase))
+                {
+                    await RecordScanLogAsync(conn, ticketCode, ownerName, zoneName, request.GateId, gateName, $"Manual ({request.ReasonCode})", "BLOCKED", staffUserId, request.EventId);
+                    return new ScanResultResponseDTO
+                    {
+                        Success = false,
+                        Status = "BLOCKED",
+                        Message = "BLOCKED: This ticket is temporarily blocked pending a risk review.",
+                        TicketCode = ticketCode,
+                        CustomerName = ownerName
+                    };
+                }
+
                 if (status.Equals("REVOKED", StringComparison.OrdinalIgnoreCase))
                 {
                     await RecordScanLogAsync(conn, ticketCode, ownerName, zoneName, request.GateId, gateName, $"Manual ({request.ReasonCode})", "REVOKED", staffUserId, request.EventId);
@@ -744,7 +773,13 @@ namespace CheckinAPI.Services
                         ZoneName = reader["ticket_type_name"]?.ToString() ?? "Standard Zone",
                         SeatNumber = "General Admission",
                         OrderId = reader["order_id"] != DBNull.Value ? $"ORD-{reader["order_id"]}" : "ORD-DIRECT",
-                        Status = isChecked ? "CHECKED_IN" : (status == "REVOKED" ? "REVOKED" : "AVAILABLE"),
+                        Status = isChecked
+                            ? "CHECKED_IN"
+                            : status.Equals("REVOKED", StringComparison.OrdinalIgnoreCase)
+                                ? "REVOKED"
+                                : status.Equals("Blocked", StringComparison.OrdinalIgnoreCase)
+                                    ? "BLOCKED"
+                                    : "AVAILABLE",
                         CheckedInAt = checkAt,
                         CheckedInGate = gate
                     });

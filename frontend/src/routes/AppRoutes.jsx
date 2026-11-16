@@ -18,6 +18,7 @@ import ProtectedRoute from "./ProtectedRoute";
 import AdminLoginPage from "../pages/AdminLoginPage";
 import AdminDashboardPage from "../pages/admin/AdminDashboardPage";
 import AdminRoute from "./AdminRoute";
+import StaffRoute from "./StaffRoute";
 import OrganizerRequestsAdminPage from "../pages/admin/OrganizerRequestsAdminPage";
 import ReviewManagementPage from "../pages/admin/ReviewManagementPage";
 import UserManagementPage from "../pages/admin/UserManagementPage";
@@ -70,8 +71,6 @@ import QueueAbuseAlertDetailPage from "../pages/admin/QueueAbuseAlertDetailPage"
 // -- from feature/scandynamicQRtitket ---
 import TicketGovernancePage from "../pages/admin/TicketGovernancePage";
 import SystemPoliciesPage from "../pages/admin/SystemPoliciesPage";
-import OrganizerVerificationsPage from "../pages/admin/OrganizerVerificationsPage";
-import SubmitOrganizerVerificationPage from "../pages/organizer/SubmitOrganizerVerificationPage";
 import RealtimeCheckinMonitorPage from "../pages/organizer/RealtimeCheckinMonitorPage";
 import ViewGateAssignmentPage from "../pages/staff/ViewGateAssignmentPage";
 import StaffCheckinTerminalPage from "../pages/staff/StaffCheckinTerminalPage";
@@ -393,9 +392,9 @@ export default function AppRoutes() {
       <Route path="/admin/kyc/access-logs" element={<AdminRoute><KycAccessLogAdminPage /></AdminRoute>} />
       <Route path="/admin/audit-logs" element={<AdminRoute><AuditLogAdminPage /></AdminRoute>} />
       <Route path="/admin/fraud-alerts" element={<AdminRoute><FraudAlertDashboardPage /></AdminRoute>} />
-      <Route path="/admin/fraud-alerts/:id" element={<AdminRoute><FraudAlertDetailPage /></AdminRoute>} />
-      <Route path="/admin/risk/decisions/:id" element={<AdminRoute><RiskDecisionDetailPage /></AdminRoute>} />
-      <Route path="/admin/fraud-cases" element={<AdminRoute><FraudCaseListPage /></AdminRoute>} />
+      <Route path="/admin/fraud-alerts/:id" element={<StaffRoute><FraudAlertDetailPage /></StaffRoute>} />
+      <Route path="/admin/risk/decisions/:id" element={<StaffRoute><RiskDecisionDetailPage /></StaffRoute>} />
+      <Route path="/admin/fraud-cases" element={<StaffRoute><FraudCaseListPage /></StaffRoute>} />
       <Route path="/admin/risk/policy" element={<AdminRoute><RiskPolicyPage /></AdminRoute>} />
       <Route path="/admin/risk/blocks" element={<AdminRoute><RiskBlocksPage /></AdminRoute>} />
       <Route path="/admin/risk/appeals" element={<AdminRoute><AppealAdminListPage /></AdminRoute>} />
@@ -412,10 +411,8 @@ export default function AppRoutes() {
       {/* Admin Ticket Governance, Policies & Verifications */}
       <Route path="/admin/ticket-governance" element={<AdminRoute><TicketGovernancePage /></AdminRoute>} />
       <Route path="/admin/policies" element={<AdminRoute><SystemPoliciesPage /></AdminRoute>} />
-      <Route path="/admin/organizer-verifications" element={<AdminRoute><OrganizerVerificationsPage /></AdminRoute>} />
 
-      {/* Organizer Verification & Real-time Check-in Monitor */}
-      <Route path="/organizer/verification" element={<ProtectedRoute><SubmitOrganizerVerificationPage /></ProtectedRoute>} />
+      {/* Organizer Verification & Real-time Check-in Monitor (UC_11.3, 14.1, 14.7) */}
       <Route path="/organizer/events/:eventId/realtime-checkin" element={<ProtectedRoute organizerOnly><RealtimeCheckinMonitorPage /></ProtectedRoute>} />
       <Route path="/organizer/realtime-checkin" element={<ProtectedRoute organizerOnly><RealtimeCheckinMonitorPage /></ProtectedRoute>} />
     </Routes>

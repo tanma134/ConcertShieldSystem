@@ -119,6 +119,7 @@ builder.Services.AddScoped<IObjectStorage, EncryptedFileObjectStorage>();
 builder.Services.AddScoped<ICccdDataProtector, AesDataProtector>();
 builder.Services.AddHostedService<KycRetentionService>();
 builder.Services.AddScoped<IAvatarStorageService, AvatarStorageService>();
+builder.Services.AddScoped<IDocumentStorageService, DocumentStorageService>();
 
 builder.Services.AddHttpClient<IAuditLogClient, AuditLogClient>(client =>
 {
@@ -136,6 +137,25 @@ using (var schemaScope = app.Services.CreateScope())
 {
     var db = schemaScope.ServiceProvider.GetRequiredService<AuthenticationDbContext>();
     await db.Database.ExecuteSqlRawAsync("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_public_id text;");
+    await db.Database.ExecuteSqlRawAsync(@"
+        ALTER TABLE organizer_requests ADD COLUMN IF NOT EXISTS tax_code VARCHAR(50);
+        ALTER TABLE organizer_requests ADD COLUMN IF NOT EXISTS representative_name VARCHAR(200);
+
+        CREATE TABLE IF NOT EXISTS organizer_request_documents (
+            document_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+            request_id INT NOT NULL REFERENCES organizer_requests(request_id) ON DELETE CASCADE,
+            document_type VARCHAR(50) NOT NULL,
+            file_name VARCHAR(255) NOT NULL,
+            file_url TEXT NOT NULL,
+            preview_url TEXT,
+            public_id VARCHAR(255),
+            is_image BOOLEAN NOT NULL DEFAULT TRUE,
+            uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+
+        ALTER TABLE organizer_request_documents ADD COLUMN IF NOT EXISTS public_id VARCHAR(255);
+        CREATE INDEX IF NOT EXISTS idx_organizer_request_documents_request_id ON organizer_request_documents(request_id);
+    ");
 }
 using (var scope = app.Services.CreateScope())
 {
@@ -293,6 +313,75 @@ using (var scope = app.Services.CreateScope())
             context.SaveChanges();
 
             Console.WriteLine("TEST ORGANIZER ACCOUNT CREATED: organizer@ticketbox.com / Organizer@123");
+        }
+
+        // Additional Customers
+        var extraCustomers = new[]
+        {
+            ("customer1@ticketbox.com", "Customer One (Nguyen Van An)", "0981111111"),
+            ("customer2@ticketbox.com", "Customer Two (Tran Thi Binh)", "0982222222"),
+            ("customer3@ticketbox.com", "Customer Three (Le Van Cuong)", "0983333333"),
+            ("customer4@ticketbox.com", "Customer Four (Pham Thi Dung)", "0984444444"),
+            ("customer5@ticketbox.com", "Customer Five (Hoang Van Em)", "0985555555"),
+            ("customer6@ticketbox.com", "Customer Six (Vu Thi Giang)", "0986666666"),
+            ("customer7@ticketbox.com", "Customer Seven (Dang Van Hai)", "0987777777")
+        };
+        foreach (var (cEmail, cName, cPhone) in extraCustomers)
+        {
+            if (!context.Users.Any(u => u.Email == cEmail))
+            {
+                var cust = new User
+                {
+                    Email = cEmail,
+                    FullName = cName,
+                    PhoneNumber = cPhone,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Customer@123"),
+                    IsVerified = true,
+                    IsActive = true,
+                    EkycStatus = "NotSubmitted",
+                    CreatedAt = DateTime.UtcNow,
+                    AuthProvider = "local",
+                    HasPassword = true
+                };
+                context.Users.Add(cust);
+                context.SaveChanges();
+                context.UserRoles.Add(new UserRole { UserId = cust.UserId, RoleId = customerRole.RoleId, AssignedAt = DateTime.UtcNow });
+                context.SaveChanges();
+                Console.WriteLine($"CUSTOMER CREATED: {cEmail} / Customer@123");
+            }
+        }
+
+        // Additional Organizers
+        var extraOrganizers = new[]
+        {
+            ("organizer1@ticketbox.com", "Organizer One (Saigon Sound Entertainment)", "0911111111"),
+            ("organizer2@ticketbox.com", "Organizer Two (Hanoi Music Production)", "0912222222")
+        };
+        foreach (var (oEmail, oName, oPhone) in extraOrganizers)
+        {
+            if (!context.Users.Any(u => u.Email == oEmail))
+            {
+                var org = new User
+                {
+                    Email = oEmail,
+                    FullName = oName,
+                    PhoneNumber = oPhone,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("Organizer@123"),
+                    IsVerified = true,
+                    IsActive = true,
+                    EkycStatus = "NotSubmitted",
+                    CreatedAt = DateTime.UtcNow,
+                    AuthProvider = "local",
+                    HasPassword = true
+                };
+                context.Users.Add(org);
+                context.SaveChanges();
+                context.UserRoles.AddRange(
+                    new UserRole { UserId = org.UserId, RoleId = customerRole.RoleId, AssignedAt = DateTime.UtcNow },
+                    new UserRole { UserId = org.UserId, RoleId = organizerRole.RoleId, AssignedAt = DateTime.UtcNow });
+                context.SaveChanges();
+                Console.WriteLine($"ORGANIZER CREATED: {oEmail} / Organizer@123");
+            }
         }
     }
     catch (Exception ex)

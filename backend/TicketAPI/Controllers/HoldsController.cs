@@ -13,6 +13,7 @@ namespace TicketAPI.Controllers
         private readonly IHoldService _holdService;
         private readonly TicketAPI.API.EventEligibilityClient _eligibility;
         private readonly TicketAPI.API.QueueAdmissionClient _queueAdmission;
+        private readonly ITicketRiskService _risk;
         private readonly ILogger<HoldsController> _logger;
 
         public HoldsController(
@@ -24,6 +25,7 @@ namespace TicketAPI.Controllers
             _logger = logger;
             _eligibility = eligibility;
             _queueAdmission = queueAdmission;
+            _risk = risk;
         }
 
         [HttpPost("session")]
@@ -36,6 +38,10 @@ namespace TicketAPI.Controllers
                     success = false,
                     message = "Token không hợp lệ."
                 });
+
+            // eKYC gate + fraud rules before any seat is reserved.
+            var verdict = await _risk.CheckHoldAsync(HttpContext, userId.Value, request);
+            if (!verdict.Allowed) return verdict.ToActionResult();
 
             try
             {

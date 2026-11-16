@@ -5,7 +5,7 @@ import PanelShell from "../../components/PanelShell";
 export const ORGANIZER_LINKS = [
   ["/organizer/dashboard", "Dashboard", true],
   ["/organizer/events", "My Concerts", true],
-  ["/organizer/verification", "Business Verification"],
+  ["/organizer/events/new", "Create Concert", true],
   ["/organizer/realtime-checkin", "Check-in Live Monitor"],
   ["/organizer/vouchers", "Vouchers"],
   ["/notifications", "Notifications"],

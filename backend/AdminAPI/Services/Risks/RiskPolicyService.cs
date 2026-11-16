@@ -131,7 +131,7 @@ public sealed class RiskPolicyService : IRiskPolicyService
         if (c.BlockHoursLevel1 < 1 || c.BlockHoursLevel2 < c.BlockHoursLevel1 || c.BlockHoursLevel2 > 24 * 30)
             throw new RiskServiceException(400, "Block hours must satisfy 1 <= level1 <= level2 <= 720.");
         if (c.EscalationWindowDays < 1 || c.TrustRestoreDays < 1 || c.AlertSlaHours < 1
-            || c.AppealDeadlineDays < 1 || c.AppealSlaHours < 1)
+            || c.AppealDeadlineDays < 1 || c.TicketAppealDeadlineHours < 1 || c.AppealSlaHours < 1)
             throw new RiskServiceException(400, "Day and hour parameters must be positive.");
         if (c.AppealMaxEvidenceFiles is < 0 or > 20 || c.AppealMaxEvidenceMb is < 1 or > 50)
             throw new RiskServiceException(400, "Evidence limits are out of range.");

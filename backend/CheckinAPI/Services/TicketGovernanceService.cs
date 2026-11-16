@@ -372,7 +372,7 @@ namespace CheckinAPI.Services
                     FROM tickets t
                     LEFT JOIN orders o ON o.order_id = t.order_id
                     WHERE t.event_id = @eid AND t.is_deleted = false 
-                      AND (t.status IS NULL OR (t.status != 'Revoked' AND t.status != 'REVOKED' AND t.status != 'Refunded'));", conn, tx))
+                      AND (t.status IS NULL OR (t.status != 'Revoked' AND t.status != 'REVOKED' AND t.status != 'Refunded' AND t.status != 'Blocked'));", conn, tx))
                 {
                     selCmd.Parameters.AddWithValue("eid", request.EventId);
                     using var reader = await selCmd.ExecuteReaderAsync();
@@ -401,7 +401,7 @@ namespace CheckinAPI.Services
                 using (var updCmd = new NpgsqlCommand(@"
                     UPDATE tickets 
                     SET status = 'Revoked', is_deleted = true, deleted_at = NOW(), deleted_by = @aid 
-                    WHERE event_id = @eid AND (status IS NULL OR (status != 'Revoked' AND status != 'REVOKED' AND status != 'Refunded'));", conn, tx))
+                    WHERE event_id = @eid AND (status IS NULL OR (status != 'Revoked' AND status != 'REVOKED' AND status != 'Refunded' AND status != 'Blocked'));", conn, tx))
                 {
                     updCmd.Parameters.AddWithValue("eid", request.EventId);
                     updCmd.Parameters.AddWithValue("aid", adminId);
@@ -897,7 +897,7 @@ namespace CheckinAPI.Services
                     SELECT event_id, COUNT(*) 
                     FROM tickets 
                     WHERE is_deleted = false 
-                      AND (status IS NULL OR (status != 'Revoked' AND status != 'REVOKED' AND status != 'Refunded')) 
+                      AND (status IS NULL OR (status != 'Revoked' AND status != 'REVOKED' AND status != 'Refunded' AND status != 'Blocked')) 
                     GROUP BY event_id;", tConn);
                 using var rdr = await tCmd.ExecuteReaderAsync();
                 var countMap = new Dictionary<int, int>();
@@ -1040,7 +1040,10 @@ namespace CheckinAPI.Services
                             zoneName = reader["ticket_type_name"]?.ToString() ?? "General Admission";
                             if (reader["checked_in_at"] != DBNull.Value) prevScannedAt = Convert.ToDateTime(reader["checked_in_at"]);
 
-                            if (isChecked || status == "Used" || status == "REVOKED")
+                            if (isChecked
+                                || string.Equals(status, "Used", StringComparison.OrdinalIgnoreCase)
+                                || string.Equals(status, "REVOKED", StringComparison.OrdinalIgnoreCase)
+                                || string.Equals(status, "Blocked", StringComparison.OrdinalIgnoreCase))
                             {
                                 alreadyUsed = true;
                             }

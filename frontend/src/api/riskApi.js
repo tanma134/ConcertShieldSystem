@@ -79,7 +79,11 @@ const riskApi = {
   assignCase: (id, analystId, note) =>
     axiosClient.post(`/admin/fraud-cases/${id}/assign`, { analystId, note: note || undefined }),
 
-  // Resolve Fraud Case (outcome: Confirmed | FalsePositive | Dismissed)
+  // UC_18.9 Staff review: the assigned Staff member proposes an outcome.
+  recommendCase: (id, outcome, note) =>
+    axiosClient.post(`/admin/fraud-cases/${id}/recommend`, { outcome, note }),
+
+  // UC_18.10 Resolve Fraud Case (outcome: Confirmed | FalsePositive | Dismissed) - Admin only
   resolveCase: (id, outcome, note) =>
     axiosClient.post(`/admin/fraud-cases/${id}/resolve`, { outcome, note }),
 

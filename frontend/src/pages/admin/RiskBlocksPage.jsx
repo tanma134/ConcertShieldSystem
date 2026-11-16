@@ -3,10 +3,10 @@ import { Link } from "react-router-dom";
 import riskApi from "../../api/riskApi";
 import { Shell, Banner, fmt, errMsg, statusPill } from "./frCommon";
 
-const STATUSES = ["", "Active", "Restored", "Overturned"];
-const SCOPES = ["", "ACCOUNT", "TICKET", "SESSION", "DEVICE", "IP"];
+const STATUSES = ["", "Active", "Restored", "Overturned", "Expired"];
+const SCOPES = ["", "ACCOUNT", "TICKET", "IP", "SESSION", "DEVICE"];
 const EMPTY = { status: "Active", scope: "", userId: "", fraudAlertId: "" };
-const NEW_BLOCK = { scope: "ACCOUNT", userId: "", ticketId: "", durationHours: 24, reason: "" };
+const NEW_BLOCK = { scope: "ACCOUNT", userId: "", ticketId: "", ipAddress: "", durationHours: 24, reason: "" };
 const MIN_REASON = 10;
 const MAX_REASON = 500;
 
@@ -56,8 +56,11 @@ export default function RiskBlocksPage() {
     const reason = form.reason.trim();
     const hours = Number(form.durationHours);
     const isTicket = form.scope === "TICKET";
+    const isIp = form.scope === "IP";
     if (!form.userId.trim()) { setError("Enter the User ID: the customer is notified and can appeal."); return; }
     if (isTicket && !form.ticketId.trim()) { setError("Enter the Ticket ID to block."); return; }
+    if (isIp && !form.ipAddress.trim()) { setError("Enter the IP address to block."); return; }
+    if (isIp && !/^(\d{1,3}\.){3}\d{1,3}$|:/.test(form.ipAddress.trim())) { setError("Enter a valid IPv4 or IPv6 address."); return; }
     if (!Number.isInteger(hours) || hours < 1 || hours > 720) { setError("Duration must be a whole number of hours between 1 and 720."); return; }
     if (reason.length < MIN_REASON || reason.length > MAX_REASON) { setError(`The reason must be ${MIN_REASON}-${MAX_REASON} characters.`); return; }
     setSaving(true);
@@ -67,10 +70,11 @@ export default function RiskBlocksPage() {
         scope: form.scope,
         userId: Number(form.userId),
         ticketId: isTicket ? Number(form.ticketId) : undefined,
+        ipAddress: isIp ? form.ipAddress.trim() : undefined,
         durationHours: hours,
         reason,
       });
-      setNotice(`Block ${res.data?.decisionCode || ""} created. The customer has been notified and can appeal within 7 days.`);
+      setNotice(`Block ${res.data?.decisionCode || ""} created. The customer has been notified and can appeal within ${isTicket ? "24 hours" : "7 days"}.`);
       setBlockOpen(false);
       setForm(NEW_BLOCK);
       await load();
@@ -124,8 +128,9 @@ export default function RiskBlocksPage() {
               <label>
                 Scope
                 <select value={form.scope} onChange={(e) => setN("scope", e.target.value)}>
-                  <option value="ACCOUNT">ACCOUNT (end all sessions, lock account)</option>
+                  <option value="ACCOUNT">ACCOUNT (block transactions, keep login)</option>
                   <option value="TICKET">TICKET (ticket cannot be used for entry)</option>
+                  <option value="IP">IP (block every request from this address)</option>
                 </select>
               </label>
               <label>
@@ -136,6 +141,12 @@ export default function RiskBlocksPage() {
                 <label>
                   Ticket ID
                   <input inputMode="numeric" value={form.ticketId} onChange={(e) => setN("ticketId", e.target.value)} />
+                </label>
+              )}
+              {form.scope === "IP" && (
+                <label>
+                  IP address
+                  <input value={form.ipAddress} onChange={(e) => setN("ipAddress", e.target.value)} placeholder="203.0.113.9" />
                 </label>
               )}
               <label>
@@ -151,7 +162,8 @@ export default function RiskBlocksPage() {
             </div>
             <p className="kyc-admin-note">
               You cannot block your own account, and a target that is already blocked cannot be blocked again.
-              The customer is notified and can appeal within 7 days.
+              Ticket blocks give the customer 24 hours to appeal; account and IP blocks give 7 days.
+              An IP block affects every account using that address (for example behind a shared NAT).
             </p>
             <div className="fr-row end">
               <button type="button" className="admin-button-secondary" onClick={() => setBlockOpen(false)}>Cancel</button>
@@ -186,7 +198,7 @@ export default function RiskBlocksPage() {
             <table className="user-table">
               <thead>
                 <tr>
-                  <th>Code</th><th>Scope</th><th>User</th><th>Alert</th><th>Status</th>
+                  <th>Code</th><th>Scope</th><th>User</th><th>IP</th><th>Alert</th><th>Status</th>
                   <th>Decided by</th><th>Expires</th><th>Created</th><th></th>
                 </tr>
               </thead>
@@ -196,6 +208,7 @@ export default function RiskBlocksPage() {
                     <td style={{ fontFamily: "monospace", fontSize: 12 }}>{b.decisionCode}</td>
                     <td>{b.scope || "—"}</td>
                     <td>{b.userId != null ? `#${b.userId}` : "—"}</td>
+                    <td style={{ fontFamily: "monospace", fontSize: 12 }}>{b.ipAddress || "—"}</td>
                     <td>
                       {b.fraudAlertId != null
                         ? <Link to={`/admin/fraud-alerts/${b.fraudAlertId}`}>#{b.fraudAlertId}</Link>
