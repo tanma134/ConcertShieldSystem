@@ -23,7 +23,9 @@ internal sealed class QueueAdminTestContext : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         Db = new QueueDbContext(options);
-        Controller = new QueueAdminController(new QueueRepository(Db), Redis.Object, AuditLog.Object);
+        var repository = new QueueRepository(Db);
+        var adminService = new QueueAdminService(repository, Redis.Object, AuditLog.Object);
+        Controller = new QueueAdminController(adminService);
         Controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext()

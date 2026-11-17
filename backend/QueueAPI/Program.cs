@@ -42,6 +42,7 @@ builder.Services.AddSwaggerGen(options =>
 });
 builder.Services.AddDbContext<QueueDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"), npgsql => npgsql.EnableRetryOnFailure()));
 builder.Services.AddScoped<IQueueRepository, QueueRepository>();
+builder.Services.AddScoped<IQueueAdminService, QueueAdminService>();
 builder.Services.AddSingleton<IRedisQueueStore, RedisQueueStore>();
 builder.Services.AddScoped<IQueueService, QueueService>();
 builder.Services.AddHttpClient<IQueueAuditLogClient, QueueAuditLogClient>((serviceProvider, client) =>
