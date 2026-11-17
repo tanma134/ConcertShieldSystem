@@ -73,7 +73,8 @@
 }
 .queue-management-page .queue-config-form input,
 .queue-management-page .queue-config-form select,
-.queue-management-page .queue-filter-control select {
+.queue-management-page .queue-filter-control select,
+.queue-management-page .queue-filter-control input {
   width: 100%;
   min-width: 0;
   min-height: 38px;
@@ -87,7 +88,8 @@
 }
 .queue-management-page .queue-config-form input:focus,
 .queue-management-page .queue-config-form select:focus,
-.queue-management-page .queue-filter-control select:focus {
+.queue-management-page .queue-filter-control select:focus,
+.queue-management-page .queue-filter-control input:focus {
   border-color: var(--admin-accent-dark);
   outline: 0;
   box-shadow: 0 0 0 3px var(--admin-accent-soft);
@@ -95,7 +97,7 @@
 .queue-management-page .queue-config-form button { white-space: nowrap; }
 .queue-management-toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(200px, 270px);
+  grid-template-columns: minmax(0, 1fr) repeat(3, minmax(160px, 220px));
   align-items: end;
   gap: 14px;
   padding-bottom: 14px;

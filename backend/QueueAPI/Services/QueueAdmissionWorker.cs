@@ -1,5 +1,4 @@
-using Microsoft.EntityFrameworkCore;
-using QueueAPI.Data;
+using QueueAPI.Repositories;
 using QueueAPI.Time;
 
 namespace QueueAPI.Services;
@@ -13,13 +12,11 @@ public sealed class QueueAdmissionWorker(IServiceScopeFactory scopeFactory, ILog
             try
             {
                 using var scope = scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<QueueDbContext>();
+                var repository = scope.ServiceProvider.GetRequiredService<IQueueRepository>();
                 var redis = scope.ServiceProvider.GetRequiredService<IRedisQueueStore>();
                 var now = QueueTimeZone.Now;
                 // timestamp without time zone values are Vietnam local wall-clock values.
-                var configs = await db.QueueConfigurations.AsNoTracking()
-                    .Where(x => x.PreQueueEndTime <= now)
-                    .ToListAsync(stoppingToken);
+                var configs = await repository.GetConfigurationsEndedBeforeAsync(now, stoppingToken);
                 foreach (var config in configs)
                 {
                     var cycleKey = config.PreQueueEndTime.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
@@ -28,22 +25,18 @@ public sealed class QueueAdmissionWorker(IServiceScopeFactory scopeFactory, ILog
                         await redis.FinalizeRandomizationAsync(config.EventId, cycleKey, stoppingToken);
                         var admitted = await redis.AdmitNextAsync(config.EventId, config.AdmissionRate, stoppingToken);
                         if (admitted > 0) logger.LogInformation("Queue admitted {Count} users for eventId={EventId}", admitted, config.EventId);
-                        await SyncQueueSessionStatusesAsync(db, redis, config.EventId, stoppingToken);
+                        await SyncQueueSessionStatusesAsync(repository, redis, config.EventId, stoppingToken);
                     }
 
-                    var admittedSessions = await db.QueueSessions
-                        .Where(x => x.EventId == config.EventId && x.Status == "ADMITTED")
-                        .Select(x => new { x.QueueSessionId, x.UserId })
-                        .ToListAsync(stoppingToken);
+                    var admittedSessions = await repository.GetAdmittedSessionsAsync(config.EventId, stoppingToken);
                     foreach (var session in admittedSessions)
                     {
                         if (!await redis.HasAdmissionAsync(config.EventId, session.UserId, stoppingToken))
                         {
-                            await db.QueueSessions
-                                .Where(x => x.QueueSessionId == session.QueueSessionId && x.Status == "ADMITTED")
-                                .ExecuteUpdateAsync(update => update
-                                    .SetProperty(x => x.Status, "EXPIRED")
-                                    .SetProperty(x => x.UpdatedAt, QueueTimeZone.Now), stoppingToken);
+                            await repository.ExpireAdmittedSessionAsync(
+                                session.QueueSessionId,
+                                QueueTimeZone.Now,
+                                stoppingToken);
                         }
                     }
                 }
@@ -55,14 +48,12 @@ public sealed class QueueAdmissionWorker(IServiceScopeFactory scopeFactory, ILog
     }
 
     private async Task SyncQueueSessionStatusesAsync(
-        QueueDbContext db,
+        IQueueRepository repository,
         IRedisQueueStore redis,
         int eventId,
         CancellationToken cancellationToken)
     {
-        var sessions = await db.QueueSessions
-            .Where(x => x.EventId == eventId && (x.Status == "REGISTERED" || x.Status == "WAITING"))
-            .ToListAsync(cancellationToken);
+        var sessions = await repository.GetSyncableSessionsAsync(eventId, cancellationToken);
 
         var changed = 0;
         foreach (var session in sessions)
@@ -93,7 +84,7 @@ public sealed class QueueAdmissionWorker(IServiceScopeFactory scopeFactory, ILog
 
         if (changed > 0)
         {
-            await db.SaveChangesAsync(cancellationToken);
+            await repository.SaveChangesAsync(cancellationToken);
             logger.LogInformation(
                 "Synchronized {Count} queue session statuses from Redis for eventId={EventId}",
                 changed, eventId);

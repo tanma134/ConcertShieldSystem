@@ -1,10 +1,9 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using QueueAPI.Data;
 using QueueAPI.DTOs;
 using QueueAPI.Models;
+using QueueAPI.Repositories;
 using QueueAPI.Services;
 using QueueAPI.Time;
 
@@ -13,7 +12,7 @@ namespace QueueAPI.Controllers;
 [ApiController]
 [Route("api/queue/admin")]
 [Authorize(Policy = "QueueAdmin")]
-public sealed class QueueAdminController(QueueDbContext db, IRedisQueueStore redis, IQueueAuditLogClient auditLog) : ControllerBase
+public sealed class QueueAdminController(IQueueRepository repository, IRedisQueueStore redis, IQueueAuditLogClient auditLog) : ControllerBase
 {
     private static readonly string[] SupportedAlertTypes =
     [
@@ -27,46 +26,54 @@ public sealed class QueueAdminController(QueueDbContext db, IRedisQueueStore red
     private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub") ?? "0");
 
     [HttpGet("sessions")]
-    public async Task<ActionResult<IEnumerable<QueueAdminSessionResponse>>> Sessions([FromQuery] int? eventId = null)
+    public async Task<ActionResult<IEnumerable<QueueAdminSessionResponse>>> Sessions(
+        [FromQuery] int? eventId = null,
+        [FromQuery] DateOnly? fromDate = null,
+        [FromQuery] DateOnly? toDate = null)
     {
-        var query = db.QueueSessions.AsNoTracking().AsQueryable();
-        if (eventId.HasValue) query = query.Where(x => x.EventId == eventId);
-        var sessions = await query.OrderByDescending(x => x.UpdatedAt).Take(500).ToListAsync();
+        if (fromDate.HasValue && toDate.HasValue && fromDate > toDate)
+            return BadRequest(new { code = "INVALID_DATE_RANGE" });
+
+        var updatedAtFrom = fromDate?.ToDateTime(TimeOnly.MinValue);
+        DateTime? updatedAtBefore = toDate.HasValue && toDate.Value < DateOnly.MaxValue
+            ? toDate.Value.AddDays(1).ToDateTime(TimeOnly.MinValue)
+            : null;
+        var sessions = await repository.GetAdminSessionsAsync(eventId, updatedAtFrom, updatedAtBefore);
         return Ok(sessions.Select(x => new QueueAdminSessionResponse(x.QueueSessionId, x.EventId, x.UserId, x.SessionId, x.Status, x.Position, x.QueueToken[..8] + "...", QueueTimeZone.AsVietnamOffset(x.UpdatedAt))));
     }
 
     [HttpPost("tokens/{token}/revoke")]
     public async Task<IActionResult> Revoke(string token, RevokeQueueRequest request)
     {
-        var session = await db.QueueSessions.SingleOrDefaultAsync(x => x.QueueToken == token);
+        var session = await repository.GetSessionByTokenAsync(token);
         if (session == null) return NotFound(new { code = "TOKEN_INVALID" });
-        var config = await db.QueueConfigurations.SingleOrDefaultAsync(x => x.EventId == session.EventId);
+        var config = await repository.GetConfigurationByEventIdAsync(session.EventId);
         if (config == null) return NotFound(new { code = "EVENT_NOT_FOUND" });
         await redis.RevokeAsync(session.EventId, session.UserId, session.SessionId, token, config.PreQueueEndTime.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture), CancellationToken.None);
         session.Status = "REVOKED";
         session.UpdatedAt = QueueTimeZone.Now;
-        await db.SaveChangesAsync();
+        await repository.SaveChangesAsync();
         return Ok(new { message = "Queue token revoked successfully." });
     }
 
     [HttpPost("sessions/{sessionId}/revoke")]
     public async Task<IActionResult> RevokeSession(string sessionId, RevokeQueueRequest request)
     {
-        var session = await db.QueueSessions.SingleOrDefaultAsync(x => x.SessionId == sessionId);
+        var session = await repository.GetSessionByIdAsync(sessionId);
         if (session == null) return NotFound(new { code = "TOKEN_INVALID" });
-        var config = await db.QueueConfigurations.SingleOrDefaultAsync(x => x.EventId == session.EventId);
+        var config = await repository.GetConfigurationByEventIdAsync(session.EventId);
         if (config == null) return NotFound(new { code = "EVENT_NOT_FOUND" });
         await redis.RevokeAsync(session.EventId, session.UserId, session.SessionId, session.QueueToken, config.PreQueueEndTime.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture), CancellationToken.None);
         session.Status = "REVOKED";
         session.UpdatedAt = QueueTimeZone.Now;
-        await db.SaveChangesAsync();
+        await repository.SaveChangesAsync();
         return Ok(new { message = "Queue token revoked successfully." });
     }
 
     [HttpPost("sessions/{sessionId}/unrevoke")]
     public async Task<IActionResult> UnrevokeSession(string sessionId)
     {
-        var session = await db.QueueSessions.SingleOrDefaultAsync(x => x.SessionId == sessionId);
+        var session = await repository.GetSessionByIdAsync(sessionId);
         if (session == null) return NotFound(new { code = "TOKEN_INVALID" });
         if (session.Status != "REVOKED") return Conflict(new { code = "SESSION_NOT_REVOKED" });
 
@@ -75,28 +82,25 @@ public sealed class QueueAdminController(QueueDbContext db, IRedisQueueStore red
         session.Status = "LEFT";
         session.Position = null;
         session.UpdatedAt = QueueTimeZone.Now;
-        await db.SaveChangesAsync();
+        await repository.SaveChangesAsync();
         return Ok(new { message = "Queue session restored. The user can register again." });
     }
 
     [HttpGet("abuse-alerts")]
     public async Task<ActionResult<IEnumerable<AbuseAlertResponse>>> Alerts([FromQuery] string? severity = null, [FromQuery] string? status = null)
     {
-        var query = db.AbuseAlerts.AsNoTracking()
-            .Where(x => SupportedAlertTypes.Contains(x.AlertType) && SupportedSeverities.Contains(x.Severity));
-        if (!string.IsNullOrWhiteSpace(severity)) query = query.Where(x => x.Severity == severity.ToUpperInvariant());
-        if (!string.IsNullOrWhiteSpace(status)) query = query.Where(x => x.Status == status.ToUpperInvariant());
-        var alerts = await query.OrderByDescending(x => x.CreatedAt).Take(500).ToListAsync();
+        var alerts = await repository.GetAdminAlertsAsync(
+            SupportedAlertTypes,
+            SupportedSeverities,
+            string.IsNullOrWhiteSpace(severity) ? null : severity.ToUpperInvariant(),
+            string.IsNullOrWhiteSpace(status) ? null : status.ToUpperInvariant());
         return Ok(alerts.Select(ToResponse));
     }
 
     [HttpGet("abuse-alerts/{id:long}")]
     public async Task<ActionResult<AbuseAlertResponse>> Alert(long id)
     {
-        var alert = await db.AbuseAlerts.AsNoTracking().SingleOrDefaultAsync(x =>
-            x.AbuseAlertId == id &&
-            SupportedAlertTypes.Contains(x.AlertType) &&
-            SupportedSeverities.Contains(x.Severity));
+        var alert = await repository.GetAdminAlertByIdAsync(id, SupportedAlertTypes, SupportedSeverities);
         return alert == null ? NotFound() : Ok(ToResponse(alert));
     }
 
@@ -111,7 +115,7 @@ public sealed class QueueAdminController(QueueDbContext db, IRedisQueueStore red
     [HttpPost("sessions/{sessionId}/unblock")]
     public async Task<IActionResult> Unblock(string sessionId, [FromQuery] long? alertId = null)
     {
-        var session = await db.QueueSessions.SingleOrDefaultAsync(x => x.SessionId == sessionId);
+        var session = await repository.GetSessionByIdAsync(sessionId);
         if (session == null) return NotFound();
         var alert = await FindRelatedAlertAsync(sessionId, alertId);
         if (alertId.HasValue && alert == null) return NotFound();
@@ -120,7 +124,7 @@ public sealed class QueueAdminController(QueueDbContext db, IRedisQueueStore red
         session.Status = "LEFT";
         session.UpdatedAt = QueueTimeZone.Now;
         if (alert != null) alert.Status = "OPEN";
-        await db.SaveChangesAsync();
+        await repository.SaveChangesAsync();
         await WriteAuditLogAsync(
             "QUEUE_ABUSE_ALERT_UNBLOCKED",
             alert,
@@ -132,7 +136,7 @@ public sealed class QueueAdminController(QueueDbContext db, IRedisQueueStore red
 
     private async Task<IActionResult> RecordSessionAction(string sessionId, string status, long? alertId)
     {
-        var session = await db.QueueSessions.SingleOrDefaultAsync(x => x.SessionId == sessionId);
+        var session = await repository.GetSessionByIdAsync(sessionId);
         if (session == null) return NotFound();
         var alert = await FindRelatedAlertAsync(sessionId, alertId);
         if (alertId.HasValue && alert == null) return NotFound();
@@ -140,14 +144,14 @@ public sealed class QueueAdminController(QueueDbContext db, IRedisQueueStore red
         var oldAlertStatus = alert?.Status;
         if (status == "BLOCKED")
         {
-            var config = await db.QueueConfigurations.SingleOrDefaultAsync(x => x.EventId == session.EventId);
+            var config = await repository.GetConfigurationByEventIdAsync(session.EventId);
             if (config == null) return NotFound(new { code = "EVENT_NOT_FOUND" });
             await redis.RevokeAsync(session.EventId, session.UserId, session.SessionId, session.QueueToken, config.PreQueueEndTime.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture), CancellationToken.None);
             session.Status = "BLOCKED";
         }
         session.UpdatedAt = QueueTimeZone.Now;
         if (alert != null) alert.Status = status;
-        await db.SaveChangesAsync();
+        await repository.SaveChangesAsync();
         await WriteAuditLogAsync(
             status == "BLOCKED" ? "QUEUE_ABUSE_ALERT_BLOCKED" : "QUEUE_ABUSE_ALERT_FLAGGED",
             alert,
@@ -174,16 +178,8 @@ public sealed class QueueAdminController(QueueDbContext db, IRedisQueueStore red
             HttpContext.TraceIdentifier,
             Request.Headers.UserAgent.ToString());
 
-    private Task<AbuseAlert?> FindRelatedAlertAsync(string sessionId, long? alertId)
-    {
-        var query = db.AbuseAlerts.Where(x =>
-            x.SessionId == sessionId &&
-            SupportedAlertTypes.Contains(x.AlertType) &&
-            SupportedSeverities.Contains(x.Severity));
-        return alertId.HasValue
-            ? query.SingleOrDefaultAsync(x => x.AbuseAlertId == alertId.Value)
-            : query.OrderByDescending(x => x.CreatedAt).FirstOrDefaultAsync();
-    }
+    private Task<AbuseAlert?> FindRelatedAlertAsync(string sessionId, long? alertId) =>
+        repository.GetRelatedAlertAsync(sessionId, alertId, SupportedAlertTypes, SupportedSeverities);
 
     private static AbuseAlertResponse ToResponse(AbuseAlert alert)
     {

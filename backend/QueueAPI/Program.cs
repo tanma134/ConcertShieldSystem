@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using QueueAPI.Data;
+using QueueAPI.Repositories;
 using QueueAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -40,6 +41,7 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 builder.Services.AddDbContext<QueueDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"), npgsql => npgsql.EnableRetryOnFailure()));
+builder.Services.AddScoped<IQueueRepository, QueueRepository>();
 builder.Services.AddSingleton<IRedisQueueStore, RedisQueueStore>();
 builder.Services.AddScoped<IQueueService, QueueService>();
 builder.Services.AddHttpClient<IQueueAuditLogClient, QueueAuditLogClient>((serviceProvider, client) =>

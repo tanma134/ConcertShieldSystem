@@ -2,7 +2,7 @@ import axiosClient from "./axiosClient";
 
 const queueAdminApi = {
   configure: (eventId, data) => axiosClient.post(`/queue/${eventId}/prequeue/configure`, data),
-  getSessions: (eventId) => axiosClient.get("/queue/admin/sessions", { params: eventId ? { eventId } : {} }),
+  getSessions: (params = {}) => axiosClient.get("/queue/admin/sessions", { params }),
   revoke: (token, reason) => axiosClient.post(`/queue/admin/tokens/${token}/revoke`, { reason }),
   revokeSession: (sessionId, reason) => axiosClient.post(`/queue/admin/sessions/${sessionId}/revoke`, { reason }),
   unrevokeSession: (sessionId) => axiosClient.post(`/queue/admin/sessions/${sessionId}/unrevoke`),

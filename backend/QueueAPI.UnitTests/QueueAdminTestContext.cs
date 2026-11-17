@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using QueueAPI.Controllers;
 using QueueAPI.Data;
 using QueueAPI.Models;
+using QueueAPI.Repositories;
 using QueueAPI.Services;
 using QueueAPI.Time;
 
@@ -22,7 +23,7 @@ internal sealed class QueueAdminTestContext : IDisposable
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         Db = new QueueDbContext(options);
-        Controller = new QueueAdminController(Db, Redis.Object, AuditLog.Object);
+        Controller = new QueueAdminController(new QueueRepository(Db), Redis.Object, AuditLog.Object);
         Controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext()

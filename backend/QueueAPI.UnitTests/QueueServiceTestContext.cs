@@ -6,6 +6,7 @@ using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using QueueAPI.Data;
 using QueueAPI.Models;
+using QueueAPI.Repositories;
 using QueueAPI.Services;
 using QueueAPI.Time;
 
@@ -45,7 +46,7 @@ internal sealed class QueueServiceTestContext : IDisposable
         };
         HttpClientFactory.Setup(factory => factory.CreateClient("EventAPI")).Returns(eventApiClient);
 
-        Service = new QueueService(Db, Redis.Object, HttpClientFactory.Object, Logger.Object);
+        Service = new QueueService(new QueueRepository(Db), Redis.Object, HttpClientFactory.Object, Logger.Object);
     }
 
     public async Task<QueueConfiguration> SeedConfigurationAsync(
