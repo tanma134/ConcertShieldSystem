@@ -31,10 +31,17 @@ public partial class TicketDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        // Khi chạy qua DI, Program.cs là nguồn connection string duy nhất.
-        // Fallback này chỉ phục vụ tooling/scaffolding chạy trực tiếp DbContext.
+        // Khi chay qua DI, Program.cs la nguon connection string duy nhat.
+        // Khong hardcode password hoac connection string trong C#.
         if (!optionsBuilder.IsConfigured)
-            optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=05_ticket_db;Username=postgres;Password=123456");
+        {
+            var fallback = Environment.GetEnvironmentVariable("CONCERTSHIELD_TEST_POSTGRES")
+                ?? Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+            if (!string.IsNullOrEmpty(fallback))
+            {
+                optionsBuilder.UseNpgsql(fallback);
+            }
+        }
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

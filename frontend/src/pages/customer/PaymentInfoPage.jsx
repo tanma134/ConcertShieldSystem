@@ -985,7 +985,6 @@ export default function PaymentInfoPage() {
               </button>
 
               <div className="tb-payment-note">
-                <span aria-hidden="true">🔒</span>
                 Your payment is processed through a secure checkout.
               </div>
             </section>

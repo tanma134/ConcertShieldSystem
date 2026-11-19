@@ -19,6 +19,7 @@ namespace TicketAPI.Repositories
         Task<TicketReturnRequest?> GetMineForCancelAsync(int userId, int requestId);
         Task<List<TicketReturnRequest>> ListForReviewAsync(string? status, IReadOnlyCollection<int>? eventScope = null);
         Task<TicketReturnRequest?> GetForReviewAsync(int requestId);
+        Task SyncOrderRefundStatusAsync(int orderId);
         Task SaveChangesAsync();
     }
 }

@@ -24,7 +24,8 @@ builder.Services.AddScoped<IWishlistRepository, WishlistRepository>();
 builder.Services.AddScoped<IPricingRuleRepository, PricingRuleRepository>();
 builder.Services.AddScoped<ISeatingTemplateRepository, SeatingTemplateRepository>();
 
-// Governance dùng API nội bộ, không truy cập DB của service khác.
+// Governance dung repository thao tac du lieu va API noi bo khong truy cap truc tiep service khac
+builder.Services.AddScoped<IGovernanceRepository, GovernanceRepository>();
 builder.Services.AddScoped<GovernanceService>();
 // Upload phải hết hạn trước Gateway để EventAPI còn thời gian trả lỗi có nội dung.
 builder.Services.AddHttpClient<IComplianceAssetStore, ComplianceAssetStore>(client =>
@@ -65,12 +66,18 @@ builder.Services.AddScoped<ISeatingTemplateService, SeatingTemplateService>();
 builder.Services.AddScoped<IEventAccessService, EventAccessService>();
 
 var authApiBaseUrl = builder.Configuration["Services:AuthenticationApi"] ?? "http://localhost:5010";
+builder.Services.AddScoped<IEventStaffRepository, EventStaffRepository>();
 builder.Services.AddHttpClient<IStaffDirectoryClient, StaffDirectoryClient>(client =>
 {
     client.BaseAddress = new Uri(authApiBaseUrl.TrimEnd('/') + "/");
     client.Timeout = TimeSpan.FromSeconds(15);
 });
-builder.Services.AddScoped<IEventStaffService, EventStaffService>();
+// Explicit factory: EventStaffService has a DbContext overload kept for tests, so the
+// container cannot choose between constructors on its own.
+builder.Services.AddScoped<IEventStaffService>(sp => new EventStaffService(
+    sp.GetRequiredService<IEventStaffRepository>(),
+    sp.GetRequiredService<IEventRepository>(),
+    sp.GetRequiredService<IStaffDirectoryClient>()));
 builder.Services.AddHttpClient<IIdentityRoleClient, IdentityRoleClient>(client =>
 {
     client.BaseAddress = new Uri(authApiBaseUrl.TrimEnd('/') + "/");
@@ -127,7 +134,7 @@ builder.Services.AddSwaggerGen(c =>
 // PostgreSQL DbContext
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? builder.Configuration["ConnectionStrings__DefaultConnection"]
-    ?? "Host=localhost;Port=5432;Database=event_db;Username=postgres;Password=123456";
+        ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_EVENT_POSTGRES") ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TEST_POSTGRES") ?? throw new InvalidOperationException("Connection string is not configured.");
 
 builder.Services.AddDbContext<EventDbContext>(options =>
     options.UseNpgsql(connectionString)

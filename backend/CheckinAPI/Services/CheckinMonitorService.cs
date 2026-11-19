@@ -31,8 +31,8 @@ namespace CheckinAPI.Services
             _configuration = configuration;
             _logger = logger;
             _ticketDbConnection = _configuration.GetConnectionString("DefaultConnection")
-                ?? "Host=localhost;Port=5432;Database=ticket_db;Username=postgres;Password=123456";
-            _eventDbConnection = "Host=localhost;Port=5432;Database=event_db;Username=postgres;Password=123456";
+                ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TICKET_POSTGRES") ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TEST_POSTGRES") ?? throw new InvalidOperationException("Missing ticket database connection string.");
+            _eventDbConnection = _configuration.GetConnectionString("EventDbConnection") ?? _configuration.GetConnectionString("EventConnection") ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_EVENT_POSTGRES") ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TEST_POSTGRES") ?? throw new InvalidOperationException("Missing event database connection string.");
         }
 
         public async Task<CheckinMonitorResponseDTO> GetMonitorStatusAsync(int eventId, string? gateId, string? zone, int currentUserId, bool isAdmin)
@@ -54,7 +54,7 @@ namespace CheckinAPI.Services
                 // 2. Query Total Issued & Checked-in count from tickets
                 using (var cmd = new NpgsqlCommand(@"
                     SELECT COUNT(*) AS total, 
-                           COUNT(CASE WHEN is_checked_in = true OR status = 'Used' THEN 1 END) AS checked_in 
+                           COUNT(CASE WHEN checked_in_at IS NOT NULL OR status = 'Used' THEN 1 END) AS checked_in 
                     FROM tickets 
                     WHERE event_id = @eid AND is_deleted = false;", conn))
                 {
@@ -71,7 +71,7 @@ namespace CheckinAPI.Services
                 using (var cmd = new NpgsqlCommand(@"
                     SELECT COALESCE(ticket_type_name, 'General Admission') AS zone_name,
                            COUNT(*) AS total_zone,
-                           COUNT(CASE WHEN is_checked_in = true OR status = 'Used' THEN 1 END) AS checked_in_zone
+                           COUNT(CASE WHEN checked_in_at IS NOT NULL OR status = 'Used' THEN 1 END) AS checked_in_zone
                     FROM tickets
                     WHERE event_id = @eid AND is_deleted = false
                     GROUP BY ticket_type_name
@@ -284,7 +284,7 @@ namespace CheckinAPI.Services
                 // Find ticket by dynamic QR token, ticket code, or ticket ID
                 string sql = @"
                     SELECT t.ticket_id, t.ticket_code, t.event_id, t.ticket_type_name, t.owner_name, 
-                           t.status, t.is_checked_in, t.checked_in_at, t.gate_id,
+                           t.status, (CASE WHEN t.checked_in_at IS NOT NULL OR t.status = 'Used' THEN true ELSE false END) AS is_checked_in, t.checked_in_at, t.checked_in_gate AS gate_id,
                            o.order_id, o.full_name, o.phone,
                            qr.ticket_qr_token_id, qr.qr_token, qr.expires_at AS qr_expires_at, qr.is_revoked AS qr_is_revoked, qr.is_used AS qr_is_used
                     FROM tickets t
@@ -513,7 +513,7 @@ namespace CheckinAPI.Services
                 {
                     sql = @"
                         SELECT t.ticket_id, t.ticket_code, t.event_id, t.ticket_type_name, t.owner_name, 
-                               t.status, t.is_checked_in, t.checked_in_at, t.gate_id,
+                               t.status, (CASE WHEN t.checked_in_at IS NOT NULL OR t.status = 'Used' THEN true ELSE false END) AS is_checked_in, t.checked_in_at, t.checked_in_gate AS gate_id,
                                o.order_id, o.full_name, o.phone
                         FROM tickets t
                         LEFT JOIN orders o ON t.order_id = o.order_id
@@ -527,7 +527,7 @@ namespace CheckinAPI.Services
                 {
                     sql = @"
                         SELECT t.ticket_id, t.ticket_code, t.event_id, t.ticket_type_name, t.owner_name, 
-                               t.status, t.is_checked_in, t.checked_in_at, t.gate_id,
+                               t.status, (CASE WHEN t.checked_in_at IS NOT NULL OR t.status = 'Used' THEN true ELSE false END) AS is_checked_in, t.checked_in_at, t.checked_in_gate AS gate_id,
                                o.order_id, o.full_name, o.phone
                         FROM tickets t
                         LEFT JOIN orders o ON t.order_id = o.order_id
@@ -674,7 +674,7 @@ namespace CheckinAPI.Services
                 var sql = @"
                     SELECT DISTINCT ON (t.ticket_id)
                            t.ticket_id, t.ticket_code, t.event_id, t.ticket_type_name, t.owner_name,
-                           t.status, t.is_checked_in, t.checked_in_at, t.gate_id,
+                           t.status, (CASE WHEN t.checked_in_at IS NOT NULL OR t.status = 'Used' THEN true ELSE false END) AS is_checked_in, t.checked_in_at, t.checked_in_gate AS gate_id,
                            o.order_id, o.full_name, o.phone, o.email,
                            COALESCE(oa.citizen_id, '') as citizen_id
                     FROM tickets t

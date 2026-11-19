@@ -189,4 +189,105 @@ public class Feature10_SeatingChartPricingTests
 
         Assert.InRange(selectedLimit, minLimit, maxLimit);
     }
+
+    [Fact]
+    public void UC_3_11_1_SeatingGeometry_OverlappingRectangles_Detected()
+    {
+        var zoneA = "{\"x\": 100, \"y\": 100, \"width\": 200, \"height\": 200}";
+        var zoneB = "{\"x\": 150, \"y\": 150, \"width\": 200, \"height\": 200}";
+
+        var boxA = EventAPI.Services.SeatingService.ParseBounds(zoneA);
+        var boxB = EventAPI.Services.SeatingService.ParseBounds(zoneB);
+
+        Assert.NotNull(boxA);
+        Assert.NotNull(boxB);
+        Assert.True(boxA.Value.Intersects(boxB.Value), "Overlapping bounding boxes must be detected");
+    }
+
+    [Fact]
+    public void UC_3_11_1_SeatingGeometry_NonOverlappingRectangles_Accepted()
+    {
+        var zoneA = "{\"x\": 100, \"y\": 100, \"width\": 100, \"height\": 100}";
+        var zoneB = "{\"x\": 300, \"y\": 100, \"width\": 100, \"height\": 100}";
+
+        var boxA = EventAPI.Services.SeatingService.ParseBounds(zoneA);
+        var boxB = EventAPI.Services.SeatingService.ParseBounds(zoneB);
+
+        Assert.NotNull(boxA);
+        Assert.NotNull(boxB);
+        Assert.False(boxA.Value.Intersects(boxB.Value), "Adjacent non-overlapping zones must not collide");
+    }
+
+    [Fact]
+    public void UC_3_11_1_SeatingGeometry_PolygonValidation_RequiresAtLeastThreeVertices()
+    {
+        var validPoly = "{\"points\":[{\"x\":0,\"y\":0},{\"x\":100,\"y\":0},{\"x\":50,\"y\":100}]}";
+        var invalidPoly = "{\"points\":[{\"x\":0,\"y\":0},{\"x\":100,\"y\":0}]}";
+
+        var boxValid = EventAPI.Services.SeatingService.ParseBounds(validPoly);
+        var boxInvalid = EventAPI.Services.SeatingService.ParseBounds(invalidPoly);
+
+        Assert.NotNull(boxValid);
+        Assert.Null(boxInvalid);
+    }
+
+    [Fact]
+    public void UC_3_11_7_EffectivePrice_AppliesPriorityAndQuantityThreshold()
+    {
+        var ticketType = new TicketType
+        {
+            TicketTypeId = 1,
+            TypeName = "VIP",
+            Price = 1000000L,
+            Quantity = 100,
+            SoldQuantity = 10,
+            PricingRules = new List<PricingRule>()
+        };
+
+        // Rule 1: Priority 1, 10% discount -> 900,000
+        ticketType.PricingRules.Add(new PricingRule
+        {
+            PricingRuleId = 1,
+            RuleName = "EarlyBird10",
+            RuleType = "EarlyBird",
+            DiscountPercent = 10,
+            Priority = 1,
+            IsActive = true,
+            TriggerFrom = DateTime.UtcNow.AddHours(-1),
+            TriggerTo = DateTime.UtcNow.AddHours(2)
+        });
+
+        // Rule 2: Priority 2, Adjusted price 800,000 -> 800,000 wins due to higher Priority
+        ticketType.PricingRules.Add(new PricingRule
+        {
+            PricingRuleId = 2,
+            RuleName = "SuperEarlyBird",
+            RuleType = "TimeBased",
+            AdjustedPrice = 800000L,
+            Priority = 2,
+            IsActive = true,
+            TriggerFrom = DateTime.UtcNow.AddHours(-1),
+            TriggerTo = DateTime.UtcNow.AddHours(2)
+        });
+
+        var price = EventAPI.Services.EventService.ResolveEffectivePrice(ticketType);
+        Assert.Equal(800000L, price);
+
+        // When SoldQuantity exceeds QuantityThreshold, rule with threshold is bypassed
+        ticketType.PricingRules.Clear();
+        ticketType.SoldQuantity = 50;
+        ticketType.PricingRules.Add(new PricingRule
+        {
+            PricingRuleId = 3,
+            RuleName = "First20Only",
+            RuleType = "QuantityBased",
+            DiscountPercent = 50,
+            QuantityThreshold = 20, // Only for first 20 tickets sold
+            Priority = 1,
+            IsActive = true
+        });
+
+        var priceAfterThreshold = EventAPI.Services.EventService.ResolveEffectivePrice(ticketType);
+        Assert.Equal(1000000L, priceAfterThreshold);
+    }
 }

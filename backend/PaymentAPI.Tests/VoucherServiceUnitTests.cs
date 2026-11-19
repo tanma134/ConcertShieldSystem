@@ -41,8 +41,8 @@ namespace PaymentAPI.Tests
                 EndsAt = DateTime.UtcNow.AddDays(30)
             };
 
-            _mockRepo.Setup(r => r.CodeExistsAsync("SUMMER20")).ReturnsAsync(false);
-            _mockRepo.Setup(r => r.AddAsync(It.IsAny<Voucher>())).Returns(Task.CompletedTask);
+            _mockRepo.Setup(r => r.CodeExistsAsync("SUMMER20", null)).ReturnsAsync(false);
+            _mockRepo.Setup(r => r.CreateAsync(It.IsAny<Voucher>())).ReturnsAsync((Voucher v) => v);
 
             // Act
             var result = await svc.CreateVoucherAsync(dto, currentUserId: 10, isAdmin: false, isOrganizer: true);
@@ -51,7 +51,7 @@ namespace PaymentAPI.Tests
             Assert.NotNull(result);
             Assert.Equal("SUMMER20", result.Code);
             Assert.Equal(20, result.DiscountPercent);
-            _mockRepo.Verify(r => r.AddAsync(It.IsAny<Voucher>()), Times.Once);
+            _mockRepo.Verify(r => r.CreateAsync(It.IsAny<Voucher>()), Times.Once);
         }
 
         [Fact]
@@ -71,7 +71,7 @@ namespace PaymentAPI.Tests
                 EndsAt = DateTime.UtcNow.AddDays(10)
             };
 
-            _mockRepo.Setup(r => r.CodeExistsAsync("EXISTING_CODE")).ReturnsAsync(true);
+            _mockRepo.Setup(r => r.CodeExistsAsync("EXISTING_CODE", null)).ReturnsAsync(true);
 
             // Act & Assert
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -119,7 +119,7 @@ namespace PaymentAPI.Tests
                 EndsAt = DateTime.UtcNow.AddDays(10)
             };
 
-            _mockRepo.Setup(r => r.CodeExistsAsync("PLATFORM10")).ReturnsAsync(false);
+            _mockRepo.Setup(r => r.CodeExistsAsync("PLATFORM10", null)).ReturnsAsync(false);
 
             // Act & Assert (isOrganizer=true, isAdmin=false)
             await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
@@ -147,12 +147,11 @@ namespace PaymentAPI.Tests
                          Items = mockVouchers,
                          TotalCount = 2,
                          Page = 1,
-                         PageSize = 10,
-                         TotalPages = 1
+                         PageSize = 10
                      });
 
             // Act
-            var result = await svc.GetVouchersAsync(page: 1, limit: 10, scope: "ORGANIZER", isActive: null, searchCode: null, organizerId: 10, userId: 10, isAdmin: false, isOrg: true);
+            var result = await svc.GetVouchersAsync(page: 1, limit: 10, scope: "ORGANIZER", isActive: null, searchCode: null, organizerId: 10, currentUserId: 10, isAdmin: false, isOrganizer: true);
 
             // Assert
             Assert.NotNull(result);
@@ -170,7 +169,7 @@ namespace PaymentAPI.Tests
 
             // Act & Assert
             await Assert.ThrowsAsync<ArgumentException>(() =>
-                svc.GetVouchersAsync(page: page, limit: 10, scope: "ORGANIZER", isActive: null, searchCode: null, organizerId: 10, userId: 10, isAdmin: false, isOrg: true));
+                svc.GetVouchersAsync(page: page, limit: 10, scope: "ORGANIZER", isActive: null, searchCode: null, organizerId: 10, currentUserId: 10, isAdmin: false, isOrganizer: true));
         }
 
         #endregion
@@ -190,8 +189,8 @@ namespace PaymentAPI.Tests
                 IsDeleted = false
             };
 
-            _mockRepo.Setup(r => r.GetByIdAsync(15)).ReturnsAsync(existing);
-            _mockRepo.Setup(r => r.UpdateAsync(It.IsAny<Voucher>())).Returns(Task.CompletedTask);
+            _mockRepo.Setup(r => r.GetByIdAsync(15, false)).ReturnsAsync(existing);
+            _mockRepo.Setup(r => r.UpdateAsync(It.IsAny<Voucher>())).ReturnsAsync((Voucher v) => v);
 
             // Act
             var result = await svc.SoftDeleteVoucherAsync(15, currentUserId: 1, isAdmin: true, isOrganizer: false);
@@ -207,7 +206,7 @@ namespace PaymentAPI.Tests
         {
             // Arrange
             var svc = CreateService();
-            _mockRepo.Setup(r => r.GetByIdAsync(99999)).ReturnsAsync((Voucher?)null);
+            _mockRepo.Setup(r => r.GetByIdAsync(99999, false)).ReturnsAsync((Voucher?)null);
 
             // Act & Assert
             await Assert.ThrowsAsync<KeyNotFoundException>(() =>
@@ -227,7 +226,7 @@ namespace PaymentAPI.Tests
                 IsDeleted = false
             };
 
-            _mockRepo.Setup(r => r.GetByIdAsync(15)).ReturnsAsync(sysVoucher);
+            _mockRepo.Setup(r => r.GetByIdAsync(15, false)).ReturnsAsync(sysVoucher);
 
             // Act & Assert (isOrganizer=true, isAdmin=false)
             await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>

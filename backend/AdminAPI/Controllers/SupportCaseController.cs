@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AdminAPI.Controllers;
 
-// Coordinates customer support case & dispute resolution operations
+// Coordinates customer support case operations operations
 [ApiController]
 [Route("api/support-cases")]
 [Authorize]
@@ -14,14 +14,16 @@ public class SupportCaseController : ControllerBase
 {
  private readonly ISupportCaseService _service;
  private readonly ILogger<SupportCaseController> _logger;
+ private readonly IConfiguration? _configuration;
 
- public SupportCaseController(ISupportCaseService service, ILogger<SupportCaseController> logger)
+ public SupportCaseController(ISupportCaseService service, ILogger<SupportCaseController> logger, IConfiguration? configuration = null)
  {
  _service = service;
  _logger = logger;
+ _configuration = configuration;
  }
 
- // Create a new customer support case (Customers can dispute their orders, Staff/Admin can create on behalf)
+ // Tao yeu cau ho tro moi danh cho Customer va Nguoi dung
  [HttpPost]
  public async Task<IActionResult> CreateCase([FromBody] CreateSupportCaseRequest req)
  {
@@ -53,7 +55,7 @@ public class SupportCaseController : ControllerBase
  }
  }
 
- // List support cases (Staff sees assigned or unassigned cases; Admin sees all)
+ // Lay danh sach cac truong hop ho tro danh cho Staff va Admin
  [HttpGet]
  [Authorize(Policy = "CanManageSupportCases")]
  public async Task<IActionResult> GetList([FromQuery] SupportCaseQuery query)
@@ -65,7 +67,7 @@ public class SupportCaseController : ControllerBase
  return Ok(result);
  }
 
- // View support case details with activity notes timeline
+ // Xem thong tin chi tiet truong hop ho tro theo id danh cho Customer, Staff va Admin
  [HttpGet("{id:int}")]
  public async Task<IActionResult> GetDetail(int id)
  {
@@ -95,7 +97,7 @@ public class SupportCaseController : ControllerBase
  }
  }
 
- // Retrieve support case associated with a specific order
+ // Lay thong tin ho so ho tro lien ket voi mot don hang cu the danh cho Customer va Staff
  [HttpGet("by-order/{orderId:int}")]
  public async Task<IActionResult> GetCaseByOrder(int orderId)
  {
@@ -117,7 +119,7 @@ public class SupportCaseController : ControllerBase
  return Ok(caseItem);
  }
 
- // Assign support case to staff (Admin only)
+ // Phan cong truong hop ho tro cho nhan vien xu ly danh cho Admin
  [HttpPost("{id:int}/assign")]
  [Authorize(Roles = "Admin")]
  public async Task<IActionResult> AssignStaff(int id, [FromBody] AssignStaffRequest req)
@@ -141,7 +143,7 @@ public class SupportCaseController : ControllerBase
  }
  }
 
- // Resolve and close support case (Resolution strictly required)
+ // Giai quyet va dong truong hop ho tro danh cho Staff va Admin
  [HttpPost("{id:int}/resolve")]
  [Authorize(Policy = "CanManageSupportCases")]
  public async Task<IActionResult> ResolveCase(int id, [FromBody] ResolveCaseRequest req)
@@ -170,25 +172,28 @@ public class SupportCaseController : ControllerBase
  }
  }
 
- // Append internal investigation note or customer follow-up
+ // Them ghi chu trao doi vao truong hop ho tro danh cho Customer, Staff va Admin
  [HttpPost("{id:int}/notes")]
  public async Task<IActionResult> AddNote(int id, [FromBody] AddSupportCaseNoteRequest req)
  {
- var userId = GetCurrentUserId();
- var userName = await GetCurrentUserNameAsync(userId);
- var role = User.IsInRole("Admin") ? "Admin" : (User.IsInRole("Staff") ? "Staff" : "Customer");
-
- try
- {
- var result = await _service.AddNoteAsync(id, req, userId, userName, role);
- return Ok(result);
+  var userId = GetCurrentUserId();
+  var userName = await GetCurrentUserNameAsync(userId);
+  var isInternalStaff = User.IsInRole("Admin") || User.IsInRole("Staff") || User.IsInRole("SupportStaff") || User.IsInRole("SecurityStaff");
+  var role = User.IsInRole("Admin") ? "Admin" : (isInternalStaff ? "Staff" : "Customer");
+  try
+  {
+   if (!isInternalStaff)
+   {
+    var ownCase = await _service.GetCaseDetailAsync(id, userId, false);
+    if (ownCase.CustomerId != userId && !string.Equals(ownCase.CustomerEmail, GetCurrentUserEmail(), StringComparison.OrdinalIgnoreCase))
+     return StatusCode(403, new { message = "You can only add a note to your own support case." });
+   }
+   var result = await _service.AddNoteAsync(id, req, userId, userName, role);
+   return Ok(result);
+  }
+  catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+  catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
  }
- catch (KeyNotFoundException ex)
- {
- return NotFound(new { message = ex.Message });
- }
- }
-
  // Helper: Extract current user id from JWT claims
  private int GetCurrentUserId()
  {
@@ -215,7 +220,12 @@ public class SupportCaseController : ControllerBase
  {
  try
  {
- using var conn = new Npgsql.NpgsqlConnection("Host=localhost;Port=5432;Database=authentication_db;Username=postgres;Password=123456");
+ var authConnStr = _configuration?.GetConnectionString("AuthenticationConnection")
+                    ?? _configuration?.GetConnectionString("AuthenticationDb")
+                    ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_AUTH_POSTGRES")
+                    ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TEST_POSTGRES");
+                if (string.IsNullOrWhiteSpace(authConnStr)) return GetCurrentUserEmail()?.Split('@')[0] ?? "User";
+                using var conn = new Npgsql.NpgsqlConnection(authConnStr);
  await conn.OpenAsync();
  using var cmd = new Npgsql.NpgsqlCommand("SELECT full_name FROM users WHERE user_id = @uid LIMIT 1;", conn);
  cmd.Parameters.AddWithValue("uid", userId);
@@ -248,3 +258,4 @@ public class SupportCaseController : ControllerBase
  ?? "";
  }
 }
+

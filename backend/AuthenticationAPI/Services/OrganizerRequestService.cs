@@ -16,14 +16,18 @@ namespace AuthenticationAPI.Services
         private const string StatusApproved = "Approved";
         private const string StatusRejected = "Rejected";
 
+        private readonly Microsoft.Extensions.Configuration.IConfiguration? _configuration;
+
         public OrganizerRequestService(
             IOrganizerRequestRepository requestRepository,
             IUserRepository userRepository,
-            ILogger<OrganizerRequestService> logger)
+            ILogger<OrganizerRequestService> logger,
+            Microsoft.Extensions.Configuration.IConfiguration? configuration = null)
         {
             _requestRepository = requestRepository;
             _userRepository = userRepository;
             _logger = logger;
+            _configuration = configuration;
         }
 
         public async Task<OrganizerRequestResponseDTO> CreateRequestAsync(int userId, CreateOrganizerRequestDTO dto)
@@ -143,13 +147,18 @@ namespace AuthenticationAPI.Services
                     // 1. Direct persistence to notification_db
                     try
                     {
-                        using var conn = new Npgsql.NpgsqlConnection("Host=localhost;Port=5432;Database=notification_db;Username=postgres;Password=123456");
+                        var notifConnStr = _configuration?.GetConnectionString("NotificationConnection")
+                            ?? _configuration?.GetConnectionString("NotificationDb")
+                            ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_NOTIFICATION_POSTGRES")
+                            ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TEST_POSTGRES");
+                        if (string.IsNullOrWhiteSpace(notifConnStr)) return;
+                        using var conn = new Npgsql.NpgsqlConnection(notifConnStr);
                         await conn.OpenAsync();
                         using var cmd = new Npgsql.NpgsqlCommand(
                             "INSERT INTO notifications (user_id, title, message, content, type, category, target_url, is_read, created_at, is_deleted) VALUES (@uid, @title, @msg, @content, @type, @cat, @url, false, NOW(), false);", conn);
                         cmd.Parameters.AddWithValue("uid", targetUserId);
-                        cmd.Parameters.AddWithValue("title", "Yêu cầu nâng cấp Organizer đã được duyệt");
-                        var msg = "Chúc mừng! Yêu cầu đăng ký làm Nhà tổ chức sự kiện (Organizer) của bạn đã được Admin phê duyệt.";
+                        cmd.Parameters.AddWithValue("title", "Organizer Upgrade Request Approved");
+                        var msg = "Congratulations! Your request to become an Event Organizer has been approved by the administrator.";
                         cmd.Parameters.AddWithValue("msg", msg);
                         cmd.Parameters.AddWithValue("content", msg);
                         cmd.Parameters.AddWithValue("type", "organizer_approved");
@@ -173,8 +182,8 @@ namespace AuthenticationAPI.Services
                         var payload = new
                         {
                             userId = targetUserId,
-                            title = "Yêu cầu nâng cấp Organizer đã được duyệt",
-                            message = "Chúc mừng! Yêu cầu đăng ký làm Nhà tổ chức sự kiện (Organizer) của bạn đã được Admin phê duyệt.",
+                            title = "Organizer Upgrade Request Approved",
+                            message = "Congratulations! Your request to become an Event Organizer has been approved by the administrator.",
                             category = "organizer_approved",
                             targetUrl = "/organizer/dashboard"
                         };

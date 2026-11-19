@@ -81,10 +81,26 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<ITicketRepository, TicketRepository>();
+builder.Services.AddScoped<ITicketReturnRepository, TicketReturnRepository>();
+builder.Services.AddScoped<ICheckinRepository, CheckinRepository>();
+builder.Services.AddScoped<IReportRepository, ReportRepository>();
 builder.Services.AddScoped<ITicketService, TicketService>();
-builder.Services.AddScoped<ITicketReturnService, TicketReturnService>();
-builder.Services.AddScoped<IReportService, ReportService>();
-builder.Services.AddScoped<ICheckinService, CheckinService>();
+// Explicit factories: these services keep DbContext overloads for the existing tests,
+// which makes plain AddScoped registration ambiguous for the DI container.
+builder.Services.AddScoped<ITicketReturnService>(sp => new TicketReturnService(
+    sp.GetRequiredService<ITicketReturnRepository>(),
+    sp.GetRequiredService<ILogger<TicketReturnService>>(),
+    sp.GetRequiredService<IEventApiClient>(),
+    sp.GetRequiredService<IConfiguration>(),
+    sp.GetRequiredService<IPaymentAPIClient>(),
+    sp.GetRequiredService<TicketReturnNotifier>()));
+builder.Services.AddScoped<IReportService>(sp => new ReportService(
+    sp.GetRequiredService<IReportRepository>(),
+    sp.GetRequiredService<IEventApiClient>()));
+builder.Services.AddScoped<ICheckinService>(sp => new CheckinService(
+    sp.GetRequiredService<ICheckinRepository>(),
+    sp.GetRequiredService<IEventApiClient>(),
+    sp.GetRequiredService<ILogger<CheckinService>>()));
 builder.Services.AddScoped<IStatusHistoryRepository, StatusHistoryRepository>();
 builder.Services.AddScoped<IStatusHistoryService, StatusHistoryService>();
 

@@ -27,7 +27,7 @@ export default function RegisterPage() {
 
     // Check policy agreement
     if (!agreedPolicies) {
-      setError("Vui lòng đọc và tích chọn đồng ý với Điều khoản Dịch vụ & Chính sách nền tảng để tiếp tục.");
+      setError("Please agree to the Terms of Service and Platform Privacy Policy to continue.");
       return;
     }
 

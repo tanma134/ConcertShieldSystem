@@ -337,7 +337,7 @@ export default function AdminSeatingTemplatesPage() {
                     zones={viewCanvasZones}
                     ticketTypes={[]}
                     readOnly={true}
-                    layoutJson={viewTemplate.layoutJson}
+                    layoutJson={viewingTemplate.layoutJson}
                   />
                 </div>
 
@@ -405,7 +405,7 @@ export default function AdminSeatingTemplatesPage() {
                   style={{ padding: "8px 18px", fontSize: "13px" }}
                   onClick={() => handleEdit(viewingTemplate)}
                 >
-                  ✏️ Edit This Template
+                  Edit This Template
                 </button>
               </div>
             </div>
@@ -463,6 +463,7 @@ export default function AdminSeatingTemplatesPage() {
             zones={canvasZones}
             ticketTypes={[]}
             layoutJson={form.layoutJson}
+            onZoneShapeChange={handleZoneMove}
             onZoneMove={handleZoneMove}
             onLayoutChange={(next) =>
               setForm((f) => ({

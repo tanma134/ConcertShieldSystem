@@ -89,6 +89,7 @@ import TicketStatusHistoryPage from "../pages/admin/TicketStatusHistoryPage";
 import AdminTicketsPage from "../pages/admin/AdminTicketsPage";
 import AdminTicketDetailPage from "../pages/admin/AdminTicketDetailPage";
 import FailedTransactionQueuePage from "../pages/admin/FailedTransactionQueuePage";
+import TicketDisputeDemoPage from "../pages/admin/TicketDisputeDemoPage";
 
 export default function AppRoutes() {
   return (
@@ -198,6 +199,8 @@ export default function AppRoutes() {
         }
       />
 
+      <Route path="/admin/ticket-disputes" element={<AdminRoute><TicketDisputeDemoPage /></AdminRoute>} />
+
       {/* return review (Staff/Admin) */}
       <Route path="/staff/returns" element={<ProtectedRoute><TicketReturnReviewPage /></ProtectedRoute>} />
       <Route path="/admin/returns" element={<ProtectedRoute adminOnly><TicketReturnReviewPage /></ProtectedRoute>} />
@@ -220,6 +223,7 @@ export default function AppRoutes() {
       <Route path="/admin/incidents/:id" element={<AdminRoute><IncidentDetailPage /></AdminRoute>} />
 
       {/* Support Case Management & Dispute Resolution */}
+      <Route path="/support-cases/:id" element={<ProtectedRoute><SupportCaseDetailPage /></ProtectedRoute>} />
       <Route path="/staff/support-cases" element={<ProtectedRoute><SupportCaseListPage /></ProtectedRoute>} />
       <Route path="/staff/support-cases/new" element={<ProtectedRoute><SupportCaseCreatePage /></ProtectedRoute>} />
       <Route path="/staff/support-cases/:id" element={<ProtectedRoute><SupportCaseDetailPage /></ProtectedRoute>} />
@@ -421,3 +425,5 @@ export default function AppRoutes() {
     </Routes>
   );
 }
+
+

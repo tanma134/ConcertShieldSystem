@@ -908,7 +908,7 @@ export default function SelectTicketPage() {
                       <div className="tb-ticket-name">{ticket.typeName}</div>
                       {notOnSale ? (
                         <div className="tb-ticket-avail" style={{ color: salesStatus.isUpcoming ? "#d97706" : "#dc2626", fontWeight: 600 }}>
-                          {salesStatus.isUpcoming ? `⏳ ${salesStatus.label}` : `🔒 ${salesStatus.label}`}
+                          {salesStatus.label}
                         </div>
                       ) : (
                         <div className="tb-ticket-avail">
@@ -966,11 +966,9 @@ export default function SelectTicketPage() {
             <h3 className="tb-card-title">Event information</h3>
             <div className="tb-event-name">{event.title}</div>
             <div className="tb-meta-item">
-              <span>📅</span>
               {formatEventTime(event.startsAt)}
             </div>
             <div className="tb-meta-item">
-              <span>📍</span>
               {[event.locationName, event.city].filter(Boolean).join(", ") ||
                 "Location to be announced"}
             </div>

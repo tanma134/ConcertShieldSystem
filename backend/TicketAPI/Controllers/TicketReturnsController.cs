@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TicketAPI.API;
 using TicketAPI.DTOs;
@@ -32,11 +32,11 @@ namespace TicketAPI.Controllers
             return (await _eventApiClient.GetReturnReviewEventIdsAsync(CurrentUserId)).ToList();
         }
 
-        // POST api/ticket-returns
+        // Gui yeu cau tra ve (hoan ve) danh cho Customer
         [HttpPost]
         public async Task<IActionResult> Submit([FromBody] SubmitTicketReturnDto dto)
         {
-            // Risk Engine: FRD_T02 (mua rồi hoàn nhiều lần)
+            // Luu y: Kiem tra chan gian lan Risk Engine FRD_T02 truoc khi tao yeu cau hoan ve
             var verdict = await _risk.CheckReturnAsync(HttpContext, CurrentUserId, dto.TicketId);
             if (!verdict.Allowed) return verdict.ToActionResult();
 
@@ -51,7 +51,7 @@ namespace TicketAPI.Controllers
             }
         }
 
-        // GET api/ticket-returns?status=Pending
+        // Lay danh sach cac yeu cau tra ve cua toi danh cho Customer
         [HttpGet]
         public async Task<IActionResult> List([FromQuery] string? status)
         {
@@ -65,7 +65,7 @@ namespace TicketAPI.Controllers
             }
         }
 
-        // GET api/ticket-returns/{id}
+        // Xem chi tiet mot yeu cau tra ve theo id danh cho Customer
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -79,7 +79,7 @@ namespace TicketAPI.Controllers
             }
         }
 
-        // POST api/ticket-returns/{id}/cancel
+        // Huy yeu cau tra ve dang cho duyet danh cho Customer
         [HttpPost("{id:int}/cancel")]
         public async Task<IActionResult> Cancel(int id)
         {
@@ -94,7 +94,7 @@ namespace TicketAPI.Controllers
             }
         }
 
-        // Support Staff/Admin: review queue.
+        // Lay danh sach hang cho duyet tra ve danh cho Staff va Admin
         [HttpGet("review")]
         [Authorize(Roles = "Staff,Admin")]
         public async Task<IActionResult> ReviewQueue([FromQuery] string? status)

@@ -55,5 +55,15 @@ namespace PaymentAPI.Repositories
                 .FirstOrDefaultAsync(x =>
                     x.PaymentTransactionId == paymentTransactionId);
         }
+
+        public Task<int> CountFailedSinceAsync(int userId, DateTime since, CancellationToken ct = default)
+        {
+            return _context.PaymentTransactions
+                .AsNoTracking()
+                .CountAsync(x => x.UserId == userId &&
+                                 x.Status == "Failed" &&
+                                 x.RespondedAt != null &&
+                                 x.RespondedAt >= since, ct);
+        }
     }
 }

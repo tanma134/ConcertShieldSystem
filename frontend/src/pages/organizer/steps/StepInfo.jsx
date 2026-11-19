@@ -299,7 +299,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
               maxLength={200}
             />
             {slugState.checking && <span className="ow-hint">Checking availability...</span>}
-            {!slugState.checking && slugState.available === true && <span className="ow-field-ok">✓ Slug is available</span>}
+            {!slugState.checking && slugState.available === true && <span className="ow-field-ok">Slug is available</span>}
             {fieldErrors.slug && <span className="ow-field-error">{fieldErrors.slug}</span>}
           </label>
 
@@ -473,7 +473,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
           className="ow-toggle-seo"
           onClick={() => setShowSeo((v) => !v)}
         >
-          {showSeo ? "▾" : "▸"} SEO options (optional)
+          {showSeo ? "Hide SEO options" : "Show SEO options (optional)"}
         </button>
 
         {showSeo && (
@@ -507,7 +507,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
           onClick={handleSaveDraft}
           disabled={saving || slugState.checking || readOnly}
         >
-          {saving ? "Saving..." : "💾 Save draft"}
+          {saving ? "Saving..." : "Save draft"}
         </button>
         <button
           type="button"
@@ -515,7 +515,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
           onClick={handleNext}
           disabled={saving || slugState.checking}
         >
-          {readOnly ? "Next →" : saving ? "Saving..." : "Save & Next →"}
+          {readOnly ? "Next" : saving ? "Saving..." : "Save & Next"}
         </button>
       </div>
     </div>

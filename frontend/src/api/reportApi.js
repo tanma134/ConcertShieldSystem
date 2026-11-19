@@ -23,23 +23,23 @@ export function saveBlob(response, fallbackName) {
   window.URL.revokeObjectURL(url);
 }
 
-// and organizer reports of one event.
+// Quan ly bao cao doanh thu va du lieu check-in danh cho Organizer va Admin
 const reportApi = {
-  // + revenue summary; params = { from, to, ticketTypeId }.
+  // Lay du lieu dashboard va loc doanh thu concert danh cho Organizer va Admin
   getRevenue: (eventId, params) =>
     axiosClient.get(`/organizer/events/${eventId}/revenue`, { params: cleanParams(params) }),
 
-  // the same report as a CSV file.
+  // Xuat file CSV bao cao doanh thu concert danh cho Organizer va Admin
   exportRevenue: (eventId, params) =>
     axiosClient.get(`/organizer/events/${eventId}/revenue/export`, {
       params: cleanParams(params),
       responseType: "blob",
     }),
 
-  // check-in figures shown next to the export button.
+  // Lay so lieu thong ke check-in tren man hinh danh cho Organizer va Admin
   getCheckin: (eventId) => axiosClient.get(`/organizer/events/${eventId}/checkin`),
 
-  // check-in report as a CSV file.
+  // Xuat file CSV bao cao check-in su kien danh cho Organizer va Admin
   exportCheckin: (eventId) =>
     axiosClient.get(`/organizer/events/${eventId}/checkin/export`, { responseType: "blob" }),
 };

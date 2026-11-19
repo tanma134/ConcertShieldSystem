@@ -150,6 +150,21 @@ namespace TicketAPI.Repositories
                 .FirstOrDefaultAsync(r => r.TicketReturnRequestId == requestId);
         }
 
+        public async Task SyncOrderRefundStatusAsync(int orderId)
+        {
+            var hasRemainingActive = await _context.Tickets
+                .AnyAsync(t => t.OrderId == orderId && !t.IsDeleted && t.Status != TicketStatuses.Returned && t.Status != TicketStatuses.Revoked);
+
+            if (!hasRemainingActive)
+            {
+                var order = await _context.Orders.FirstOrDefaultAsync(o => o.OrderId == orderId);
+                if (order != null)
+                {
+                    order.Status = "Refunded";
+                }
+            }
+        }
+
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();

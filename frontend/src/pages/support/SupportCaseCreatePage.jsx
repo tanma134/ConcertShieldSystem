@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import supportCaseApi from "../../api/supportCaseApi";
 import { useToast } from "../../components/ToastProvider";
@@ -7,12 +7,11 @@ import AdminShell from "../admin/AdminShell";
 import "../../styles/supportCaseManagement.css";
 
 const CATEGORIES = [
-  "Ticketing",
-  "Payment & Billing",
   "Account & Security",
-  "Event Dispute",
   "Technical Issue",
   "General Inquiry",
+  "Event Information",
+  "Order & Ticket Help",
 ];
 
 const PRIORITIES = ["Low", "Medium", "High", "Critical"];
@@ -33,7 +32,7 @@ export default function SupportCaseCreatePage() {
     customerPhone: "",
     title: "",
     description: "",
-    category: "Ticketing",
+    category: "General Inquiry",
     priority: "Medium",
     orderId: "",
     ticketId: "",
@@ -103,14 +102,14 @@ export default function SupportCaseCreatePage() {
           <div className="sc-header-title">
             <span className="sc-badge-pill">Customer Support</span>
             <h1>Create Customer Support Case</h1>
-            <p>Record a customer grievance, transaction dispute, or on-site support request.</p>
+            <p>Describe your account, event, order or ticket support request.</p>
           </div>
           <div className="sc-header-actions">
             <Link
               to={isAdminPath ? "/admin/support-cases" : "/staff/support-cases"}
               className="sc-btn sc-btn-outline"
             >
-              ← Back to List
+              â† Back to List
             </Link>
           </div>
         </div>
@@ -310,3 +309,4 @@ export default function SupportCaseCreatePage() {
     </Shell>
   );
 }
+

@@ -459,7 +459,6 @@ export default function TicketGovernancePage() {
                         borderRadius: "10px"
                       }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-                          <span style={{ fontSize: "18px" }}>⚠️</span>
                           <strong style={{ fontSize: "15px", color: "#991b1b" }}>
                             WARNING: EVENT TICKETS PENDING BULK REVOCATION ({selectedEventObj.status.toUpperCase()})
                           </strong>
@@ -479,7 +478,6 @@ export default function TicketGovernancePage() {
                           fontWeight: "800",
                           fontSize: "14px"
                         }}>
-                          <span>🎟️</span>
                           <span>Total Tickets to be Revoked: <strong>{Number(selectedEventObj.activeTicketsCount).toLocaleString()} tickets</strong></span>
                         </div>
                       </div>
@@ -1013,7 +1011,6 @@ export default function TicketGovernancePage() {
           <div className="gov-modal-overlay">
             <div className="gov-dialog-modal">
               <div className={`gov-dialog-header ${noticeDialog.type?.toLowerCase()}`}>
-                <span className="dialog-icon">{noticeDialog.type === "WARNING" ? "⚠️" : "ℹ️"}</span>
                 <h3>{noticeDialog.title}</h3>
                 <button
                   type="button"

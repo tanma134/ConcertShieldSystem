@@ -17,6 +17,8 @@ namespace EventAPI.Validators
             RuleFor(x => x.Quantity)
                 .GreaterThan(0).WithMessage("Quantity must be > 0");
 
+            // Cau hinh so luong ve toi thieu va toi da tren moi don hang cho tung hang ve
+            // Luu y: MinPerOrder phai lon hon 0 va MaxPerOrder phai lon hon hoac bang MinPerOrder
             RuleFor(x => x.MinPerOrder)
                 .GreaterThan(0).WithMessage("MinPerOrder must be > 0");
 

@@ -25,6 +25,7 @@ namespace EventAPI.Repositories
             {
                 query = query
                     .Include(e => e.TicketTypes.Where(t => !t.IsDeleted).OrderBy(t => t.SortOrder))
+                    .ThenInclude(t => t.PricingRules)
                     .Include(e => e.EventImages.Where(i => !i.IsDeleted).OrderBy(i => i.SortOrder))
                     .Include(e => e.RefundPolicies.Where(r => r.IsActive));
             }
@@ -40,6 +41,7 @@ namespace EventAPI.Repositories
             {
                 query = query
                     .Include(e => e.TicketTypes.Where(t => !t.IsDeleted).OrderBy(t => t.SortOrder))
+                    .ThenInclude(t => t.PricingRules)
                     .Include(e => e.EventImages.Where(i => !i.IsDeleted).OrderBy(i => i.SortOrder))
                     .Include(e => e.RefundPolicies.Where(r => r.IsActive));
             }

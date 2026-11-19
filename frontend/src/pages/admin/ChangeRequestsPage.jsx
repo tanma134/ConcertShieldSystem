@@ -51,20 +51,31 @@ export default function ChangeRequestsPage() {
     }catch{setImpact(undefined);}
   };
 
-  const decide=async decision=>{
-    const problem=validateChangeReview(decision,note);
-    if(problem){setError(problem);return;}
-    const ask=decision==='Approved'?'Approve this change? Customers will be notified.':'Reject this change request?';
-    if(!window.confirm(ask))return;
-    setBusy(true);setError('');setNotice('');
-    try{
-      await api.reviewChange(selected.eventId,selected.id,{decision,notes:note.trim()});
-      setNotice(`Change request ${code(selected.id)} ${decision==='Approved'?'approved':'rejected'}.`);
-      const fresh=await load();setSelected(fresh.find(i=>i.id===selected.id)||null);
-    }catch(err){
+  const [confirmAction, setConfirmAction] = useState(null);
+
+  const decide = (decision) => {
+    const problem = validateChangeReview(decision, note);
+    if (problem) { setError(problem); return; }
+    const title = decision === 'Approved' ? 'Approve Change Request' : 'Reject Change Request';
+    const message = decision === 'Approved' 
+      ? 'Are you sure you want to approve this change? Customers will be notified immediately.' 
+      : 'Are you sure you want to reject this change request?';
+    setConfirmAction({ decision, title, message });
+  };
+
+  const executeDecision = async () => {
+    if (!confirmAction) return;
+    const { decision } = confirmAction;
+    setConfirmAction(null);
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await api.reviewChange(selected.eventId, selected.id, { decision, notes: note.trim() });
+      setNotice(`Change request ${code(selected.id)} ${decision === 'Approved' ? 'approved' : 'rejected'}.`);
+      const fresh = await load(); setSelected(fresh.find(i => i.id === selected.id) || null);
+    } catch (err) {
       setError(errorText(err));
-      const fresh=await load();setSelected(fresh.find(i=>i.id===selected.id)||selected);
-    }finally{setBusy(false);}
+      const fresh = await load(); setSelected(fresh.find(i => i.id === selected.id) || selected);
+    } finally { setBusy(false); }
   };
 
   const pending=selected?.status==='Pending';
@@ -281,7 +292,6 @@ export default function ChangeRequestsPage() {
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span style={{ fontSize: "24px" }}>📑</span>
                 <div>
                   <div
                     style={{
@@ -454,7 +464,7 @@ export default function ChangeRequestsPage() {
                 }}
                 href={`/admin/events/${selected.eventId}/governance?request=${selected.id}`}
               >
-                📦 View affected orders & tickets in detail →
+                View affected orders & tickets in detail →
               </a>
             </div>
           )}
@@ -551,6 +561,88 @@ export default function ChangeRequestsPage() {
               </button>
             </div>
           )}
+        </div>
+      </div>
+    )}
+
+    {confirmAction && (
+      <div
+        className="admin-confirm-modal-overlay"
+        onClick={() => setConfirmAction(null)}
+        style={{
+          position: "fixed",
+          inset: 0,
+          backgroundColor: "rgba(15, 23, 42, 0.75)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 10000,
+          padding: "20px",
+        }}
+      >
+        <div
+          className="admin-confirm-modal"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            background: "#ffffff",
+            borderRadius: "14px",
+            padding: "24px",
+            maxWidth: "460px",
+            width: "100%",
+            boxShadow: "0 20px 40px -10px rgba(0, 0, 0, 0.25)",
+            border: "1px solid #e2e8f0",
+          }}
+        >
+          <h3
+            style={{
+              margin: "0 0 10px 0",
+              fontSize: "17px",
+              fontWeight: 700,
+              color: confirmAction.decision === "Approved" ? "#16a34a" : "#dc2626",
+            }}
+          >
+            {confirmAction.title}
+          </h3>
+          <p
+            style={{
+              margin: "0 0 20px 0",
+              fontSize: "14px",
+              color: "#4b5563",
+              lineHeight: 1.5,
+            }}
+          >
+            {confirmAction.message}
+          </p>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: "10px",
+            }}
+          >
+            <button
+              type="button"
+              className="tb-btn tb-btn-outline"
+              onClick={() => setConfirmAction(null)}
+              disabled={busy}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="tb-btn tb-btn-primary"
+              style={{
+                background: confirmAction.decision === "Approved" ? "#16a34a" : "#dc2626",
+                borderColor: confirmAction.decision === "Approved" ? "#16a34a" : "#dc2626",
+                color: "#ffffff",
+              }}
+              disabled={busy}
+              onClick={executeDecision}
+            >
+              {confirmAction.decision === "Approved" ? "Yes, Approve Change" : "Yes, Reject Request"}
+            </button>
+          </div>
         </div>
       </div>
     )}

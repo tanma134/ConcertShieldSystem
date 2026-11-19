@@ -199,7 +199,7 @@ export default function RefundReconciliationPage() {
               onClick={handleExportCsv}
               title="Export all filtered records to CSV (Excel compatible)"
             >
-              📥 Export CSV
+              Export CSV
             </button>
             <button
               type="button"

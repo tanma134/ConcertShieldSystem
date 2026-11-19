@@ -171,9 +171,6 @@ export default function AdminEventDetailPage() {
 
         {result && (
           <div className={`admin-result-banner is-${result.type === "approved" ? "success" : result.type === "warning" ? "warning" : "danger"}`}>
-            <div className="admin-result-icon">
-              {result.type === "approved" ? "✅" : result.type === "warning" ? "⚠️" : "❌"}
-            </div>
             <div className="admin-result-content">
               <strong>{result.title}</strong>
               <span>{result.message}</span>
@@ -250,7 +247,7 @@ export default function AdminEventDetailPage() {
                 <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                   <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Seat Hold Timeout</div>
                   <div style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginTop: '4px' }}>
-                    ⏱️ {event.holdTimeoutMinutes || 10} minutes
+                    {event.holdTimeoutMinutes || 10} minutes
                   </div>
                   <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
                     Seats held during selection before auto-release
@@ -260,7 +257,7 @@ export default function AdminEventDetailPage() {
                 <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                   <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Re-entry Policy</div>
                   <div style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginTop: '4px' }}>
-                    🚪 {event.reEntryPolicy === 'TimeLimited' ? `Time-limited (${event.reEntryDurationMinutes || 30} mins)` : event.reEntryPolicy === 'Unlimited' ? 'Unlimited Re-entry' : 'No Re-entry'}
+                    {event.reEntryPolicy === 'TimeLimited' ? `Time-limited (${event.reEntryDurationMinutes || 30} mins)` : event.reEntryPolicy === 'Unlimited' ? 'Unlimited Re-entry' : 'No Re-entry'}
                   </div>
                   <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
                     {event.reEntryPolicy === 'TimeLimited' ? `Attendee can exit and return within ${event.reEntryDurationMinutes || 30} mins` : event.reEntryPolicy === 'Unlimited' ? 'Attendee can exit and re-enter freely' : 'Once scanned in, attendee cannot re-enter if they exit'}
@@ -270,7 +267,7 @@ export default function AdminEventDetailPage() {
                 <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                   <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Purchase Limit</div>
                   <div style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginTop: '4px' }}>
-                    🎟️ Max {event.maxTicketsPerAccount || 4} tickets / account
+                    Max {event.maxTicketsPerAccount || 4} tickets / account
                   </div>
                   <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
                     Anti-scalping quota per customer account
@@ -299,11 +296,20 @@ export default function AdminEventDetailPage() {
               <div className="ow-actions" style={{ marginTop: '20px' }}>
                 <button
                   type="button"
-                  className="tb-btn tb-btn-outline admin-btn-danger"
+                  style={{
+                    backgroundColor: "#dc2626",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "8px",
+                    padding: "9px 18px",
+                    fontWeight: 600,
+                    fontSize: "14px",
+                    cursor: "pointer"
+                  }}
                   onClick={() => { setShowCancelModal(true); setCancelReason(""); setError(""); }}
                   disabled={submitting}
                 >
-                  🚫 Cancel Concert
+                  Cancel Concert
                 </button>
               </div>
             )}
@@ -319,12 +325,6 @@ export default function AdminEventDetailPage() {
                   style={{ maxWidth: "520px" }}
                 >
                   <div className="admin-confirm-modal-header">
-                    <div
-                      className="admin-confirm-modal-icon"
-                      style={{ background: "#fee2e2", color: "#dc2626" }}
-                    >
-                      ⚠️
-                    </div>
                     <div>
                       <h3
                         className="admin-confirm-modal-title"
@@ -408,7 +408,7 @@ export default function AdminEventDetailPage() {
                           ? `Need at least ${
                               10 - cancelReason.trim().length
                             } more characters`
-                          : "✓ Valid reason"}
+                          : "Valid reason"}
                       </span>
                       <span>{cancelReason.length} / 1000</span>
                     </div>
@@ -462,8 +462,7 @@ export default function AdminEventDetailPage() {
                             }
                           }}
                         />
-                        <div style={{ fontSize: "26px", marginBottom: "4px" }}>📑</div>
-                        <div style={{ fontSize: "13px", fontWeight: 600, color: "#1f2937" }}>
+                        <div style={{ fontSize: "13px", fontWeight: 600, color: "#1f2937", marginTop: "4px" }}>
                           Click to attach notarized notice / official decision
                         </div>
                         <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "2px" }}>
@@ -529,7 +528,7 @@ export default function AdminEventDetailPage() {
                           }}
                           onClick={() => setCancelEvidenceFile(null)}
                         >
-                          ✕ Remove
+                          Remove
                         </button>
                       </div>
                     )}
@@ -582,7 +581,7 @@ export default function AdminEventDetailPage() {
                   onClick={() => setShowReject((v) => !v)}
                   disabled={submitting}
                 >
-                  {showReject ? "Close" : "✕ Reject"}
+                  {showReject ? "Close" : "Reject"}
                 </button>
                 <button
                   type="button"
@@ -590,7 +589,7 @@ export default function AdminEventDetailPage() {
                   onClick={requestApprove}
                   disabled={submitting || !complianceReady}
                 >
-                  {submitting ? "Working..." : "✓ Approve & Publish"}
+                  {submitting ? "Working..." : "Approve & Publish"}
                 </button>
               </div>
             )}
@@ -599,7 +598,6 @@ export default function AdminEventDetailPage() {
               <div className="admin-confirm-modal-overlay" onClick={() => setShowApproveConfirm(false)}>
                 <div className="admin-confirm-modal" onClick={(e) => e.stopPropagation()}>
                   <div className="admin-confirm-modal-header">
-                    <div className="admin-confirm-modal-icon">🎉</div>
                     <div>
                       <h3 className="admin-confirm-modal-title">Publish Event Confirmation</h3>
                       <p className="admin-confirm-modal-body" style={{ margin: 0 }}>

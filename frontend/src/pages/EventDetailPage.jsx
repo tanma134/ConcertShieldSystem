@@ -280,13 +280,13 @@ export default function EventDetailPage() {
                 <h2>Admission &amp; Re-entry Policies</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginTop: '10px' }}>
                   <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>⏱️ Seat Hold Timeout</div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Seat Hold Timeout</div>
                     <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
                       Seats are held for <strong>{event.holdTimeoutMinutes || 10} minutes</strong> during checkout before auto-release.
                     </div>
                   </div>
                   <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>🚪 Re-entry Policy</div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Re-entry Policy</div>
                     <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
                       {event.reEntryPolicy === 'TimeLimited'
                         ? `Time-limited: Attendees can exit and re-enter within ${event.reEntryDurationMinutes || 30} minutes.`
@@ -386,7 +386,7 @@ export default function EventDetailPage() {
           {(relatedLoading || related.length > 0) && (
             <section className="tb-container tb-list-section">
               <div className="tb-list-header">
-                <h2>🎟️ Other Events On Sale</h2>
+                <h2>Other Events On Sale</h2>
               </div>
               {relatedLoading && <div className="tb-loading">Loading...</div>}
               {!relatedLoading && related.length > 0 && (

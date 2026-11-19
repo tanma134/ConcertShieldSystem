@@ -64,7 +64,7 @@ export default function CameraCapture({ kind, onCapture }) {
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", CAMERA_CONFIG.JPEG_QUALITY));
 
     if (!blob) {
-      setError("Không lưu được ảnh. Hãy chụp lại.");
+      setError("Could not save photo. Please retake.");
       return;
     }
     onCapture(blob, quality);
@@ -95,12 +95,12 @@ export default function CameraCapture({ kind, onCapture }) {
           className="kyc-link"
           onClick={() => setFacing((f) => (f === "user" ? "environment" : "user"))}
         >
-          Đổi camera
+          Switch camera
         </button>
         <button
           type="button"
           className="kyc-shutter"
-          aria-label="Chụp ảnh"
+          aria-label="Take photo"
           disabled={!ready}
           onClick={handleShoot}
         />

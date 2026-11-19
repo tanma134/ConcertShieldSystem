@@ -60,19 +60,43 @@ export default function Header() {
       .getNotifications()
       .then((res) => {
         const rawItems = res.data?.items || res.data?.Items || res.data?.data?.items || res.data?.data?.Items || [];
-        const rawUnread = res.data?.unreadCount ?? res.data?.UnreadCount ?? res.data?.data?.unreadCount ?? res.data?.data?.UnreadCount ?? 0;
-        setNotifications(
-          rawItems.map((n) => ({
+        
+        // 1. Deduplicate by title + message
+        const seen = new Set();
+        const mapped = [];
+        for (const n of rawItems) {
+          const title = n.title || n.Title || "";
+          const message = n.message || n.Message || n.content || "";
+          const key = `${title}::${message}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+
+          // 2. Filter internal staff/admin notifications for customer accounts
+          if (!isStaff) {
+            const lowerTitle = title.toLowerCase();
+            if (
+              lowerTitle.startsWith("staff note on") ||
+              lowerTitle.startsWith("admin note on") ||
+              lowerTitle.startsWith("assigned to case")
+            ) {
+              continue;
+            }
+          }
+
+          mapped.push({
             notificationId: n.notificationId ?? n.NotificationId ?? n.id ?? 0,
-            title: n.title || n.Title || "",
-            message: n.message || n.Message || n.content || "",
+            title,
+            message,
             category: n.category || n.Category || "event_new",
             targetUrl: n.targetUrl || n.TargetUrl || "",
             isRead: n.isRead ?? n.IsRead ?? false,
             createdAt: n.createdAt || n.CreatedAt,
-          }))
-        );
-        setUnreadCount(rawUnread);
+          });
+        }
+
+        setNotifications(mapped);
+        const actualUnread = mapped.filter((n) => !n.isRead).length;
+        setUnreadCount(actualUnread);
       })
       .catch(() => {});
   };
@@ -430,8 +454,8 @@ export default function Header() {
                           <button
                             type="button"
                             className="tb-notif-item-delete"
-                            title="Xóa thông báo"
-                            aria-label="Xóa thông báo"
+                            title="Dismiss notification"
+                            aria-label="Dismiss notification"
                             onClick={async (e) => {
                               e.stopPropagation();
                               const targetId = notif.notificationId;

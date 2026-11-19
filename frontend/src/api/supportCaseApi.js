@@ -1,4 +1,3 @@
-// Shared axiosClient (BASE_URL includes /api, attaches Bearer token & refresh)
 import axiosClient from "./axiosClient";
 
 const cleanParams = (params = {}) => {
@@ -7,26 +6,27 @@ const cleanParams = (params = {}) => {
   );
 };
 
+// Quan ly cac API ho so ho tro khach hang danh cho Customer, Staff va Admin
 const supportCaseApi = {
-  // Create a new customer support case
+  // Tao ho so yeu cau ho tro moi danh cho Customer va Nguoi dung
   createCase: (data) => axiosClient.post("/support-cases", data),
 
-  // List support cases (Staff sees assigned/unassigned; Admin sees all)
+  // Lay danh sach cac truong hop ho tro co loc va phan trang danh cho Staff va Admin
   getCases: (params) => axiosClient.get("/support-cases", { params: cleanParams(params) }),
 
-  // View support case details with activity notes timeline
+  // Xem thong tin chi tiet truong hop ho tro theo id danh cho Customer, Staff va Admin
   getCaseDetail: (id) => axiosClient.get(`/support-cases/${id}`),
 
-  // Retrieve active case for a specific order
+  // Lay ho so ho tro lien ket voi don hang cu the danh cho Customer va Staff
   getCaseByOrder: (orderId) => axiosClient.get(`/support-cases/by-order/${orderId}`),
 
-  // Assign support case to staff (Admin only)
+  // Phan cong truong hop ho tro cho nhan vien danh cho Admin
   assignStaff: (id, data) => axiosClient.post(`/support-cases/${id}/assign`, data),
 
-  // Resolve and close support case with mandatory resolution
+  // Giai quyet va dong truong hop ho tro danh cho Staff va Admin
   resolveCase: (id, data) => axiosClient.post(`/support-cases/${id}/resolve`, data),
 
-  // Add internal investigation or communication note
+  // Them ghi chu trao doi vao truong hop ho tro danh cho Customer, Staff va Admin
   addNote: (id, data) => axiosClient.post(`/support-cases/${id}/notes`, data),
 };
 

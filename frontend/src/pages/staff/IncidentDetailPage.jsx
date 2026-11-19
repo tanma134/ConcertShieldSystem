@@ -634,13 +634,15 @@ export default function IncidentDetailPage() {
                     {evidences.length} {evidences.length === 1 ? "file" : "files"}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  className="inc-btn inc-btn-primary inc-btn-sm"
-                  onClick={() => setShowUploadModal(true)}
-                >
-                  Upload Evidence
-                </button>
+                {!isResolvedOrClosed && (
+                  <button
+                    type="button"
+                    className="inc-btn inc-btn-primary inc-btn-sm"
+                    onClick={() => setShowUploadModal(true)}
+                  >
+                    Upload Evidence
+                  </button>
+                )}
               </div>
 
               {evidences.length === 0 ? (
@@ -649,13 +651,15 @@ export default function IncidentDetailPage() {
                   <p className="inc-empty-desc">
                     Attach photos, video recordings, audio dispatches, or witness statements directly to this incident report.
                   </p>
-                  <button
-                    type="button"
-                    className="inc-btn inc-btn-secondary inc-btn-sm"
-                    onClick={() => setShowUploadModal(true)}
-                  >
-                    Attach Files
-                  </button>
+                  {!isResolvedOrClosed && (
+                    <button
+                      type="button"
+                      className="inc-btn inc-btn-secondary inc-btn-sm"
+                      onClick={() => setShowUploadModal(true)}
+                    >
+                      Attach Files
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="inc-evidence-grid">
@@ -724,14 +728,16 @@ export default function IncidentDetailPage() {
                           >
                             Inspect
                           </a>
-                          <button
-                            type="button"
-                            className="inc-btn inc-btn-danger inc-btn-sm"
-                            title="Delete evidence"
-                            onClick={() => handleDeleteEvidence(ev.id)}
-                          >
-                            Delete
-                          </button>
+                          {!isResolvedOrClosed && (
+                            <button
+                              type="button"
+                              className="inc-btn inc-btn-danger inc-btn-sm"
+                              title="Delete evidence"
+                              onClick={() => handleDeleteEvidence(ev.id)}
+                            >
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </div>
                     );

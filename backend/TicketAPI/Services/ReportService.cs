@@ -6,26 +6,33 @@ using TicketAPI.API;
 using TicketAPI.Domain;
 using TicketAPI.DTOs;
 using TicketAPI.Models;
+using TicketAPI.Repositories;
 
 namespace TicketAPI.Services
 {
-    // (revenue dashboard, filter, export) and (check-in report export).
-    // Every method first proves that the caller owns the event.
+    // Dịch vu tao bao cao doanh thu, loc so lieu va xuat file CSV check-in
     public class ReportService : IReportService
     {
         // Vietnam has no daylight saving, so a fixed offset is enough for cutting days.
         private static readonly TimeSpan LocalOffset = TimeSpan.FromHours(7);
 
-        private readonly TicketDbContext _context;
+        private readonly IReportRepository _reportRepository;
         private readonly IEventApiClient _eventApi;
 
-        public ReportService(TicketDbContext context, IEventApiClient eventApi)
+        [Microsoft.Extensions.DependencyInjection.ActivatorUtilitiesConstructor]
+        public ReportService(IReportRepository reportRepository, IEventApiClient eventApi)
         {
-            _context = context;
+            _reportRepository = reportRepository;
             _eventApi = eventApi;
         }
 
-        // totals and breakdowns for the chosen filters.
+        // Backward compatibility overload for tests
+        public ReportService(TicketDbContext context, IEventApiClient eventApi)
+            : this(new ReportRepository(context), eventApi)
+        {
+        }
+
+        // Xem tong quan bao cao doanh thu va loc theo thoi gian, hang ve
         public async Task<RevenueReportDto> GetRevenueAsync(
             int eventId, int callerId, bool isAdmin, string? bearer,
             DateOnly? from, DateOnly? to, int? ticketTypeId)
@@ -57,11 +64,12 @@ namespace TicketAPI.Services
             };
         }
 
-        // the same report as a CSV file (one table: totals, then days, then ticket types).
+        // Xuat bao cao doanh thu chi tiet cua concert ra file CSV
         public async Task<ExportFileDto> ExportRevenueAsync(
             int eventId, int callerId, bool isAdmin, string? bearer,
             DateOnly? from, DateOnly? to, int? ticketTypeId)
         {
+            // Luu y: Xuat bao cao dinh dang CSV gom tong hop, doanh thu theo ngay va theo hang ve
             var report = await GetRevenueAsync(eventId, callerId, isAdmin, bearer, from, to, ticketTypeId);
             var summary = report.Summary;
 
@@ -84,11 +92,11 @@ namespace TicketAPI.Services
             return ToFile($"revenue-event-{eventId}-{DateTime.UtcNow:yyyyMMdd}.csv", csv);
         }
 
-        // (screen): check-in figures shown next to the export button.
+        // Xem thong ke tong quan so lieu check-in cua concert tren man hinh
         public async Task<CheckinReportDto> GetCheckinAsync(int eventId, int callerId, bool isAdmin, string? bearer)
         {
             var ev = await EnsureOwnerAsync(eventId, callerId, isAdmin, bearer);
-            var tickets = await LoadTicketsAsync(eventId);
+            var tickets = await _reportRepository.GetActiveTicketsByEventIdAsync(eventId);
 
             var summary = CheckinReportCalculator.Summarize(
                 tickets.Select(t => new CheckinTicketFact(
@@ -97,11 +105,11 @@ namespace TicketAPI.Services
             return new CheckinReportDto { EventId = eventId, EventTitle = ev.Title, Summary = summary };
         }
 
-        // one CSV line per ticket with its check-in time and the staff member who scanned it.
+        // Xuat danh sach lich su check-in cua concert ra file CSV
         public async Task<ExportFileDto> ExportCheckinAsync(int eventId, int callerId, bool isAdmin, string? bearer)
         {
             await EnsureOwnerAsync(eventId, callerId, isAdmin, bearer);
-            var tickets = await LoadTicketsAsync(eventId);
+            var tickets = await _reportRepository.GetActiveTicketsByEventIdAsync(eventId);
 
             var rows = tickets.Select(t => (IReadOnlyList<string?>)new string?[]
             {
@@ -137,11 +145,7 @@ namespace TicketAPI.Services
         // Paid, not deleted orders of the event, as plain facts for the calculator.
         private async Task<List<OrderFact>> LoadPaidOrdersAsync(int eventId)
         {
-            var orders = await _context.Orders
-                .AsNoTracking()
-                .Include(o => o.OrderDetails)
-                .Where(o => o.EventId == eventId && o.Status == "Paid" && !o.IsDeleted)
-                .ToListAsync();
+            var orders = await _reportRepository.GetPaidOrdersWithDetailsAsync(eventId);
 
             return orders.Select(o => new OrderFact(
                 o.OrderId,
@@ -155,25 +159,11 @@ namespace TicketAPI.Services
         // Approved ticket returns count as refunds on the day they were approved.
         private async Task<List<RefundLine>> LoadRefundsAsync(int eventId)
         {
-            var approved = await _context.TicketReturnRequests
-                .AsNoTracking()
-                .Where(r => r.EventId == eventId && (r.Status == ReturnRequestStatuses.Approved || r.Status == ReturnRequestStatuses.Refunded || r.Status == ReturnRequestStatuses.RefundFailed))
-                .Select(r => new { r.Ticket.TicketTypeId, r.RefundAmount, r.ReviewedAt, r.UpdatedAt })
-                .ToListAsync();
+            var approved = await _reportRepository.GetRefundableReturnRequestsAsync(eventId);
 
             return approved
-                .Select(r => new RefundLine(r.ReviewedAt ?? r.UpdatedAt, r.TicketTypeId, r.RefundAmount))
+                .Select(r => new RefundLine(r.ReviewedAt ?? r.UpdatedAt, r.Ticket?.TicketTypeId ?? 0, r.RefundAmount))
                 .ToList();
-        }
-
-        // Every non-deleted ticket of the event, oldest first.
-        private async Task<List<Ticket>> LoadTicketsAsync(int eventId)
-        {
-            return await _context.Tickets
-                .AsNoTracking()
-                .Where(t => t.EventId == eventId && !t.IsDeleted)
-                .OrderBy(t => t.TicketId)
-                .ToListAsync();
         }
 
         // Builds one CSV row for the revenue export.

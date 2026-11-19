@@ -27,6 +27,7 @@ namespace EventAPI.Services
             _eventAccessService = eventAccessService;
         }
 
+        // Lay danh sach cac hang ve da cau hinh cua concert
         public async Task<List<TicketTypeResponseDTO>> GetByEventIdAsync(int eventId, int? callerId, bool isAdmin)
         {
             // Draft/Pending/Rejected/Cancelled ticket types are the owner's/Admin's
@@ -37,8 +38,10 @@ namespace EventAPI.Services
             return items.Select(Map).ToList();
         }
 
+        // Tao moi mot hang ve cho concert o trang thai Draft hoac Rejected
         public async Task<TicketTypeResponseDTO> CreateAsync(int eventId, CreateTicketTypeDTO dto, int callerId, bool isAdmin)
         {
+            // Luu y: Kiem tra khong trung ten hang ve va luu thiet lap gioi han MinPerOrder, MaxPerOrder
             var ev = await GetOwnedEventAsync(eventId, callerId, isAdmin);
 
             if (await _ticketTypeRepository.ExistsNameAsync(eventId, dto.TypeName))
@@ -57,8 +60,8 @@ namespace EventAPI.Services
                 MaxPerOrder = dto.MaxPerOrder,
                 ColorCode = dto.ColorCode,
                 SortOrder = dto.SortOrder,
-                SalesStartsAt = dto.SalesStartsAt,
-                SalesEndsAt = dto.SalesEndsAt,
+                SalesStartsAt = EventTime.ToUtc(dto.SalesStartsAt),
+                SalesEndsAt = EventTime.ToUtc(dto.SalesEndsAt),
                 Status = "Active",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -68,8 +71,10 @@ namespace EventAPI.Services
             return Map(created);
         }
 
+        // Cap nhat thong tin hang ve nhu ten, gia, so luong hoac gioi han mua
         public async Task<TicketTypeResponseDTO> UpdateAsync(int ticketTypeId, UpdateTicketTypeDTO dto, int callerId, bool isAdmin)
         {
+            // Luu y: Khi concert da Published chi cho phep sua khung gio mo ban, khoa ten, gia va so luong
             var entity = await _ticketTypeRepository.GetByIdAsync(ticketTypeId)
                 ?? throw new KeyNotFoundException($"TicketType {ticketTypeId} not found.");
 
@@ -114,8 +119,8 @@ namespace EventAPI.Services
             if (dto.ColorCode != null) entity.ColorCode = dto.ColorCode;
             if (dto.SortOrder.HasValue) entity.SortOrder = dto.SortOrder.Value;
             if (dto.Status != null) entity.Status = dto.Status;
-            if (dto.SalesStartsAt.HasValue) entity.SalesStartsAt = dto.SalesStartsAt;
-            if (dto.SalesEndsAt.HasValue) entity.SalesEndsAt = dto.SalesEndsAt;
+            if (dto.SalesStartsAt.HasValue) entity.SalesStartsAt = EventTime.ToUtc(dto.SalesStartsAt);
+            if (dto.SalesEndsAt.HasValue) entity.SalesEndsAt = EventTime.ToUtc(dto.SalesEndsAt);
 
             if (entity.Quantity < entity.SoldQuantity)
                 throw new InvalidOperationException("Quantity cannot be less than the number already sold.");
@@ -147,8 +152,10 @@ namespace EventAPI.Services
             return Map(entity);
         }
 
+        // Xoa hang ve khoi concert khi chua phat sinh ve ban ra
         public async Task DeleteAsync(int ticketTypeId, int callerId, bool isAdmin)
         {
+            // Luu y: Khong duoc phep xoa neu da co ve duoc ban ra hoac dang gan vao so do ghe
             var entity = await _ticketTypeRepository.GetByIdAsync(ticketTypeId)
                 ?? throw new KeyNotFoundException($"TicketType {ticketTypeId} not found.");
 
@@ -166,7 +173,7 @@ namespace EventAPI.Services
             await _ticketTypeRepository.SoftDeleteAsync(ticketTypeId, callerId);
         }
 
-        /// <summary>True when at least one zone in the concert's layout uses this ticket type.</summary>
+        // Kiem tra xem co vung ghe nao trong so do dang su dung hang ve nay khong
         private async Task<bool> IsPlacedInLayoutAsync(int eventId, int ticketTypeId)
         {
             var map = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: false);

@@ -1,28 +1,37 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using TicketAPI.API;
 using TicketAPI.DTOs;
 using TicketAPI.Models;
+using TicketAPI.Repositories;
 
 namespace TicketAPI.Services
 {
     public class CheckinService : ICheckinService
     {
-        private readonly TicketDbContext _context;
+        private readonly ICheckinRepository _checkinRepository;
         private readonly IEventApiClient _eventApiClient;
         private readonly ILogger<CheckinService> _logger;
+
+        [Microsoft.Extensions.DependencyInjection.ActivatorUtilitiesConstructor]
+        public CheckinService(
+            ICheckinRepository checkinRepository,
+            IEventApiClient eventApiClient,
+            ILogger<CheckinService> logger)
+        {
+            _checkinRepository = checkinRepository;
+            _eventApiClient = eventApiClient;
+            _logger = logger;
+        }
 
         public CheckinService(
             TicketDbContext context,
             IEventApiClient eventApiClient,
             ILogger<CheckinService> logger)
+            : this(new CheckinRepository(context), eventApiClient, logger)
         {
-            _context = context;
-            _eventApiClient = eventApiClient;
-            _logger = logger;
         }
 
         public async Task<CheckinScanResponseDto> ProcessScanAsync(CheckinScanRequestDto request, int staffUserId)
@@ -41,37 +50,23 @@ namespace TicketAPI.Services
 
             if (request.TicketCode.HasValue)
             {
-                ticket = await _context.Tickets
-                    .Include(t => t.Order)
-                    .FirstOrDefaultAsync(t => t.TicketCode == request.TicketCode.Value && !t.IsDeleted);
+                ticket = await _checkinRepository.GetTicketByCodeAsync(request.TicketCode.Value);
             }
             else if (!string.IsNullOrWhiteSpace(request.QrToken))
             {
                 if (Guid.TryParse(request.QrToken, out var parsedCode))
                 {
-                    ticket = await _context.Tickets
-                        .Include(t => t.Order)
-                        .FirstOrDefaultAsync(t => t.TicketCode == parsedCode && !t.IsDeleted);
+                    ticket = await _checkinRepository.GetTicketByCodeAsync(parsedCode);
                 }
 
                 if (ticket == null)
                 {
-                    var qrRecord = await _context.TicketQrTokens
-                        .Include(q => q.Ticket)
-                        .ThenInclude(t => t.Order)
-                        .FirstOrDefaultAsync(q => q.QrToken == request.QrToken && !q.IsRevoked);
-
-                    if (qrRecord != null && !qrRecord.Ticket.IsDeleted)
-                    {
-                        ticket = qrRecord.Ticket;
-                    }
+                    ticket = await _checkinRepository.GetTicketByQrTokenAsync(request.QrToken);
                 }
             }
             else if (request.TicketId.HasValue)
             {
-                ticket = await _context.Tickets
-                    .Include(t => t.Order)
-                    .FirstOrDefaultAsync(t => t.TicketId == request.TicketId.Value && !t.IsDeleted);
+                ticket = await _checkinRepository.GetTicketByIdAsync(request.TicketId.Value);
             }
 
             if (ticket == null)
@@ -120,7 +115,22 @@ namespace TicketAPI.Services
 
                 ticket.IsInside = false;
                 ticket.LastExitAt = DateTime.UtcNow;
-                await _context.SaveChangesAsync();
+                await _checkinRepository.AddStatusHistoryAsync(new StatusHistory
+                {
+                    TargetType = "Ticket",
+                    TargetId = ticket.TicketId,
+                    EventId = ticket.EventId,
+                    TicketId = ticket.TicketId,
+                    OrderId = ticket.OrderId,
+                    ActorUserId = staffUserId,
+                    ActorRole = "Staff",
+                    Action = "Checkin_Exit",
+                    OldStatus = ticket.Status,
+                    NewStatus = ticket.Status,
+                    Metadata = $"{{\"gate\":\"{request.GateName}\",\"action\":\"Exit\"}}",
+                    CreatedAt = DateTime.UtcNow
+                });
+                await _checkinRepository.SaveChangesAsync();
 
                 _logger.LogInformation("Ticket {TicketId} exit scanned at {Gate} by staff {StaffId}",
                     ticket.TicketId, request.GateName, staffUserId);
@@ -160,12 +170,30 @@ namespace TicketAPI.Services
             if (!ticket.CheckedInAt.HasValue)
             {
                 // First time check-in
+                var prevStatus = ticket.Status;
                 ticket.CheckedInAt = DateTime.UtcNow;
                 ticket.CheckedInBy = staffUserId;
                 ticket.CheckedInGate = string.IsNullOrWhiteSpace(request.GateName) ? "Main Gate" : request.GateName;
                 ticket.IsInside = true;
+                ticket.Status = "Used";
 
-                await _context.SaveChangesAsync();
+                await _checkinRepository.AddStatusHistoryAsync(new StatusHistory
+                {
+                    TargetType = "Ticket",
+                    TargetId = ticket.TicketId,
+                    EventId = ticket.EventId,
+                    TicketId = ticket.TicketId,
+                    OrderId = ticket.OrderId,
+                    ActorUserId = staffUserId,
+                    ActorRole = "Staff",
+                    Action = "Checkin_Entry",
+                    OldStatus = prevStatus,
+                    NewStatus = "Used",
+                    Metadata = $"{{\"gate\":\"{ticket.CheckedInGate}\",\"action\":\"Entry\"}}",
+                    CreatedAt = DateTime.UtcNow
+                });
+
+                await _checkinRepository.SaveChangesAsync();
 
                 _logger.LogInformation("Ticket {TicketId} first check-in at {Gate} by staff {StaffId}",
                     ticket.TicketId, ticket.CheckedInGate, staffUserId);
@@ -208,7 +236,22 @@ namespace TicketAPI.Services
             {
                 ticket.IsInside = true;
                 ticket.ReEntryCount++;
-                await _context.SaveChangesAsync();
+                await _checkinRepository.AddStatusHistoryAsync(new StatusHistory
+                {
+                    TargetType = "Ticket",
+                    TargetId = ticket.TicketId,
+                    EventId = ticket.EventId,
+                    TicketId = ticket.TicketId,
+                    OrderId = ticket.OrderId,
+                    ActorUserId = staffUserId,
+                    ActorRole = "Staff",
+                    Action = "Checkin_ReEntry",
+                    OldStatus = ticket.Status,
+                    NewStatus = ticket.Status,
+                    Metadata = $"{{\"gate\":\"{request.GateName}\",\"policy\":\"Unlimited\",\"count\":{ticket.ReEntryCount}}}",
+                    CreatedAt = DateTime.UtcNow
+                });
+                await _checkinRepository.SaveChangesAsync();
 
                 _logger.LogInformation("Ticket {TicketId} unlimited re-entry at {Gate} by staff {StaffId}",
                     ticket.TicketId, request.GateName, staffUserId);
@@ -253,7 +296,22 @@ namespace TicketAPI.Services
 
                 ticket.IsInside = true;
                 ticket.ReEntryCount++;
-                await _context.SaveChangesAsync();
+                await _checkinRepository.AddStatusHistoryAsync(new StatusHistory
+                {
+                    TargetType = "Ticket",
+                    TargetId = ticket.TicketId,
+                    EventId = ticket.EventId,
+                    TicketId = ticket.TicketId,
+                    OrderId = ticket.OrderId,
+                    ActorUserId = staffUserId,
+                    ActorRole = "Staff",
+                    Action = "Checkin_ReEntry",
+                    OldStatus = ticket.Status,
+                    NewStatus = ticket.Status,
+                    Metadata = $"{{\"gate\":\"{request.GateName}\",\"policy\":\"Unlimited\",\"count\":{ticket.ReEntryCount}}}",
+                    CreatedAt = DateTime.UtcNow
+                });
+                await _checkinRepository.SaveChangesAsync();
 
                 _logger.LogInformation("Ticket {TicketId} time-limited re-entry ({Elapsed}/{Allowed} min) at {Gate} by staff {StaffId}",
                     ticket.TicketId, (int)elapsedMinutes, allowedMinutes, request.GateName, staffUserId);

@@ -1,5 +1,6 @@
 using System.Text;
 using IncidentAPI.Data;
+using IncidentAPI.Repositories;
 using IncidentAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -15,10 +16,21 @@ builder.Services.AddDbContext<IncidentDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // ============================================================
-// 2. Dependency Injection - Services
+// 2. Dependency Injection - Repositories & Services
 // ============================================================
-builder.Services.AddScoped<IIncidentService, IncidentService>();
-builder.Services.AddScoped<IEvidenceService, EvidenceService>();
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IIncidentRepository, IncidentRepository>();
+// Explicit factories: both services keep DbContext overloads for tests, so the container
+// cannot choose between constructors on its own.
+builder.Services.AddScoped<IIncidentService>(sp => new IncidentService(
+    sp.GetRequiredService<IIncidentRepository>(),
+    sp.GetRequiredService<ILogger<IncidentService>>(),
+    sp.GetRequiredService<IHttpClientFactory>(),
+    sp.GetRequiredService<IConfiguration>()));
+builder.Services.AddScoped<IEvidenceService>(sp => new EvidenceService(
+    sp.GetRequiredService<IIncidentRepository>(),
+    sp.GetRequiredService<ICloudinaryService>(),
+    sp.GetRequiredService<ILogger<EvidenceService>>()));
 builder.Services.AddSingleton<ICloudinaryService, CloudinaryService>();
 
 // ============================================================

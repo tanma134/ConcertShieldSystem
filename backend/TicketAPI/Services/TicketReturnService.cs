@@ -1,3 +1,4 @@
+using TicketAPI.Repositories;
 using Microsoft.EntityFrameworkCore;
 using TicketAPI.Domain;
 using TicketAPI.API;
@@ -9,17 +10,18 @@ namespace TicketAPI.Services
     // submit, track and cancel ticket return requests.
     public class TicketReturnService : ITicketReturnService
     {
-        private readonly TicketDbContext _context;
+        private readonly ITicketReturnRepository _returnRepository;
         private readonly ILogger<TicketReturnService> _logger;
         private readonly IEventApiClient _eventApiClient;
         private readonly IConfiguration _configuration;
         private readonly IPaymentAPIClient _paymentClient;
         private readonly TicketReturnNotifier _notifier;
 
-        public TicketReturnService(TicketDbContext context, ILogger<TicketReturnService> logger, IEventApiClient eventApiClient, IConfiguration configuration,
+        [Microsoft.Extensions.DependencyInjection.ActivatorUtilitiesConstructor]
+        public TicketReturnService(ITicketReturnRepository returnRepository, ILogger<TicketReturnService> logger, IEventApiClient eventApiClient, IConfiguration configuration,
             IPaymentAPIClient paymentClient, TicketReturnNotifier notifier)
         {
-            _context = context;
+            _returnRepository = returnRepository;
             _logger = logger;
             _eventApiClient = eventApiClient;
             _configuration = configuration;
@@ -27,16 +29,18 @@ namespace TicketAPI.Services
             _notifier = notifier;
         }
 
+        public TicketReturnService(TicketDbContext context, ILogger<TicketReturnService> logger, IEventApiClient eventApiClient, IConfiguration configuration,
+            IPaymentAPIClient paymentClient, TicketReturnNotifier notifier)
+            : this(new TicketReturnRepository(context), logger, eventApiClient, configuration, paymentClient, notifier)
+        {
+        }
+
         // Every paid ticket the user owns, with whether it can be returned right now.
         public async Task<List<MyTicketDto>> ListMyTicketsAsync(int userId)
         {
             var now = DateTime.UtcNow;
 
-            var tickets = await _context.Tickets
-                .AsNoTracking()
-                .Include(t => t.Order).ThenInclude(o => o.OrderDetails)
-                .Where(t => t.OwnerUserId == userId && !t.IsDeleted && t.Order.Status == "Paid")
-                .ToListAsync();
+            var tickets = await _returnRepository.GetPaidTicketsByOwnerAsync(userId);
 
             // Do not touch the return-request table when this account owns no paid tickets.
             // This also makes Staff/Admin accounts correctly receive [] instead of failing.
@@ -50,16 +54,8 @@ namespace TicketAPI.Services
             foreach (var eventId in tickets.Select(t => t.EventId).Distinct())
                 tiersByEvent[eventId] = await _eventApiClient.GetRefundTiersAsync(eventId);
 
-            var requests = await _context.TicketReturnRequests
-                .AsNoTracking()
-                .Where(r => ticketIds.Contains(r.TicketId))
-                .ToListAsync();
-
-            var changes = await (from affected in _context.Set<AffectedTicket>().AsNoTracking()
-                join change in _context.Set<AppliedEventChange>().AsNoTracking() on affected.ChangeId equals change.ChangeId
-                where ticketIds.Contains(affected.TicketId)
-                select new { affected.TicketId, Change = change }).ToListAsync();
-            var latestChanges = changes.GroupBy(x => x.TicketId).ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.Change.ScheduleVersion).First().Change);
+            var requests = await _returnRepository.GetRequestsByTicketIdsAsync(ticketIds);
+            var latestChanges = await _returnRepository.GetLatestChangesByTicketIdsAsync(ticketIds);
 
             return tickets
                 .OrderByDescending(t => t.Order.StartsAt)
@@ -107,21 +103,14 @@ namespace TicketAPI.Services
             if (!reason.IsValid)
                 throw new ArgumentException(reason.Error);
 
-            var ticket = await _context.Tickets
-                .Include(t => t.Order).ThenInclude(o => o.OrderDetails)
-                .Include(t => t.TicketQrTokens)
-                .FirstOrDefaultAsync(t => t.TicketId == dto.TicketId && t.OwnerUserId == userId && !t.IsDeleted)
+            var ticket = await _returnRepository.GetTicketForReturnAsync(dto.TicketId, userId)
                 ?? throw new KeyNotFoundException("Ticket not found.");
 
-            var hasOpen = await _context.TicketReturnRequests
-                .AnyAsync(r => r.TicketId == ticket.TicketId && r.Status == ReturnRequestStatuses.Pending);
+            var hasOpen = await _returnRepository.HasPendingRequestForTicketAsync(ticket.TicketId);
 
             var now = DateTime.UtcNow;
             var tiers = await _eventApiClient.GetRefundTiersAsync(ticket.EventId);
-            var change = await (from affected in _context.Set<AffectedTicket>().AsNoTracking()
-                join applied in _context.Set<AppliedEventChange>().AsNoTracking() on affected.ChangeId equals applied.ChangeId
-                where affected.TicketId == ticket.TicketId
-                orderby applied.ScheduleVersion descending select applied).FirstOrDefaultAsync();
+            var change = await _returnRepository.GetLatestChangeForTicketAsync(ticket.TicketId);
             var eligibility = EvaluatePolicy(ticket, hasOpen, now, tiers, change);
             if (!eligibility.IsEligible)
                 throw new InvalidOperationException(eligibility.Message);
@@ -142,11 +131,11 @@ namespace TicketAPI.Services
 
             ticket.Status = TicketStatuses.ReturnPending;
             RevokeQrTokens(ticket, now);
-            _context.TicketReturnRequests.Add(request);
+            await _returnRepository.AddRequestAsync(request);
 
             try
             {
-                await _context.SaveChangesAsync();
+                await _returnRepository.SaveChangesAsync();
             }
             catch (DbUpdateException ex)
             {
@@ -161,26 +150,14 @@ namespace TicketAPI.Services
         // the user's requests, newest first, optionally filtered by status.
         public async Task<List<TicketReturnDto>> ListMineAsync(int userId, string? status)
         {
-            var query = _context.TicketReturnRequests
-                .AsNoTracking()
-                .Include(r => r.Ticket).ThenInclude(t => t.Order)
-                .Where(r => r.RequesterUserId == userId);
-
-            if (!string.IsNullOrWhiteSpace(status))
-                query = query.Where(r => r.Status == status);
-
-            var requests = await query.OrderByDescending(r => r.CreatedAt).ToListAsync();
-
+            var requests = await _returnRepository.ListMineAsync(userId, status);
             return requests.Select(r => MapRequest(r, r.Ticket)).ToList();
         }
 
         // one request. Other people's requests look like "not found".
         public async Task<TicketReturnDto> GetMineAsync(int userId, int requestId)
         {
-            var request = await _context.TicketReturnRequests
-                .AsNoTracking()
-                .Include(r => r.Ticket).ThenInclude(t => t.Order)
-                .FirstOrDefaultAsync(r => r.TicketReturnRequestId == requestId && r.RequesterUserId == userId)
+            var request = await _returnRepository.GetMineAsync(userId, requestId)
                 ?? throw new KeyNotFoundException("Return request not found.");
 
             return MapRequest(request, request.Ticket);
@@ -189,9 +166,7 @@ namespace TicketAPI.Services
         // withdraws a Pending request and gives the ticket back to its owner.
         public async Task<TicketReturnDto> CancelAsync(int userId, int requestId)
         {
-            var request = await _context.TicketReturnRequests
-                .Include(r => r.Ticket).ThenInclude(t => t.Order)
-                .FirstOrDefaultAsync(r => r.TicketReturnRequestId == requestId && r.RequesterUserId == userId)
+            var request = await _returnRepository.GetMineForCancelAsync(userId, requestId)
                 ?? throw new KeyNotFoundException("Return request not found.");
 
             if (!TicketReturnPolicy.CanCancel(request.Status))
@@ -205,7 +180,7 @@ namespace TicketAPI.Services
             if (request.Ticket.Status == TicketStatuses.ReturnPending)
                 request.Ticket.Status = TicketStatuses.Active;
 
-            await _context.SaveChangesAsync();
+            await _returnRepository.SaveChangesAsync();
 
             return MapRequest(request, request.Ticket);
         }
@@ -213,21 +188,7 @@ namespace TicketAPI.Services
         // Staff/Admin queue of return requests. eventScope limits Staff to the events they were assigned.
         public async Task<List<TicketReturnDto>> ListForReviewAsync(string? status, IReadOnlyCollection<int>? eventScope = null)
         {
-            var query = _context.TicketReturnRequests
-                .AsNoTracking()
-                .Include(r => r.Ticket).ThenInclude(t => t.Order)
-                .AsQueryable();
-
-            if (eventScope != null)
-            {
-                var ids = eventScope.ToList();
-                query = query.Where(r => ids.Contains(r.EventId));
-            }
-
-            if (!string.IsNullOrWhiteSpace(status))
-                query = query.Where(r => r.Status == status);
-
-            var requests = await query.OrderByDescending(r => r.CreatedAt).ToListAsync();
+            var requests = await _returnRepository.ListForReviewAsync(status, eventScope);
             return requests.Select(r => MapRequest(r, r.Ticket)).ToList();
         }
 
@@ -274,7 +235,7 @@ namespace TicketAPI.Services
             }
 
             // Save the decision before touching money, so a payment problem can never undo it.
-            await _context.SaveChangesAsync();
+            await _returnRepository.SaveChangesAsync();
 
             if (!dto.Approve)
             {
@@ -323,17 +284,7 @@ namespace TicketAPI.Services
                 request.RefundError = null;
 
                 // Sync Order status if all tickets in the order have been returned / refunded
-                var hasRemainingActive = await _context.Tickets
-                    .AnyAsync(t => t.OrderId == request.OrderId && !t.IsDeleted && t.Status != TicketStatuses.Returned && t.Status != TicketStatuses.Revoked);
-
-                if (!hasRemainingActive)
-                {
-                    var order = await _context.Orders.FirstOrDefaultAsync(o => o.OrderId == request.OrderId);
-                    if (order != null)
-                    {
-                        order.Status = "Refunded";
-                    }
-                }
+                await _returnRepository.SyncOrderRefundStatusAsync(request.OrderId);
             }
             else
             {
@@ -342,7 +293,7 @@ namespace TicketAPI.Services
                 request.RefundError = error.Length > 500 ? error[..500] : error;
             }
 
-            await _context.SaveChangesAsync();
+            await _returnRepository.SaveChangesAsync();
 
             var eventName = request.Ticket.Order?.EventName ?? "your ticket";
             var amount = request.RefundAmount.ToString("N0", System.Globalization.CultureInfo.InvariantCulture);
@@ -359,9 +310,7 @@ namespace TicketAPI.Services
         // Loads a request for review. A request outside the reviewer's events looks like "not found".
         private async Task<TicketReturnRequest> LoadForReviewAsync(int requestId, IReadOnlyCollection<int>? eventScope)
         {
-            var request = await _context.TicketReturnRequests
-                .Include(r => r.Ticket).ThenInclude(t => t.Order)
-                .FirstOrDefaultAsync(r => r.TicketReturnRequestId == requestId)
+            var request = await _returnRepository.GetForReviewAsync(requestId)
                 ?? throw new KeyNotFoundException("Return request not found.");
 
             if (eventScope != null && !eventScope.Contains(request.EventId))

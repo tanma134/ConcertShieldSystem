@@ -83,6 +83,7 @@ namespace AuthenticationAPI.Controllers
         private readonly IEmailService _emailService;
         private readonly IAuditLogClient _auditLog;
         private readonly ILogger<OrganizerVerificationController> _logger;
+        private readonly IConfiguration _configuration;
         private readonly string _connectionString;
 
         public OrganizerVerificationController(
@@ -98,9 +99,10 @@ namespace AuthenticationAPI.Controllers
             _emailService = emailService;
             _auditLog = auditLog;
             _logger = logger;
+            _configuration = configuration;
             _connectionString = configuration.GetConnectionString("DefaultConnection") 
                 ?? configuration.GetConnectionString("MyConnection") 
-                ?? "Host=localhost;Port=5432;Database=authentication_db;Username=postgres;Password=123456";
+                ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_AUTH_POSTGRES") ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TEST_POSTGRES") ?? throw new InvalidOperationException("Missing connection string.");
         }
 
         private async Task EnsureTablesAsync()
@@ -221,7 +223,11 @@ namespace AuthenticationAPI.Controllers
             if (userId <= 0) return;
             try
             {
-                var notifConnStr = "Host=localhost;Port=5432;Database=notification_db;Username=postgres;Password=123456";
+                var notifConnStr = _configuration?.GetConnectionString("NotificationConnection")
+                    ?? _configuration?.GetConnectionString("NotificationDb")
+                    ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_NOTIFICATION_POSTGRES")
+                    ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TEST_POSTGRES");
+                if (string.IsNullOrWhiteSpace(notifConnStr)) return;
                 using var conn = new NpgsqlConnection(notifConnStr);
                 await conn.OpenAsync();
                 using var cmd = new NpgsqlCommand(@"
@@ -451,7 +457,7 @@ namespace AuthenticationAPI.Controllers
                 // 5. Send In-App Notification to Organizer
                 await SendNotificationToUserAsync(
                     targetUserId,
-                    "🎉 Business Verification Approved!",
+                    "Business Verification Approved",
                     $"Congratulations! Your business verification application for '{companyName}' has been approved by Platform Administration. You now have full Organizer privileges to create and manage concerts.",
                     "organizer_verification",
                     "/organizer/dashboard");
@@ -550,7 +556,7 @@ namespace AuthenticationAPI.Controllers
                 // 4. Send In-App Notification to Organizer
                 await SendNotificationToUserAsync(
                     targetUserId,
-                    "❌ Business Verification Application Rejected",
+                    "Business Verification Application Rejected",
                     $"Your business verification application for '{companyName}' was rejected by Platform Administration. Reason: {request.RejectionReason}. Please review the feedback and resubmit revised documents.",
                     "organizer_verification",
                     "/organizer/verification");
@@ -571,6 +577,7 @@ namespace AuthenticationAPI.Controllers
         // ==========================================
         // Submit Organizer Verification Documents (Organizer)
         // ==========================================
+        // Nop ho so giay to xac minh danh tinh doanh nghiep de nang cap len Ban to chuc
         [HttpPost("api/organizer/verification/submit")]
         [Authorize]
         [Consumes("multipart/form-data")]

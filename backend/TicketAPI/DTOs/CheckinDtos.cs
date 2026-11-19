@@ -6,9 +6,7 @@ namespace TicketAPI.DTOs
         public Guid? TicketCode { get; set; }
         public int? TicketId { get; set; }
         public string GateName { get; set; } = "Main Gate";
-        /// <summary>
-        /// "Entry" (default) or "Exit"
-        /// </summary>
+        // Loai quet: "Entry" (vao cong) hoac "Exit" (ra ngoai de vao lai)
         public string ScanType { get; set; } = "Entry";
     }
 

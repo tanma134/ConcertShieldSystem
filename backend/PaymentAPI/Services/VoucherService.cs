@@ -15,11 +15,14 @@ namespace PaymentAPI.Services
         private readonly ITicketApiClient _ticketApiClient;
         private readonly IEventApiClient _eventApiClient;
 
-        public VoucherService(IVoucherRepository voucherRepository, IEventApiClient eventApiClient, ITicketApiClient ticketApiClient)
+        private readonly Microsoft.Extensions.Configuration.IConfiguration? _configuration;
+
+        public VoucherService(IVoucherRepository voucherRepository, IEventApiClient eventApiClient, ITicketApiClient ticketApiClient, Microsoft.Extensions.Configuration.IConfiguration? configuration = null)
         {
             _voucherRepository = voucherRepository;
             _eventApiClient = eventApiClient;
             _ticketApiClient = ticketApiClient;
+            _configuration = configuration;
         }
 
         public async Task<VoucherResponseDTO> CreateVoucherAsync(CreateVoucherDTO dto, int currentUserId, bool isAdmin, bool isOrganizer)
@@ -168,7 +171,12 @@ namespace PaymentAPI.Services
                 // 1. Direct persistence to notification_db (100% resilient)
                 try
                 {
-                    using var conn = new Npgsql.NpgsqlConnection("Host=localhost;Port=5432;Database=notification_db;Username=postgres;Password=123456");
+                    var notifConnStr = _configuration?.GetConnectionString("NotificationConnection")
+                        ?? _configuration?.GetConnectionString("NotificationDb")
+                        ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_NOTIFICATION_POSTGRES")
+                        ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TEST_POSTGRES");
+                    if (string.IsNullOrWhiteSpace(notifConnStr)) return;
+                    using var conn = new Npgsql.NpgsqlConnection(notifConnStr);
                     await conn.OpenAsync();
 
                     // Notification 1: Broadcast to all customers (UserId = 0)
@@ -265,6 +273,16 @@ namespace PaymentAPI.Services
             bool isAdmin,
             bool isOrganizer)
         {
+            // Kiem tra gia tri phan trang hop le, tranh so am hoac bang 0
+            if (page <= 0)
+            {
+                throw new ArgumentException("Page must be greater than 0.", nameof(page));
+            }
+            if (limit <= 0)
+            {
+                throw new ArgumentException("Limit must be greater than 0.", nameof(limit));
+            }
+
             bool isOrganizerOnly = false;
             int? queryOrgId = organizerId;
 
@@ -368,8 +386,10 @@ namespace PaymentAPI.Services
             return MapToResponseDTO(updated);
         }
 
+        // Cap nhat thong tin voucher he thong hoac voucher cua ban to chuc
         public async Task<VoucherResponseDTO> UpdateVoucherAsync(int id, UpdateVoucherDTO dto, int currentUserId, bool isAdmin, bool isOrganizer)
         {
+            // Luu y: Khoa ma voucher neu da co luot su dung va kiem tra quyen so huu cua Organizer
             var voucher = await _voucherRepository.GetByIdAsync(id);
             if (voucher == null)
             {
@@ -493,8 +513,10 @@ namespace PaymentAPI.Services
             return MapToResponseDTO(updated);
         }
 
+        // Xoa mem voucher khoi he thong bang cach danh dau IsDeleted
         public async Task<bool> SoftDeleteVoucherAsync(int id, int currentUserId, bool isAdmin, bool isOrganizer)
         {
+            // Luu y: Kiem tra quyen so huu cua Organizer va cap nhat IsDeleted=true de bao toan lich su don hang
             var voucher = await _voucherRepository.GetByIdAsync(id);
             if (voucher == null)
             {

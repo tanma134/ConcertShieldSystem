@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EventAPI.Controllers
 {
-    // staff assigned to one concert. Organizer of the concert (or Admin) only.
+    // Quan ly nhan vien ho tro va phan cong soat ve tai concert danh cho Organizer va Admin
     [Route("api/events/{eventId:int}/staff")]
     [Authorize(Policy = "RequireOrganizer")]
     public class EventStaffController : BaseApiController
@@ -17,19 +17,20 @@ namespace EventAPI.Controllers
             _service = service;
         }
 
-        // GET api/events/{eventId}/staff
+        // Lay danh sach nhan vien duoc phan cong lam viec tai su kien
         [HttpGet]
         public async Task<ActionResult> GetStaff(int eventId)
         {
             try
             {
+                // Luu y: Kiem tra quyen Organizer hoac Admin truoc khi lay danh sach nhan vien
                 var result = await _service.ListAsync(eventId, CurrentUserId, IsAdmin, BearerToken);
                 return Ok(ApiResponseDTO<List<EventStaffDTO>>.SuccessResponse(result));
             }
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        // GET api/events/{eventId}/staff/candidates?q=an
+        // Tim kiem nhan vien ung vien tu danh ba he thong de phan cong vao su kien
         [HttpGet("candidates")]
         public async Task<ActionResult> GetCandidates(int eventId, [FromQuery] string? q)
         {
@@ -41,19 +42,20 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        // POST api/events/{eventId}/staff   { "staffUserId": 12 }
+        // Phan cong mot nhan vien vao lam viec tai concert kem cong soat ve
         [HttpPost]
         public async Task<ActionResult> Assign(int eventId, [FromBody] AssignStaffDTO dto)
         {
             try
             {
+                // Luu y: Kiem tra nhan vien hop le tu Directory va khong duoc phan cong trung lap
                 var result = await _service.AssignAsync(eventId, dto.StaffUserId, dto.GateName, CurrentUserId, IsAdmin, BearerToken, dto.CanReviewReturns);
                 return Ok(ApiResponseDTO<EventStaffDTO>.SuccessResponse(result, "Staff member assigned."));
             }
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        // PUT api/events/{eventId}/staff/{staffUserId}/return-review   { "canReviewReturns": true }
+        // Cap nhat quyen duyet hoan ve cho nhan vien tai su kien
         [HttpPut("{staffUserId:int}/return-review")]
         public async Task<ActionResult> SetReturnReview(int eventId, int staffUserId, [FromBody] SetReturnReviewDTO dto)
         {
@@ -65,12 +67,13 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        // DELETE api/events/{eventId}/staff/{staffUserId}
+        // Huy phan cong nhan vien khoi concert
         [HttpDelete("{staffUserId:int}")]
         public async Task<ActionResult> Unassign(int eventId, int staffUserId)
         {
             try
             {
+                // Luu y: Xoa quyen soat ve va truy cap cua nhan vien vao su kien nay
                 await _service.UnassignAsync(eventId, staffUserId, CurrentUserId, IsAdmin);
                 return Ok(ApiResponseDTO<object>.SuccessResponse(new { eventId, staffUserId }, "Staff member removed."));
             }

@@ -1,12 +1,8 @@
-
-
--- =================================================================
--- AUTH INITIALIZATION - DESTRUCTIVE DROPS
--- =================================================================
 -- =============================================================================
 -- DATABASE: authentication_db
 -- System: PostgreSQL 13+
 -- Description: Init script for AuthenticationAPI database schema & seed data
+-- An toàn khi chạy lại hoặc tạo mới (DROP CASCADE rồi CREATE).
 -- =============================================================================
 
 -- Drop existing tables (reverse dependency order)
@@ -73,7 +69,7 @@ CREATE TABLE organizer_requests (
     phone_number VARCHAR(20),
     website VARCHAR(200),
     experience VARCHAR(2000),
-    reason VARCHAR(1000),
+    reason VARCHAR(1000) NOT NULL DEFAULT '',
     status VARCHAR(20) NOT NULL DEFAULT 'Pending',
     rejection_reason VARCHAR(1000),
     review_note VARCHAR(1000),
@@ -91,52 +87,93 @@ CREATE TABLE ekyc_verifications (
     ekyc_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id INT NOT NULL REFERENCES users(user_id),
     cccd_number_encrypted TEXT,
+    cccd_number_hash VARCHAR(64),
     cccd_front_object_key VARCHAR(500),
     cccd_back_object_key VARCHAR(500),
     face_capture_object_key VARCHAR(500),
+    face_vector BYTEA,
+    ocr_raw_data JSONB,
     face_match_score NUMERIC(5,2),
     liveness_score NUMERIC(5,2),
     liveness_passed BOOLEAN,
-    ocr_raw_data JSONB,
     status VARCHAR(20) NOT NULL DEFAULT 'Pending',
     fail_reason VARCHAR(500),
+    consent_version VARCHAR(20),
+    consented_at TIMESTAMPTZ,
+    data_purged_at TIMESTAMPTZ,
+    legal_hold BOOLEAN NOT NULL DEFAULT FALSE,
+    legal_hold_reason VARCHAR(500),
+    legal_hold_at TIMESTAMPTZ,
+    reviewed_by INT,
+    reviewed_at TIMESTAMPTZ,
     verified_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS ix_ekyc_cccd_number_hash ON ekyc_verifications(cccd_number_hash);
+CREATE INDEX IF NOT EXISTS ix_ekyc_user_status ON ekyc_verifications(user_id, status);
+CREATE INDEX IF NOT EXISTS ix_ekyc_verifications_purge ON ekyc_verifications(created_at) WHERE (data_purged_at IS NULL);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_ekyc_cccd_hash_active ON ekyc_verifications(cccd_number_hash) 
+    WHERE (cccd_number_hash IS NOT NULL AND status IN ('Passed', 'ManualReview'));
+CREATE UNIQUE INDEX IF NOT EXISTS ux_ekyc_cccd_hash_passed ON ekyc_verifications(cccd_number_hash) 
+    WHERE (status = 'Passed');
+
 -- 7. Kyc Consent Versions table
 CREATE TABLE kyc_consent_versions (
-    consent_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    version VARCHAR(20) NOT NULL,
-    content TEXT NOT NULL,
-    effective_from TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    version VARCHAR(20) NOT NULL UNIQUE,
+    title VARCHAR(500) NOT NULL,
+    content_json TEXT NOT NULL,
+    checkbox_text TEXT NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_by INT
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_kyc_consent_versions_one_active ON kyc_consent_versions(is_active) WHERE is_active = true;
 
 -- 8. Kyc Settings table
 CREATE TABLE kyc_settings (
-    setting_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id INT PRIMARY KEY,
     retention_days INT NOT NULL DEFAULT 30,
-    privacy_contact VARCHAR(200)
+    keep_document_hash_after_deletion BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_by INT
 );
 
 -- 9. Kyc Deletion Requests table
 CREATE TABLE kyc_deletion_requests (
-    request_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id INT NOT NULL REFERENCES users(user_id),
     status VARCHAR(20) NOT NULL DEFAULT 'Pending',
-    reason VARCHAR(500),
     requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    processed_at TIMESTAMPTZ
+    processed_at TIMESTAMPTZ,
+    processed_by INT,
+    note TEXT,
+    reason_code VARCHAR(30)
 );
+
+CREATE INDEX IF NOT EXISTS ix_kyc_deletion_requests_status_requested ON kyc_deletion_requests(status, requested_at DESC);
+CREATE INDEX IF NOT EXISTS ix_kyc_deletion_requests_user_status ON kyc_deletion_requests(user_id, status);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_kyc_deletion_one_pending_per_user ON kyc_deletion_requests(user_id) WHERE (status = 'Pending');
 
 -- 10. Kyc Access Logs table
 CREATE TABLE kyc_access_logs (
-    log_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    user_id INT NOT NULL REFERENCES users(user_id),
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    subject_user_id INT NOT NULL REFERENCES users(user_id),
+    ekyc_id INT REFERENCES ekyc_verifications(ekyc_id),
+    actor_user_id INT REFERENCES users(user_id),
+    actor_type VARCHAR(50) NOT NULL,
     action VARCHAR(50) NOT NULL,
+    ip_address VARCHAR(50),
     details TEXT,
-    accessed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS ix_kyc_access_logs_actor_created ON kyc_access_logs(actor_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS ix_kyc_access_logs_created ON kyc_access_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS ix_kyc_access_logs_ekyc ON kyc_access_logs(ekyc_id);
+CREATE INDEX IF NOT EXISTS ix_kyc_access_logs_subject_created ON kyc_access_logs(subject_user_id, created_at DESC);
 
 -- 11. Pending Registrations table
 CREATE TABLE pending_registrations (
@@ -144,9 +181,9 @@ CREATE TABLE pending_registrations (
     full_name VARCHAR(100),
     email VARCHAR(256) NOT NULL,
     phone_number VARCHAR(20),
-    password_hash TEXT,
-    otp_code VARCHAR(10),
-    expired_at TIMESTAMPTZ
+    password_hash TEXT NOT NULL,
+    otp_code VARCHAR(10) NOT NULL,
+    expired_at TIMESTAMPTZ NOT NULL
 );
 
 -- =============================================================================
@@ -178,9 +215,6 @@ INSERT INTO user_roles (user_id, role_id) VALUES (2, (SELECT role_id FROM roles 
 INSERT INTO user_roles (user_id, role_id) VALUES (3, (SELECT role_id FROM roles WHERE role_name = 'Customer'));
 INSERT INTO user_roles (user_id, role_id) VALUES (3, (SELECT role_id FROM roles WHERE role_name = 'Organizer'));
 
-
--- =================================================================
--- AUTH AVATAR MIGRATION
--- =================================================================
--- Non-destructive avatar metadata migration. Image binaries remain in Cloudinary.
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS avatar_public_id text;
+-- Seed Default KYC Settings
+INSERT INTO kyc_settings (id, retention_days, keep_document_hash_after_deletion, updated_at)
+VALUES (1, 30, false, NOW()) ON CONFLICT (id) DO NOTHING;

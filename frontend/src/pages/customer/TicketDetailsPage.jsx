@@ -726,12 +726,12 @@ export default function TicketDetailsPage() {
                   outline: "none",
                 }}
               >
-                <option value="PersonalSchedule">📅 Personal schedule conflict / Unable to attend</option>
-                <option value="MedicalEmergency">🏥 Medical emergency / Health issue / Hospitalization</option>
-                <option value="EventChanged">⏰ Event schedule or venue changed</option>
-                <option value="AccidentalBooking">🛒 Accidental booking / Wrong tier or quantity</option>
-                <option value="ForceMajeure">🌧️ Severe weather / Natural disaster / Travel disruption</option>
-                <option value="Other">📝 Other reason (detailed explanation required)</option>
+                <option value="PersonalSchedule">Personal schedule conflict / Unable to attend</option>
+                <option value="MedicalEmergency">Medical emergency / Health issue / Hospitalization</option>
+                <option value="EventChanged">Event schedule or venue changed</option>
+                <option value="AccidentalBooking">Accidental booking / Wrong tier or quantity</option>
+                <option value="ForceMajeure">Severe weather / Natural disaster / Travel disruption</option>
+                <option value="Other">Other reason (detailed explanation required)</option>
               </select>
             </div>
 
@@ -771,7 +771,7 @@ export default function TicketDetailsPage() {
                 }}
               />
               <small style={{ display: "block", marginTop: "4px", fontSize: "11px", color: "#6b7280" }}>
-                💡 Providing valid evidence helps expedite the review process for medical or force majeure reasons.
+                Providing valid evidence helps expedite the review process for medical or force majeure reasons.
               </small>
             </div>
 

@@ -64,7 +64,9 @@ namespace AdminAPI.Controllers
             _configuration = configuration;
             _logger = logger;
             _connectionString = _configuration.GetConnectionString("DefaultConnection")
-                ?? "Host=localhost;Port=5432;Database=admin_db;Username=postgres;Password=123456";
+                ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_ADMIN_POSTGRES")
+                ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TEST_POSTGRES")
+                ?? throw new InvalidOperationException("Missing connection string 'DefaultConnection'.");
         }
 
         private int GetCurrentAdminId()
@@ -81,10 +83,7 @@ namespace AdminAPI.Controllers
                 ?? "Platform Administrator";
         }
 
-        /// <summary>
-        /// View Policy Version History (Category: PRICE_TICKETING, REFUND_CANCELLATION, VIRTUAL_QUEUE, RISK_ANTI_FRAUD, TERMS_OF_SERVICE)
-        /// Directly queried from system_policies table in admin_db.
-        /// </summary>
+        // Xem lich su cac phien ban chinh sach he thong theo tung danh muc
         [HttpGet("history")]
         public async Task<IActionResult> GetPolicyHistory([FromQuery] string? category = "PRICE_TICKETING")
         {
@@ -142,9 +141,7 @@ namespace AdminAPI.Controllers
             });
         }
 
-        /// <summary>
-        /// Get Active Policy Document for each Category from database (Public for registration & login policy review).
-        /// </summary>
+        // Lay danh sach cac ban ghi chinh sach dang co hieu luc theo tung danh muc danh cho moi nguoi dung
         [AllowAnonymous]
         [HttpGet("active")]
         public async Task<IActionResult> GetActivePolicies()
@@ -199,10 +196,7 @@ namespace AdminAPI.Controllers
             });
         }
 
-        /// <summary>
-        /// Create / Publish New Policy Version (Actor: Admin)
-        /// Archives previous active versions and inserts new active policy document into admin_db.
-        /// </summary>
+        // Ban hanh phien ban chinh sach he thong moi va luu tru phien ban cu
         [HttpPost("create")]
         public async Task<IActionResult> CreatePolicyVersion([FromBody] CreatePolicyVersionRequestDTO request)
         {

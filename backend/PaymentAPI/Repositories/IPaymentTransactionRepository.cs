@@ -15,5 +15,6 @@ namespace PaymentAPI.Repositories
         Task<List<PaymentTransaction>> GetAllForReconciliationAsync();
 
         Task<PaymentTransaction?> GetByIdAsync(int paymentTransactionId);
+        Task<int> CountFailedSinceAsync(int userId, DateTime since, CancellationToken ct = default);
     }
 }

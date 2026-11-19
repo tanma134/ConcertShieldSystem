@@ -2,6 +2,7 @@ using System.Text;
 using AdminAPI.Data;
 using AdminAPI.Services;
 using AdminAPI.Services.Risks;
+using AdminAPI.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -12,9 +13,17 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AdminDbContext>(options =>
  options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddHttpClient();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<ISupportEmailService, SupportEmailService>();
-builder.Services.AddScoped<ISupportCaseService, SupportCaseService>();
+// Explicit factory: SupportCaseService exposes several convenience constructors for tests.
+builder.Services.AddScoped<ISupportCaseService>(sp => new SupportCaseService(
+    sp.GetRequiredService<ISupportCaseRepository>(),
+    sp.GetRequiredService<ILogger<SupportCaseService>>(),
+    sp.GetRequiredService<ISupportEmailService>(),
+    sp.GetRequiredService<IHttpClientFactory>(),
+    sp.GetRequiredService<IConfiguration>()));
+builder.Services.AddScoped<ISupportCaseRepository, SupportCaseRepository>();
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtSection["Key"]

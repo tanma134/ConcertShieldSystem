@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+﻿import { useEffect, useState, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import supportCaseApi from "../../api/supportCaseApi";
 import { useAuth } from "../../context/AuthContext";
@@ -24,7 +24,7 @@ const PlusIcon = () => (
 
 // Format helper
 const formatDate = (dateStr) => {
-  if (!dateStr) return "—";
+  if (!dateStr) return "â€”";
   const d = new Date(dateStr);
   return d.toLocaleString("en-US", {
     year: "numeric",
@@ -109,12 +109,12 @@ export default function SupportCaseListPage() {
   };
 
   return (
-    <Shell title="Customer Support Cases & Disputes">
+    <Shell title="Customer Support Cases">
       <div className="sc-container">
         {/* Header */}
         <div className="sc-header">
           <div className="sc-header-title">
-            <span className="sc-badge-pill">Support & Dispute Center</span>
+            <span className="sc-badge-pill">Customer Support Center</span>
             <h1>Customer Support Cases</h1>
             <p>
               {isAdminPath
@@ -272,3 +272,4 @@ export default function SupportCaseListPage() {
     </Shell>
   );
 }
+

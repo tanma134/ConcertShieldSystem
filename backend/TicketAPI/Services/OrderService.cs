@@ -44,6 +44,12 @@ namespace TicketAPI.Services
             if (string.IsNullOrWhiteSpace(dto.HoldId))
                 throw new ArgumentException("HoldId không hợp lệ.");
 
+            // Idempotent retry: neu don hang da duoc tao cho hold session nay thi tra ve OrderId ngay
+            var existingOrder = await _context.Orders
+                .Include(o => o.OrderDetails)
+                .FirstOrDefaultAsync(o => o.HoldToken == dto.HoldId && !o.IsDeleted && o.CustomerId == customerId);
+            if (existingOrder != null) return existingOrder.OrderId;
+
             var hold = await _holdService.GetHoldDetailsAsync(
                 dto.HoldId,
                 customerId);
@@ -56,6 +62,31 @@ namespace TicketAPI.Services
             var eventInfo = await _eventApiClient.GetEventByIdAsync(dto.EventId);
             if (eventInfo == null) throw new Exception("Không tìm thấy sự kiện");
             if (eventInfo.Status != "Published") throw new Exception($"Sự kiện không mở bán. (Trạng thái: {eventInfo.Status})");
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // Khoa advisory lock theo customerId de tranh race condition vuot han muc qua nhieu order dong thoi
+                await _context.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(9823, {customerId})");
+
+                // Kiem tra gioi han toi thieu va toi da theo tai khoan truoc khi tao don moi
+                var requestedQuantity = dto.OrderDetails.Sum(x => x.Quantity);
+                if (eventInfo.MinTicketsPerAccount is > 0 && requestedQuantity < eventInfo.MinTicketsPerAccount.Value)
+                {
+                    throw new InvalidOperationException($"Số lượng vé đặt ({requestedQuantity}) nhỏ hơn mức tối thiểu ({eventInfo.MinTicketsPerAccount.Value}) của sự kiện.");
+                }
+
+                if (eventInfo.MaxTicketsPerAccount is > 0)
+                {
+                    var existingQuantity = await _context.OrderDetails
+                        .Where(d => d.Order.CustomerId == customerId
+                            && d.Order.EventId == dto.EventId
+                            && !d.Order.IsDeleted
+                            && (d.Order.Status == "Pending" || d.Order.Status == "PaymentPending" || d.Order.Status == "Paid" || d.Order.Status == "Held"))
+                        .SumAsync(d => (int?)d.Quantity) ?? 0;
+                    if (existingQuantity + requestedQuantity > eventInfo.MaxTicketsPerAccount.Value)
+                        throw new InvalidOperationException($"Ban da dat {existingQuantity} ve. Gioi han cua su kien la {eventInfo.MaxTicketsPerAccount.Value} ve moi tai khoan.");
+                }
 
             var newOrder = new Order
             {
@@ -112,7 +143,7 @@ namespace TicketAPI.Services
                     TicketTypeId = detailDto.TicketTypeId,
                     TicketTypeName = ticketType.TypeName,
                     Quantity = detailDto.Quantity,
-                    UnitPrice = ticketType.Price,
+                    UnitPrice = ticketType.EffectivePrice ?? ticketType.Price,
                     SeatIds = seatIdsJson
                 };
 
@@ -161,9 +192,6 @@ namespace TicketAPI.Services
                 }
             }
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
-            try
-            {
                 await _orderRepository.AddCompleteOrderAsync(newOrder);
 
                 await _context.SaveChangesAsync();

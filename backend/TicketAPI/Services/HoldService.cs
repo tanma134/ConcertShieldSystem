@@ -507,7 +507,7 @@ namespace TicketAPI.Services
                         TicketTypeId = ticket.TicketTypeId,
                         Quantity = ticket.Quantity,
                         TypeName = type?.TypeName,
-                        UnitPrice = type?.Price
+                        UnitPrice = type?.EffectivePrice ?? type?.Price
                     };
                 }).ToList();
 

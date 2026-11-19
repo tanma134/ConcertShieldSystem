@@ -13,6 +13,7 @@ namespace EventAPI.DTOs
 
         [Required]
         public long Price { get; set; }
+        public long? EffectivePrice { get; set; }
 
         public long? OriginalPrice { get; set; }
 
@@ -71,6 +72,7 @@ namespace EventAPI.DTOs
         public string TypeName { get; set; } = null!;
         public string? Description { get; set; }
         public long Price { get; set; }
+        public long? EffectivePrice { get; set; }
         public long? OriginalPrice { get; set; }
         public int Quantity { get; set; }
         public int SoldQuantity { get; set; }
