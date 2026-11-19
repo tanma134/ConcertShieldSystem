@@ -8,8 +8,8 @@ import {
   openCamera,
 } from "../../utils/cameraUtils";
 
-// Mở camera, hiển thị khung ngắm và trả về ảnh vừa chụp qua onCapture(blob, quality).
-// Không có ô chọn file: ảnh chỉ có thể lấy trực tiếp từ camera.
+// Open the camera, show the guide frame and return the captured photo through onCapture(blob, quality).
+// There is no file picker: photos can only be taken directly from the camera.
 export default function CameraCapture({ kind, onCapture }) {
   const info = CAPTURE_KINDS[kind];
   const videoRef = useRef(null);
@@ -22,7 +22,7 @@ export default function CameraCapture({ kind, onCapture }) {
   const [flashKey, setFlashKey] = useState(0);
 
   useEffect(() => {
-    // Có cờ cancelled vì React StrictMode (dev) chạy effect 2 lần và getUserMedia trả về bất đồng bộ
+    // The cancelled flag is needed because React StrictMode (dev) runs the effect twice and getUserMedia resolves asynchronously
     let cancelled = false;
     let stream = null;
     setReady(false);
@@ -64,7 +64,7 @@ export default function CameraCapture({ kind, onCapture }) {
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", CAMERA_CONFIG.JPEG_QUALITY));
 
     if (!blob) {
-      setError("Could not save photo. Please retake.");
+      setError("Couldn't save the photo. Please take it again.");
       return;
     }
     onCapture(blob, quality);

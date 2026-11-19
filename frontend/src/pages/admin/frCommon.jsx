@@ -11,8 +11,13 @@ export const g = (o, ...keys) => {
 };
 
 export const errMsg = (e, fallback) => {
+  // The API explains most failures (unknown user, ticket owned by someone else,
+  // account limit reached...). Only fall back to a generic permission message when
+  // the server sent nothing useful.
+  const message = e.response?.data?.message;
+  if (message) return message;
   if (e.response?.status === 403) return "Only Admin accounts with fraud/risk access can do this.";
-  return e.response?.data?.message || fallback;
+  return fallback;
 };
 
 export const dash = (v) => (v == null || v === "" ? "—" : String(v));

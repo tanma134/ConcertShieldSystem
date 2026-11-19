@@ -15,10 +15,14 @@ namespace AuthenticationAPI.Repositories
 
         public async Task<User?> GetByEmailAsync(string email)
         {
+            // The users_email_key index is case-sensitive, so the lookup normalises the
+            // input; registration stores the address lower-case for the same reason.
+            var normalised = (email ?? string.Empty).Trim().ToLowerInvariant();
+
             return await _context.Users
                 .Include(u => u.UserRoles)
                     .ThenInclude(ur => ur.Role)
-                .FirstOrDefaultAsync(u => u.Email == email);
+                .FirstOrDefaultAsync(u => u.Email.ToLower() == normalised);
         }
 
         public async Task<User?> GetByIdAsync(int userId)
@@ -100,6 +104,15 @@ namespace AuthenticationAPI.Repositories
                 await _context.SaveChangesAsync();
             }
         }
+        public async Task<int> RevokeAllRefreshTokensAsync(int userId)
+        {
+            // One UPDATE: revoking N tokens must not depend on N round trips, and the
+            // operation has to be safe when it runs concurrently with a refresh.
+            return await _context.RefreshTokens
+                .Where(rt => rt.UserId == userId && !rt.IsRevoked)
+                .ExecuteUpdateAsync(s => s.SetProperty(rt => rt.IsRevoked, true));
+        }
+
         public async Task<List<User>> GetAllAsync()
         {
             return await _context.Users

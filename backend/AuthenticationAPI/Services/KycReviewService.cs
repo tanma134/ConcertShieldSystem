@@ -1,6 +1,7 @@
 using AuthenticationAPI.DTOs;
 using AuthenticationAPI.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 
 namespace AuthenticationAPI.Services
@@ -16,11 +17,16 @@ namespace AuthenticationAPI.Services
 
         private readonly AuthenticationDbContext _db;
         private readonly IKycAccessLogService _accessLog;
+        private readonly IEmailService _email;
+        private readonly ILogger<KycReviewService> _logger;
 
-        public KycReviewService(AuthenticationDbContext db, IKycAccessLogService accessLog)
+        public KycReviewService(AuthenticationDbContext db, IKycAccessLogService accessLog,
+            IEmailService email, ILogger<KycReviewService> logger)
         {
             _db = db;
             _accessLog = accessLog;
+            _email = email;
+            _logger = logger;
         }
 
         public async Task<KycPagedResult<KycReviewItemDto>> ListPendingAsync(int page, int pageSize)
@@ -79,6 +85,8 @@ namespace AuthenticationAPI.Services
 
             await _accessLog.LogAsync(record.UserId, record.EkycId, adminId, KycActorTypes.Admin,
                 KycAccessActions.ReviewApproved, ip, "purpose=manual_review");
+
+            await NotifyUserAsync(record.UserId, approved: true, reason: null);
         }
 
         public async Task RejectAsync(int ekycId, int adminId, string reason, string? ip)
@@ -105,6 +113,8 @@ namespace AuthenticationAPI.Services
 
             await _accessLog.LogAsync(record.UserId, record.EkycId, adminId, KycActorTypes.Admin,
                 KycAccessActions.ReviewRejected, ip, "purpose=manual_review");
+
+            await NotifyUserAsync(record.UserId, approved: false, reason: reason);
         }
 
         public async Task SetLegalHoldAsync(int ekycId, bool hold, string? reason, int adminId, string? ip)
@@ -138,6 +148,25 @@ namespace AuthenticationAPI.Services
             await _accessLog.LogAsync(record.UserId, record.EkycId, adminId, KycActorTypes.Admin,
                 hold ? KycAccessActions.LegalHoldSet : KycAccessActions.LegalHoldCleared, ip,
                 "purpose=legal_hold");
+        }
+
+        /// <summary>
+        /// Tells the customer the outcome of the manual review. Same rule as the
+        /// deletion flow: a failed email must never undo an admin decision.
+        /// </summary>
+        private async Task NotifyUserAsync(int userId, bool approved, string? reason)
+        {
+            try
+            {
+                var email = await _db.Users.AsNoTracking()
+                    .Where(u => u.UserId == userId).Select(u => u.Email).FirstOrDefaultAsync();
+                if (!string.IsNullOrWhiteSpace(email))
+                    await _email.SendKycReviewResultAsync(email, approved, reason);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Could not send the eKYC review result email to user {UserId}", userId);
+            }
         }
 
         private async Task<EkycVerification> GetForReviewAsync(int ekycId)

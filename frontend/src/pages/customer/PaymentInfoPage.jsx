@@ -594,6 +594,16 @@ export default function PaymentInfoPage() {
       console.error("Backend response:", error.response?.data);
 
       const responseBody = error.response?.data;
+
+      // eKYC may have been revoked/locked between reserving and paying.
+      if (responseBody?.code === "EKYC_REQUIRED") {
+        const msg = responseBody.message || "Please complete identity verification (eKYC) before paying.";
+        setLoadError(msg);
+        toast.error(msg);
+        setIsProcessing(false);
+        return;
+      }
+
       const message =
         responseBody?.message ||
         responseBody?.errors ||

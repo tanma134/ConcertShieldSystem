@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import appealApi from "../../api/appealApi";
 import riskApi from "../../api/riskApi";
+import { useAuth } from "../../context/AuthContext";
 import { Shell, Banner, Chips, fmt, dash, errMsg, levelPill, statusPill } from "./frCommon";
 
 const MIN_REASON = 10;
@@ -21,6 +22,7 @@ function groupRows(v) {
 // View Risk Decision Details (Admin) — GET api/risk/decisions/{id}
 // Decisions are immutable records: this page never edits scores or rules, it only restores.
 export default function RiskDecisionDetailPage() {
+  const { isAdmin } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -87,7 +89,7 @@ export default function RiskDecisionDetailPage() {
     );
   }
 
-  const canRestore = (d.action === "BLOCK" || d.action === "HOLD") && d.status === "Active" && !d.isShadow;
+  const canRestore = isAdmin && (d.action === "BLOCK" || d.action === "HOLD") && d.status === "Active" && !d.isShadow;
   const groups = groupRows(d.scoreByGroup);
   const decidedBy = d.decidedByType === "STAFF" ? `Admin #${d.decidedBy}` : "the risk engine";
 

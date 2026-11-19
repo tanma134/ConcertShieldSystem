@@ -1,5 +1,6 @@
 ﻿using AdminAPI.Data;
 using AdminAPI.DTOs;
+using AdminAPI.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace AdminAPI.Services.Risks;
@@ -12,10 +13,11 @@ public sealed class FraudCaseService : IFraudCaseService
 
     private readonly AdminDbContext _db;
     private readonly IRiskConfigProvider _config;
+    private readonly IStaffDirectoryClient? _staff;
 
-    public FraudCaseService(AdminDbContext db, IRiskConfigProvider config)
+    public FraudCaseService(AdminDbContext db, IRiskConfigProvider config, IStaffDirectoryClient? staff = null)
     {
-        _db = db; _config = config;
+        _db = db; _config = config; _staff = staff;
     }
 
     public async Task<PagedResult<FraudCaseListItemDto>> SearchAsync(FraudCaseQuery qy)
@@ -73,7 +75,11 @@ public sealed class FraudCaseService : IFraudCaseService
                     CreatedAt = a.CreatedAt,
                     ReviewedAt = a.ReviewedAt,
                     SlaDueAt = due,
-                    IsOverdue = OpenStatuses.Contains(a.Status) && (a.RiskLevel == "High" || a.RiskLevel == "Critical") && due < now
+                    IsOverdue = OpenStatuses.Contains(a.Status) && (a.RiskLevel == "High" || a.RiskLevel == "Critical") && due < now,
+                    Recommendation = a.Recommendation,
+                    RecommendedOutcome = a.RecommendedOutcome,
+                    RecommendedBy = a.RecommendedBy,
+                    RecommendedAt = a.RecommendedAt
                 };
             }).ToList(),
             Page = page,
@@ -90,27 +96,25 @@ public sealed class FraudCaseService : IFraudCaseService
         if (!OpenStatuses.Contains(a.Status))
             throw new RiskServiceException(409, $"The case is in status {a.Status} and can no longer be assigned.");
 
+        if (_staff != null && !await _staff.IsActiveStaffAsync(analystId))
+            throw new RiskServiceException(400, "The assignee must be an active Staff member.");
+
         var prevStatus = a.Status;
         int? prevAssignee = a.AssignedTo;
         if (prevAssignee == analystId)
-            throw new RiskServiceException(409, "The case is already assigned to this analyst.");
+            throw new RiskServiceException(409, "The case is already assigned to this staff member.");
 
         a.Status = "InReview";
         a.AssignedTo = analystId;
         a.AssignedAt = DateTime.UtcNow;
+        // A new assignee starts a fresh review; never keep the previous reviewer's proposal.
+        a.Recommendation = null;
+        a.RecommendedOutcome = null;
+        a.RecommendedBy = null;
+        a.RecommendedAt = null;
         await SaveAsync();
 
-        return new FraudCaseResultDto
-        {
-            CaseId = a.FraudAlertId,
-            Status = a.Status,
-            AssignedTo = a.AssignedTo,
-            AssignedAt = a.AssignedAt,
-            ReviewedBy = a.ReviewedBy,
-            ReviewedAt = a.ReviewedAt,
-            PreviousStatus = prevStatus,
-            PreviousAssignee = prevAssignee
-        };
+        return Result(a, prevStatus, prevAssignee);
     }
 
     public async Task<FraudCaseResultDto> ResolveAsync(int caseId, string outcome, string note, int actorId)
@@ -131,10 +135,11 @@ public sealed class FraudCaseService : IFraudCaseService
                 ?? throw new RiskServiceException(404, "Fraud case not found.");
         if (!OpenStatuses.Contains(a.Status))
             throw new RiskServiceException(409, $"The case is already {a.Status}.");
-        if (a.AssignedTo == null)
-            throw new RiskServiceException(409, "The case must be assigned to an analyst before it can be resolved.");
-        if (a.AssignedTo != actorId)
-            throw new RiskServiceException(403, "Only the assigned analyst can resolve this case.");
+        // Assigning first is recommended but not required: with a single Admin, an
+        // obvious false positive must be closeable without a make-work assignment.
+        // When the case was assigned, the Staff recommendation is kept for the trail.
+        // Only an Admin reaches this method (controller policy). Staff submit a
+        // recommendation; the final decision stays with an Admin.
         if (await RiskSupport.HasPendingAppealAsync(_db, caseId))
             throw new RiskServiceException(409, "The case has a pending appeal. Resolve the appeal first.");
 
@@ -159,18 +164,58 @@ public sealed class FraudCaseService : IFraudCaseService
         a.Details = AppendNote(a.Details, actorId, status, note, a.ReviewedAt.Value);
         await SaveAsync();
 
-        return new FraudCaseResultDto
-        {
-            CaseId = a.FraudAlertId,
-            Status = a.Status,
-            AssignedTo = a.AssignedTo,
-            AssignedAt = a.AssignedAt,
-            ReviewedBy = a.ReviewedBy,
-            ReviewedAt = a.ReviewedAt,
-            PreviousStatus = prevStatus,
-            PreviousAssignee = prevAssignee
-        };
+        return Result(a, prevStatus, prevAssignee);
     }
+
+    // Staff review: the assigned Staff member proposes an outcome and a note.
+    // The case stays InReview until an Admin resolves it.
+    public async Task<FraudCaseResultDto> RecommendAsync(int caseId, string outcome, string note, int actorId)
+    {
+        note = (note ?? "").Trim();
+        if (note.Length < MinNoteLength || note.Length > 1000)
+            throw new RiskServiceException(400, $"A recommendation note is required, {MinNoteLength}-1000 characters long.");
+
+        var recommended = (outcome ?? "").Trim().ToLowerInvariant() switch
+        {
+            "confirmed" => "Confirmed",
+            "falsepositive" => "FalsePositive",
+            "dismissed" => "Dismissed",
+            _ => throw new RiskServiceException(400, "Outcome must be Confirmed, FalsePositive or Dismissed.")
+        };
+
+        var a = await _db.FraudAlerts.FirstOrDefaultAsync(x => x.FraudAlertId == caseId)
+                ?? throw new RiskServiceException(404, "Fraud case not found.");
+
+        if (a.Status != "InReview")
+            throw new RiskServiceException(409, "The case must be InReview before it can be reviewed.");
+        if (a.AssignedTo != actorId)
+            throw new RiskServiceException(403, "Only the assigned Staff member can submit a recommendation.");
+
+        a.Recommendation = note;
+        a.RecommendedOutcome = recommended;
+        a.RecommendedBy = actorId;
+        a.RecommendedAt = DateTime.UtcNow;
+        a.Details = AppendNote(a.Details, actorId, $"REVIEW {recommended}", note, a.RecommendedAt.Value);
+        await SaveAsync();
+
+        return Result(a, a.Status, a.AssignedTo);
+    }
+
+    private static FraudCaseResultDto Result(FraudAlert a, string? prevStatus, int? prevAssignee) => new()
+    {
+        CaseId = a.FraudAlertId,
+        Status = a.Status,
+        AssignedTo = a.AssignedTo,
+        AssignedAt = a.AssignedAt,
+        ReviewedBy = a.ReviewedBy,
+        ReviewedAt = a.ReviewedAt,
+        PreviousStatus = prevStatus,
+        PreviousAssignee = prevAssignee,
+        Recommendation = a.Recommendation,
+        RecommendedOutcome = a.RecommendedOutcome,
+        RecommendedBy = a.RecommendedBy,
+        RecommendedAt = a.RecommendedAt
+    };
 
     private static string AppendNote(string? details, int actorId, string status, string note, DateTime at) =>
         (string.IsNullOrEmpty(details) ? "" : details + "\n") + $"[{at:yyyy-MM-dd HH:mm} UTC] {status} by #{actorId}: {note}";

@@ -138,6 +138,51 @@ namespace AuthenticationAPI.Controllers
             return File(stream, "image/jpeg");
         }
 
+        // GET api/admin/kyc/{ekycId}/evidence/front|back|selfie?reason=...
+        // Evidence access for cases that are no longer waiting for review (appeals,
+        // authority requests, re-checking an approved submission). The reason is
+        // mandatory and every view is logged, so the customer can see who looked.
+        [HttpGet("{ekycId:int}/evidence/{kind}")]
+        public async Task<IActionResult> GetEvidence(int ekycId, string kind, [FromQuery] string? reason)
+        {
+            var adminId = GetCurrentUserId();
+            if (adminId is null) return Unauthorized(new { message = "Invalid token" });
+
+            reason = (reason ?? "").Trim();
+            if (reason.Length < 10 || reason.Length > 300)
+                return BadRequest(new { message = "A reason of 10-300 characters is required to view eKYC evidence" });
+
+            var record = await _repository.GetByIdAsync(ekycId);
+            if (record is null) return NotFound();
+
+            if (record.DataPurgedAt is not null)
+                return StatusCode(410, new { message = "The data of this record has already been deleted" });
+
+            var normalizedKind = kind.ToLowerInvariant();
+            var key = normalizedKind switch
+            {
+                "front" => record.CccdFrontObjectKey,
+                "back" => record.CccdBackObjectKey,
+                "selfie" => record.FaceCaptureObjectKey,
+                _ => null
+            };
+            if (key is null) return NotFound();
+
+            var stream = await _storage.DownloadAsync(key);
+            if (stream is null) return NotFound();
+
+            // Log before serving: if the access cannot be recorded, the image is not shown.
+            await _accessLog.LogAsync(record.UserId, record.EkycId, adminId, KycActorTypes.Admin,
+                KycAccessActions.ViewImage, GetClientIp(),
+                $"purpose=evidence_access; kind={normalizedKind}; status={record.Status}; reason={reason}");
+
+            _logger.LogWarning("KYC evidence access: admin {AdminId} viewed {Kind} of ekyc {EkycId} (user {UserId}, status {Status})",
+                adminId, normalizedKind, ekycId, record.UserId, record.Status);
+
+            Response.Headers["Cache-Control"] = "no-store";
+            return File(stream, "image/jpeg");
+        }
+
         private int? GetCurrentUserId() =>
             int.TryParse((User.FindFirst("userId") ?? User.FindFirst(ClaimTypes.NameIdentifier))?.Value, out var id) ? id : null;
 

@@ -94,6 +94,7 @@ builder.Services.AddScoped<ITicketReturnService>(sp => new TicketReturnService(
     sp.GetRequiredService<IConfiguration>(),
     sp.GetRequiredService<IPaymentAPIClient>(),
     sp.GetRequiredService<TicketReturnNotifier>()));
+builder.Services.AddScoped<IRiskTicketAdminService, RiskTicketAdminService>();
 builder.Services.AddScoped<IReportService>(sp => new ReportService(
     sp.GetRequiredService<IReportRepository>(),
     sp.GetRequiredService<IEventApiClient>()));

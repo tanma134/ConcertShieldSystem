@@ -24,6 +24,12 @@ namespace AuthenticationAPI.Services
         private const string AdminRoleName = "Admin";
         private const string GenericOtpInvalidMessage = "Invalid or expired OTP.";
 
+        // An OTP is 6 digits: unlimited guesses inside 5 minutes would make it brute-forceable.
+        private const int MaxOtpAttempts = 5;
+        // Wrong passwords are counted per account and reset on a successful login.
+        private const int MaxLoginFailures = 5;
+        private static readonly TimeSpan LoginLockDuration = TimeSpan.FromMinutes(15);
+
         public AuthenticationService(
             IUserRepository userRepository,
             IEmailService emailService,
@@ -52,6 +58,7 @@ namespace AuthenticationAPI.Services
 
         public async Task RegisterAsync(RegisterDTO dto)
         {
+            dto.Email = (dto.Email ?? string.Empty).Trim().ToLowerInvariant();
             var existingUser = await _userRepository.GetByEmailAsync(dto.Email);
             if (existingUser != null)
             {
@@ -89,7 +96,21 @@ namespace AuthenticationAPI.Services
 
             if (pending.OtpCode != dto.OTP)
             {
-                _logger.LogWarning("Email verification failed: invalid OTP for {Email}.", dto.Email);
+                pending.FailedOtpAttempts++;
+                if (pending.FailedOtpAttempts >= MaxOtpAttempts)
+                {
+                    // Too many guesses: the code is dead and the customer must register again.
+                    _cache.Remove(cacheKey);
+                    _logger.LogWarning("Email verification locked after {Attempts} wrong OTPs for {Email}.",
+                        pending.FailedOtpAttempts, dto.Email);
+                    throw new UnauthorizedAccessException(
+                        "Too many incorrect codes. Please register again to receive a new one.");
+                }
+
+                // Keep the counter, and the remaining lifetime, in the cache.
+                _cache.Set(cacheKey, pending, pending.ExpiredAt - DateTime.UtcNow);
+                _logger.LogWarning("Email verification failed: invalid OTP for {Email} (attempt {Attempt}).",
+                    dto.Email, pending.FailedOtpAttempts);
                 throw new UnauthorizedAccessException("Invalid OTP.");
             }
 
@@ -136,38 +157,11 @@ namespace AuthenticationAPI.Services
 
         public async Task<LoginResponseDTO> LoginAsync(LoginDTO dto, string? ipAddress = null, string? userAgent = null)
         {
+            dto.Email = (dto.Email ?? string.Empty).Trim().ToLowerInvariant();
+            // Accounts are created only through registration or an administrator.
+            // A hard-coded demo account on the login path was a backdoor: knowing the
+            // address and password was enough to obtain a Staff session.
             var user = await _userRepository.GetByEmailAsync(dto.Email);
-            if (user == null && dto.Email != null && dto.Email.Trim().Equals("staff@ticketbox.com", StringComparison.OrdinalIgnoreCase))
-            {
-                try
-                {
-                    var staffRole = await _userRepository.GetRoleByNameAsync("Staff");
-                    if (staffRole != null)
-                    {
-                        var staffUser = new User
-                        {
-                            Email = "staff@ticketbox.com",
-                            FullName = "Gate Check-in Staff Member",
-                            PhoneNumber = "0988776655",
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Staff@123"),
-                            IsVerified = true,
-                            IsActive = true,
-                            HasPassword = true,
-                            CreatedAt = DateTime.UtcNow,
-                            AuthProvider = "local"
-                        };
-                        await _userRepository.AddAsync(staffUser);
-                        await _userRepository.SaveChangesAsync();
-                        await _userRepository.AddUserRoleAsync(new UserRole { UserId = staffUser.UserId, RoleId = staffRole.RoleId, AssignedAt = DateTime.UtcNow });
-                        await _userRepository.SaveChangesAsync();
-                        user = await _userRepository.GetByEmailAsync(dto.Email);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Could not auto-seed staff user in DB");
-                }
-            }
 
             if (user == null)
                 throw new KeyNotFoundException("Invalid email or password.");
@@ -192,15 +186,35 @@ namespace AuthenticationAPI.Services
                     "This account was created with Google Sign-In. Please log in with Google, or use 'Forgot Password' to set a password.");
             }
 
+            // A locked account is refused before the hash comparison, so a stolen
+            // password cannot be confirmed by watching the response time or message.
+            var lockedFor = GetLoginLockRemaining(user.UserId);
+            if (lockedFor.HasValue)
+            {
+                _logger.LogWarning("Login blocked: UserId={UserId} is temporarily locked for {Minutes} more minute(s).",
+                    user.UserId, (int)Math.Ceiling(lockedFor.Value.TotalMinutes));
+
+                await _auditLog.LogAsync(user.UserId, ResolveActorType(user), "LOGIN_BLOCKED_LOCKOUT", "User", user.UserId.ToString(),
+                    ipAddress: ipAddress, userAgent: userAgent);
+
+                throw new UnauthorizedAccessException(
+                    $"Too many failed attempts. Please try again in {(int)Math.Ceiling(lockedFor.Value.TotalMinutes)} minute(s).");
+            }
+
             if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
             {
-                _logger.LogWarning("Login failed: incorrect password for {Email}.", dto.Email);
+                var failures = RegisterLoginFailure(user.UserId);
+                _logger.LogWarning("Login failed: incorrect password for {Email} (attempt {Attempt}/{Max}).",
+                    dto.Email, failures, MaxLoginFailures);
 
                 await _auditLog.LogAsync(user.UserId, ResolveActorType(user), "LOGIN_FAILED", "User", user.UserId.ToString(),
+                    newValue: new { attempt = failures, maxAttempts = MaxLoginFailures },
                     ipAddress: ipAddress, userAgent: userAgent);
 
                 throw new UnauthorizedAccessException("Invalid email or password.");
             }
+
+            ClearLoginFailures(user.UserId);
 
             var (accessToken, accessTokenExpiry) = GenerateAccessToken(user);
             string refreshToken = GenerateRefreshToken();
@@ -256,8 +270,11 @@ namespace AuthenticationAPI.Services
                 await _auditLog.LogAsync(tokenEntity.UserId, ResolveActorType(tokenEntity.User), "REFRESH_TOKEN_REUSE_DETECTED", "User", tokenEntity.UserId.ToString(),
                     ipAddress: ipAddress, userAgent: userAgent);
 
-                // TODO: requires a RevokeAllRefreshTokensAsync(int userId) method on IUserRepository
-                // await _userRepository.RevokeAllRefreshTokensAsync(tokenEntity.UserId);
+                // A revoked token coming back means someone kept a copy: end every
+                // session of this account, not just the replayed one.
+                var revokedSessions = await _userRepository.RevokeAllRefreshTokensAsync(tokenEntity.UserId);
+                _logger.LogWarning("Revoked {Count} refresh token(s) for UserId={UserId} after token reuse.",
+                    revokedSessions, tokenEntity.UserId);
 
                 throw new UnauthorizedAccessException("Refresh token has been revoked.");
             }
@@ -315,6 +332,7 @@ namespace AuthenticationAPI.Services
 
         public async Task ForgotPasswordAsync(ForgotPasswordDTO dto)
         {
+            dto.Email = (dto.Email ?? string.Empty).Trim().ToLowerInvariant();
             var user = await _userRepository.GetByEmailAsync(dto.Email);
 
             if (user == null || !user.IsVerified)
@@ -334,10 +352,14 @@ namespace AuthenticationAPI.Services
 
         public async Task<VerifyResetOtpResponseDTO> VerifyResetOtpAsync(VerifyResetOtpDTO dto)
         {
+            dto.Email = (dto.Email ?? string.Empty).Trim().ToLowerInvariant();
             var user = await _userRepository.GetByEmailAsync(dto.Email);
 
             if (user == null || string.IsNullOrEmpty(user.OtpHash) || user.OtpHash != HashValue(dto.OTP))
             {
+                if (user != null)
+                    await CountResetOtpFailureAsync(dto.Email, user);
+
                 _logger.LogWarning("Password reset OTP verification failed for {Email}.", dto.Email);
                 throw new UnauthorizedAccessException(GenericOtpInvalidMessage);
             }
@@ -351,6 +373,7 @@ namespace AuthenticationAPI.Services
             user.OtpHash = null;
             user.OtpExpiredAt = null;
             await _userRepository.SaveChangesAsync();
+            _cache.Remove(ResetOtpAttemptKey(dto.Email));
 
             string resetToken = GenerateRefreshToken();
             var expiresAt = DateTime.UtcNow.AddMinutes(10);
@@ -369,6 +392,7 @@ namespace AuthenticationAPI.Services
 
         public async Task ResetPasswordAsync(ResetPasswordDTO dto, string? ipAddress = null, string? userAgent = null)
         {
+            dto.Email = (dto.Email ?? string.Empty).Trim().ToLowerInvariant();
             var user = await _userRepository.GetByEmailAsync(dto.Email);
 
             string cacheKey = $"reset_token:{dto.Email}";
@@ -386,8 +410,8 @@ namespace AuthenticationAPI.Services
 
             _cache.Remove(cacheKey);
 
-            // TODO: requires a RevokeAllRefreshTokensAsync(int userId) method on IUserRepository
-            // await _userRepository.RevokeAllRefreshTokensAsync(user.UserId);
+            // Anyone holding an old refresh token must lose access once the password changes.
+            await _userRepository.RevokeAllRefreshTokensAsync(user.UserId);
 
             _logger.LogInformation("Password reset successful for {Email} (UserId={UserId}).", user.Email, user.UserId);
 
@@ -414,7 +438,10 @@ namespace AuthenticationAPI.Services
                 new(ClaimTypes.Email,              user.Email),
                 new("fullName",                    user.FullName),
                 new(JwtRegisteredClaimNames.Jti,   Guid.NewGuid().ToString()),
-                new("account_created_at",          DateTime.SpecifyKind(user.CreatedAt, DateTimeKind.Utc).ToString("O"))
+                new("account_created_at",          DateTime.SpecifyKind(user.CreatedAt, DateTimeKind.Utc).ToString("O")),
+                // Lets downstream services (TicketAPI) enforce "eKYC required to buy"
+                // without an extra call on every request.
+                new("ekyc_status",                 user.EkycStatus ?? "NotSubmitted")
             };
             claims.AddRange(user.UserRoles.Select(ur => new Claim(ClaimTypes.Role, ur.Role.RoleName)));
 
@@ -574,10 +601,74 @@ namespace AuthenticationAPI.Services
 
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
             await _userRepository.SaveChangesAsync();
-            _logger.LogInformation("Password changed successfully for UserId={UserId}.", userId);
+
+            // Changing a password ends every other session. The caller's own refresh
+            // token is revoked too; the client re-authenticates on the next refresh.
+            var revokedSessions = await _userRepository.RevokeAllRefreshTokensAsync(userId);
+            _logger.LogInformation("Password changed for UserId={UserId}; revoked {Count} refresh token(s).",
+                userId, revokedSessions);
 
             await _auditLog.LogAsync(userId, ResolveActorType(user), "PASSWORD_CHANGED", "User", userId.ToString(),
                 ipAddress: ipAddress, userAgent: userAgent);
+        }
+
+        private static string LoginFailureKey(int userId) => $"login_failures:{userId}";
+
+        private sealed record LoginFailureState(int Count, DateTime? LockedUntil);
+
+        private int RegisterLoginFailure(int userId)
+        {
+            var key = LoginFailureKey(userId);
+            var current = _cache.TryGetValue(key, out LoginFailureState? state) && state != null
+                ? state
+                : new LoginFailureState(0, null);
+
+            var count = current.Count + 1;
+            // The lock starts on the attempt that reaches the limit, and lasts from that moment.
+            var lockedUntil = count >= MaxLoginFailures ? DateTime.UtcNow.Add(LoginLockDuration) : current.LockedUntil;
+
+            var next = new LoginFailureState(count, lockedUntil);
+            // The cache entry lives exactly as long as the window it represents.
+            var ttl = lockedUntil.HasValue ? lockedUntil.Value - DateTime.UtcNow : LoginLockDuration;
+            _cache.Set(key, next, ttl > TimeSpan.Zero ? ttl : TimeSpan.FromSeconds(1));
+            return count;
+        }
+
+        private TimeSpan? GetLoginLockRemaining(int userId)
+        {
+            var key = LoginFailureKey(userId);
+            if (!_cache.TryGetValue(key, out LoginFailureState? state) || state?.LockedUntil == null)
+                return null;
+
+            var remaining = state.LockedUntil.Value - DateTime.UtcNow;
+            return remaining > TimeSpan.Zero ? remaining : null;
+        }
+
+        private void ClearLoginFailures(int userId) => _cache.Remove(LoginFailureKey(userId));
+
+        private static string ResetOtpAttemptKey(string email) => $"reset_otp_attempts:{email}";
+
+        /// <summary>
+        /// Counts wrong reset-OTP entries. After MaxOtpAttempts the stored OTP is destroyed,
+        /// so the only way forward is a new "forgot password" request.
+        /// </summary>
+        private async Task CountResetOtpFailureAsync(string email, User user)
+        {
+            var key = ResetOtpAttemptKey(email);
+            var attempts = _cache.TryGetValue(key, out int n) ? n + 1 : 1;
+
+            if (attempts >= MaxOtpAttempts)
+            {
+                user.OtpHash = null;
+                user.OtpExpiredAt = null;
+                await _userRepository.SaveChangesAsync();
+                _cache.Remove(key);
+                _logger.LogWarning("Password reset OTP invalidated after {Attempts} wrong attempts for {Email}.",
+                    attempts, email);
+                return;
+            }
+
+            _cache.Set(key, attempts, TimeSpan.FromMinutes(10));
         }
 
         private static string GenerateRefreshToken()
