@@ -117,6 +117,29 @@ public sealed class GetQueueStatusTests
     }
 
     [Fact]
+    public async Task UTCID05A_KeepsExpiredAdmissionFromReturningToPreQueue()
+    {
+        using var context = new QueueServiceTestContext();
+        var now = QueueTimeZone.Now;
+        await context.SeedConfigurationAsync(end: now.AddMinutes(-1));
+        var session = await context.SeedSessionAsync(status: "ADMITTED", position: 4);
+        context.Redis.Setup(redis => redis.FinalizeRandomizationAsync(12, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        context.Redis.Setup(redis => redis.AdmitNextAsync(12, It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
+        context.Redis.Setup(redis => redis.GetStatusAsync(12, 7, session.QueueToken, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((0, 0, "PREQUEUE", (DateTimeOffset?)null));
+
+        var firstResult = await context.Service.GetStatusAsync(12, 7, session.QueueToken);
+        var secondResult = await context.Service.GetStatusAsync(12, 7, session.QueueToken);
+
+        Assert.Equal("EXPIRED", firstResult.Status);
+        Assert.Equal("EXPIRED", secondResult.Status);
+        Assert.Equal("EXPIRED", Assert.Single(context.Db.QueueSessions).Status);
+        Assert.Null(secondResult.Position);
+    }
+
+    [Fact]
     public async Task UTCID06_FinalizesButDoesNotAdmitWhenQueueIsDisabled()
     {
         using var context = new QueueServiceTestContext();

@@ -133,7 +133,8 @@ public sealed class QueueService(IQueueRepository repository, IRedisQueueStore r
             throw new UnauthorizedAccessException("TOKEN_INVALID");
 
         var status = result.Status;
-        if (session.Status == "ADMITTED" && status != "ADMITTED")
+        if (session.Status == "EXPIRED" ||
+            (session.Status == "ADMITTED" && status != "ADMITTED"))
             status = "EXPIRED";
         session.Status = status == "PREQUEUE" ? "REGISTERED" : status;
         session.Position = status == "EXPIRED" ? null : result.Position == 0 ? null : result.Position;
