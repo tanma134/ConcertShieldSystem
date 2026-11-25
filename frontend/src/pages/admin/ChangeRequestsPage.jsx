@@ -51,20 +51,31 @@ export default function ChangeRequestsPage() {
     }catch{setImpact(undefined);}
   };
 
-  const decide=async decision=>{
-    const problem=validateChangeReview(decision,note);
-    if(problem){setError(problem);return;}
-    const ask=decision==='Approved'?'Approve this change? Customers will be notified.':'Reject this change request?';
-    if(!window.confirm(ask))return;
-    setBusy(true);setError('');setNotice('');
-    try{
-      await api.reviewChange(selected.eventId,selected.id,{decision,notes:note.trim()});
-      setNotice(`Change request ${code(selected.id)} ${decision==='Approved'?'approved':'rejected'}.`);
-      const fresh=await load();setSelected(fresh.find(i=>i.id===selected.id)||null);
-    }catch(err){
+  const [confirmAction, setConfirmAction] = useState(null);
+
+  const decide = (decision) => {
+    const problem = validateChangeReview(decision, note);
+    if (problem) { setError(problem); return; }
+    const title = decision === 'Approved' ? 'Approve Change Request' : 'Reject Change Request';
+    const message = decision === 'Approved' 
+      ? 'Are you sure you want to approve this change? Customers will be notified immediately.' 
+      : 'Are you sure you want to reject this change request?';
+    setConfirmAction({ decision, title, message });
+  };
+
+  const executeDecision = async () => {
+    if (!confirmAction) return;
+    const { decision } = confirmAction;
+    setConfirmAction(null);
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await api.reviewChange(selected.eventId, selected.id, { decision, notes: note.trim() });
+      setNotice(`Change request ${code(selected.id)} ${decision === 'Approved' ? 'approved' : 'rejected'}.`);
+      const fresh = await load(); setSelected(fresh.find(i => i.id === selected.id) || null);
+    } catch (err) {
       setError(errorText(err));
-      const fresh=await load();setSelected(fresh.find(i=>i.id===selected.id)||selected);
-    }finally{setBusy(false);}
+      const fresh = await load(); setSelected(fresh.find(i => i.id === selected.id) || selected);
+    } finally { setBusy(false); }
   };
 
   const pending=selected?.status==='Pending';
@@ -74,7 +85,7 @@ export default function ChangeRequestsPage() {
     {notice&&<div role="status">{notice}</div>}
     <label>Status <select value={filter} onChange={e=>{setFilter(e.target.value);setSelected(null);}}><option value="">All</option><option>Pending</option><option>Approved</option><option>Rejected</option></select></label>{' '}
     <button type="button" className="tb-btn tb-btn-outline" disabled={loading} onClick={load}>Refresh</button>
-    {loading?<p>Loading change requests...</p>:items.length===0?<p>No change requests.</p>:
+    {loading?<p><span className="app-loading-spinner" role="status" aria-label="Loading" /></p>:items.length===0?<p>No change requests.</p>:
     <div className="governance-table"><table><thead><tr><th>Request</th><th>Event</th><th>Type</th><th>Organizer</th><th>Status</th><th>Submitted</th><th></th></tr></thead>
       <tbody>{items.map(i=><tr key={i.id}><td>{code(i.id)}</td><td>{i.eventTitle} (#{i.eventId})</td><td><span style={{display:'inline-block',padding:'2px 8px',borderRadius:'6px',fontSize:'11px',fontWeight:700,background:i.type==='Cancel'?'#fee2e2':i.type==='Postpone'?'#fef3c7':'#e0e7ff',color:i.type==='Cancel'?'#b91c1c':i.type==='Postpone'?'#b45309':'#3730a3'}}>{i.type.toUpperCase()}</span></td><td>Organizer #{i.organizerId}</td><td>{i.status.toUpperCase()}</td><td>{date(i.submittedAt)}</td>
         <td><button type="button" className="tb-btn tb-btn-outline" onClick={()=>open(i)}>{i.status==='Pending'?'Review':'View'}</button></td></tr>)}</tbody></table></div>}
@@ -281,7 +292,6 @@ export default function ChangeRequestsPage() {
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span style={{ fontSize: "24px" }}>📑</span>
                 <div>
                   <div
                     style={{
@@ -361,7 +371,7 @@ export default function ChangeRequestsPage() {
                   marginTop: "2px",
                 }}
               >
-                {impact === null ? "..." : impact?.orders ?? "N/A"}
+                {impact === null ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : impact?.orders ?? "N/A"}
               </div>
             </div>
             <div
@@ -386,7 +396,7 @@ export default function ChangeRequestsPage() {
                   marginTop: "2px",
                 }}
               >
-                {impact === null ? "..." : impact?.tickets ?? "N/A"}
+                {impact === null ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : impact?.tickets ?? "N/A"}
               </div>
             </div>
             <div
@@ -411,7 +421,7 @@ export default function ChangeRequestsPage() {
                   marginTop: "2px",
                 }}
               >
-                {impact === null ? "..." : money(impact?.totalPaid)}
+                {impact === null ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : money(impact?.totalPaid)}
               </div>
             </div>
           </div>
@@ -454,7 +464,7 @@ export default function ChangeRequestsPage() {
                 }}
                 href={`/admin/events/${selected.eventId}/governance?request=${selected.id}`}
               >
-                📦 View affected orders & tickets in detail →
+                View affected orders & tickets in detail →
               </a>
             </div>
           )}
@@ -551,6 +561,88 @@ export default function ChangeRequestsPage() {
               </button>
             </div>
           )}
+        </div>
+      </div>
+    )}
+
+    {confirmAction && (
+      <div
+        className="admin-confirm-modal-overlay"
+        onClick={() => setConfirmAction(null)}
+        style={{
+          position: "fixed",
+          inset: 0,
+          backgroundColor: "rgba(15, 23, 42, 0.75)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 10000,
+          padding: "20px",
+        }}
+      >
+        <div
+          className="admin-confirm-modal"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            background: "#ffffff",
+            borderRadius: "14px",
+            padding: "24px",
+            maxWidth: "460px",
+            width: "100%",
+            boxShadow: "0 20px 40px -10px rgba(0, 0, 0, 0.25)",
+            border: "1px solid #e2e8f0",
+          }}
+        >
+          <h3
+            style={{
+              margin: "0 0 10px 0",
+              fontSize: "17px",
+              fontWeight: 700,
+              color: confirmAction.decision === "Approved" ? "#16a34a" : "#dc2626",
+            }}
+          >
+            {confirmAction.title}
+          </h3>
+          <p
+            style={{
+              margin: "0 0 20px 0",
+              fontSize: "14px",
+              color: "#4b5563",
+              lineHeight: 1.5,
+            }}
+          >
+            {confirmAction.message}
+          </p>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: "10px",
+            }}
+          >
+            <button
+              type="button"
+              className="tb-btn tb-btn-outline"
+              onClick={() => setConfirmAction(null)}
+              disabled={busy}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="tb-btn tb-btn-primary"
+              style={{
+                background: confirmAction.decision === "Approved" ? "#16a34a" : "#dc2626",
+                borderColor: confirmAction.decision === "Approved" ? "#16a34a" : "#dc2626",
+                color: "#ffffff",
+              }}
+              disabled={busy}
+              onClick={executeDecision}
+            >
+              {confirmAction.decision === "Approved" ? "Yes, Approve Change" : "Yes, Reject Request"}
+            </button>
+          </div>
         </div>
       </div>
     )}

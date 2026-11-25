@@ -321,6 +321,13 @@ CREATE TABLE IF NOT EXISTS public.refund_policies
 
 );
 
+CREATE TABLE IF NOT EXISTS public.event_sale_confirmations (
+    order_id integer PRIMARY KEY,
+    event_id integer NOT NULL
+        REFERENCES public.events(event_id),
+    confirmed_at_utc timestamp with time zone NOT NULL DEFAULT now()
+);
+
 CREATE INDEX IF NOT EXISTS ix_refund_policies_event_id ON public.refund_policies(event_id);
 
 CREATE TABLE IF NOT EXISTS public.seat_maps
@@ -1071,3 +1078,10 @@ ALTER TABLE public.event_staff
     ADD COLUMN IF NOT EXISTS can_review_returns boolean NOT NULL DEFAULT false;
 CREATE INDEX IF NOT EXISTS ix_event_staff_return_reviewers
     ON public.event_staff (staff_user_id) WHERE is_active = true AND can_review_returns = true;
+
+	CREATE TABLE IF NOT EXISTS public.event_sale_confirmations (
+    order_id integer PRIMARY KEY,
+    event_id integer NOT NULL
+        REFERENCES public.events(event_id),
+    confirmed_at_utc timestamp with time zone NOT NULL DEFAULT now()
+);

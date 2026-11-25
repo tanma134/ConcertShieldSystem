@@ -43,7 +43,7 @@ namespace PaymentAPI.Controllers
                  c.Value.Equals("SupportStaff", StringComparison.OrdinalIgnoreCase) ||
                  c.Value.Equals("SecurityStaff", StringComparison.OrdinalIgnoreCase)));
 
-        // Process Full / Partial Refund
+        // Xu ly hoan tien toan phan hoac mot phan cho don hang danh cho Admin va Staff
         [HttpPost("process")]
         public async Task<IActionResult> ProcessRefund([FromBody] ProcessRefundRequestDto request, CancellationToken ct)
         {
@@ -74,7 +74,7 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        // Retry Failed Refund
+        // Thu lai yeu cau hoan tien bi loi danh cho Admin va Staff
         [HttpPost("{id:int}/retry")]
         public async Task<IActionResult> RetryRefund(int id, [FromBody] RetryRefundRequestDto? request, CancellationToken ct)
         {
@@ -102,7 +102,7 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        // View Refund Reconciliation Report (Platform Admin)
+        // Xem bao cao doi soat hoan tien danh cho Admin
         [HttpGet("reconciliation")]
         public async Task<IActionResult> GetReconciliationReport([FromQuery] ReconciliationFilterDto filter, CancellationToken ct)
         {
@@ -120,7 +120,7 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        // Order refund summary (eligibility, balances, history)
+        // Xem tong quan thong tin hoan tien cua don hang danh cho Admin va Staff
         [HttpGet("order/{orderId:int}")]
         public async Task<IActionResult> GetOrderRefundSummary(int orderId, CancellationToken ct)
         {
@@ -138,7 +138,7 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        // Single refund detail
+        // Xem chi tiet mot giao dich hoan tien theo id danh cho Admin va Staff
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetRefundDetail(int id, CancellationToken ct)
         {

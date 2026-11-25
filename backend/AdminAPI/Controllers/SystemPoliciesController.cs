@@ -69,9 +69,7 @@ namespace AdminAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Get Active Policy Document for each Category from database (Public for registration & login policy review).
-        /// </summary>
+        // Lay danh sach cac ban ghi chinh sach dang co hieu luc theo tung danh muc danh cho moi nguoi dung
         [AllowAnonymous]
         [HttpGet("active")]
         public async Task<IActionResult> GetActivePolicies()
@@ -94,10 +92,7 @@ namespace AdminAPI.Controllers
             });
         }
 
-        /// <summary>
-        /// Create / Publish New Policy Version (Actor: Admin)
-        /// Archives previous active versions and inserts new active policy document into admin_db.
-        /// </summary>
+        // Ban hanh phien ban chinh sach he thong moi va luu tru phien ban cu
         [HttpPost("create")]
         public async Task<IActionResult> CreatePolicyVersion([FromBody] CreatePolicyVersionRequestDTO request)
         {

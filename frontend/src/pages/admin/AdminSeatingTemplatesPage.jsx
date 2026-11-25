@@ -217,7 +217,7 @@ export default function AdminSeatingTemplatesPage() {
         <section className="ow-section">
           <div className="ow-section-header-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
             <h3 style={{ margin: 0 }}>Template Library</h3>
-            {fetchingDetail && <span className="ow-hint">Loading template details...</span>}
+            {fetchingDetail && <span className="ow-hint"><span className="app-loading-spinner" role="status" aria-label="Loading" /></span>}
           </div>
 
           {!templates.length && <div className="ow-empty-row">No public templates yet.</div>}
@@ -337,7 +337,7 @@ export default function AdminSeatingTemplatesPage() {
                     zones={viewCanvasZones}
                     ticketTypes={[]}
                     readOnly={true}
-                    layoutJson={viewTemplate.layoutJson}
+                    layoutJson={viewingTemplate.layoutJson}
                   />
                 </div>
 
@@ -405,7 +405,7 @@ export default function AdminSeatingTemplatesPage() {
                   style={{ padding: "8px 18px", fontSize: "13px" }}
                   onClick={() => handleEdit(viewingTemplate)}
                 >
-                  ✏️ Edit This Template
+                  Edit This Template
                 </button>
               </div>
             </div>
@@ -463,6 +463,7 @@ export default function AdminSeatingTemplatesPage() {
             zones={canvasZones}
             ticketTypes={[]}
             layoutJson={form.layoutJson}
+            onZoneShapeChange={handleZoneMove}
             onZoneMove={handleZoneMove}
             onLayoutChange={(next) =>
               setForm((f) => ({
@@ -547,7 +548,7 @@ export default function AdminSeatingTemplatesPage() {
               + Add zone
             </button>
             <button className="tb-btn tb-btn-primary" disabled={saving}>
-              {saving ? "Saving..." : editingId ? "Save template changes" : "Create public template"}
+              {saving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : editingId ? "Save template changes" : "Create public template"}
             </button>
           </div>
         </form>

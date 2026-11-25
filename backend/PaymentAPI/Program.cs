@@ -1,7 +1,8 @@
-using System;
+﻿using System;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using PaymentAPI.API;
@@ -19,7 +20,7 @@ builder.Services.AddEndpointsApiExplorer();
 
 // PostgreSQL DbContext
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? "Host=localhost;Port=5432;Database=04_payment_db;Username=postgres;Password=123456";
+        ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_PAYMENT_POSTGRES") ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TEST_POSTGRES") ?? throw new InvalidOperationException("Connection string is not configured.");
 
 builder.Services.AddDbContext<PaymentDbContext>(options =>
     options.UseNpgsql(connectionString, npgsqlOptions =>
@@ -55,7 +56,15 @@ builder.Services.Configure<VnPayConfig>(
 builder.Services.AddScoped<IVnPayService, VnPayService>();
 builder.Services.AddScoped<IPaymentTransactionService, PaymentTransactionService>();
 builder.Services.AddScoped<IPaymentTransactionRepository, PaymentTransactionRepository>();
-builder.Services.AddScoped<IRefundService, RefundService>();
+builder.Services.AddScoped<IPaymentRefundRepository, PaymentRefundRepository>();
+// Explicit factory: a DbContext overload is kept for tests, so the container cannot choose.
+builder.Services.AddScoped<IRefundService>(sp => new RefundService(
+    sp.GetRequiredService<IPaymentRefundRepository>(),
+    sp.GetRequiredService<IPaymentTransactionRepository>(),
+    sp.GetRequiredService<IHttpClientFactory>(),
+    sp.GetRequiredService<IOptions<VnPayConfig>>(),
+    sp.GetRequiredService<IConfiguration>(),
+    sp.GetRequiredService<ILogger<RefundService>>()));
 
 builder.Services.AddScoped<IPaymentReconciliationResolutionRepository,PaymentReconciliationResolutionRepository>();
 
@@ -63,7 +72,12 @@ builder.Services.AddScoped<IPaymentReconciliationService, PaymentReconciliationS
 
 // Risk Engine
 builder.Services.AddRiskClient(builder.Configuration);
-builder.Services.AddScoped<IPaymentRiskService, PaymentRiskService>();
+// Explicit factory: a DbContext overload is kept for tests, so the container cannot choose.
+builder.Services.AddScoped<IPaymentRiskService>(sp => new PaymentRiskService(
+    sp.GetRequiredService<IPaymentTransactionRepository>(),
+    sp.GetRequiredService<IRiskClient>(),
+    sp.GetRequiredService<IConfiguration>(),
+    sp.GetRequiredService<ILogger<PaymentRiskService>>()));
 
 // JWT Authentication
 var jwtSecretKey = builder.Configuration["JwtSettings:SecretKey"] ?? throw new InvalidOperationException("Configure JwtSettings:SecretKey");
@@ -144,21 +158,21 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// Thêm schema cho Risk Engine, Refund và Đối soát nếu chưa có
+// ThĂªm schema cho Risk Engine, Refund vĂ  Äá»‘i soĂ¡t náº¿u chÆ°a cĂ³
 try
 {
     using var schemaScope = app.Services.CreateScope();
     var paymentDb = schemaScope.ServiceProvider.GetRequiredService<PaymentDbContext>();
     paymentDb.Database.SetCommandTimeout(30);
     await paymentDb.Database.ExecuteSqlRawAsync(@"
-        -- Cột Risk Engine
+        -- Cá»™t Risk Engine
         ALTER TABLE payment_transactions ADD COLUMN IF NOT EXISTS user_id integer;
         ALTER TABLE payment_transactions ADD COLUMN IF NOT EXISTS client_ip varchar(64);
         ALTER TABLE payment_transactions ADD COLUMN IF NOT EXISTS device_fp varchar(128);
         ALTER TABLE payment_transactions ADD COLUMN IF NOT EXISTS session_id varchar(128);
         CREATE INDEX IF NOT EXISTS ix_payment_transactions_user_status ON payment_transactions (user_id, status);
 
-        -- Bảng payment_refunds cơ bản
+        -- Báº£ng payment_refunds cÆ¡ báº£n
         CREATE TABLE IF NOT EXISTS payment_refunds (
             payment_refund_id integer GENERATED ALWAYS AS IDENTITY,
             return_request_id integer NULL,
@@ -175,7 +189,7 @@ try
         CREATE UNIQUE INDEX IF NOT EXISTS uq_payment_refunds_return_request ON payment_refunds (return_request_id);
         CREATE INDEX IF NOT EXISTS ix_payment_refunds_order_id ON payment_refunds (order_id);
 
-        -- Cột mở rộng cho Payment Refund (Support Case, Retry, Reconciliation)
+        -- Cá»™t má»Ÿ rá»™ng cho Payment Refund (Support Case, Retry, Reconciliation)
         ALTER TABLE payment_refunds ALTER COLUMN return_request_id DROP NOT NULL;
         ALTER TABLE payment_refunds ADD COLUMN IF NOT EXISTS refund_type varchar(20) DEFAULT 'Full';
         ALTER TABLE payment_refunds ADD COLUMN IF NOT EXISTS reason varchar(255);
@@ -190,7 +204,7 @@ try
         ALTER TABLE payment_refunds ADD COLUMN IF NOT EXISTS event_id integer;
         ALTER TABLE payment_refunds ADD COLUMN IF NOT EXISTS event_name varchar(255);
 
-        -- Bảng payment_reconciliation_resolutions
+        -- Báº£ng payment_reconciliation_resolutions
         CREATE TABLE IF NOT EXISTS payment_reconciliation_resolutions (
             payment_reconciliation_resolution_id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
             payment_transaction_id integer NOT NULL,

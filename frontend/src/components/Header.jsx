@@ -63,30 +63,56 @@ export default function Header() {
       .getNotifications()
       .then((res) => {
         const rawItems = res.data?.items || res.data?.Items || res.data?.data?.items || res.data?.data?.Items || [];
-        let items = rawItems.map((n) => ({
-          notificationId: n.notificationId ?? n.NotificationId ?? n.id ?? 0,
-          title: n.title || n.Title || "",
-          message: n.message || n.Message || n.content || "",
-          category: n.category || n.Category || "event_new",
-          targetUrl: n.targetUrl || n.TargetUrl || "",
-          isRead: n.isRead ?? n.IsRead ?? false,
-          createdAt: n.createdAt || n.CreatedAt,
-        }));
+        // 1. Deduplicate by title + message
+        const seen = new Set();
+        const mapped = [];
+        for (const n of rawItems) {
+          const title = n.title || n.Title || "";
+          const message = n.message || n.Message || n.content || "";
+          const key = `${title}::${message}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
 
-        // Merge locally stored notifications for this user (resilience for cross-tab notifications)
+          // 2. Filter internal staff/admin notifications for customer accounts
+          if (!isStaff) {
+            const lowerTitle = title.toLowerCase();
+            if (
+              lowerTitle.startsWith("staff note on") ||
+              lowerTitle.startsWith("admin note on") ||
+              lowerTitle.startsWith("assigned to case")
+            ) {
+              continue;
+            }
+          }
+
+          mapped.push({
+            notificationId: n.notificationId ?? n.NotificationId ?? n.id ?? 0,
+            title,
+            message,
+            category: n.category || n.Category || "event_new",
+            targetUrl: n.targetUrl || n.TargetUrl || "",
+            isRead: n.isRead ?? n.IsRead ?? false,
+            createdAt: n.createdAt || n.CreatedAt,
+          });
+        }
+
+        // 3. Merge locally stored notifications for this user (resilience for cross-tab notifications)
         if (currentUid) {
           try {
             const localSaved = JSON.parse(localStorage.getItem(`cs_user_notifs_${currentUid}`) || "[]");
             for (const item of localSaved) {
-              if (!items.some((n) => n.title === item.title && n.message === item.message)) {
-                items.unshift(item);
+              const key = `${item.title}::${item.message}`;
+              if (!seen.has(key)) {
+                seen.add(key);
+                mapped.unshift(item);
               }
             }
           } catch (_) {}
         }
 
-        setNotifications(items);
-        setUnreadCount(items.filter((n) => !n.isRead).length);
+        setNotifications(mapped);
+        const actualUnread = mapped.filter((n) => !n.isRead).length;
+        setUnreadCount(actualUnread);
       })
       .catch(() => {
         // Fallback when NotificationAPI is offline or starting up
@@ -260,7 +286,7 @@ export default function Header() {
                 <div className="tb-search-section">
                   <span className="tb-search-section-label">Suggestions</span>
                   {suggestLoading && (
-                    <div className="tb-search-hint">Searching...</div>
+                    <div className="tb-search-hint"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
                   )}
                   {!suggestLoading && suggestions.length === 0 && (
                     <div className="tb-search-hint">No matching events</div>
@@ -453,8 +479,8 @@ export default function Header() {
                           <button
                             type="button"
                             className="tb-notif-item-delete"
-                            title="Xóa thông báo"
-                            aria-label="Xóa thông báo"
+                            title="Dismiss notification"
+                            aria-label="Dismiss notification"
                             onClick={async (e) => {
                               e.stopPropagation();
                               const targetId = notif.notificationId;

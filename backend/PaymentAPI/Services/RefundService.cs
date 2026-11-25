@@ -21,12 +21,29 @@ namespace PaymentAPI.Services
 {
     public class RefundService : IRefundService
     {
-        private readonly PaymentDbContext _db;
+        private readonly IPaymentRefundRepository _refunds;
         private readonly IPaymentTransactionRepository _payments;
         private readonly IHttpClientFactory _http;
         private readonly VnPayConfig _vnPay;
         private readonly IConfiguration _config;
         private readonly ILogger<RefundService> _logger;
+
+        [Microsoft.Extensions.DependencyInjection.ActivatorUtilitiesConstructor]
+        public RefundService(
+            IPaymentRefundRepository refunds,
+            IPaymentTransactionRepository payments,
+            IHttpClientFactory http,
+            IOptions<VnPayConfig> vnPay,
+            IConfiguration config,
+            ILogger<RefundService> logger)
+        {
+            _refunds = refunds;
+            _payments = payments;
+            _http = http;
+            _vnPay = vnPay.Value;
+            _config = config;
+            _logger = logger;
+        }
 
         public RefundService(
             PaymentDbContext db,
@@ -35,13 +52,8 @@ namespace PaymentAPI.Services
             IOptions<VnPayConfig> vnPay,
             IConfiguration config,
             ILogger<RefundService> logger)
+            : this(new PaymentRefundRepository(db), payments, http, vnPay, config, logger)
         {
-            _db = db;
-            _payments = payments;
-            _http = http;
-            _vnPay = vnPay.Value;
-            _config = config;
-            _logger = logger;
         }
 
         // Internal refund for ticket return requests (called by TicketAPI)
@@ -50,7 +62,7 @@ namespace PaymentAPI.Services
             if (request.ReturnRequestId <= 0 || request.OrderId <= 0 || request.Amount < 0)
                 throw new ArgumentException("Invalid refund request.");
 
-            var refund = await _db.PaymentRefunds.FirstOrDefaultAsync(r => r.ReturnRequestId == request.ReturnRequestId, ct);
+            var refund = await _refunds.GetByReturnRequestIdAsync(request.ReturnRequestId, ct);
             if (refund?.Status == "Refunded")
                 return new RefundResultDto { RefundId = refund.PaymentRefundId, Status = "Refunded", Reference = refund.GatewayRefundRef };
 
@@ -70,15 +82,15 @@ namespace PaymentAPI.Services
                     Reason = "Ticket Return Request",
                     CreatedAt = DateTime.UtcNow
                 };
-                _db.PaymentRefunds.Add(refund);
+                await _refunds.AddAsync(refund, ct);
                 try
                 {
-                    await _db.SaveChangesAsync(ct);
+                    await _refunds.SaveChangesAsync(ct);
                 }
                 catch (DbUpdateException)
                 {
-                    _db.Entry(refund).State = EntityState.Detached;
-                    refund = await _db.PaymentRefunds.FirstAsync(r => r.ReturnRequestId == request.ReturnRequestId, ct);
+                    _refunds.Detach(refund);
+                    refund = await _refunds.GetByReturnRequestIdAsync(request.ReturnRequestId, ct) ?? throw new DbUpdateException("Refund was created concurrently.");
                     if (refund.Status == "Refunded")
                         return new RefundResultDto { RefundId = refund.PaymentRefundId, Status = "Refunded", Reference = refund.GatewayRefundRef };
                 }
@@ -99,15 +111,13 @@ namespace PaymentAPI.Services
             if (payment == null || payment.Status != "Success")
                 throw new InvalidOperationException("No successful payment transaction found for this order.");
 
-            var alreadyRefunded = await _db.PaymentRefunds
-                .Where(r => r.OrderId == request.OrderId && r.Status == "Refunded")
-                .SumAsync(r => (long?)r.Amount, ct) ?? 0;
+            var alreadyRefunded = await _refunds.GetRefundedAmountByOrderIdAsync(request.OrderId, ct);
 
             var maxRefundable = payment.Amount - alreadyRefunded;
             if (request.Amount > maxRefundable)
             {
                 // EX-01: Refund Amount Exceeds Limit
-                throw new ArgumentException($"Refund amount exceeds the maximum refundable amount (₫{maxRefundable:N0}).");
+                throw new ArgumentException($"Refund amount exceeds the maximum refundable amount (â‚«{maxRefundable:N0}).");
             }
 
             var customerName = ExtractCustomerName(payment.WebhookPayload) ?? $"Customer (Order #{request.OrderId})";
@@ -126,8 +136,8 @@ namespace PaymentAPI.Services
                 CreatedAt = DateTime.UtcNow
             };
 
-            _db.PaymentRefunds.Add(refund);
-            await _db.SaveChangesAsync(ct);
+            await _refunds.AddAsync(refund, ct);
+            await _refunds.SaveChangesAsync(ct);
 
             return await ExecuteRefundAsync(refund, request.OrderId, request.Amount, ct);
         }
@@ -135,7 +145,7 @@ namespace PaymentAPI.Services
         // Retry Failed Refund
         public async Task<RefundResultDto> RetryRefundAsync(int refundId, string strategy, int actorId, string actorName, CancellationToken ct = default)
         {
-            var refund = await _db.PaymentRefunds.FirstOrDefaultAsync(r => r.PaymentRefundId == refundId, ct)
+            var refund = await _refunds.GetByIdAsync(refundId, ct: ct)
                 ?? throw new KeyNotFoundException($"Refund record #{refundId} not found.");
 
             // A.1: Previous Refund Already Confirmed
@@ -154,7 +164,7 @@ namespace PaymentAPI.Services
             refund.ProcessedByUserId = actorId;
             refund.ProcessedByUserName = string.IsNullOrWhiteSpace(actorName) ? refund.ProcessedByUserName : actorName.Trim();
             refund.Status = "Pending";
-            await _db.SaveChangesAsync(ct);
+            await _refunds.SaveChangesAsync(ct);
 
             return await ExecuteRefundAsync(refund, refund.OrderId, refund.Amount, ct);
         }
@@ -205,7 +215,7 @@ namespace PaymentAPI.Services
             refund.ErrorMessage = null;
             refund.GatewayErrorCode = null;
             refund.CompletedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync(ct);
+            await _refunds.SaveChangesAsync(ct);
 
             return new RefundResultDto
             {
@@ -221,7 +231,7 @@ namespace PaymentAPI.Services
             refund.ErrorMessage = error.Length > 500 ? error[..500] : error;
             refund.GatewayErrorCode = errCode.Length > 50 ? errCode[..50] : errCode;
             refund.ReconciliationStatus = "Mismatched";
-            await _db.SaveChangesAsync(ct);
+            await _refunds.SaveChangesAsync(ct);
 
             return new RefundResultDto
             {
@@ -238,10 +248,7 @@ namespace PaymentAPI.Services
             var payment = await _payments.GetLatestByOrderIdAsync(orderId, "VNPay");
             var originalAmount = payment?.Amount ?? 0;
 
-            var refunds = await _db.PaymentRefunds
-                .Where(r => r.OrderId == orderId)
-                .OrderByDescending(r => r.CreatedAt)
-                .ToListAsync(ct);
+            var refunds = await _refunds.GetByOrderIdAsync(orderId, ct);
 
             var alreadyRefunded = refunds
                 .Where(r => r.Status == "Refunded")
@@ -266,56 +273,8 @@ namespace PaymentAPI.Services
         // Refund Reconciliation Report
         public async Task<RefundReconciliationReportDto> GetReconciliationReportAsync(ReconciliationFilterDto filter, CancellationToken ct = default)
         {
-            var query = _db.PaymentRefunds.AsNoTracking().AsQueryable();
-
-            if (!string.IsNullOrWhiteSpace(filter.Search))
-            {
-                var term = filter.Search.Trim().ToLower();
-                var cleanDigits = new string(term.Where(char.IsDigit).ToArray());
-                if (int.TryParse(cleanDigits, out var numericId))
-                {
-                    query = query.Where(r => r.PaymentRefundId == numericId || r.OrderId == numericId);
-                }
-                else
-                {
-                    query = query.Where(r =>
-                        (r.CustomerName != null && r.CustomerName.ToLower().Contains(term)) ||
-                        (r.EventName != null && r.EventName.ToLower().Contains(term)) ||
-                        (r.GatewayRefundRef != null && r.GatewayRefundRef.ToLower().Contains(term)));
-                }
-            }
-
-            if (!string.IsNullOrWhiteSpace(filter.Status) && !string.Equals(filter.Status, "All", StringComparison.OrdinalIgnoreCase))
-            {
-                if (filter.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase) || filter.Status.Equals("Refunded", StringComparison.OrdinalIgnoreCase))
-                    query = query.Where(r => r.Status == "Refunded");
-                else
-                    query = query.Where(r => r.Status == filter.Status);
-            }
-
-            if (!string.IsNullOrWhiteSpace(filter.MatchStatus) && !string.Equals(filter.MatchStatus, "All", StringComparison.OrdinalIgnoreCase))
-            {
-                query = query.Where(r => r.ReconciliationStatus == filter.MatchStatus);
-            }
-
-            if (filter.EventId.HasValue && filter.EventId.Value > 0)
-            {
-                query = query.Where(r => r.EventId == filter.EventId.Value);
-            }
-
-            var availableEvents = await _db.PaymentRefunds.AsNoTracking()
-                .Where(r => r.EventId != null)
-                .GroupBy(r => new { r.EventId, r.EventName })
-                .Select(g => new EventOptionDto
-                {
-                    EventId = g.Key.EventId!.Value,
-                    EventName = string.IsNullOrWhiteSpace(g.Key.EventName) ? $"Event #{g.Key.EventId}" : g.Key.EventName,
-                    RefundCount = g.Count()
-                })
-                .OrderByDescending(e => e.RefundCount)
-                .ToListAsync(ct);
-
-            var allRefunds = await query.OrderByDescending(r => r.CreatedAt).ToListAsync(ct);
+            var allRefunds = await _refunds.GetReconciliationRefundsAsync(filter, ct);
+            var availableEvents = await _refunds.GetDistinctRefundEventsAsync(ct);
 
             // Calculate KPI metrics
             var totalRefunds = allRefunds.Count;
@@ -336,7 +295,7 @@ namespace PaymentAPI.Services
 
         public async Task<RefundItemDto?> GetRefundByIdAsync(int refundId, CancellationToken ct = default)
         {
-            var refund = await _db.PaymentRefunds.AsNoTracking().FirstOrDefaultAsync(r => r.PaymentRefundId == refundId, ct);
+            var refund = await _refunds.GetByIdAsync(refundId, asNoTracking: true, ct: ct);
             return refund == null ? null : MapRefundItem(refund);
         }
 
@@ -486,3 +445,4 @@ namespace PaymentAPI.Services
         }
     }
 }
+

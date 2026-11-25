@@ -225,7 +225,7 @@ export default function SystemPoliciesPage() {
               onClick={() => loadHistory(selectedCategory)}
               disabled={loading}
             >
-              {loading ? "Querying..." : "Refresh Data"}
+              {loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Refresh Data"}
             </button>
           </div>
 
@@ -247,7 +247,7 @@ export default function SystemPoliciesPage() {
                 {loading ? (
                   <tr>
                     <td colSpan="8" className="table-loading">
-                      Querying policy records directly from database...
+                      <span className="app-loading-spinner" role="status" aria-label="Loading" />
                     </td>
                   </tr>
                 ) : history.length === 0 ? (
@@ -446,7 +446,7 @@ export default function SystemPoliciesPage() {
                       className="btn-modal-submit"
                       disabled={submitting}
                     >
-                      {submitting ? "Saving to Database..." : "Confirm & Publish Version"}
+                      {submitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm & Publish Version"}
                     </button>
                   </div>
                 </footer>

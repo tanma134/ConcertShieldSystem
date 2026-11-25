@@ -132,7 +132,7 @@ export default function AdminDashboardPage() {
             >
               <span className="stat-label">{stat.label}</span>
               <span className="stat-value">
-                {loading ? "..." : stat.value ?? "—"}
+                {loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : stat.value ?? "—"}
               </span>
             </div>
           ))}
@@ -172,9 +172,9 @@ export default function AdminDashboardPage() {
       {error && <div className="auth-message error">{error}<button type="button" onClick={() => setError("")}>Dismiss</button></div>}
       <section className="admin-header"><div><p>Admin dashboard</p><h1>System Management</h1></div></section>
       <section className="summary-grid" aria-label="Summary statistics">
-        <div className="summary-card"><span className="label">Total users</span><div className="value">{totalUsers ?? "..."}</div><span className="trend">Registered accounts</span></div>
-        <div className="summary-card"><span className="label">Active users</span><div className="value">{activeUsers ?? "..."}</div><span className="trend">{totalUsers ? `${Math.round((activeUsers / totalUsers) * 100)}% active` : "Loading"}</span></div>
-        <div className="summary-card"><span className="label">Total roles</span><div className="value">{totalRoles ?? "..."}</div><span className="trend">{adminCount ?? "..."} administrators</span></div>
+        <div className="summary-card"><span className="label">Total users</span><div className="value">{totalUsers ?? <span className="app-loading-spinner" role="status" aria-label="Loading" />}</div><span className="trend">Registered accounts</span></div>
+        <div className="summary-card"><span className="label">Active users</span><div className="value">{activeUsers ?? <span className="app-loading-spinner" role="status" aria-label="Loading" />}</div><span className="trend">{totalUsers ? `${Math.round((activeUsers / totalUsers) * 100)}% active` : <span className="app-loading-spinner" role="status" aria-label="Loading" />}</span></div>
+        <div className="summary-card"><span className="label">Total roles</span><div className="value">{totalRoles ?? <span className="app-loading-spinner" role="status" aria-label="Loading" />}</div><span className="trend">{adminCount ?? <span className="app-loading-spinner" role="status" aria-label="Loading" />} administrators</span></div>
       </section>
     </main>
   </div>;

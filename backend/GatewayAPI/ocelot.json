@@ -37,6 +37,24 @@
             }
         },
         {
+            "Key": "ticket-issuance-recovery-queue",
+            "DownstreamPathTemplate": "/api/admin/ticket-issuance-recovery-queue",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7227
+                }
+            ],
+            "UpstreamPathTemplate": "/api/admin/ticket-issuance-recovery-queue",
+            "UpstreamHttpMethod": [
+                "Get"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
             "Key": "admin-tickets-list",
             "DownstreamPathTemplate": "/api/admin/tickets",
             "DownstreamScheme": "https",

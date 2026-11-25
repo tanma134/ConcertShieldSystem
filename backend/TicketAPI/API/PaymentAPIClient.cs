@@ -18,22 +18,18 @@ public class PaymentAPIClient : IPaymentAPIClient
         _httpContextAccessor = httpContextAccessor;
     }
 
-    public async Task<CreateVnPayPaymentResponseDto> CreateVnPayPaymentAsync(
-        CreateVnPayPaymentRequestDto request,
-        CancellationToken cancellationToken = default)
+    public async Task<CreateVnPayPaymentResponseDto> CreateVnPayPaymentAsync(CreateVnPayPaymentRequestDto request)
     {
         try
         {
             using var response = await _httpClient.PostAsJsonAsync(
             "api/VnPay/create-payment",
-            request,
-            cancellationToken);
+            request);
 
             response.EnsureSuccessStatusCode();
 
             var result = await response.Content
-                .ReadFromJsonAsync<CreateVnPayPaymentResponseDto>(
-                    cancellationToken: cancellationToken);
+                .ReadFromJsonAsync<CreateVnPayPaymentResponseDto>();
 
             if (string.IsNullOrWhiteSpace(result?.PaymentUrl))
                 throw new InvalidOperationException("PaymentAPI không trả về PaymentUrl.");
@@ -81,9 +77,7 @@ public class PaymentAPIClient : IPaymentAPIClient
         public string? Error { get; set; }
     }
 
-    public async Task<ApplyVoucherResponseDto> ApplyVoucherAsync(
-        ApplyVoucherRequestDto request,
-        CancellationToken cancellationToken = default)
+    public async Task<ApplyVoucherResponseDto> ApplyVoucherAsync(ApplyVoucherRequestDto request)
     {
         try
         {
@@ -104,14 +98,12 @@ public class PaymentAPIClient : IPaymentAPIClient
             }
 
             using var response = await _httpClient.SendAsync(
-                httpRequest,
-                cancellationToken);
+                httpRequest);
 
             response.EnsureSuccessStatusCode();
 
             var result = await response.Content
-                .ReadFromJsonAsync<ApplyVoucherResponseDto>(
-                    cancellationToken: cancellationToken);
+                .ReadFromJsonAsync<ApplyVoucherResponseDto>();
 
             return result ?? throw new InvalidOperationException("PaymentAPI không trả về kết quả áp dụng voucher.");
         }
@@ -120,5 +112,43 @@ public class PaymentAPIClient : IPaymentAPIClient
             _logger.LogError(ex, "Lỗi khi gọi PaymentAPI áp dụng voucher");
             throw;
         }
+    }
+
+    public async Task<int> CancelPendingPaymentsAsync(int orderId)
+    {
+        if (orderId <= 0)
+            throw new ArgumentOutOfRangeException(nameof(orderId));
+
+        try
+        {
+            using var response = await _httpClient.PostAsync(
+                $"api/internal/payments/orders/{orderId}/cancel-pending",
+                content: null);
+
+            response.EnsureSuccessStatusCode();
+
+            var result = await response.Content
+                .ReadFromJsonAsync<CancelPendingPaymentsResponse>();
+
+            return result?.CancelledCount
+                ?? throw new InvalidOperationException(
+                    "PaymentAPI không trả về số payment đã hủy.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Lỗi khi gọi PaymentAPI hủy payment Pending cho order {OrderId}",
+                orderId);
+
+            throw;
+        }
+    }
+
+    private sealed class CancelPendingPaymentsResponse
+    {
+        public bool Success { get; set; }
+        public int OrderId { get; set; }
+        public int CancelledCount { get; set; }
     }
 }

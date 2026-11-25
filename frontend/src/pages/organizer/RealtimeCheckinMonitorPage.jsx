@@ -127,7 +127,7 @@ export default function RealtimeCheckinMonitorPage() {
       <div className="rcm-container" style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
         <div style={{ textAlign: "center" }}>
           <div className="rcm-pulse-dot" style={{ width: "24px", height: "24px", margin: "0 auto 16px" }}></div>
-          <h2 style={{ fontSize: "18px", fontWeight: 700, color: "#7a7392" }}>Connecting to Real-time Check-in Telemetry...</h2>
+          <span className="app-loading-spinner" role="status" aria-label="Loading" />
         </div>
       </div>
     );
@@ -226,7 +226,7 @@ export default function RealtimeCheckinMonitorPage() {
           </select>
 
           <button className="rcm-btn" onClick={handleManualRefresh} disabled={refreshing}>
-            {refreshing ? "Refreshing..." : "Refresh Now"}
+            {refreshing ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Refresh Now"}
           </button>
 
           <button className="rcm-btn" onClick={() => navigate("/organizer/dashboard")}>

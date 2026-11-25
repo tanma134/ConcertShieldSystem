@@ -1,20 +1,43 @@
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 using IncidentAPI.Data;
 using IncidentAPI.DTOs;
 using IncidentAPI.Models;
-using Microsoft.EntityFrameworkCore;
+using IncidentAPI.Repositories;
+using Microsoft.Extensions.Configuration;
 
 namespace IncidentAPI.Services;
 
 // Triển khai toàn bộ nghiệp vụ Incident Management cho 5 Use Case ()
 public class IncidentService : IIncidentService
 {
-    private readonly IncidentDbContext _db;
+    private readonly IIncidentRepository _incidentRepository;
     private readonly ILogger<IncidentService> _logger;
+    private readonly IHttpClientFactory? _httpClientFactory;
+    private readonly IConfiguration? _configuration;
+
+    [Microsoft.Extensions.DependencyInjection.ActivatorUtilitiesConstructor]
+    public IncidentService(
+        IIncidentRepository incidentRepository,
+        ILogger<IncidentService> logger,
+        IHttpClientFactory? httpClientFactory = null,
+        IConfiguration? configuration = null)
+    {
+        _incidentRepository = incidentRepository;
+        _logger = logger;
+        _httpClientFactory = httpClientFactory;
+        _configuration = configuration;
+    }
+
+    public IncidentService(IIncidentRepository incidentRepository, ILogger<IncidentService> logger)
+        : this(incidentRepository, logger, null, null)
+    {
+    }
 
     public IncidentService(IncidentDbContext db, ILogger<IncidentService> logger)
+        : this(new IncidentRepository(db), logger, null, null)
     {
-        _db = db;
-        _logger = logger;
     }
 
     // Staff báo cáo sự cố mới tại hiện trường
@@ -52,8 +75,7 @@ public class IncidentService : IIncidentService
             UpdatedAt = now
         };
 
-        _db.Incidents.Add(incident);
-        await _db.SaveChangesAsync(ct);
+        await _incidentRepository.AddIncidentAsync(incident, ct);
 
         // Ghi nhật ký ban đầu
         var initialUpdate = new IncidentUpdate
@@ -68,8 +90,7 @@ public class IncidentService : IIncidentService
             CreatedAt = now
         };
 
-        _db.IncidentUpdates.Add(initialUpdate);
-        await _db.SaveChangesAsync(ct);
+        await _incidentRepository.AddIncidentUpdateAsync(initialUpdate, ct);
 
         return await GetDetailAsync(incident.Id, reporterId, true, ct);
     }
@@ -78,11 +99,7 @@ public class IncidentService : IIncidentService
     public async Task<IncidentDetailDto> GetDetailAsync(
         int id, int requestingUserId, bool isAdmin, CancellationToken ct = default)
     {
-        var incident = await _db.Incidents
-            .AsNoTracking()
-            .Include(i => i.Evidences)
-            .Include(i => i.Updates)
-            .FirstOrDefaultAsync(i => i.Id == id, ct);
+        var incident = await _incidentRepository.GetIncidentDetailAsync(id, ct);
 
         if (incident == null)
             throw new IncidentServiceException(404, $"Incident #{id} not found.");
@@ -94,72 +111,14 @@ public class IncidentService : IIncidentService
     public async Task<List<IncidentListItemDto>> SearchAsync(
         IncidentQuery query, int requestingUserId, bool isAdmin, CancellationToken ct = default)
     {
-        var q = _db.Incidents.AsNoTracking().AsQueryable();
-
-        // Lọc theo người báo cáo nếu không phải admin (nếu muốn xem tất cả sự cố on-site của event thì bỏ qua)
-        // Trong SRS, nhân viên hiện trường cùng xem sự cố trong event
-        if (!isAdmin && query.IsEscalated != true)
-        {
-            // Cho phép Staff xem các sự cố
-        }
-
-        if (query.EventId.HasValue)
-            q = q.Where(i => i.EventId == query.EventId.Value);
-
-        if (!string.IsNullOrWhiteSpace(query.Status))
-            q = q.Where(i => i.Status.ToLower() == query.Status.ToLower());
-
-        if (!string.IsNullOrWhiteSpace(query.Severity))
-            q = q.Where(i => i.Severity.ToLower() == query.Severity.ToLower());
-
-        if (!string.IsNullOrWhiteSpace(query.Category))
-            q = q.Where(i => i.Category.ToLower() == query.Category.ToLower());
-
-        if (query.IsEscalated.HasValue)
-            q = q.Where(i => i.IsEscalated == query.IsEscalated.Value);
-
-        if (!string.IsNullOrWhiteSpace(query.SearchTerm))
-        {
-            var term = query.SearchTerm.Trim().ToLower();
-            q = q.Where(i =>
-                i.Title.ToLower().Contains(term) ||
-                i.Location.ToLower().Contains(term) ||
-                (i.EventName != null && i.EventName.ToLower().Contains(term)) ||
-                i.ReporterName.ToLower().Contains(term) ||
-                i.Description.ToLower().Contains(term));
-        }
-
-        var items = await q
-            .OrderByDescending(i => i.CreatedAt)
-            .Select(i => new IncidentListItemDto
-            {
-                Id = i.Id,
-                EventId = i.EventId,
-                EventName = i.EventName,
-                ReporterId = i.ReporterId,
-                ReporterName = i.ReporterName,
-                Title = i.Title,
-                Category = i.Category,
-                Severity = i.Severity,
-                Location = i.Location,
-                Description = i.Description,
-                Status = i.Status,
-                IsEscalated = i.IsEscalated,
-                EscalatedAt = i.EscalatedAt,
-                EvidenceCount = i.Evidences.Count,
-                CreatedAt = i.CreatedAt,
-                UpdatedAt = i.UpdatedAt
-            })
-            .ToListAsync(ct);
-
-        return items;
+        return await _incidentRepository.SearchIncidentsAsync(query, requestingUserId, isAdmin, ct);
     }
 
     // Cập nhật thông tin chi tiết sự cố và tiến độ
     public async Task<IncidentDetailDto> UpdateIncidentAsync(
         int id, UpdateIncidentRequest req, int updatedBy, string updaterName, bool isAdmin, CancellationToken ct = default)
     {
-        var incident = await _db.Incidents.FirstOrDefaultAsync(i => i.Id == id, ct);
+        var incident = await _incidentRepository.GetIncidentByIdAsync(id, ct);
         if (incident == null)
             throw new IncidentServiceException(404, $"Incident #{id} not found.");
 
@@ -202,8 +161,8 @@ public class IncidentService : IIncidentService
             CreatedAt = now
         };
 
-        _db.IncidentUpdates.Add(updateRecord);
-        await _db.SaveChangesAsync(ct);
+        await _incidentRepository.AddIncidentUpdateAsync(updateRecord, ct);
+        await _incidentRepository.SaveChangesAsync(ct);
 
         return await GetDetailAsync(id, updatedBy, true, ct);
     }
@@ -212,7 +171,7 @@ public class IncidentService : IIncidentService
     public async Task<IncidentDetailDto> UpdateStatusAsync(
         int id, UpdateStatusRequest req, int updatedBy, string updaterName, bool isAdmin, CancellationToken ct = default)
     {
-        var incident = await _db.Incidents.FirstOrDefaultAsync(i => i.Id == id, ct);
+        var incident = await _incidentRepository.GetIncidentByIdAsync(id, ct);
         if (incident == null)
             throw new IncidentServiceException(404, $"Incident #{id} not found.");
 
@@ -232,8 +191,8 @@ public class IncidentService : IIncidentService
             CreatedAt = DateTime.UtcNow
         };
 
-        _db.IncidentUpdates.Add(updateRecord);
-        await _db.SaveChangesAsync(ct);
+        await _incidentRepository.AddIncidentUpdateAsync(updateRecord, ct);
+        await _incidentRepository.SaveChangesAsync(ct);
 
         return await GetDetailAsync(id, updatedBy, true, ct);
     }
@@ -242,7 +201,7 @@ public class IncidentService : IIncidentService
     public async Task<IncidentDetailDto> EscalateIncidentAsync(
         int id, EscalateIncidentRequest req, int staffId, string staffName, CancellationToken ct = default)
     {
-        var incident = await _db.Incidents.FirstOrDefaultAsync(i => i.Id == id, ct);
+        var incident = await _incidentRepository.GetIncidentByIdAsync(id, ct);
         if (incident == null)
             throw new IncidentServiceException(404, $"Incident #{id} not found.");
 
@@ -272,8 +231,45 @@ public class IncidentService : IIncidentService
             CreatedAt = now
         };
 
-        _db.IncidentUpdates.Add(updateRecord);
-        await _db.SaveChangesAsync(ct);
+        await _incidentRepository.AddIncidentUpdateAsync(updateRecord, ct);
+        await _incidentRepository.SaveChangesAsync(ct);
+
+        _logger.LogInformation("Incident #{IncidentId} escalated to Admin {AdminId} by staff {StaffId}", id, incident.EscalatedToAdminId ?? 1, staffId);
+
+        // Gui thong bao den Admin qua NotificationAPI (ho tro retry va idempotency key)
+        var targetAdminId = incident.EscalatedToAdminId ?? 1;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var client = _httpClientFactory?.CreateClient() ?? new HttpClient();
+                var baseUrl = _configuration?["NotificationApi:BaseUrl"] ?? "http://localhost:7197";
+                var notifPayload = new
+                {
+                    userId = targetAdminId,
+                    title = $"[URGENT] Incident #{incident.Id} Escalated: {incident.Title}",
+                    message = $"Staff {staffName} escalated incident #{incident.Id} ({incident.Category}/{incident.Severity}). Reason: {req.Reason.Trim()}",
+                    category = "incident_escalated",
+                    targetUrl = $"/admin/incidents/{incident.Id}"
+                };
+                using var content = new StringContent(JsonSerializer.Serialize(notifPayload), Encoding.UTF8, "application/json");
+                client.DefaultRequestHeaders.Remove("Idempotency-Key");
+                client.DefaultRequestHeaders.Add("Idempotency-Key", $"incident-escalate-{incident.Id}");
+                var response = await client.PostAsync($"{baseUrl.TrimEnd('/')}/api/notifications", content);
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("Escalation notification dispatched for incident {IncidentId} to admin {AdminId}", incident.Id, targetAdminId);
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to dispatch escalation notification for incident {IncidentId}, status: {StatusCode}", incident.Id, response.StatusCode);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not notify admin {AdminId} for escalated incident {IncidentId}", targetAdminId, incident.Id);
+            }
+        });
 
         return await GetDetailAsync(id, staffId, true, ct);
     }
@@ -282,7 +278,7 @@ public class IncidentService : IIncidentService
     public async Task<IncidentDetailDto> ResolveIncidentAsync(
         int id, ResolveIncidentRequest req, int adminId, string adminName, CancellationToken ct = default)
     {
-        var incident = await _db.Incidents.FirstOrDefaultAsync(i => i.Id == id, ct);
+        var incident = await _incidentRepository.GetIncidentByIdAsync(id, ct);
         if (incident == null)
             throw new IncidentServiceException(404, $"Incident #{id} not found.");
 
@@ -309,8 +305,8 @@ public class IncidentService : IIncidentService
             CreatedAt = now
         };
 
-        _db.IncidentUpdates.Add(updateRecord);
-        await _db.SaveChangesAsync(ct);
+        await _incidentRepository.AddIncidentUpdateAsync(updateRecord, ct);
+        await _incidentRepository.SaveChangesAsync(ct);
 
         return await GetDetailAsync(id, adminId, true, ct);
     }
@@ -318,9 +314,7 @@ public class IncidentService : IIncidentService
     // Xem thông tin giải quyết sự cố
     public async Task<ResolutionDto> GetResolutionAsync(int id, CancellationToken ct = default)
     {
-        var incident = await _db.Incidents
-            .AsNoTracking()
-            .FirstOrDefaultAsync(i => i.Id == id, ct);
+        var incident = await _incidentRepository.GetIncidentDetailAsync(id, ct);
 
         if (incident == null)
             throw new IncidentServiceException(404, $"Incident #{id} not found.");
@@ -343,54 +337,49 @@ public class IncidentService : IIncidentService
     // Lấy dòng thời gian cập nhật của sự cố
     public async Task<List<IncidentUpdateDto>> GetHistoryAsync(int id, CancellationToken ct = default)
     {
-        var updates = await _db.IncidentUpdates
-            .AsNoTracking()
-            .Where(u => u.IncidentId == id)
-            .OrderBy(u => u.CreatedAt)
-            .Select(u => new IncidentUpdateDto
-            {
-                Id = u.Id,
-                IncidentId = u.IncidentId,
-                UpdatedById = u.UpdatedById,
-                UpdatedByName = u.UpdatedByName,
-                ActionType = u.ActionType,
-                Note = u.Note,
-                PreviousStatus = u.PreviousStatus,
-                NewStatus = u.NewStatus,
-                CreatedAt = u.CreatedAt
-            })
-            .ToListAsync(ct);
+        var updates = await _incidentRepository.GetIncidentHistoryAsync(id, ct);
 
-        return updates;
+        return updates.Select(u => new IncidentUpdateDto
+        {
+            Id = u.Id,
+            IncidentId = u.IncidentId,
+            UpdatedById = u.UpdatedById,
+            UpdatedByName = u.UpdatedByName,
+            ActionType = u.ActionType,
+            Note = u.Note,
+            PreviousStatus = u.PreviousStatus,
+            NewStatus = u.NewStatus,
+            CreatedAt = u.CreatedAt
+        }).ToList();
     }
 
-    private static IncidentDetailDto MapToDetailDto(Incident i)
+    private static IncidentDetailDto MapToDetailDto(Incident incident)
     {
         return new IncidentDetailDto
         {
-            Id = i.Id,
-            EventId = i.EventId,
-            EventName = i.EventName,
-            ReporterId = i.ReporterId,
-            ReporterName = i.ReporterName,
-            Title = i.Title,
-            Category = i.Category,
-            Severity = i.Severity,
-            Location = i.Location,
-            Description = i.Description,
-            Status = i.Status,
-            IsEscalated = i.IsEscalated,
-            EscalatedToAdminId = i.EscalatedToAdminId,
-            EscalatedAt = i.EscalatedAt,
-            EscalationReason = i.EscalationReason,
-            ResolutionSummary = i.ResolutionSummary,
-            ActionTaken = i.ActionTaken,
-            ResolvedById = i.ResolvedById,
-            ResolvedByName = i.ResolvedByName,
-            ResolvedAt = i.ResolvedAt,
-            CreatedAt = i.CreatedAt,
-            UpdatedAt = i.UpdatedAt,
-            Evidences = i.Evidences.Select(e => new IncidentEvidenceDto
+            Id = incident.Id,
+            EventId = incident.EventId,
+            EventName = incident.EventName,
+            ReporterId = incident.ReporterId,
+            ReporterName = incident.ReporterName,
+            Title = incident.Title,
+            Category = incident.Category,
+            Severity = incident.Severity,
+            Location = incident.Location,
+            Description = incident.Description,
+            Status = incident.Status,
+            IsEscalated = incident.IsEscalated,
+            EscalationReason = incident.EscalationReason,
+            EscalatedAt = incident.EscalatedAt,
+            EscalatedToAdminId = incident.EscalatedToAdminId,
+            ResolutionSummary = incident.ResolutionSummary,
+            ActionTaken = incident.ActionTaken,
+            ResolvedById = incident.ResolvedById,
+            ResolvedByName = incident.ResolvedByName,
+            ResolvedAt = incident.ResolvedAt,
+            CreatedAt = incident.CreatedAt,
+            UpdatedAt = incident.UpdatedAt,
+            Evidences = incident.Evidences.Select(e => new IncidentEvidenceDto
             {
                 Id = e.Id,
                 IncidentId = e.IncidentId,
@@ -405,7 +394,7 @@ public class IncidentService : IIncidentService
                 UploadedByName = e.UploadedByName,
                 UploadedAt = e.UploadedAt
             }).ToList(),
-            Updates = i.Updates.OrderBy(u => u.CreatedAt).Select(u => new IncidentUpdateDto
+            Updates = incident.Updates.OrderBy(u => u.CreatedAt).Select(u => new IncidentUpdateDto
             {
                 Id = u.Id,
                 IncidentId = u.IncidentId,

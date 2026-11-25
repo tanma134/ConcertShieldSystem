@@ -126,8 +126,8 @@ export default function NotificationCenterPage() {
       <div className="tb-container nc-container" style={{ padding: "30px 20px", minHeight: "60vh" }}>
         <div className="nc-header">
           <h1 className="nc-title">
-            <span>Trung tâm Thông báo</span>
-            {unreadCount > 0 && <span className="nc-unread-badge">{unreadCount} chưa đọc</span>}
+            <span>Notification Center</span>
+            {unreadCount > 0 && <span className="nc-unread-badge">{unreadCount} unread</span>}
           </h1>
 
           {unreadCount > 0 && (
@@ -137,7 +137,7 @@ export default function NotificationCenterPage() {
                 className="tb-btn tb-btn-outline"
                 onClick={handleMarkAllAsRead}
               >
-                Đánh dấu tất cả đã đọc
+                Mark all as read
               </button>
             </div>
           )}
@@ -149,23 +149,23 @@ export default function NotificationCenterPage() {
             className={`nc-tab ${filter === "all" ? "active" : ""}`}
             onClick={() => setFilter("all")}
           >
-            Tất cả ({notifications.length})
+            All ({notifications.length})
           </button>
           <button
             type="button"
             className={`nc-tab ${filter === "unread" ? "active" : ""}`}
             onClick={() => setFilter("unread")}
           >
-            Chưa đọc ({unreadCount})
+            Unread ({unreadCount})
           </button>
         </div>
 
         {loading ? (
-          <div className="nc-empty">Đang tải thông báo...</div>
+          <div className="nc-empty"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
         ) : filteredItems.length === 0 ? (
           <div className="nc-empty">
             <div className="nc-empty-icon">🔔</div>
-            <div className="nc-empty-text">Chưa có thông báo nào</div>
+            <div className="nc-empty-text">No notifications yet</div>
           </div>
         ) : (
           <div className="nc-list">
@@ -194,7 +194,7 @@ export default function NotificationCenterPage() {
                 <button
                   type="button"
                   className="nc-card-delete"
-                  title="Xóa thông báo"
+                  title="Delete notification"
                   onClick={(e) => {
                     e.stopPropagation();
                     setDeleteConfirmId(n.notificationId);
@@ -206,14 +206,14 @@ export default function NotificationCenterPage() {
                 {deleteConfirmId === n.notificationId && (
                   <div className="tb-notif-confirm-overlay" onClick={(e) => e.stopPropagation()}>
                     <div className="tb-notif-confirm-box">
-                      <p>Bạn có chắc chắn muốn xóa thông báo này?</p>
+                      <p>Are you sure you want to delete this notification?</p>
                       <div className="tb-notif-confirm-actions">
                         <button
                           type="button"
                           className="tb-btn tb-btn-sm tb-btn-danger"
                           onClick={(e) => handleDelete(n.notificationId, e)}
                         >
-                          Xóa
+                          Delete
                         </button>
                         <button
                           type="button"
@@ -223,7 +223,7 @@ export default function NotificationCenterPage() {
                             setDeleteConfirmId(null);
                           }}
                         >
-                          Hủy
+                          Cancel
                         </button>
                       </div>
                     </div>

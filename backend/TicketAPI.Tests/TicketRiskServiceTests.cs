@@ -285,7 +285,7 @@ public class TicketRiskServiceTests : IDisposable
     public async Task V02_NotRaised_WhenUserTookTheirTime()
     {
         _holds.Setup(h => h.GetHoldDetailsAsync("h1", UserId))
-              .ReturnsAsync(new HoldSessionResponse { ExpiresAtUtc = DateTime.UtcNow.AddSeconds(300) });   // giữ chỗ cách đây ~5 phút
+              .ReturnsAsync(new HoldSessionResponse { CreatedAtUtc = DateTime.UtcNow.AddSeconds(-300), ExpiresAtUtc = DateTime.UtcNow.AddSeconds(300) });   // giữ chỗ cách đây ~5 phút
 
         await _svc.CheckOrderAsync(TestHttp.Browser(), UserId, OrderFor(1));
 

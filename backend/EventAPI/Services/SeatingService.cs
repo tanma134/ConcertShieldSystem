@@ -2,6 +2,7 @@ using EventAPI.Common;
 using EventAPI.DTOs;
 using EventAPI.Models;
 using EventAPI.Repositories;
+using System.Text.Json;
 
 namespace EventAPI.Services
 {
@@ -229,6 +230,20 @@ namespace EventAPI.Services
             if (map.SeatZones.Any(z => string.Equals(z.ZoneName, dto.ZoneName, StringComparison.OrdinalIgnoreCase)))
                 errors.Add($"A zone named '{dto.ZoneName}' already exists on this layout.");
 
+            // Kiem tra hinh dang zone moi khong duoc chong lan voi cac zone da co
+            var newBox = ParseBounds(dto.ShapeJson);
+            if (newBox is { } nb)
+            {
+                foreach (var existingZone in map.SeatZones)
+                {
+                    var existingBox = ParseBounds(existingZone.ShapeJson);
+                    if (existingBox is { } eb && nb.Intersects(eb))
+                    {
+                        errors.Add($"Zone '{dto.ZoneName}' overlaps existing zone '{existingZone.ZoneName}'.");
+                    }
+                }
+            }
+
             var targetTicket = ticketTypes.FirstOrDefault(t => t.TicketTypeId == dto.TicketTypeId);
             if (targetTicket != null)
             {
@@ -272,7 +287,23 @@ namespace EventAPI.Services
             var ticketTypes = await _ticketTypeRepository.GetByEventIdAsync(eventId);
 
             if (dto.ZoneName != null) zone.ZoneName = dto.ZoneName;
-            if (dto.ShapeJson != null) zone.ShapeJson = dto.ShapeJson;
+            if (dto.ShapeJson != null)
+            {
+                var updatedBox = ParseBounds(dto.ShapeJson);
+                if (updatedBox is { } ub)
+                {
+                    var existingMap = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: false);
+                    foreach (var otherZone in existingMap!.SeatZones.Where(z => z.SeatZoneId != seatZoneId))
+                    {
+                        var otherBox = ParseBounds(otherZone.ShapeJson);
+                        if (otherBox is { } ob && ub.Intersects(ob))
+                        {
+                            throw new ArgumentException($"Updated shape for zone '{zone.ZoneName}' overlaps zone '{otherZone.ZoneName}'.");
+                        }
+                    }
+                }
+                zone.ShapeJson = dto.ShapeJson;
+            }
 
             if (dto.ZoneName != null)
             {
@@ -494,11 +525,85 @@ namespace EventAPI.Services
                 errors.Add("Zone names must be unique within a layout.");
             }
 
+            // Kiem tra hop le hinh hoc ShapeJson: rectangle hoac polygon
+            foreach (var zone in zones)
+            {
+                var label = string.IsNullOrWhiteSpace(zone.ZoneName) ? "A zone" : $"Zone '{zone.ZoneName}'";
+                if (!string.IsNullOrWhiteSpace(zone.ShapeJson))
+                {
+                    try
+                    {
+                        using var doc = JsonDocument.Parse(zone.ShapeJson);
+                        var root = doc.RootElement;
+                        var hasWidth = root.TryGetProperty("width", out var w) || root.TryGetProperty("w", out w);
+                        var hasHeight = root.TryGetProperty("height", out var h) || root.TryGetProperty("h", out h);
+                        if (root.TryGetProperty("x", out _) && root.TryGetProperty("y", out _) && hasWidth && hasHeight)
+                        {
+                            if (w.GetDouble() <= 0 || h.GetDouble() <= 0)
+                                errors.Add($"{label}: Rectangle width and height must be greater than 0.");
+                        }
+                        else if (root.TryGetProperty("points", out var points) && points.ValueKind == JsonValueKind.Array)
+                        {
+                            if (points.GetArrayLength() < 3)
+                                errors.Add($"{label}: Polygon must have at least 3 vertices.");
+                        }
+                        else
+                        {
+                            errors.Add($"{label}: ShapeJson must represent either a rectangle (x, y, width/w, height/h) or a polygon (points array).");
+                        }
+                    }
+                    catch (JsonException)
+                    {
+                        errors.Add($"{label}: Invalid ShapeJson format.");
+                    }
+                }
+            }
+
+            // Kiem tra bbox cua cac hinh zone de chan cac layout chong lan.
+            var boxes = zones.Select(ParseBounds).ToList();
+            for (var i = 0; i < boxes.Count; i++)
+                for (var j = i + 1; j < boxes.Count; j++)
+                    if (boxes[i] is { } a && boxes[j] is { } b && a.Intersects(b))
+                        errors.Add($"Zone '{zones[i].ZoneName}' overlaps zone '{zones[j].ZoneName}'.");
+
             if (runningSeats > MaxSeatsPerEvent)
                 errors.Add($"Total seats ({runningSeats}) exceeds the {MaxSeatsPerEvent} per-event limit.");
 
             return errors;
         }
+
+        public readonly record struct Bounds(double Left, double Top, double Right, double Bottom)
+        {
+            public bool Intersects(Bounds other) => Left < other.Right && Right > other.Left && Top < other.Bottom && Bottom > other.Top;
+        }
+
+        public static Bounds? ParseBounds(string? shapeJson)
+        {
+            if (string.IsNullOrWhiteSpace(shapeJson)) return null;
+            try
+            {
+                using var doc = JsonDocument.Parse(shapeJson);
+                var root = doc.RootElement;
+                var hasWidth = root.TryGetProperty("width", out var w) || root.TryGetProperty("w", out w);
+                var hasHeight = root.TryGetProperty("height", out var h) || root.TryGetProperty("h", out h);
+                if (root.TryGetProperty("x", out var x) && root.TryGetProperty("y", out var y) && hasWidth && hasHeight)
+                {
+                    var width = w.GetDouble();
+                    var height = h.GetDouble();
+                    if (width <= 0 || height <= 0) return null;
+                    return new Bounds(x.GetDouble(), y.GetDouble(), x.GetDouble() + width, y.GetDouble() + height);
+                }
+                if (root.TryGetProperty("points", out var points) && points.ValueKind == JsonValueKind.Array)
+                {
+                    var values = points.EnumerateArray().Select(p => (p.GetProperty("x").GetDouble(), p.GetProperty("y").GetDouble())).ToList();
+                    return values.Count >= 3 ? new Bounds(values.Min(p => p.Item1), values.Min(p => p.Item2), values.Max(p => p.Item1), values.Max(p => p.Item2)) : null;
+                }
+            }
+            catch (JsonException) { return null; }
+            return null;
+        }
+
+        private static Bounds? ParseBounds(CreateSeatZoneDTO zone) => ParseBounds(zone.ShapeJson);
 
         private static int DtoCapacity(CreateSeatZoneDTO zone)
         {
@@ -573,6 +678,13 @@ namespace EventAPI.Services
                         UpdatedAt = DateTime.UtcNow
                     });
                 }
+            }
+
+            var seen = new HashSet<(int?, int?)>();
+            foreach (var s in seats)
+            {
+                if (!seen.Add((s.XCoordinate, s.YCoordinate)))
+                    throw new InvalidOperationException($"Duplicate seat coordinate ({s.XCoordinate}, {s.YCoordinate}) generated in zone.");
             }
 
             return seats;

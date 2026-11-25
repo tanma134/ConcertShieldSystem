@@ -2,19 +2,15 @@ using System.ComponentModel.DataAnnotations;
 
 namespace EventAPI.DTOs
 {
-    /// <summary>Body for POST api/events/{id}/reject.</summary>
+// Du lieu ly do tu choi concert danh cho Admin
     public class RejectEventDTO
     {
-        [Required(ErrorMessage = "A rejection reason is required so the customer knows what to fix.")]
+        [Required(ErrorMessage = "A rejection reason is required so the organizer knows what to fix.")]
         [MaxLength(500)]
         public string Reason { get; set; } = null!;
     }
 
-    /// <summary>
-    /// Result of the pre-submit publication check. Returned by
-    /// GET api/events/{id}/validate so the customer can see exactly what's missing
-    /// before they hit Submit, and embedded in the 400 body when Submit fails.
-    /// </summary>
+    // Ket qua kiem tra tinh day du cua du lieu concert truoc khi submit
     public class SubmitValidationResultDTO
     {
         public bool IsValid => Errors.Count == 0;
@@ -22,7 +18,7 @@ namespace EventAPI.DTOs
         public List<string> Warnings { get; set; } = new();
     }
 
-    /// <summary>Lightweight row for the Admin moderation queue.</summary>
+    // Danh sach concert dang cho xet duyet danh cho Admin
     public class PendingEventDTO
     {
         public int EventId { get; set; }

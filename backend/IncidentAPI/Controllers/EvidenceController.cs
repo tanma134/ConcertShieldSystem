@@ -21,7 +21,7 @@ public class EvidenceController : ControllerBase
         _logger = logger;
     }
 
-    // GET api/incidents/{incidentId}/evidences
+    // Lay danh sach bang chung dinh kem cua ho so su co danh cho Staff va Admin
     [HttpGet]
     [Authorize(Policy = "CanManageIncidents")]
     public Task<IActionResult> GetAll(int incidentId) =>
@@ -31,7 +31,7 @@ public class EvidenceController : ControllerBase
             return Ok(evidences);
         });
 
-    // POST api/incidents/{incidentId}/evidences (Attach Evidence)
+    // Tai len hinh anh hoac video bang chung dinh kem vao ho so su co danh cho Staff va Admin
     [HttpPost]
     [Authorize(Policy = "CanManageIncidents")]
     [RequestSizeLimit(50 * 1024 * 1024)]
@@ -43,6 +43,7 @@ public class EvidenceController : ControllerBase
         [FromForm] string? caption = null) =>
         Run(async () =>
         {
+            // Luu y: Kiem tra tep dinh kem va upload len storage Cloudinary/MinIO
             if (file == null || file.Length == 0)
                 return BadRequest(new { message = "Please select a file to upload." });
 
@@ -55,7 +56,7 @@ public class EvidenceController : ControllerBase
             return Ok(result);
         });
 
-    // DELETE api/incidents/{incidentId}/evidences/{evidenceId}
+    // Xoa tep tin bang chung dinh kem khoi ho so su co danh cho Staff va Admin
     [HttpDelete("{evidenceId:int}")]
     [Authorize(Policy = "CanManageIncidents")]
     public Task<IActionResult> Delete(int incidentId, int evidenceId) =>

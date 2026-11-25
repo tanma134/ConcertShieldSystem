@@ -88,6 +88,12 @@ import TicketStatusHistoryPage from "../pages/admin/TicketStatusHistoryPage";
 import AdminTicketsPage from "../pages/admin/AdminTicketsPage";
 import AdminTicketDetailPage from "../pages/admin/AdminTicketDetailPage";
 import FailedTransactionQueuePage from "../pages/admin/FailedTransactionQueuePage";
+import TicketDisputeDemoPage from "../pages/admin/TicketDisputeDemoPage";
+import TicketIssuanceRecoveryQueuePage from "../pages/admin/TicketIssuanceRecoveryQueuePage";
+import TicketDisputeListPage from "../pages/admin/TicketDisputeListPage";
+import TicketDisputeDetailPage from "../pages/admin/TicketDisputeDetailPage";
+import NotFoundPage from "../pages/NotFoundPage";
+import ConcertOrderListPage from "../pages/organizer/ConcertOrderListPage";
 
 export default function AppRoutes() {
   return (
@@ -180,6 +186,15 @@ export default function AppRoutes() {
       />
 
       <Route
+        path="/admin/ticket-issuance-recovery"
+        element={
+          <ProtectedRoute adminOnly>
+            <TicketIssuanceRecoveryQueuePage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/admin/ticket-status-history"
         element={
           <ProtectedRoute adminOnly>
@@ -193,6 +208,33 @@ export default function AppRoutes() {
         element={
           <ProtectedRoute adminOnly>
             <FailedTransactionQueuePage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/ticket-disputes"
+        element={
+          <AdminRoute>
+            <TicketDisputeListPage />
+          </AdminRoute>
+        }
+      />
+
+      <Route
+        path="/admin/ticket-disputes/:id"
+        element={
+          <AdminRoute>
+            <TicketDisputeDetailPage />
+          </AdminRoute>
+        }
+      />
+
+      <Route
+        path="/organizer/events/:id/orders"
+        element={
+          <ProtectedRoute organizerOnly>
+            <ConcertOrderListPage />
           </ProtectedRoute>
         }
       />
@@ -219,6 +261,7 @@ export default function AppRoutes() {
       <Route path="/admin/incidents/:id" element={<AdminRoute><IncidentDetailPage /></AdminRoute>} />
 
       {/* Support Case Management & Dispute Resolution */}
+      <Route path="/support-cases/:id" element={<ProtectedRoute><SupportCaseDetailPage /></ProtectedRoute>} />
       <Route path="/staff/support-cases" element={<ProtectedRoute><SupportCaseListPage /></ProtectedRoute>} />
       <Route path="/staff/support-cases/new" element={<ProtectedRoute><SupportCaseCreatePage /></ProtectedRoute>} />
       <Route path="/staff/support-cases/:id" element={<ProtectedRoute><SupportCaseDetailPage /></ProtectedRoute>} />
@@ -415,6 +458,9 @@ export default function AppRoutes() {
       {/* Organizer Verification & Real-time Check-in Monitor (UC_11.3, 14.1, 14.7) */}
       <Route path="/organizer/events/:eventId/realtime-checkin" element={<ProtectedRoute organizerOnly><RealtimeCheckinMonitorPage /></ProtectedRoute>} />
       <Route path="/organizer/realtime-checkin" element={<ProtectedRoute organizerOnly><RealtimeCheckinMonitorPage /></ProtectedRoute>} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
+
+

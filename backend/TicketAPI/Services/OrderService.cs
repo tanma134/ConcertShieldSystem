@@ -42,128 +42,165 @@ namespace TicketAPI.Services
         public async Task<int> Add(CreateOrderDTO dto, int customerId)
         {
             if (string.IsNullOrWhiteSpace(dto.HoldId))
-                throw new ArgumentException("HoldId không hợp lệ.");
+                throw new ArgumentException("Invalid hold ID.");
 
-            var hold = await _holdService.GetHoldDetailsAsync(
-                dto.HoldId,
-                customerId);
+            var existingOrderId = await _orderRepository.GetExistingOrderIdByHoldAsync(dto.HoldId, customerId);
+
+            if (existingOrderId.HasValue) return existingOrderId.Value;
+
+            var hold = await _holdService.GetHoldDetailsAsync(dto.HoldId, customerId);
 
             if (hold.EventId != dto.EventId)
-                throw new ArgumentException("Hold không thuộc sự kiện này.");
+                throw new ArgumentException("The hold does not belong to this event.");
 
             await ValidateRedisHoldAsync(dto, customerId);
 
             var eventInfo = await _eventApiClient.GetEventByIdAsync(dto.EventId);
-            if (eventInfo == null) throw new Exception("Không tìm thấy sự kiện");
-            if (eventInfo.Status != "Published") throw new Exception($"Sự kiện không mở bán. (Trạng thái: {eventInfo.Status})");
-
-            var newOrder = new Order
-            {
-                FullName = dto.FullName,
-                Email = dto.Email,
-                Phone = dto.Phone,
-                CustomerId = customerId,
-                EventId = dto.EventId,
-                EventName = eventInfo.Title,
-                PosterUrl = eventInfo.PosterUrl,
-
-                StartsAt = eventInfo.StartsAt,
-                EndsAt = eventInfo.EndsAt,
-
-                HoldToken = hold.HoldId,
-                ExpiresAt = hold.ExpiresAtUtc,
-                Status = "Pending",
-
-                OrderDate = DateTime.UtcNow,
-
-                IsDeleted = false,
-
-                OrderDetails = new List<OrderDetail>(),
-                OrderAttendees = new List<OrderAttendee>()
-            };
-
-            long totalAmount = 0;
-            foreach (var detailDto in dto.OrderDetails)
-            {
-                var ticketType = eventInfo.TicketTypes.FirstOrDefault(t => t.TicketTypeId == detailDto.TicketTypeId);
-                if (ticketType == null) throw new Exception($"Loại vé ID {detailDto.TicketTypeId} không tồn tại.");
-
-                if (detailDto.Quantity < ticketType.MinPerOrder) throw new Exception($"Vé {ticketType.TypeName} yêu cầu ít nhất {ticketType.MinPerOrder} vé.");
-                if (detailDto.Quantity > ticketType.MaxPerOrder) throw new Exception($"Vé {ticketType.TypeName} tối đa {ticketType.MaxPerOrder} vé.");
-
-                string? seatIdsJson = null;
-
-                if (dto.IsReservedSeating)
-                {
-                    var seatIds = detailDto.SeatIds;
-
-                    if (seatIds == null ||
-                        seatIds.Count != detailDto.Quantity ||
-                        seatIds.Any(id => id <= 0))
-                    {
-                        throw new Exception("Danh sách ghế không hợp lệ hoặc thiếu SeatId.");
-                    }
-
-                    seatIdsJson = JsonSerializer.Serialize(seatIds);
-                }
-
-                var orderDetail = new OrderDetail
-                {
-                    TicketTypeId = detailDto.TicketTypeId,
-                    TicketTypeName = ticketType.TypeName,
-                    Quantity = detailDto.Quantity,
-                    UnitPrice = ticketType.Price,
-                    SeatIds = seatIdsJson
-                };
-
-                newOrder.OrderDetails.Add(orderDetail);
-                totalAmount += orderDetail.UnitPrice * orderDetail.Quantity;
-            }
-
-            newOrder.TotalAmount = totalAmount;
-            newOrder.FinalAmount = totalAmount;
-            newOrder.DiscountAmount = 0;
-
-            if (!string.IsNullOrWhiteSpace(dto.VoucherCode))
-            {
-                var voucherResult = await _paymentApiClient.ApplyVoucherAsync(
-                    new ApplyVoucherRequestDto
-                    {
-                        Code = dto.VoucherCode.Trim(),
-                        EventId = dto.EventId,
-                        OrderAmount = totalAmount
-                    });
-
-                if (!voucherResult.IsValid)
-                {
-                    throw new ArgumentException(
-                        voucherResult.Message ?? "Voucher không hợp lệ.");
-                }
-
-                newOrder.DiscountAmount = voucherResult.DiscountAmount;
-                newOrder.FinalAmount = voucherResult.FinalAmount;
-                newOrder.VoucherId = voucherResult.VoucherId;
-            }
-
-            if (dto.Attendees != null && dto.Attendees.Any())
-            {
-                foreach (var att in dto.Attendees)
-                {
-                    newOrder.OrderAttendees.Add(new OrderAttendee
-                    {
-                        FullName = att.FullName,
-                        CitizenId = att.CitizenId,
-                        Phone = att.Phone,
-                        TicketTypeId = att.TicketTypeId,
-                        SeatId = att.SeatId,
-                        IsPrimaryBuyer = att.IsPrimaryBuyer
-                    });
-                }
-            }
+            if (eventInfo == null) throw new Exception("Event not found.");
+            if (eventInfo.Status != "Published") throw new Exception($"The event is not open for sale. (Status: {eventInfo.Status})");
 
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
+                await _context.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(9823, {customerId})");
+
+                var requestedQuantity = dto.OrderDetails.Sum(x => x.Quantity);
+                if (eventInfo.MinTicketsPerAccount is > 0 && requestedQuantity < eventInfo.MinTicketsPerAccount.Value)
+                {
+                    throw new InvalidOperationException($"The requested ticket quantity ({requestedQuantity}) is below the event minimum ({eventInfo.MinTicketsPerAccount.Value}).");
+                }
+
+                if (eventInfo.MaxTicketsPerAccount is > 0)
+                {
+                    var existingQuantity =
+                        await _orderRepository.GetCustomerEventTicketQuantityAsync(
+                            customerId,
+                            dto.EventId);
+
+                    if (existingQuantity + requestedQuantity > eventInfo.MaxTicketsPerAccount.Value)
+                    {
+                        throw new InvalidOperationException(
+                            $"You have already ordered {existingQuantity} ticket(s). The event limit is " +
+                            $"{eventInfo.MaxTicketsPerAccount.Value} ticket(s) per account.");
+                    }
+                }
+
+                var newOrder = new Order
+                {
+                    FullName = dto.FullName,
+                    Email = dto.Email,
+                    Phone = dto.Phone,
+                    CustomerId = customerId,
+                    EventId = dto.EventId,
+                    EventName = eventInfo.Title,
+                    PosterUrl = eventInfo.PosterUrl,
+
+                    StartsAt = eventInfo.StartsAt,
+                    EndsAt = eventInfo.EndsAt,
+
+                    HoldToken = hold.HoldId,
+                    ExpiresAt = hold.ExpiresAtUtc,
+                    Status = "Pending",
+
+                    OrderDate = DateTime.UtcNow,
+
+                    IsDeleted = false,
+
+                    OrderDetails = new List<OrderDetail>(),
+                    OrderAttendees = new List<OrderAttendee>()
+                };
+
+                long totalAmount = 0;
+                foreach (var detailDto in dto.OrderDetails)
+                {
+                    var ticketType = eventInfo.TicketTypes.FirstOrDefault(t => t.TicketTypeId == detailDto.TicketTypeId);
+                    if (ticketType == null) throw new Exception($"Ticket type ID {detailDto.TicketTypeId} does not exist.");
+
+                    var nowUtc = DateTime.UtcNow;
+
+                    if (ticketType.Status != "Active" ||
+                        (ticketType.SalesStartsAt.HasValue &&
+                         ticketType.SalesStartsAt.Value > nowUtc) ||
+                        (ticketType.SalesEndsAt.HasValue &&
+                         ticketType.SalesEndsAt.Value <= nowUtc))
+                    {
+                        throw new InvalidOperationException(
+                            $"Ticket type {ticketType.TypeName} is not currently on sale.");
+                    }
+
+                    //if (detailDto.Quantity < ticketType.MinPerOrder) throw new Exception($"Vé {ticketType.TypeName} yêu cầu ít nhất {ticketType.MinPerOrder} vé.");
+                    if (detailDto.Quantity > ticketType.MaxPerOrder) throw new Exception($"The maximum quantity for ticket type {ticketType.TypeName} is {ticketType.MaxPerOrder}.");
+
+                    string? seatIdsJson = null;
+
+                    if (dto.IsReservedSeating)
+                    {
+                        var seatIds = detailDto.SeatIds;
+
+                        if (seatIds == null ||
+                            seatIds.Count != detailDto.Quantity ||
+                            seatIds.Any(id => id <= 0))
+                        {
+                            throw new Exception("The seat list is invalid or a SeatId is missing.");
+                        }
+
+                        seatIdsJson = JsonSerializer.Serialize(seatIds);
+                    }
+
+                    var orderDetail = new OrderDetail
+                    {
+                        TicketTypeId = detailDto.TicketTypeId,
+                        TicketTypeName = ticketType.TypeName,
+                        Quantity = detailDto.Quantity,
+                        UnitPrice = ticketType.EffectivePrice ?? ticketType.Price,
+                        SeatIds = seatIdsJson
+                    };
+
+                    newOrder.OrderDetails.Add(orderDetail);
+                    totalAmount += orderDetail.UnitPrice * orderDetail.Quantity;
+                }
+
+                newOrder.TotalAmount = totalAmount;
+                newOrder.FinalAmount = totalAmount;
+                newOrder.DiscountAmount = 0;
+
+                if (!string.IsNullOrWhiteSpace(dto.VoucherCode))
+                {
+                    var voucherResult = await _paymentApiClient.ApplyVoucherAsync(
+                        new ApplyVoucherRequestDto
+                        {
+                            Code = dto.VoucherCode.Trim(),
+                            EventId = dto.EventId,
+                            OrderAmount = totalAmount
+                        });
+
+                    if (!voucherResult.IsValid)
+                    {
+                        throw new ArgumentException(
+                            voucherResult.Message ?? "Invalid voucher.");
+                    }
+
+                    newOrder.DiscountAmount = voucherResult.DiscountAmount;
+                    newOrder.FinalAmount = voucherResult.FinalAmount;
+                    newOrder.VoucherId = voucherResult.VoucherId;
+                }
+
+                if (dto.Attendees != null && dto.Attendees.Any())
+                {
+                    foreach (var att in dto.Attendees)
+                    {
+                        newOrder.OrderAttendees.Add(new OrderAttendee
+                        {
+                            FullName = att.FullName,
+                            CitizenId = att.CitizenId,
+                            Phone = att.Phone,
+                            TicketTypeId = att.TicketTypeId,
+                            SeatId = att.SeatId,
+                            IsPrimaryBuyer = att.IsPrimaryBuyer
+                        });
+                    }
+                }
+
                 await _orderRepository.AddCompleteOrderAsync(newOrder);
 
                 await _context.SaveChangesAsync();
@@ -195,9 +232,9 @@ namespace TicketAPI.Services
 
                 var realError = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
 
-                _logger.LogError(ex, "Lỗi tạo đơn hàng chi tiết: {RealError}", realError);
+                _logger.LogError(ex, "Failed to create order details: {RealError}", realError);
 
-                throw new Exception("Lỗi hệ thống khi tạo đơn hàng: " + realError);
+                throw new Exception("A system error occurred while creating the order: " + realError);
             }
         }
         private async Task ValidateRedisHoldAsync(CreateOrderDTO dto, int userId)
@@ -208,14 +245,14 @@ namespace TicketAPI.Services
                 {
                     if (detail.SeatIds == null || !detail.SeatIds.Any())
                     {
-                        throw new Exception($"Vui lòng chọn ghế cho loại vé {detail.TicketTypeId}.");
+                        throw new Exception($"Please select seats for ticket type {detail.TicketTypeId}.");
                     }
                     foreach (var seatId in detail.SeatIds)
                     {
                         var holdInfo = await _holdService.GetHoldInfoAsync(dto.EventId, seatId);
                         if (holdInfo == null || holdInfo.UserId != userId)
                         {
-                            throw new Exception($"Ghế {seatId} đã hết hạn giữ hoặc không phải do bạn chọn.");
+                            throw new Exception($"Seat {seatId} has expired or was not selected by you.");
                         }
                     }
                 }
@@ -228,7 +265,7 @@ namespace TicketAPI.Services
 
                     if (holdInfo == null || holdInfo.Quantity < detail.Quantity)
                     {
-                        throw new Exception($"Số lượng vé bạn giữ cho loại vé {detail.TicketTypeId} không đủ hoặc đã hết hạn.");
+                        throw new Exception($"The number of held tickets for ticket type {detail.TicketTypeId} is insufficient or the hold has expired.");
                     }
                 }
             }
@@ -342,7 +379,7 @@ namespace TicketAPI.Services
             if (!saleRecorded)
             {
                 throw new InvalidOperationException(
-                    "EventAPI không cập nhật được số lượng vé đã bán.");
+                    "EventAPI could not update the number of tickets sold.");
             }
 
             var tickets = new List<Ticket>();
@@ -397,7 +434,8 @@ namespace TicketAPI.Services
                         SeatId = attendee.SeatId,
                         OwnerUserId = order.CustomerId,
                         OwnerName = attendee.FullName,
-                        Status = "Active"
+                        Status = "Active",
+                        OrderAttendeeId = attendee.AttendeeId
                     });
                 }
             }
@@ -511,6 +549,25 @@ namespace TicketAPI.Services
 
             await dbTransaction.CommitAsync();
 
+            if (!string.IsNullOrWhiteSpace(order.HoldToken))
+            {
+                try
+                {
+                    await _holdService.CancelHoldSessionAsync(order.HoldToken, order.CustomerId);
+                }
+                catch (KeyNotFoundException)
+                {
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(
+                        ex,
+                        "Order {OrderId} was paid, but hold {HoldId} could not be cleaned up",
+                        order.OrderId,
+                        order.HoldToken);
+                }
+            }
+
             try
             {
                 await _emailService.SendPaymentSuccessAsync(order, tickets);
@@ -519,7 +576,7 @@ namespace TicketAPI.Services
             {
                 _logger.LogError(
                     ex,
-                    "Gửi email xác nhận thanh toán thất bại cho Order {OrderId}",
+                    "Failed to send the payment confirmation email for order {OrderId}",
                     order.OrderId);
             }
         }
@@ -538,14 +595,14 @@ namespace TicketAPI.Services
             var ticket = await _ticketRepository.GetTicketForQrRotationAsync(ticketId, userId);
 
             if (ticket == null)
-                throw new KeyNotFoundException("Không tìm thấy vé.");
+                throw new KeyNotFoundException("Ticket not found.");
 
             if (ticket.Order.Status != "Paid" ||
                 ticket.Status != "Active" ||
                 ticket.CheckedInAt != null)
             {
                 throw new InvalidOperationException(
-                    "Vé chưa thanh toán, không còn hoạt động hoặc đã check-in.");
+                    "The ticket is unpaid, inactive, or has already been checked in.");
             }
 
             var now = DateTime.UtcNow;
@@ -610,6 +667,7 @@ namespace TicketAPI.Services
                 PaymentMethod = order.PaymentMethod,
                 Status = order.Status,
                 ExpiresAt = order.ExpiresAt,
+                HoldId = order.HoldToken,
                 TicketCount = order.OrderDetails?.Sum(detail => detail.Quantity) ?? 0
             }).ToList();
         }
@@ -646,6 +704,7 @@ namespace TicketAPI.Services
                 EventId = order.EventId,
                 Status = order.Status,
                 FinalAmount = order.FinalAmount,
+                PaymentGatewayRef = order.PaymentGatewayRef,
                 ExpectedTicketCount = order.OrderDetails.Sum(detail => detail.Quantity),
                 IssuedTicketCount = tickets.Count,
                 TicketsWithoutQrCount = tickets.Count(
@@ -653,19 +712,16 @@ namespace TicketAPI.Services
             };
         }
 
-        public async Task RepairPaidOrderArtifactsAsync(
-            int orderId,
-            long amount,
-            string transactionRef)
+        public async Task RepairPaidOrderArtifactsAsync(int orderId, long amount, string transactionRef)
         {
             if (orderId <= 0)
-                throw new ArgumentException("Order ID không hợp lệ.");
+                throw new ArgumentException("Invalid order ID.");
 
             if (amount <= 0)
-                throw new ArgumentException("Payment amount không hợp lệ.");
+                throw new ArgumentException("Invalid payment amount.");
 
             if (string.IsNullOrWhiteSpace(transactionRef))
-                throw new ArgumentException("Transaction reference không hợp lệ.");
+                throw new ArgumentException("Invalid transaction reference.");
 
             await using var dbTransaction =
                 await _context.Database.BeginTransactionAsync();
@@ -673,20 +729,16 @@ namespace TicketAPI.Services
             var order = await _orderRepository.GetOrderByOrderId(orderId);
 
             if (order == null || order.IsDeleted)
-                throw new KeyNotFoundException("Order không tồn tại.");
+                throw new KeyNotFoundException("Order not found.");
 
-            if (!string.Equals(
-                    order.Status,
-                    "Paid",
-                    StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(order.Status, "Paid", StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidOperationException(
-                    "Chỉ có thể khôi phục vé cho order đã thanh toán.");
+                throw new InvalidOperationException("Tickets can only be recovered for a paid order.");
             }
 
             if (order.FinalAmount != amount)
                 throw new InvalidOperationException(
-                    "Payment amount không khớp với FinalAmount của order.");
+                    "The payment amount does not match the order's final amount.");
 
             if (string.IsNullOrWhiteSpace(order.PaymentGatewayRef) ||
                 !string.Equals(
@@ -695,96 +747,164 @@ namespace TicketAPI.Services
                     StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
-                    "Transaction reference không khớp với order.");
+                    "The transaction reference does not match the order.");
             }
 
             var details = order.OrderDetails.ToList();
+
             var attendees = order.OrderAttendees
                 .OrderBy(attendee => attendee.AttendeeId)
                 .ToList();
 
             var expectedTicketCount = details.Sum(detail => detail.Quantity);
+
             var existingTickets = order.Tickets
                 .Where(ticket => !ticket.IsDeleted)
                 .ToList();
 
             if (attendees.Count != expectedTicketCount)
-                throw new InvalidOperationException(
-                    "Số attendee không khớp với số vé trong order.");
-
-            if (existingTickets.Count > expectedTicketCount)
-                throw new InvalidOperationException(
-                    "Order đã có nhiều ticket hơn số lượng dự kiến.");
-
-            // Hiện Ticket không lưu OrderAttendeeId nên không thể xác định
-            // an toàn attendee nào còn thiếu khi chỉ có một phần ticket.
-            if (existingTickets.Count > 0 &&
-                existingTickets.Count < expectedTicketCount)
             {
                 throw new InvalidOperationException(
-                    "Order chỉ thiếu một phần ticket. Cần kiểm tra thủ công để tránh tạo trùng hoặc gán sai attendee.");
+                    "The attendee count does not match the ticket quantity in the order.");
+            }
+
+            if (attendees.Any(attendee => !attendee.TicketTypeId.HasValue))
+            {
+                throw new InvalidOperationException(
+                    "An attendee has not been assigned a ticket type.");
+            }
+
+            if (existingTickets.Count > expectedTicketCount)
+            {
+                throw new InvalidOperationException(
+                    "The order already has more tickets than expected.");
+            }
+
+            // Nếu đang thiếu ticket nhưng ticket cũ chưa liên kết attendee,
+            // không thể xác định an toàn attendee nào còn thiếu.
+            if (existingTickets.Count < expectedTicketCount &&
+                existingTickets.Any(ticket => !ticket.OrderAttendeeId.HasValue))
+            {
+                throw new InvalidOperationException(
+                    "Missing tickets cannot be issued because an existing ticket is not linked to an attendee.");
+            }
+
+            var attendeeById = attendees.ToDictionary(
+                attendee => attendee.AttendeeId);
+
+            var linkedAttendeeIds = existingTickets
+                .Where(ticket => ticket.OrderAttendeeId.HasValue)
+                .Select(ticket => ticket.OrderAttendeeId!.Value)
+                .ToList();
+
+            if (linkedAttendeeIds.Count != linkedAttendeeIds.Distinct().Count())
+            {
+                throw new InvalidOperationException(
+                    "An attendee is linked to multiple tickets.");
+            }
+
+            foreach (var ticket in existingTickets
+                         .Where(ticket => ticket.OrderAttendeeId.HasValue))
+            {
+                var attendeeId = ticket.OrderAttendeeId!.Value;
+
+                if (!attendeeById.TryGetValue(attendeeId, out var attendee))
+                {
+                    throw new InvalidOperationException(
+                        $"Ticket {ticket.TicketId} is linked to an attendee who does not belong to this order.");
+                }
+
+                if (attendee.TicketTypeId != ticket.TicketTypeId)
+                {
+                    throw new InvalidOperationException(
+                        $"Ticket {ticket.TicketId} does not match the attendee's ticket type.");
+                }
+            }
+
+            var issuedAttendeeIds = linkedAttendeeIds.ToHashSet();
+
+            // Đủ ticket rồi thì không tạo ticket mới.
+            // Nếu thiếu ticket, chỉ lấy attendee chưa được liên kết với ticket.
+            var attendeeIdsToIssue = existingTickets.Count == expectedTicketCount
+                ? new HashSet<int>()
+                : attendees
+                    .Where(attendee =>
+                        !issuedAttendeeIds.Contains(attendee.AttendeeId))
+                    .Select(attendee => attendee.AttendeeId)
+                    .ToHashSet();
+
+            if (existingTickets.Count + attendeeIdsToIssue.Count != expectedTicketCount)
+            {
+                throw new InvalidOperationException(
+                    "The number of attendees requiring tickets does not match the order's ticket quantity.");
             }
 
             var createdTickets = new List<Ticket>();
 
-            if (existingTickets.Count == 0)
+            foreach (var detail in details)
             {
-                foreach (var detail in details)
+                var attendeesForType = attendees
+                    .Where(attendee =>
+                        attendee.TicketTypeId == detail.TicketTypeId)
+                    .ToList();
+
+                if (attendeesForType.Count != detail.Quantity)
                 {
-                    var attendeesForType = attendees
-                        .Where(attendee =>
-                            attendee.TicketTypeId == detail.TicketTypeId)
-                        .ToList();
-
-                    if (attendeesForType.Count != detail.Quantity)
-                    {
-                        throw new InvalidOperationException(
-                            $"Số attendee không khớp với loại vé {detail.TicketTypeId}.");
-                    }
-
-                    var orderSeatIds = string.IsNullOrWhiteSpace(detail.SeatIds)
-                        ? new List<int>()
-                        : JsonSerializer.Deserialize<List<int>>(detail.SeatIds)
-                            ?? new List<int>();
-
-                    var attendeeSeatIds = attendeesForType
-                        .Where(attendee => attendee.SeatId.HasValue)
-                        .Select(attendee => attendee.SeatId!.Value)
-                        .ToList();
-
-                    if (orderSeatIds.Count > 0 &&
-                        (orderSeatIds.Count != detail.Quantity ||
-                         attendeeSeatIds.Count != detail.Quantity ||
-                         !orderSeatIds.ToHashSet().SetEquals(attendeeSeatIds)))
-                    {
-                        throw new InvalidOperationException(
-                            $"Danh sách ghế của loại vé {detail.TicketTypeId} không khớp với attendees.");
-                    }
-
-                    if (orderSeatIds.Count == 0 && attendeeSeatIds.Count > 0)
-                    {
-                        throw new InvalidOperationException(
-                            $"Attendee có SeatId nhưng order không lưu danh sách ghế cho loại vé {detail.TicketTypeId}.");
-                    }
-
-                    foreach (var attendee in attendeesForType)
-                    {
-                        createdTickets.Add(new Ticket
-                        {
-                            TicketCode = Guid.NewGuid(),
-                            OrderId = order.OrderId,
-                            EventId = order.EventId,
-                            TicketTypeId = detail.TicketTypeId,
-                            TicketTypeName = detail.TicketTypeName,
-                            SeatId = attendee.SeatId,
-                            OwnerUserId = order.CustomerId,
-                            OwnerName = attendee.FullName,
-                            Status = "Active",
-                            IsDeleted = false
-                        });
-                    }
+                    throw new InvalidOperationException(
+                        $"The attendee count does not match ticket type {detail.TicketTypeId}.");
                 }
 
+                var orderSeatIds = string.IsNullOrWhiteSpace(detail.SeatIds)
+                    ? new List<int>()
+                    : JsonSerializer.Deserialize<List<int>>(detail.SeatIds)
+                        ?? new List<int>();
+
+                var attendeeSeatIds = attendeesForType
+                    .Where(attendee => attendee.SeatId.HasValue)
+                    .Select(attendee => attendee.SeatId!.Value)
+                    .ToList();
+
+                if (orderSeatIds.Count > 0 &&
+                    (orderSeatIds.Count != detail.Quantity ||
+                     attendeeSeatIds.Count != detail.Quantity ||
+                     !orderSeatIds.ToHashSet().SetEquals(attendeeSeatIds)))
+                {
+                    throw new InvalidOperationException(
+                        $"The seat list for ticket type {detail.TicketTypeId} does not match the attendees.");
+                }
+
+                if (orderSeatIds.Count == 0 && attendeeSeatIds.Count > 0)
+                {
+                    throw new InvalidOperationException(
+                        $"An attendee has a SeatId, but the order has no saved seat list for ticket type {detail.TicketTypeId}.");
+                }
+
+                var attendeesToIssueForType = attendeesForType
+                    .Where(attendee =>
+                        attendeeIdsToIssue.Contains(attendee.AttendeeId))
+                    .ToList();
+
+                foreach (var attendee in attendeesToIssueForType)
+                {
+                    createdTickets.Add(new Ticket
+                    {
+                        TicketCode = Guid.NewGuid(),
+                        OrderId = order.OrderId,
+                        OrderAttendeeId = attendee.AttendeeId,
+                        EventId = order.EventId,
+                        TicketTypeId = detail.TicketTypeId,
+                        TicketTypeName = detail.TicketTypeName,
+                        SeatId = attendee.SeatId,
+                        OwnerUserId = order.CustomerId,
+                        OwnerName = attendee.FullName,
+                        Status = "Active",
+                        IsDeleted = false
+                    });
+                }
+            }
+
+            if (createdTickets.Count > 0)
+            {
                 await _ticketRepository.AddRangeAsync(createdTickets);
                 await _context.SaveChangesAsync();
             }
@@ -908,6 +1028,93 @@ namespace TicketAPI.Services
                     Status = order.Status
                 }).ToList()
             };
+        }
+
+        public async Task ExpirePendingOrdersAsync()
+        {
+            var now = DateTime.UtcNow;
+            var expiredOrders =
+                await _orderRepository.GetExpiredPendingOrdersAsync(now);
+
+            foreach (var order in expiredOrders)
+            {
+                var changed = await _orderRepository.TryMarkOrderExpiredAsync(order.OrderId, now);
+
+                if (!changed)
+                    continue;
+
+                await _paymentApiClient.CancelPendingPaymentsAsync(order.OrderId);
+
+                await _statusHistoryService.RecordAsync(new StatusHistory
+                {
+                    TargetType = "Order",
+                    TargetId = order.OrderId,
+                    EventId = order.EventId,
+                    OrderId = order.OrderId,
+                    HoldId = order.HoldToken,
+                    CustomerId = order.CustomerId,
+                    Action = "OrderExpired",
+                    OldStatus = "Pending",
+                    NewStatus = "Expired",
+                    ActorRole = "System",
+                    Metadata = "{}"
+                });
+            }
+        }
+
+        public async Task CancelPendingOrderAsync(int orderId)
+        {
+            if (orderId <= 0)
+                throw new ArgumentOutOfRangeException(nameof(orderId));
+
+            var order = await _orderRepository.GetOrderByOrderId(orderId);
+
+            if (order == null || order.IsDeleted)
+                throw new KeyNotFoundException($"Order #{orderId} was not found.");
+
+            if (string.Equals(order.Status, "Cancelled", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(order.Status, "Expired", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            if (!string.Equals(order.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Only a Pending order can be cancelled. Current status: {order.Status}.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(order.HoldToken))
+            {
+                try
+                {
+                    await _holdService.CancelHoldSessionAsync(
+                        order.HoldToken,
+                        order.CustomerId);
+                }
+                catch (KeyNotFoundException)
+                {
+                }
+            }
+
+            order.Status = "Cancelled";
+            await _orderRepository.UpdateAsync(order);
+
+            await _statusHistoryService.RecordAsync(new StatusHistory
+            {
+                TargetType = "Order",
+                TargetId = order.OrderId,
+                EventId = order.EventId,
+                OrderId = order.OrderId,
+                HoldId = order.HoldToken,
+                CustomerId = order.CustomerId,
+                Action = "OrderCancelled",
+                OldStatus = "Pending",
+                NewStatus = "Cancelled",
+                ActorRole = "System",
+                Reason = "Customer cancelled payment on VNPay.",
+                Metadata = "{}"
+            });
         }
     }
 }

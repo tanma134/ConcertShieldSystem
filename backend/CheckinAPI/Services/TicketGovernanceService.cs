@@ -49,11 +49,11 @@ namespace CheckinAPI.Services
             _configuration = configuration;
             _logger = logger;
             _ticketDbConnection = _configuration.GetConnectionString("DefaultConnection")
-                ?? "Host=localhost;Port=5432;Database=05_ticket_db;Username=postgres;Password=123456";
+                ?? _configuration.GetConnectionString("TicketConnection") ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TICKET_POSTGRES") ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TEST_POSTGRES") ?? throw new InvalidOperationException("Missing ticket database connection string.");
             _eventDbConnection = _configuration.GetConnectionString("EventDbConnection")
-                ?? "Host=localhost;Port=5432;Database=event_db;Username=postgres;Password=123456";
+                ?? _configuration.GetConnectionString("EventConnection") ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_EVENT_POSTGRES") ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TEST_POSTGRES") ?? throw new InvalidOperationException("Missing event database connection string.");
             _notifDbConnection = _configuration.GetConnectionString("NotificationDbConnection")
-                ?? "Host=localhost;Port=5432;Database=notification_db;Username=postgres;Password=123456";
+                ?? _configuration.GetConnectionString("NotificationConnection") ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_NOTIFICATION_POSTGRES") ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TEST_POSTGRES") ?? throw new InvalidOperationException("Missing notification database connection string.");
 
             Task.Run(EnsureDbTablesCreatedAsync);
         }
@@ -551,9 +551,10 @@ namespace CheckinAPI.Services
                 await notifConn.OpenAsync();
 
                 string notifTitle = reasonType == "EVENT_CANCELLED"
-                    ? $"Thông báo hủy sự kiện: {eventTitle}"
-                    : $"Thông báo dời lịch sự kiện: {eventTitle}";
-                string notifContent = $"Sự kiện '{eventTitle}' đã được xác nhận {(reasonType == "EVENT_CANCELLED" ? "hủy bỏ" : "hoãn lại")}. Lý do: {reasonNote}. Toàn bộ vé của quý khách cho sự kiện này đã được khóa và thu hồi (Mã đối soát #{reconciliationId}).";
+                    ? $"Event Cancellation Notice: {eventTitle}"
+                    : $"Event Reschedule Notice: {eventTitle}";
+                var statusText = reasonType == "EVENT_CANCELLED" ? "cancelled" : "postponed/rescheduled";
+                string notifContent = $"Event '{eventTitle}' has been {statusText}. Reason: {reasonNote}. All your tickets for this event have been locked and revoked (Audit Reconciliation #{reconciliationId}).";
 
                 foreach (var uid in customerIds)
                 {

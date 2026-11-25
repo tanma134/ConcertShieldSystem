@@ -7,6 +7,7 @@ namespace TicketAPI.Controllers
     // "My tickets": the signed-in customer's paid tickets and their return state.
     [Route("api/tickets/my")]
     [Authorize]
+    [Authorize(Roles = "Cusstomer")]
     public class MyTicketsController : TicketApiControllerBase
     {
         private readonly ITicketReturnService _service;

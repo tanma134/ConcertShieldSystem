@@ -53,14 +53,14 @@ namespace EventAPI.DTOs
         [MaxLength(500)]
         public string? MetaDescription { get; set; }
 
-        /// <summary>Seat hold timeout in minutes (1 to 30, default 10).</summary>
+        // Thoi gian giu ghe tinh bang phut (tu 1 den 30, mac dinh 10 phut)
         public int? HoldTimeoutMinutes { get; set; }
 
-        /// <summary>Re-entry policy (NoReEntry, Unlimited, TimeLimited).</summary>
+        // Chinh sach vao lai su kien (NoReEntry, Unlimited, TimeLimited)
         [MaxLength(30)]
         public string? ReEntryPolicy { get; set; }
 
-        /// <summary>Time-limited re-entry duration in minutes (5 to 120).</summary>
+        // Thoi gian cho phep vao lai khi chon TimeLimited (tu 5 den 120 phut)
         public int? ReEntryDurationMinutes { get; set; }
     }
 
@@ -113,14 +113,14 @@ namespace EventAPI.DTOs
         [MaxLength(500)]
         public string? MetaDescription { get; set; }
 
-        /// <summary>Seat hold timeout in minutes (1 to 30).</summary>
+        // Thoi gian giu ghe tinh bang phut (tu 1 den 30 phut)
         public int? HoldTimeoutMinutes { get; set; }
 
-        /// <summary>Re-entry policy (NoReEntry, Unlimited, TimeLimited).</summary>
+        // Chinh sach vao lai su kien (NoReEntry, Unlimited, TimeLimited)
         [MaxLength(30)]
         public string? ReEntryPolicy { get; set; }
 
-        /// <summary>Time-limited re-entry duration in minutes (5 to 120).</summary>
+        // Thoi gian cho phep vao lai khi chon TimeLimited (tu 5 den 120 phut)
         public int? ReEntryDurationMinutes { get; set; }
     }
 

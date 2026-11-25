@@ -314,7 +314,7 @@ export default function TicketGovernancePage() {
             <div className="stat-info">
               <span className="stat-label">Total Revoked Tickets</span>
               <strong className="stat-val">
-                {loadingStats ? "..." : stats.totalRevokedTickets.toLocaleString()}
+                {loadingStats ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : stats.totalRevokedTickets.toLocaleString()}
               </strong>
               <span className="stat-sub">System-wide invalidations</span>
             </div>
@@ -324,7 +324,7 @@ export default function TicketGovernancePage() {
             <div className="stat-info">
               <span className="stat-label">Bulk Event Disruptions</span>
               <strong className="stat-val">
-                {loadingStats ? "..." : stats.totalBulkEvents}
+                {loadingStats ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : stats.totalBulkEvents}
               </strong>
               <span className="stat-sub">Reconciliation audit records</span>
             </div>
@@ -334,7 +334,7 @@ export default function TicketGovernancePage() {
             <div className="stat-info">
               <span className="stat-label">Reissued Tickets</span>
               <strong className="stat-val">
-                {loadingStats ? "..." : stats.totalReissuedTickets}
+                {loadingStats ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : stats.totalReissuedTickets}
               </strong>
               <span className="stat-sub">1-to-1 traceability: Old to New</span>
             </div>
@@ -459,7 +459,6 @@ export default function TicketGovernancePage() {
                         borderRadius: "10px"
                       }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-                          <span style={{ fontSize: "18px" }}>⚠️</span>
                           <strong style={{ fontSize: "15px", color: "#991b1b" }}>
                             WARNING: EVENT TICKETS PENDING BULK REVOCATION ({selectedEventObj.status.toUpperCase()})
                           </strong>
@@ -479,7 +478,6 @@ export default function TicketGovernancePage() {
                           fontWeight: "800",
                           fontSize: "14px"
                         }}>
-                          <span>🎟️</span>
                           <span>Total Tickets to be Revoked: <strong>{Number(selectedEventObj.activeTicketsCount).toLocaleString()} tickets</strong></span>
                         </div>
                       </div>
@@ -596,7 +594,7 @@ export default function TicketGovernancePage() {
                 </div>
 
                 {loadingReconciliations ? (
-                  <div className="loading-spinner-box">Loading reconciliation records...</div>
+                  <div className="loading-spinner-box"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
                 ) : reconciliations.length === 0 ? (
                   <div className="empty-state">No bulk revocation reconciliation records found.</div>
                 ) : (
@@ -681,7 +679,7 @@ export default function TicketGovernancePage() {
                       onClick={handleBulkRevokeSubmit}
                       disabled={submittingBulk}
                     >
-                      {submittingBulk ? "Processing atomic transaction..." : "I Confirm & Revoke All Tickets"}
+                      {submittingBulk ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "I Confirm & Revoke All Tickets"}
                     </button>
                   </div>
                 </div>
@@ -767,7 +765,7 @@ export default function TicketGovernancePage() {
 
               {/* Revocations Table */}
               {loadingRevocations ? (
-                <div className="loading-spinner-box">Loading revocation records...</div>
+                <div className="loading-spinner-box"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
               ) : revocations.length === 0 ? (
                 <div className="empty-state">No revoked tickets match the selected filters.</div>
               ) : (
@@ -918,7 +916,7 @@ export default function TicketGovernancePage() {
 
               {/* Reissue Table */}
               {loadingReissues ? (
-                <div className="loading-spinner-box">Loading reissue history records...</div>
+                <div className="loading-spinner-box"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
               ) : reissues.length === 0 ? (
                 <div className="empty-state">No ticket reissue records match the selected filters.</div>
               ) : (
@@ -1013,7 +1011,6 @@ export default function TicketGovernancePage() {
           <div className="gov-modal-overlay">
             <div className="gov-dialog-modal">
               <div className={`gov-dialog-header ${noticeDialog.type?.toLowerCase()}`}>
-                <span className="dialog-icon">{noticeDialog.type === "WARNING" ? "⚠️" : "ℹ️"}</span>
                 <h3>{noticeDialog.title}</h3>
                 <button
                   type="button"

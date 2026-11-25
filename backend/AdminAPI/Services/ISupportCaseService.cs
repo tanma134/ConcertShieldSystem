@@ -1,8 +1,8 @@
-using AdminAPI.DTOs;
+﻿using AdminAPI.DTOs;
 
 namespace AdminAPI.Services;
 
-// Service contract for Support Case Management and Dispute Resolution
+// Service contract for Support Case Management
 public interface ISupportCaseService
 {
     // Create a new customer support case with transaction context
@@ -20,9 +20,17 @@ public interface ISupportCaseService
     // Resolve and close support case with mandatory resolution
     Task<SupportCaseDetailDto> ResolveCaseAsync(int caseId, ResolveCaseRequest req, int resolverId, string resolverName, string role);
 
+    Task<SupportCaseDetailDto> DismissCaseAsync(int caseId, DismissCaseRequest req, int resolverId, string resolverName, string role);
+
     // Append internal investigation or communication note to case timeline
     Task<SupportCaseNoteDto> AddNoteAsync(int caseId, AddSupportCaseNoteRequest req, int authorId, string authorName, string authorRole);
 
     // Get the latest active or completed support case linked to an order
     Task<SupportCaseDetailDto?> GetCaseByOrderIdAsync(int orderId);
+
+    // Get order IDs linked to support cases owned by the current customer
+    Task<List<int>> GetReportedOrderIdsAsync(int currentUserId, string? currentUserEmail);
+
+    Task<List<SupportCaseListDto>> GetTicketDisputesAsync(SupportCaseQuery query, int currentUserId, bool isAdmin);
 }
+

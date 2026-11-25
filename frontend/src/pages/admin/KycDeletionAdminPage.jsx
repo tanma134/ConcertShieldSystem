@@ -91,7 +91,7 @@ export default function KycDeletionAdminPage() {
         </div>
 
         {loading ? (
-          <div className="empty-state">Loading...</div>
+          <div className="empty-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
         ) : items.length === 0 ? (
           <div className="empty-state">No requests found.</div>
         ) : (
@@ -153,7 +153,7 @@ export default function KycDeletionAdminPage() {
             <div className="modal-footer">
               <button type="button" className="admin-button-secondary" onClick={() => setAction(null)} disabled={busy}>Cancel</button>
               <button type="button" className={`admin-button ${action.type === "approve" ? "danger" : ""}`} onClick={submit} disabled={busy}>
-                {busy ? "Working..." : action.type === "approve" ? "Approve & delete" : "Reject"}
+                {busy ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : action.type === "approve" ? "Approve & delete" : "Reject"}
               </button>
             </div>
           </div>

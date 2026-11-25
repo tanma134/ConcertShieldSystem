@@ -71,12 +71,36 @@ function getTicketCategory(ticket, restricted = false) {
   );
   const isUsable = ["active", "used", "checkedin"].includes(ticketStatus);
 
-  return isPaid && isUsable ? "success" : "other";
+  return isPaid && isUsable ? "success" : "processing";
 }
 
 function getStatusLabel(category, ticket) {
   if (category === "success") return "Successful";
-  if (category === "processing") return "Refund processing";
+  if (category === "processing") {
+    const orderStatus = normalize(ticket.orderStatus);
+    const ticketStatus = normalize(ticket.status);
+    const refundProcessingStatuses = [
+      "refundpending",
+      "refundrequested",
+      "pendingrefund",
+      "processingrefund",
+      "returnpending",
+    ];
+
+    if (
+      refundProcessingStatuses.includes(orderStatus) ||
+      refundProcessingStatuses.includes(ticketStatus)
+    ) {
+      return "Refund processing";
+    }
+
+    const paidStatuses = ["paid", "completed", "success", "succeeded"];
+    if (ticket.orderStatus && !paidStatuses.includes(orderStatus)) {
+      return ticket.orderStatus;
+    }
+
+    return ticket.status || ticket.orderStatus || "Processing";
+  }
   if (category === "cancelled") return "Refunded";
   if (category === "restricted") return "Blocked";
 
@@ -93,6 +117,16 @@ function formatDate(value) {
     dateStyle: "medium",
     timeStyle: "short",
   });
+}
+
+function toLocalDateKey(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function formatPrice(value) {
@@ -130,6 +164,8 @@ export default function MyTicketsPage() {
   const [tickets, setTickets] = useState([]);
   const [restrictions, setRestrictions] = useState([]);
   const [activeTab, setActiveTab] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -269,11 +305,22 @@ export default function MyTicketsPage() {
   const categoryOf = (ticket) =>
     getTicketCategory(ticket, restrictionByTicketId.has(Number(ticket.ticketId)));
 
-  const visibleTickets = useMemo(() => {
-    if (activeTab === "all") return tickets;
+  const dateFilteredTickets = useMemo(() => {
+    let filteredTickets = tickets;
+    if (dateFrom || dateTo) {
+      filteredTickets = filteredTickets.filter((ticket) => {
+        const eventDate = toLocalDateKey(ticket.startsAt);
+        return eventDate && (!dateFrom || eventDate >= dateFrom) && (!dateTo || eventDate <= dateTo);
+      });
+    }
+    return filteredTickets;
+  }, [tickets, dateFrom, dateTo]);
 
-    return tickets.filter((ticket) => categoryOf(ticket) === activeTab);
-  }, [tickets, activeTab, restrictionByTicketId]);
+  const visibleTickets = useMemo(() => {
+    if (activeTab === "all") return dateFilteredTickets;
+
+    return dateFilteredTickets.filter((ticket) => categoryOf(ticket) === activeTab);
+  }, [dateFilteredTickets, activeTab, restrictionByTicketId]);
 
   const visibleOrders = useMemo(
     () => groupTicketsByOrder(visibleTickets),
@@ -281,9 +328,9 @@ export default function MyTicketsPage() {
   );
 
   function getTabCount(tabId) {
-    if (tabId === "all") return tickets.length;
+    if (tabId === "all") return dateFilteredTickets.length;
 
-    return tickets.filter((ticket) => categoryOf(ticket) === tabId).length;
+    return dateFilteredTickets.filter((ticket) => categoryOf(ticket) === tabId).length;
   }
 
   return (
@@ -304,23 +351,41 @@ export default function MyTicketsPage() {
             </span>
           </header>
 
-          <nav className="mt-tabs" aria-label="Filter tickets">
-            {TABS.map((tab) => (
-              <button
-                type="button"
-                key={tab.id}
-                className={activeTab === tab.id ? "is-active" : ""}
-                aria-pressed={activeTab === tab.id}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                {tab.label}
-                <span>{getTabCount(tab.id)}</span>
-              </button>
-            ))}
-          </nav>
+          <div className="mt-toolbar">
+            <nav className="mt-tabs" aria-label="Filter tickets">
+              {TABS.map((tab) => (
+                <button
+                  type="button"
+                  key={tab.id}
+                  className={activeTab === tab.id ? "is-active" : ""}
+                  aria-pressed={activeTab === tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  {tab.label}
+                  <span>{getTabCount(tab.id)}</span>
+                </button>
+              ))}
+            </nav>
+
+            <div className="mt-date-filter" aria-label="Filter by event date">
+              <label>
+                <span>From</span>
+                <input type="date" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} />
+              </label>
+              <label>
+                <span>To</span>
+                <input type="date" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} />
+              </label>
+              {(dateFrom || dateTo) && (
+                <button type="button" onClick={() => { setDateFrom(""); setDateTo(""); }}>
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
 
           {loading ? (
-            <div className="mt-state">Loading tickets...</div>
+            <div className="mt-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
           ) : error ? (
             <div className="mt-state is-error" role="alert">
               {error}
@@ -488,7 +553,7 @@ export default function MyTicketsPage() {
               <div className="bm-icon">↺</div>
               <div>
                 <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 700, color: "#1e1b2e" }}>
-                  Batch Ticket Refund — Order #{selectedOrder.orderId}
+                  Batch Ticket Refund - Order #{selectedOrder.orderId}
                 </h3>
                 <p style={{ margin: "2px 0 0", fontSize: "13px", color: "#6b6480" }}>
                   {selectedOrder.eventName}
@@ -664,7 +729,7 @@ export default function MyTicketsPage() {
                       : "pointer",
                 }}
               >
-                {submittingBatch ? "Submitting request..." : `Confirm Refund (${selectedTicketIds.length} tickets)`}
+                {submittingBatch ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : `Confirm Refund (${selectedTicketIds.length} tickets)`}
               </button>
             </div>
           </div>

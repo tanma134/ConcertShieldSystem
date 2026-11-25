@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using AdminAPI.Data;
 using AdminAPI.Repositories;
 using AdminAPI.Services;
@@ -13,9 +13,17 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AdminDbContext>(options =>
  options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddHttpClient();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<ISupportEmailService, SupportEmailService>();
-builder.Services.AddScoped<ISupportCaseService, SupportCaseService>();
+// Explicit factory: SupportCaseService exposes several convenience constructors for tests.
+builder.Services.AddScoped<ISupportCaseService>(sp => new SupportCaseService(
+    sp.GetRequiredService<ISupportCaseRepository>(),
+    sp.GetRequiredService<ILogger<SupportCaseService>>(),
+    sp.GetRequiredService<ISupportEmailService>(),
+    sp.GetRequiredService<IHttpClientFactory>(),
+    sp.GetRequiredService<IConfiguration>()));
+builder.Services.AddScoped<ISupportCaseRepository, SupportCaseRepository>();
 builder.Services.AddScoped<ISystemPolicyService, SystemPolicyService>();
 builder.Services.AddAdminRepositories();
 
@@ -52,10 +60,6 @@ builder.Services.AddAuthorization(options =>
 
  options.AddPolicy("CanManageSupportCases", policy =>
  policy.RequireRole("Admin", "Staff", "SupportStaff", "SecurityStaff"));
-
- // chỉ Admin được xem/xử lý fraud-risk (Staff không còn quyền).
- // Bật "Risk:RequirePermissionClaim": true để yêu cầu thêm claim permission = fraud.manage | risk.manage
- // (claim này phải do AuthenticationAPI cấp trong JWT).
  options.AddPolicy("CanReviewFraud", policy =>
  {
  policy.RequireRole("Admin");

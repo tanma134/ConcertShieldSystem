@@ -7,6 +7,7 @@ namespace BookingAPI.DTOS
         public int TicketTypeId { get; set; }
         public string TypeName { get; set; } = null!;
         public long Price { get; set; }
+        public long? EffectivePrice { get; set; }
         public int Quantity { get; set; }
         public int SoldQuantity { get; set; }
         public string Status { get; set; } = null!;

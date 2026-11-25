@@ -1,9 +1,9 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace AdminAPI.Models;
 
-// Customer support case and dispute entity
+// Customer support case
 [Table("support_cases")]
 public class SupportCase
 {
@@ -112,3 +112,4 @@ public class SupportCase
 
  public List<SupportCaseNote> Notes { get; set; } = new();
 }
+

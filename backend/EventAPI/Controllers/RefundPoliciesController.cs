@@ -6,13 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EventAPI.Controllers
 {
-    /// <summary>
-    /// Refund terms for a concert. A concert may have several tiers, e.g.
-    /// "100% refund up to 168h before" plus "50% refund up to 48h before".
-    ///
-    /// Terms are part of what buyers agree to, so they're only editable while the
-    /// concert is Draft or Rejected.
-    /// </summary>
+    // Quan ly cac chinh sach hoan ve cua concert theo cac moc thoi gian truoc gio dien
     [Route("api/refundpolicies")]
     public class RefundPoliciesController : BaseApiController
     {
@@ -27,7 +21,7 @@ namespace EventAPI.Controllers
             _createValidator = createValidator;
         }
 
-        /// <summary>Active refund policies for a concert, longest deadline first.</summary>
+        // Lay danh sach cac chinh sach hoan ve da cau hinh cua concert
         [HttpGet("event/{eventId:int}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetByEvent(int eventId)
@@ -40,10 +34,12 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
+        // Tao moi chinh sach hoan ve voi moc thoi gian va phan tram hoan
         [HttpPost("event/{eventId:int}")]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Create(int eventId, [FromBody] CreateRefundPolicyDTO dto)
         {
+            // Luu y: Validate du lieu chinh sach hoan ve truoc khi luu
             var validation = await _createValidator.ValidateAsync(dto);
             if (!validation.IsValid)
                 return BadRequest(ApiResponseDTO<object>.FailResponse(
@@ -58,18 +54,21 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
+        // Cap nhat moc thoi gian va ty le hoan ve cho su kien
         [HttpPut("{id:int}")]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateRefundPolicyDTO dto)
         {
             try
             {
+                // Luu y: Chi sua duoc khi concert o Draft hoac Rejected de dam bao hop dong nguoi mua
                 var result = await _refundPolicyService.UpdateAsync(id, dto, CurrentUserId, IsAdmin);
                 return Ok(ApiResponseDTO<RefundPolicyResponseDTO>.SuccessResponse(result, "Refund policy updated"));
             }
             catch (Exception ex) { return HandleException(ex); }
         }
 
+        // Xoa chinh sach hoan ve khoi concert
         [HttpDelete("{id:int}")]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Delete(int id)

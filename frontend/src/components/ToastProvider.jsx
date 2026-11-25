@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import "./ToastProvider.css";
 
 // Thông báo ngắn (thành công / lỗi / thông tin) hiển thị ở góc phải màn hình.
@@ -70,16 +70,34 @@ export function useToast() {
 }
 
 // Thay thế trực tiếp cho `useState("")` của state lỗi: vẫn trả về [error, setError]
-// như cũ (banner đỏ trong trang không đổi) nhưng mỗi lỗi mới còn hiện thêm một toast.
-export function useToastedError() {
+// như cũ (banner đỏ trong trang không đổi) nhưng mỗi lỗi mới còn hiện thêm một toast,
+// đồng thời tự động xóa banner sau một khoảng thời gian (mặc định 8s) để không bị kẹt thông báo.
+export function useToastedError(autoDismissMs = 8000) {
   const toast = useToast();
   const [error, setErrorState] = useState("");
+  const timerRef = useRef(null);
+
   const setError = useCallback(
     (message) => {
       setErrorState(message);
-      if (message) toast.error(message);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (message) {
+        toast.error(message);
+        if (autoDismissMs > 0) {
+          timerRef.current = setTimeout(() => {
+            setErrorState("");
+          }, autoDismissMs);
+        }
+      }
     },
-    [toast]
+    [toast, autoDismissMs]
   );
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
   return [error, setError];
 }

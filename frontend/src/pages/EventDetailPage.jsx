@@ -153,7 +153,7 @@ export default function EventDetailPage() {
     <div className="tb-app">
       <Header />
 
-      {loading && <div className="tb-loading">Loading event...</div>}
+      {loading && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
       {!loading && error && <div className="tb-error">{error}</div>}
 
       {!loading && !error && event && (
@@ -280,13 +280,13 @@ export default function EventDetailPage() {
                 <h2>Admission &amp; Re-entry Policies</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginTop: '10px' }}>
                   <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>⏱️ Seat Hold Timeout</div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Seat Hold Timeout</div>
                     <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
                       Seats are held for <strong>{event.holdTimeoutMinutes || 10} minutes</strong> during checkout before auto-release.
                     </div>
                   </div>
                   <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>🚪 Re-entry Policy</div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Re-entry Policy</div>
                     <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
                       {event.reEntryPolicy === 'TimeLimited'
                         ? `Time-limited: Attendees can exit and re-enter within ${event.reEntryDurationMinutes || 30} minutes.`
@@ -366,7 +366,7 @@ export default function EventDetailPage() {
                 </div>
 
                 <button type="button" className="tb-btn tb-btn-outline tb-wishlist-btn" onClick={toggleWishlist} disabled={wishlistLoading}>
-                  {wishlistLoading ? "Updating..." : isWishlisted ? "♥ Wishlisted" : "♡ Add to Wishlist"}
+                  {wishlistLoading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : isWishlisted ? "♥ Wishlisted" : "♡ Add to Wishlist"}
                 </button>
                 {wishlistError && <div className="tb-buy-blocked">{wishlistError}</div>}
 
@@ -386,9 +386,9 @@ export default function EventDetailPage() {
           {(relatedLoading || related.length > 0) && (
             <section className="tb-container tb-list-section">
               <div className="tb-list-header">
-                <h2>🎟️ Other Events On Sale</h2>
+                <h2>Other Events On Sale</h2>
               </div>
-              {relatedLoading && <div className="tb-loading">Loading...</div>}
+              {relatedLoading && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
               {!relatedLoading && related.length > 0 && (
                 <div className="tb-grid tb-grid-3">
                   {related.map((ev) => (

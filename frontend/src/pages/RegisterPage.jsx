@@ -34,7 +34,7 @@ export default function RegisterPage() {
 
     // UC 11.1 & 11.2: Check policy agreement
     if (!agreedPolicies) {
-      setError("Vui lòng đọc và tích chọn đồng ý với Điều khoản Dịch vụ & Chính sách nền tảng để tiếp tục.");
+      setError("Please agree to the Terms of Service and Platform Privacy Policy to continue.");
       return;
     }
 
@@ -144,7 +144,7 @@ export default function RegisterPage() {
                 cursor: agreedPolicies ? "pointer" : "not-allowed",
               }}
             >
-              {loading ? "Processing..." : "Sign Up"}
+              {loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Sign Up"}
             </button>
           </form>
 

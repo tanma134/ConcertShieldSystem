@@ -11,6 +11,7 @@ namespace CheckinAPI.Controllers
 {
     [ApiController]
     [Route("api/checkin")]
+    [Authorize(Roles = "Admin,admin,Staff,staff,Organizer,organizer")]
     public class CheckinMonitorController : ControllerBase
     {
         private readonly ICheckinMonitorService _monitorService;

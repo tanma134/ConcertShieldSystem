@@ -133,7 +133,7 @@ export default function AuditLogAdminPage() {
             <div style={{ display: "flex", gap: 8 }}>
               <button type="button" className="admin-button-secondary" onClick={load}>Refresh</button>
               <button type="button" className="admin-button" onClick={handleExport} disabled={exporting}>
-                {exporting ? "Exporting..." : "Export CSV"}
+                {exporting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Export CSV"}
               </button>
             </div>
           </div>
@@ -179,7 +179,7 @@ export default function AuditLogAdminPage() {
           </form>
 
           {loading ? (
-            <div className="empty-state">Loading...</div>
+            <div className="empty-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
           ) : items.length === 0 ? (
             <div className="empty-state">No log entries found.</div>
           ) : (

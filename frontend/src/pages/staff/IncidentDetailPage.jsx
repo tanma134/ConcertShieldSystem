@@ -374,8 +374,7 @@ export default function IncidentDetailPage() {
             <div className="inc-empty-icon">
               <ClockIcon />
             </div>
-            <div className="inc-empty-title">Loading incident #{id}...</div>
-            <div className="inc-empty-desc">Synchronizing dossier from Incident Command Center...</div>
+            <div className="inc-empty-title"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
           </div>
         </div>
       </Shell>
@@ -634,13 +633,15 @@ export default function IncidentDetailPage() {
                     {evidences.length} {evidences.length === 1 ? "file" : "files"}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  className="inc-btn inc-btn-primary inc-btn-sm"
-                  onClick={() => setShowUploadModal(true)}
-                >
-                  Upload Evidence
-                </button>
+                {!isResolvedOrClosed && (
+                  <button
+                    type="button"
+                    className="inc-btn inc-btn-primary inc-btn-sm"
+                    onClick={() => setShowUploadModal(true)}
+                  >
+                    Upload Evidence
+                  </button>
+                )}
               </div>
 
               {evidences.length === 0 ? (
@@ -649,13 +650,15 @@ export default function IncidentDetailPage() {
                   <p className="inc-empty-desc">
                     Attach photos, video recordings, audio dispatches, or witness statements directly to this incident report.
                   </p>
-                  <button
-                    type="button"
-                    className="inc-btn inc-btn-secondary inc-btn-sm"
-                    onClick={() => setShowUploadModal(true)}
-                  >
-                    Attach Files
-                  </button>
+                  {!isResolvedOrClosed && (
+                    <button
+                      type="button"
+                      className="inc-btn inc-btn-secondary inc-btn-sm"
+                      onClick={() => setShowUploadModal(true)}
+                    >
+                      Attach Files
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="inc-evidence-grid">
@@ -724,14 +727,16 @@ export default function IncidentDetailPage() {
                           >
                             Inspect
                           </a>
-                          <button
-                            type="button"
-                            className="inc-btn inc-btn-danger inc-btn-sm"
-                            title="Delete evidence"
-                            onClick={() => handleDeleteEvidence(ev.id)}
-                          >
-                            Delete
-                          </button>
+                          {!isResolvedOrClosed && (
+                            <button
+                              type="button"
+                              className="inc-btn inc-btn-danger inc-btn-sm"
+                              title="Delete evidence"
+                              onClick={() => handleDeleteEvidence(ev.id)}
+                            >
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
@@ -849,7 +854,7 @@ export default function IncidentDetailPage() {
                     className="inc-btn inc-btn-primary"
                     disabled={isUploading}
                   >
-                    {isUploading ? "Uploading to Cloudinary..." : "Upload Evidence"}
+                    {isUploading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Upload Evidence"}
                   </button>
                 </div>
               </form>
@@ -998,7 +1003,7 @@ export default function IncidentDetailPage() {
                     className="inc-btn inc-btn-primary"
                     disabled={isUpdating}
                   >
-                    {isUpdating ? "Saving..." : "Save Updates"}
+                    {isUpdating ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Save Updates"}
                   </button>
                 </div>
               </form>
@@ -1066,7 +1071,7 @@ export default function IncidentDetailPage() {
                     className="inc-btn inc-btn-danger"
                     disabled={isEscalating}
                   >
-                    {isEscalating ? "Escalating..." : "Confirm Escalation"}
+                    {isEscalating ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm Escalation"}
                   </button>
                 </div>
               </form>
@@ -1151,7 +1156,7 @@ export default function IncidentDetailPage() {
                     className="inc-btn inc-btn-success"
                     disabled={isResolving}
                   >
-                    {isResolving ? "Submitting..." : "Confirm Resolution"}
+                    {isResolving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm Resolution"}
                   </button>
                 </div>
               </form>

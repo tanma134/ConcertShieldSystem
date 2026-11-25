@@ -23,14 +23,14 @@ function read(item, camelName, pascalName) {
 }
 
 function formatDate(value) {
-  if (!value) return "—";
+  if (!value) return "-";
 
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
 function formatMoney(value) {
-  if (value == null) return "—";
+  if (value == null) return "-";
 
   return new Intl.NumberFormat("vi-VN", {
     style: "currency",
@@ -39,27 +39,12 @@ function formatMoney(value) {
   }).format(value);
 }
 
-function getIssueDescription(item) {
-  const missingTickets = Number(
-    read(item, "missingTicketCount", "MissingTicketCount") ?? 0
-  );
-  const ticketsWithoutQr = Number(
-    read(item, "ticketsWithoutQrCount", "TicketsWithoutQrCount") ?? 0
-  );
+function getFailureDescription(item) {
+  const reasons = read(item, "reasons", "Reasons");
 
-  if (missingTickets > 0 && ticketsWithoutQr > 0) {
-    return `${missingTickets} missing ticket(s); ${ticketsWithoutQr} ticket(s) without QR`;
-  }
-
-  if (missingTickets > 0) {
-    return `${missingTickets} missing ticket(s)`;
-  }
-
-  if (ticketsWithoutQr > 0) {
-    return `${ticketsWithoutQr} ticket(s) without QR`;
-  }
-
-  return "Ticket issuance incomplete";
+  return Array.isArray(reasons) && reasons.length > 0
+    ? reasons.join("; ")
+    : "Payment failed";
 }
 
 function matchesDateRange(item, filters) {
@@ -183,7 +168,7 @@ export default function FailedTransactionQueuePage() {
             <p className="failed-queue-eyebrow">Payment operations</p>
             <h1>Failed Transaction Queue</h1>
             <p className="failed-queue-description">
-              Successful payments with missing tickets or QR tokens.
+              Failed payment transactions.
             </p>
           </div>
 
@@ -193,7 +178,7 @@ export default function FailedTransactionQueuePage() {
             onClick={() => loadQueue(true)}
             disabled={loading}
           >
-            {loading ? "Loading…" : "Refresh"}
+            {loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Refresh"}
           </button>
         </header>
 
@@ -273,14 +258,16 @@ export default function FailedTransactionQueuePage() {
         <section className="failed-queue-card">
           <div className="failed-queue-card-heading">
             <div>
-              <h2>Transactions</h2>
+              <h2>Failed payments</h2>
               <p>{filteredItems.length} transaction(s) on this page</p>
             </div>
           </div>
 
           {loading ? (
-            <div className="failed-queue-state">Loading transactions…</div>
-          ) : error ? null : filteredItems.length === 0 ? (
+            <div className="failed-queue-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
+          ) : error ? (
+            <div className="failed-queue-state">{error}</div>
+          ) : filteredItems.length === 0 ? (
             <div className="failed-queue-state">
               No failed transactions match the selected filters.
             </div>
@@ -296,7 +283,7 @@ export default function FailedTransactionQueuePage() {
                     <th>Gateway</th>
                     <th>Amount</th>
                     <th>Payment status</th>
-                    <th>Issuance issue</th>
+                    <th>Failure reason</th>
                   </tr>
                 </thead>
 
@@ -314,33 +301,39 @@ export default function FailedTransactionQueuePage() {
                       <td>
                         {formatDate(read(item, "requestedAt", "RequestedAt"))}
                       </td>
+
                       <td>
                         {read(
                           item,
                           "paymentTransactionId",
                           "PaymentTransactionId"
-                        ) ?? "—"}
+                        ) ?? "-"}
                       </td>
-                      <td>{read(item, "orderId", "OrderId") ?? "—"}</td>
-                      <td>{read(item, "eventId", "EventId") ?? "—"}</td>
+
+                      <td>{read(item, "orderId", "OrderId") ?? "-"}</td>
+                      <td>{read(item, "eventId", "EventId") ?? "-"}</td>
+
                       <td>
                         {read(item, "gatewayName", "GatewayName") ??
                           read(item, "gateway", "Gateway") ??
-                          "—"}
+                          "-"}
                       </td>
+
                       <td>
                         {formatMoney(
                           read(item, "paymentAmount", "PaymentAmount") ??
                             read(item, "amount", "Amount")
                         )}
                       </td>
+
                       <td>
                         <span className="failed-queue-status">
                           {read(item, "paymentStatus", "PaymentStatus") ??
-                            "Success"}
+                            "Failed"}
                         </span>
                       </td>
-                      <td>{getIssueDescription(item)}</td>
+
+                      <td>{getFailureDescription(item)}</td>
                     </tr>
                   ))}
                 </tbody>

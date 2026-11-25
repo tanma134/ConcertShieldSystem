@@ -11,27 +11,32 @@ namespace EventAPI.Services
     // Only the event's organizer (or an Admin) may use it, and only real Staff accounts can be assigned.
     public class EventStaffService : IEventStaffService
     {
-        private readonly EventDbContext _context;
+        private readonly IEventStaffRepository _staffRepository;
         private readonly IEventRepository _events;
         private readonly IStaffDirectoryClient _directory;
 
-        public EventStaffService(EventDbContext context, IEventRepository events, IStaffDirectoryClient directory)
+        [Microsoft.Extensions.DependencyInjection.ActivatorUtilitiesConstructor]
+        public EventStaffService(IEventStaffRepository staffRepository, IEventRepository events, IStaffDirectoryClient directory)
         {
-            _context = context;
+            _staffRepository = staffRepository;
             _events = events;
             _directory = directory;
         }
 
+        // Backward compatibility overload for existing tests
+        public EventStaffService(EventDbContext context, IEventRepository events, IStaffDirectoryClient directory)
+            : this(new EventStaffRepository(context), events, directory)
+        {
+        }
+
         // the staff currently assigned to the event, oldest assignment first.
+        // Lay danh sach nhan vien duoc phan cong lam viec tai su kien
         public async Task<List<EventStaffDTO>> ListAsync(int eventId, int callerId, bool isAdmin, string? bearer)
         {
+            // Luu y: Kiem tra quyen so huu cua Organizer va lay day du thong tin tu Staff Directory
             await EnsureOwnerAsync(eventId, callerId, isAdmin);
 
-            var rows = await _context.EventStaff
-                .AsNoTracking()
-                .Where(s => s.EventId == eventId && s.IsActive)
-                .OrderBy(s => s.AssignedAt)
-                .ToListAsync();
+            var rows = await _staffRepository.GetActiveByEventIdAsync(eventId);
 
             var people = await _directory.GetByIdsAsync(rows.Select(r => r.StaffUserId), bearer);
 
@@ -48,11 +53,7 @@ namespace EventAPI.Services
         {
             await EnsureOwnerAsync(eventId, callerId, isAdmin);
 
-            var assigned = await _context.EventStaff
-                .AsNoTracking()
-                .Where(s => s.EventId == eventId && s.IsActive)
-                .Select(s => s.StaffUserId)
-                .ToListAsync();
+            var assigned = await _staffRepository.GetActiveStaffUserIdsByEventIdAsync(eventId);
 
             var people = await _directory.SearchAsync(query, bearer);
 
@@ -66,8 +67,10 @@ namespace EventAPI.Services
         }
 
         // assigns a Staff account to the event.
+        // Phan cong mot nhan vien vao lam viec tai concert kem cong soat ve
         public async Task<EventStaffDTO> AssignAsync(int eventId, int staffUserId, string? gateName, int callerId, bool isAdmin, string? bearer, bool canReviewReturns = false)
         {
+            // Luu y: Kiem tra nhan vien hop le tu Directory va ngan chan phan cong trung lap
             if (staffUserId <= 0)
                 throw new ArgumentException("Please choose a staff member.");
 
@@ -79,8 +82,7 @@ namespace EventAPI.Services
             var person = (await _directory.GetByIdsAsync(new[] { staffUserId }, bearer)).FirstOrDefault()
                 ?? throw new InvalidOperationException("This account does not hold the Staff role.");
 
-            var alreadyAssigned = await _context.EventStaff
-                .AnyAsync(s => s.EventId == eventId && s.StaffUserId == staffUserId && s.IsActive);
+            var alreadyAssigned = await _staffRepository.IsStaffAssignedAsync(eventId, staffUserId);
             if (alreadyAssigned)
                 throw new InvalidOperationException("This staff member is already assigned to the concert.");
 
@@ -95,11 +97,11 @@ namespace EventAPI.Services
                 CanReviewReturns = canReviewReturns
             };
 
-            _context.EventStaff.Add(row);
+            await _staffRepository.AddAsync(row);
 
             try
             {
-                await _context.SaveChangesAsync();
+                await _staffRepository.SaveChangesAsync();
             }
             catch (DbUpdateException)
             {
@@ -116,12 +118,11 @@ namespace EventAPI.Services
         {
             await EnsureOwnerAsync(eventId, callerId, isAdmin);
 
-            var row = await _context.EventStaff
-                .FirstOrDefaultAsync(s => s.EventId == eventId && s.StaffUserId == staffUserId && s.IsActive)
+            var row = await _staffRepository.GetActiveAssignmentAsync(eventId, staffUserId)
                 ?? throw new KeyNotFoundException("This staff member is not assigned to the concert.");
 
             row.CanReviewReturns = canReviewReturns;
-            await _context.SaveChangesAsync();
+            await _staffRepository.SaveChangesAsync();
 
             var person = (await _directory.GetByIdsAsync(new[] { staffUserId }, bearer)).FirstOrDefault();
             return ToDto(row, person);
@@ -130,55 +131,30 @@ namespace EventAPI.Services
         // Events where the staff member is actively assigned with the return-review duty.
         public async Task<List<int>> GetReturnReviewEventIdsAsync(int staffUserId)
         {
-            return await _context.EventStaff
-                .AsNoTracking()
-                .Where(s => s.StaffUserId == staffUserId && s.IsActive && s.CanReviewReturns)
-                .Select(s => s.EventId)
-                .Distinct()
-                .ToListAsync();
+            return await _staffRepository.GetReturnReviewEventIdsAsync(staffUserId);
         }
 
         // Returns active event and gate assignments for the given staff member.
         public async Task<List<StaffEventAssignmentDTO>> GetAssignmentsByStaffAsync(int staffUserId)
         {
-            var query = from s in _context.EventStaff.AsNoTracking()
-                        where s.StaffUserId == staffUserId && s.IsActive
-                        join e in _context.Events.AsNoTracking() on s.EventId equals e.EventId
-                        where !e.IsDeleted
-                        orderby s.AssignedAt descending
-                        select new StaffEventAssignmentDTO
-                        {
-                            EventStaffId = s.EventStaffId,
-                            EventId = s.EventId,
-                            StaffUserId = s.StaffUserId,
-                            GateName = s.GateName,
-                            EventTitle = e.Title,
-                            City = e.City ?? string.Empty,
-                            LocationName = e.LocationName ?? e.Address ?? string.Empty,
-                            StartsAt = e.StartsAt,
-                            EndsAt = e.EndsAt,
-                            Status = e.Status,
-                            CanReviewReturns = s.CanReviewReturns,
-                            AssignedAt = s.AssignedAt
-                        };
-
-            return await query.ToListAsync();
+            return await _staffRepository.GetAssignmentsByStaffAsync(staffUserId);
         }
 
         // removes a staff member from the event; the row is kept as history.
+        // Huy phan cong nhan vien khoi concert
         public async Task UnassignAsync(int eventId, int staffUserId, int callerId, bool isAdmin)
         {
+            // Luu y: Xoa ban ghi phan cong de thu hoi quyen soat ve cua nhan vien
             await EnsureOwnerAsync(eventId, callerId, isAdmin);
 
-            var row = await _context.EventStaff
-                .FirstOrDefaultAsync(s => s.EventId == eventId && s.StaffUserId == staffUserId && s.IsActive)
+            var row = await _staffRepository.GetActiveAssignmentAsync(eventId, staffUserId)
                 ?? throw new KeyNotFoundException("This staff member is not assigned to the concert.");
 
             row.IsActive = false;
             row.UnassignedBy = callerId;
             row.UnassignedAt = DateTime.UtcNow;
 
-            await _context.SaveChangesAsync();
+            await _staffRepository.SaveChangesAsync();
         }
 
         // Loads the event and checks the caller owns it. A stranger gets the same

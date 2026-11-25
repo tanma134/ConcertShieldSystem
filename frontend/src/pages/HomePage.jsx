@@ -273,7 +273,7 @@ export default function HomePage() {
             </a>
           </div>
 
-          {featuredLoading && <div className="tb-loading">Loading...</div>}
+          {featuredLoading && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
 
           {!featuredLoading && featured.length > 0 && (
             <div className="tb-grid tb-grid-3">
@@ -346,7 +346,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {loading && <div className="tb-loading">Loading events...</div>}
+        {loading && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
         {!loading && error && <div className="tb-error">{error}</div>}
         {!loading && !error && displayedEvents.length === 0 && (
           <div className="tb-empty">No matching events found.</div>

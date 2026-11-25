@@ -7,6 +7,7 @@ namespace PaymentAPI.Services
         Task<PaymentReconciliationExceptionPageDto> GetExceptionsAsync(
             DateTime? from,
             DateTime? to,
+            int? orderId,
             int page,
             int pageSize);
 
@@ -16,6 +17,12 @@ namespace PaymentAPI.Services
             int adminUserId);
 
         Task<PaymentReconciliationExceptionPageDto> GetFailedTransactionQueueAsync(
+            DateTime? from,
+            DateTime? to,
+            int page,
+            int pageSize);
+
+        Task<TicketIssuanceRecoveryPageDto> GetTicketIssuanceRecoveryQueueAsync(
             DateTime? from,
             DateTime? to,
             int page,

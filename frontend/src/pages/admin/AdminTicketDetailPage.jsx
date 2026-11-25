@@ -70,7 +70,7 @@ export default function AdminTicketDetailPage() {
     return (
       <AdminShell title="Ticket Details">
         <main className="admin-ticket-detail-page">
-          <div className="admin-ticket-detail-state">Loading ticket...</div>
+          <div className="admin-ticket-detail-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
         </main>
       </AdminShell>
     );

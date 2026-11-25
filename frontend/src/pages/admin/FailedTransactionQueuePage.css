@@ -104,6 +104,8 @@
 .failed-queue-filter-actions .failed-queue-apply {
   border-color: #8a3fe0;
   background: #8139d5;
+  color: #ffffff !important;
+  font-weight: 600;
 }
 
 .failed-queue-filter-actions .failed-queue-clear {

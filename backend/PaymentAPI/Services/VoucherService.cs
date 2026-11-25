@@ -15,11 +15,14 @@ namespace PaymentAPI.Services
         private readonly ITicketApiClient _ticketApiClient;
         private readonly IEventApiClient _eventApiClient;
 
-        public VoucherService(IVoucherRepository voucherRepository, IEventApiClient eventApiClient, ITicketApiClient ticketApiClient)
+        private readonly Microsoft.Extensions.Configuration.IConfiguration? _configuration;
+
+        public VoucherService(IVoucherRepository voucherRepository, IEventApiClient eventApiClient, ITicketApiClient ticketApiClient, Microsoft.Extensions.Configuration.IConfiguration? configuration = null)
         {
             _voucherRepository = voucherRepository;
             _eventApiClient = eventApiClient;
             _ticketApiClient = ticketApiClient;
+            _configuration = configuration;
         }
 
         public async Task<VoucherResponseDTO> CreateVoucherAsync(CreateVoucherDTO dto, int currentUserId, bool isAdmin, bool isOrganizer)
@@ -168,7 +171,12 @@ namespace PaymentAPI.Services
                 // 1. Direct persistence to notification_db (100% resilient)
                 try
                 {
-                    using var conn = new Npgsql.NpgsqlConnection("Host=localhost;Port=5432;Database=notification_db;Username=postgres;Password=123456");
+                    var notifConnStr = _configuration?.GetConnectionString("NotificationConnection")
+                        ?? _configuration?.GetConnectionString("NotificationDb")
+                        ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_NOTIFICATION_POSTGRES")
+                        ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TEST_POSTGRES");
+                    if (string.IsNullOrWhiteSpace(notifConnStr)) return;
+                    using var conn = new Npgsql.NpgsqlConnection(notifConnStr);
                     await conn.OpenAsync();
 
                     // Notification 1: Broadcast to all customers (UserId = 0)
@@ -265,6 +273,16 @@ namespace PaymentAPI.Services
             bool isAdmin,
             bool isOrganizer)
         {
+            // Kiem tra gia tri phan trang hop le, tranh so am hoac bang 0
+            if (page <= 0)
+            {
+                throw new ArgumentException("Page must be greater than 0.", nameof(page));
+            }
+            if (limit <= 0)
+            {
+                throw new ArgumentException("Limit must be greater than 0.", nameof(limit));
+            }
+
             bool isOrganizerOnly = false;
             int? queryOrgId = organizerId;
 
@@ -368,8 +386,10 @@ namespace PaymentAPI.Services
             return MapToResponseDTO(updated);
         }
 
+        // Cap nhat thong tin voucher he thong hoac voucher cua ban to chuc
         public async Task<VoucherResponseDTO> UpdateVoucherAsync(int id, UpdateVoucherDTO dto, int currentUserId, bool isAdmin, bool isOrganizer)
         {
+            // Luu y: Khoa ma voucher neu da co luot su dung va kiem tra quyen so huu cua Organizer
             var voucher = await _voucherRepository.GetByIdAsync(id);
             if (voucher == null)
             {
@@ -493,8 +513,10 @@ namespace PaymentAPI.Services
             return MapToResponseDTO(updated);
         }
 
+        // Xoa mem voucher khoi he thong bang cach danh dau IsDeleted
         public async Task<bool> SoftDeleteVoucherAsync(int id, int currentUserId, bool isAdmin, bool isOrganizer)
         {
+            // Luu y: Kiem tra quyen so huu cua Organizer va cap nhat IsDeleted=true de bao toan lich su don hang
             var voucher = await _voucherRepository.GetByIdAsync(id);
             if (voucher == null)
             {
@@ -570,35 +592,35 @@ namespace PaymentAPI.Services
             };
 
             if (string.IsNullOrWhiteSpace(request.Code))
-                return Invalid("Vui lòng nhập mã voucher.");
+                return Invalid("Please enter a voucher code.");
 
             if (request.EventId <= 0)
-                return Invalid("Event không hợp lệ.");
+                return Invalid("Invalid event.");
 
             if (request.OrderAmount <= 0)
-                return Invalid("Giá trị đơn hàng không hợp lệ.");
+                return Invalid("Invalid order amount.");
 
             var voucher = await _voucherRepository.GetByCodeAsync(request.Code);
 
             if (voucher == null)
-                return Invalid("Không tìm thấy voucher.");
+                return Invalid("Voucher not found.");
 
             var now = DateTime.UtcNow;
 
             if (!voucher.IsActive)
-                return Invalid("Voucher hiện không hoạt động.");
+                return Invalid("This voucher is currently inactive.");
 
             if (now < voucher.StartsAt || now > voucher.EndsAt)
-                return Invalid("Voucher chưa đến thời gian sử dụng hoặc đã hết hạn.");
+                return Invalid("This voucher is not yet valid or has expired.");
 
             if (voucher.UsedQuantity >= voucher.TotalQuantity)
-                return Invalid("Voucher đã hết lượt sử dụng.");
+                return Invalid("This voucher has reached its usage limit.");
 
             if (request.OrderAmount < (voucher.MinOrderAmount ?? 0))
-                return Invalid("Đơn hàng chưa đạt giá trị tối thiểu để sử dụng voucher.");
+                return Invalid("The order does not meet the minimum amount required for this voucher.");
 
             if (voucher.Scope == "EVENT" && voucher.EventId != request.EventId)
-                return Invalid("Voucher không áp dụng cho sự kiện này.");
+                return Invalid("This voucher does not apply to this event.");
 
             var eventOrganizerId = await _eventApiClient.GetOrganizerIdByEventIdAsync(request.EventId);
 
@@ -611,26 +633,26 @@ namespace PaymentAPI.Services
             };
 
             if (!isApplicable)
-                return Invalid("Voucher không áp dụng cho sự kiện này.");
+                return Invalid("This voucher does not apply to this event.");
 
             if (voucher.Scope != "SYSTEM" &&
                 voucher.Scope != "EVENT" &&
                 voucher.Scope != "ORGANIZER")
             {
-                return Invalid("Phạm vi voucher không hợp lệ.");
+                return Invalid("Invalid voucher scope.");
             }
 
             var userUsageCount = await _voucherRepository.CountUserUsagesAsync(voucher.VoucherId, userId);
 
             if (userUsageCount >= voucher.MaxUsagePerUser)
-                return Invalid("Bạn đã sử dụng voucher này đủ số lần cho phép.");
+                return Invalid("You have reached the usage limit for this voucher.");
 
             decimal calculatedDiscount;
 
             if (voucher.DiscountType == "PERCENT")
             {
                 if (!voucher.DiscountPercent.HasValue)
-                    return Invalid("Cấu hình phần trăm giảm giá của voucher không hợp lệ.");
+                    return Invalid("The voucher's percentage discount configuration is invalid.");
 
                 calculatedDiscount = request.OrderAmount * voucher.DiscountPercent.Value / 100m;
 
@@ -642,13 +664,13 @@ namespace PaymentAPI.Services
             else if (voucher.DiscountType == "FIXED")
             {
                 if (!voucher.DiscountAmount.HasValue)
-                    return Invalid("Cấu hình số tiền giảm giá của voucher không hợp lệ.");
+                    return Invalid("The voucher's fixed discount configuration is invalid.");
 
                 calculatedDiscount = voucher.DiscountAmount.Value;
             }
             else
             {
-                return Invalid("Loại giảm giá của voucher không hợp lệ.");
+                return Invalid("Invalid voucher discount type.");
             }
 
             var discountAmount = (long)Math.Round(calculatedDiscount, MidpointRounding.AwayFromZero);
@@ -661,7 +683,7 @@ namespace PaymentAPI.Services
                 Code = voucher.Code,
                 DiscountAmount = discountAmount,
                 FinalAmount = request.OrderAmount - discountAmount,
-                Message = "Áp dụng voucher thành công.",
+                Message = "Voucher applied successfully.",
                 VoucherId = voucher.VoucherId
             };
         }
@@ -671,7 +693,7 @@ namespace PaymentAPI.Services
             int userId)
         {
             if (eventId <= 0)
-                throw new ArgumentException("Event không hợp lệ.");
+                throw new ArgumentException("Invalid event.");
 
             var eventOrganizerId =
                 await _eventApiClient.GetOrganizerIdByEventIdAsync(eventId);

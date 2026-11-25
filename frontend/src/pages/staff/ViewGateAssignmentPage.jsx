@@ -124,8 +124,7 @@ export default function ViewGateAssignmentPage() {
 
         {loading ? (
           <div className="gate-loading-card">
-            <div className="gate-spinner"></div>
-            <p>Loading gate assignment parameters...</p>
+            <span className="app-loading-spinner" role="status" aria-label="Loading" />
           </div>
         ) : error ? (
           <div className="gate-error-banner">

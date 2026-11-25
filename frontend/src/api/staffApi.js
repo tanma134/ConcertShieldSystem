@@ -1,26 +1,26 @@
 import axiosClient from "./axiosClient";
 
-// staff assigned to one event.
+// Quan ly danh sach nhan vien va phan cong soat ve danh cho Organizer va Staff
 const staffApi = {
-  // staff currently assigned to the event.
+  // Lay danh sach nhan vien duoc phan cong cho su kien danh cho Organizer
   list: (eventId) => axiosClient.get(`/events/${eventId}/staff`),
 
-  // Staff accounts the organizer can pick from; q filters by name or email.
+  // Tim kiem nhan vien ung vien tu danh ba he thong danh cho Organizer
   candidates: (eventId, q) =>
     axiosClient.get(`/events/${eventId}/staff/candidates`, { params: q ? { q } : {} }),
 
-  // assign a Staff account to the event.
+  // Phan cong nhan vien vao lam viec tai su kien kem cong soat ve danh cho Organizer
   assign: (eventId, staffUserId, gateName, canReviewReturns = false) =>
     axiosClient.post(`/events/${eventId}/staff`, { staffUserId, gateName, canReviewReturns }),
 
-  // Let (or stop) an assigned staff member reviewing ticket return requests of the event.
+  // Cap nhat quyen duyet hoan ve cho nhan vien tai su kien danh cho Organizer
   setReturnReview: (eventId, staffUserId, canReviewReturns) =>
     axiosClient.put(`/events/${eventId}/staff/${staffUserId}/return-review`, { canReviewReturns }),
 
-  // remove a staff member from the event.
+  // Huy phan cong nhan vien khoi su kien danh cho Organizer
   unassign: (eventId, staffUserId) => axiosClient.delete(`/events/${eventId}/staff/${staffUserId}`),
 
-  // Events & gates assigned to this staff member
+  // Lay danh sach su kien va cong soat ve duoc phan cong cho nhan vien dang dang nhap danh cho Staff
   getMyAssignments: (staffUserId) => axiosClient.get(`/events/staff/${staffUserId}`),
 };
 

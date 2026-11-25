@@ -254,27 +254,22 @@ namespace TicketAPI.Services
             var seatIds = request.SeatIds ?? new List<int>();
 
             if (tickets.Count == 0 && seatIds.Count == 0)
-                throw new ArgumentException("Bạn chưa chọn vé hoặc ghế.");
+                throw new ArgumentException("No tickets or seats have been selected.");
 
-            if (tickets.Any(ticket =>
-                    ticket.TicketTypeId <= 0 || ticket.Quantity <= 0))
+            if (tickets.Any(ticket => ticket.TicketTypeId <= 0 || ticket.Quantity <= 0))
             {
-                throw new ArgumentException(
-                    "TicketTypeId và Quantity phải lớn hơn 0.");
+                throw new ArgumentException("TicketTypeId and Quantity must be greater than 0.");
             }
 
-            if (tickets.GroupBy(ticket => ticket.TicketTypeId)
-                       .Any(group => group.Count() > 1))
+            if (tickets.GroupBy(ticket => ticket.TicketTypeId).Any(group => group.Count() > 1))
             {
-                throw new ArgumentException(
-                    "Một loại vé chỉ được xuất hiện một lần trong request.");
+                throw new ArgumentException("Each ticket type can appear only once in a request.");
             }
 
             if (seatIds.Any(seatId => seatId <= 0) ||
                 seatIds.Distinct().Count() != seatIds.Count)
             {
-                throw new ArgumentException(
-                    "Danh sách SeatIds không hợp lệ hoặc có ghế bị lặp.");
+                throw new ArgumentException("The SeatIds list is invalid or contains duplicate seats.");
             }
 
             await _eligibility.EnsureSalesAsync(request.EventId);
@@ -284,7 +279,7 @@ namespace TicketAPI.Services
             if (eventInfo?.TicketTypes == null)
             {
                 throw new InvalidOperationException(
-                    $"Không lấy được thông tin vé của sự kiện {request.EventId}.");
+                    $"Could not retrieve ticket information for event {request.EventId}.");
             }
 
             int effectiveDurationSeconds = durationSeconds.HasValue && durationSeconds.Value > 0
@@ -302,7 +297,7 @@ namespace TicketAPI.Services
                 if (ticketInfo == null)
                 {
                     throw new ArgumentException(
-                        $"Loại vé {ticket.TicketTypeId} không thuộc sự kiện này.");
+                        $"Ticket type {ticket.TicketTypeId} does not belong to this event.");
                 }
 
                 if (ticketInfo.Status != "Active" || ticketInfo.SalesStartsAt > DateTime.UtcNow || ticketInfo.SalesEndsAt <= DateTime.UtcNow)
@@ -323,7 +318,7 @@ namespace TicketAPI.Services
             if (!acquired)
             {
                 throw new InvalidOperationException(
-                    "Bạn đang có phiên giữ vé. Vui lòng tiếp tục thanh toán hoặc chờ phiên hết hạn.");
+                    "You already have a ticket reservation. Please continue to checkout or wait for it to expire.");
             }
 
             var heldTickets = new List<TicketHoldItem>();
@@ -344,8 +339,8 @@ namespace TicketAPI.Services
                     if (!held)
                     {
                         throw new InvalidOperationException(
-                            $"Không giữ được vé loại {ticket.TicketTypeId}. " +
-                            "Vé có thể đã hết hoặc bạn đang giữ loại vé này.");
+                            $"Could not reserve ticket type {ticket.TicketTypeId}. " +
+                            "Tickets may be sold out, or you may already be holding this ticket type.");
                     }
 
                     heldTickets.Add(ticket);
@@ -362,7 +357,7 @@ namespace TicketAPI.Services
                     if (!held)
                     {
                         throw new InvalidOperationException(
-                            $"Ghế {seatId} vừa được người khác chọn.");
+                            $"Seat {seatId} has just been selected by someone else.");
                     }
 
                     heldSeats.Add(seatId);
@@ -390,10 +385,10 @@ namespace TicketAPI.Services
 
                 if (!saved)
                     throw new InvalidOperationException(
-                        "Không lưu được hold session.");
+                        "Could not save the hold session.");
 
                 _logger.LogInformation(
-                    "Tạo hold session {HoldId} cho user {UserId}, event {EventId}",
+                    "Created hold session {HoldId} for user {UserId}, event {EventId}",
                     session.HoldId,
                     userId,
                     request.EventId);
@@ -447,7 +442,7 @@ namespace TicketAPI.Services
             int userId)
         {
             if (string.IsNullOrWhiteSpace(holdId))
-                throw new ArgumentException("HoldId không hợp lệ.");
+                throw new ArgumentException("Invalid hold ID.");
 
             ValidatePositive(userId, nameof(userId));
 
@@ -457,7 +452,7 @@ namespace TicketAPI.Services
             if (json.IsNull)
             {
                 throw new KeyNotFoundException(
-                    "Phiên giữ vé không tồn tại hoặc đã hết hạn.");
+                    "The reservation session does not exist or has expired.");
             }
 
             var session = JsonSerializer.Deserialize<HoldSession>(
@@ -466,11 +461,11 @@ namespace TicketAPI.Services
 
             if (session == null)
                 throw new InvalidOperationException(
-                    "Dữ liệu hold session không hợp lệ.");
+                    "Invalid hold session data.");
 
             if (session.UserId != userId)
                 throw new UnauthorizedAccessException(
-                    "Bạn không có quyền xem phiên giữ vé này.");
+                    "You are not authorized to view this reservation session.");
 
             var remainingSeconds = (int)Math.Ceiling(
                 (session.ExpiresAtUtc - DateTime.UtcNow).TotalSeconds);
@@ -480,7 +475,7 @@ namespace TicketAPI.Services
                 await _db.KeyDeleteAsync(key);
 
                 throw new KeyNotFoundException(
-                    "Phiên giữ vé đã hết hạn.");
+                    "The reservation session has expired.");
             }
 
             await _eligibility.EnsureSalesAsync(session.EventId);
@@ -507,7 +502,7 @@ namespace TicketAPI.Services
                         TicketTypeId = ticket.TicketTypeId,
                         Quantity = ticket.Quantity,
                         TypeName = type?.TypeName,
-                        UnitPrice = type?.Price
+                        UnitPrice = type?.EffectivePrice ?? type?.Price
                     };
                 }).ToList();
 
@@ -517,7 +512,7 @@ namespace TicketAPI.Services
             catch (Exception ex)
             {
                 _logger.LogWarning(ex,
-                    "Không lấy được tên/giá vé cho hold {HoldId}", response.HoldId);
+                    "Could not retrieve ticket names or prices for hold {HoldId}", response.HoldId);
             }
         }
 
@@ -592,7 +587,7 @@ namespace TicketAPI.Services
             {
                 throw new ArgumentOutOfRangeException(
                     name,
-                    "Giá trị phải lớn hơn 0.");
+                    "The value must be greater than 0.");
             }
         }
 
@@ -602,7 +597,7 @@ namespace TicketAPI.Services
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(durationSeconds),
-                    "Thời hạn giữ vé phải lớn hơn 0.");
+                    "The reservation duration must be greater than 0.");
             }
         }
 
@@ -632,19 +627,19 @@ namespace TicketAPI.Services
         public async Task<HoldSessionResponse> SaveAttendeesAsync(string holdId, int userId, List<HoldAttendeeDto> attendees)
         {
             if (string.IsNullOrWhiteSpace(holdId))
-                throw new ArgumentException("HoldId không hợp lệ.");
+                throw new ArgumentException("Invalid hold ID.");
 
             ValidatePositive(userId, nameof(userId));
 
             if (attendees == null || attendees.Count == 0)
-                throw new ArgumentException("Danh sách attendee không được để trống.");
+                throw new ArgumentException("The attendee list cannot be empty.");
 
             var key = SessionKey(holdId);
             var json = await _db.StringGetAsync(key);
 
             if (json.IsNull)
                 throw new KeyNotFoundException(
-                    "Phiên giữ vé không tồn tại hoặc đã hết hạn.");
+                    "The reservation session does not exist or has expired.");
 
             var session = JsonSerializer.Deserialize<HoldSession>(
                 json.ToString(),
@@ -652,11 +647,11 @@ namespace TicketAPI.Services
 
             if (session == null)
                 throw new InvalidOperationException(
-                    "Dữ liệu hold session không hợp lệ.");
+                    "Invalid hold session data.");
 
             if (session.UserId != userId)
                 throw new UnauthorizedAccessException(
-                    "Bạn không có quyền cập nhật phiên giữ vé này.");
+                    "You are not authorized to update this reservation session.");
 
             var remainingSeconds = (int)Math.Ceiling(
                 (session.ExpiresAtUtc - DateTime.UtcNow).TotalSeconds);
@@ -664,7 +659,7 @@ namespace TicketAPI.Services
             var redisTtl = await _db.KeyTimeToLiveAsync(key);
 
             if (remainingSeconds <= 0 || redisTtl == null || redisTtl <= TimeSpan.Zero)
-                throw new KeyNotFoundException("Phiên giữ vé đã hết hạn.");
+                throw new KeyNotFoundException("The reservation session has expired.");
 
             var expectedCount = session.SeatIds.Count > 0
                 ? session.SeatIds.Count
@@ -673,7 +668,7 @@ namespace TicketAPI.Services
             if (attendees.Count != expectedCount)
             {
                 throw new ArgumentException(
-                    $"Cần nhập thông tin cho {expectedCount} attendee.");
+                    $"Information is required for all {expectedCount} attendee(s).");
             }
 
             session.Attendees = attendees;
@@ -689,7 +684,7 @@ namespace TicketAPI.Services
                 When.Exists);
 
             if (!saved)
-                throw new KeyNotFoundException("Phiên giữ vé đã hết hạn.");
+                throw new KeyNotFoundException("The reservation session has expired.");
 
             await _eligibility.EnsureSalesAsync(session.EventId);
             return ToResponse(session, remainingSeconds);
@@ -698,7 +693,7 @@ namespace TicketAPI.Services
         public async Task CancelHoldSessionAsync(string holdId, int userId)
         {
             if (string.IsNullOrWhiteSpace(holdId))
-                throw new ArgumentException("HoldId không hợp lệ.");
+                throw new ArgumentException("Invalid hold ID.");
 
             ValidatePositive(userId, nameof(userId));
 
@@ -708,7 +703,7 @@ namespace TicketAPI.Services
             if (json.IsNull)
             {
                 throw new KeyNotFoundException(
-                    "Phiên giữ vé không tồn tại hoặc đã hết hạn.");
+                    "The reservation session does not exist or has expired.");
             }
 
             var session = JsonSerializer.Deserialize<HoldSession>(
@@ -718,13 +713,13 @@ namespace TicketAPI.Services
             if (session == null)
             {
                 throw new InvalidOperationException(
-                    "Dữ liệu hold session không hợp lệ.");
+                    "Invalid hold session data.");
             }
 
             if (session.UserId != userId)
             {
                 throw new UnauthorizedAccessException(
-                    "Bạn không có quyền hủy phiên giữ vé này.");
+                    "You are not authorized to cancel this reservation session.");
             }
 
             foreach (var ticket in session.Tickets ?? new List<TicketHoldItem>())
@@ -747,7 +742,7 @@ namespace TicketAPI.Services
             await ReleaseUserHoldLockAsync(userId, session.HoldId);
 
             _logger.LogInformation(
-                "Đã hủy hold session {HoldId} của user {UserId}",
+                "Cancelled hold session {HoldId} for user {UserId}",
                 holdId,
                 userId);
         }
@@ -781,35 +776,35 @@ namespace TicketAPI.Services
             List<int> seatIds)
         {
             if (string.IsNullOrWhiteSpace(holdId))
-                throw new ArgumentException("HoldId không hợp lệ.");
+                throw new ArgumentException("Invalid hold ID.");
 
             ValidatePositive(userId, nameof(userId));
 
             if (seatIds == null || seatIds.Count == 0)
-                throw new ArgumentException("Bạn phải chọn ít nhất một ghế.");
+                throw new ArgumentException("You must select at least one seat.");
 
             if (seatIds.Any(id => id <= 0) ||
                 seatIds.Distinct().Count() != seatIds.Count)
             {
-                throw new ArgumentException("Danh sách ghế không hợp lệ hoặc có ghế bị lặp.");
+                throw new ArgumentException("The seat list is invalid or contains duplicate seats.");
             }
 
             var sessionKey = SessionKey(holdId);
             var sessionJson = await _db.StringGetAsync(sessionKey);
 
             if (sessionJson.IsNull)
-                throw new KeyNotFoundException("Phiên giữ vé không tồn tại hoặc đã hết hạn.");
+                throw new KeyNotFoundException("The reservation session does not exist or has expired.");
 
             var session = JsonSerializer.Deserialize<HoldSession>(
                 sessionJson.ToString(),
                 JsonOptions);
 
             if (session == null)
-                throw new InvalidOperationException("Dữ liệu hold session không hợp lệ.");
+                throw new InvalidOperationException("Invalid hold session data.");
 
             if (session.UserId != userId)
                 throw new UnauthorizedAccessException(
-                    "Bạn không có quyền cập nhật phiên giữ vé này.");
+                    "You are not authorized to update this reservation session.");
 
             var remainingSeconds = (int)Math.Ceiling(
                 (session.ExpiresAtUtc - DateTime.UtcNow).TotalSeconds);
@@ -820,18 +815,18 @@ namespace TicketAPI.Services
                 sessionTtl == null ||
                 sessionTtl <= TimeSpan.Zero)
             {
-                throw new KeyNotFoundException("Phiên giữ vé đã hết hạn.");
+                throw new KeyNotFoundException("The reservation session has expired.");
             }
 
             var currentSeatIds = session.SeatIds ?? new List<int>();
 
             if (currentSeatIds.Count == 0)
                 throw new InvalidOperationException(
-                    "Phiên giữ vé này không có ghế để thay đổi.");
+                    "This reservation session has no seats to change.");
 
             if (seatIds.Count != currentSeatIds.Count)
                 throw new ArgumentException(
-                    $"Bạn cần chọn đúng {currentSeatIds.Count} ghế.");
+                    $"You must select exactly {currentSeatIds.Count} seat(s).");
 
             await _eligibility.EnsureSalesAsync(session.EventId);
 
@@ -864,7 +859,7 @@ namespace TicketAPI.Services
                     }
 
                     throw new InvalidOperationException(
-                        $"Ghế {seatId} vừa được người khác chọn. Các ghế bạn đang giữ vẫn được giữ nguyên.");
+                        $"Seat {seatId} has just been selected by someone else. Your current seats remain reserved.");
                 }
 
                 newlyAcquiredSeatIds.Add(seatId);
@@ -900,7 +895,7 @@ namespace TicketAPI.Services
                 }
 
                 throw new KeyNotFoundException(
-                    "Phiên giữ vé đã hết hạn trong lúc cập nhật ghế.");
+                    "The reservation session expired while the seats were being updated.");
             }
 
             foreach (var oldSeatId in previousSeatIds)

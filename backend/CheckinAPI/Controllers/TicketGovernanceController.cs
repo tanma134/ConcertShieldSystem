@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ namespace CheckinAPI.Controllers
 {
     [ApiController]
     [Route("api/checkin")]
+    [Authorize(Roles = "Admin,admin")]
     public class TicketGovernanceController : ControllerBase
     {
         private readonly ITicketGovernanceService _governanceService;
@@ -42,13 +44,13 @@ namespace CheckinAPI.Controllers
                 return role.Equals("Admin", StringComparison.OrdinalIgnoreCase) || 
                        role.Equals("PlatformAdministrator", StringComparison.OrdinalIgnoreCase);
             }
-            var userId = GetCurrentUserId();
-            return userId > 0;
+            return User.IsInRole("Admin") || User.IsInRole("admin") || User.HasClaim(c => c.Type == ClaimTypes.Role && c.Value.Equals("Admin", StringComparison.OrdinalIgnoreCase));
         }
 
         // ==========================================
         // Bulk Revoke Tickets (event change)
         // ==========================================
+        // Thu hoi hang loat ve khi concert bi hoan, doi lich hoac phat hien gian lan
         [HttpPost("governance/bulk-revoke")]
         public async Task<IActionResult> BulkRevokeTickets([FromBody] BulkRevokeRequestDTO request)
         {
