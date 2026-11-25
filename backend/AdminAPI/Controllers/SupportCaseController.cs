@@ -22,6 +22,7 @@ public class SupportCaseController : ControllerBase
         _configuration = configuration;
     }
 
+    // Tao yeu cau ho tro moi danh cho Customer va Nguoi dung
     [HttpPost]
     public async Task<IActionResult> CreateCase([FromBody] CreateSupportCaseRequest req)
     {
@@ -53,6 +54,18 @@ public class SupportCaseController : ControllerBase
         }
     }
 
+    // Get order IDs with support reports submitted by the current customer
+    [HttpGet("my-reported-orders")]
+    public async Task<IActionResult> GetMyReportedOrders()
+    {
+        var result = await _service.GetReportedOrderIdsAsync(
+            GetCurrentUserId(),
+            GetCurrentUserEmail());
+
+        return Ok(result);
+    }
+
+    // Lay danh sach cac truong hop ho tro danh cho Staff va Admin
     [HttpGet]
     [Authorize(Policy = "CanManageSupportCases")]
     public async Task<IActionResult> GetList([FromQuery] SupportCaseQuery query)
@@ -64,6 +77,7 @@ public class SupportCaseController : ControllerBase
         return Ok(result);
     }
 
+    // Xem thong tin chi tiet truong hop ho tro theo id danh cho Customer, Staff va Admin
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetDetail(int id)
     {
@@ -93,6 +107,7 @@ public class SupportCaseController : ControllerBase
         }
     }
 
+    // Lay thong tin ho so ho tro lien ket voi mot don hang cu the danh cho Customer va Staff
     [HttpGet("by-order/{orderId:int}")]
     public async Task<IActionResult> GetCaseByOrder(int orderId)
     {
@@ -114,6 +129,7 @@ public class SupportCaseController : ControllerBase
         return Ok(caseItem);
     }
 
+    // Phan cong truong hop ho tro cho nhan vien xu ly danh cho Admin
     [HttpPost("{id:int}/assign")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> AssignStaff(int id, [FromBody] AssignStaffRequest req)
@@ -132,10 +148,12 @@ public class SupportCaseController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
+            // Cannot reassign closed cases
             return BadRequest(new { message = ex.Message });
         }
     }
 
+    // Giai quyet va dong truong hop ho tro danh cho Staff va Admin
     [HttpPost("{id:int}/resolve")]
     [Authorize(Policy = "CanManageSupportCases")]
     public async Task<IActionResult> ResolveCase(int id, [FromBody] ResolveCaseRequest req)
@@ -155,6 +173,7 @@ public class SupportCaseController : ControllerBase
         }
         catch (ArgumentException ex)
         {
+            // Missing resolution
             return BadRequest(new { message = ex.Message });
         }
         catch (InvalidOperationException ex)
@@ -163,6 +182,23 @@ public class SupportCaseController : ControllerBase
         }
     }
 
+    [HttpPost("{id:int}/dismiss")]
+    [Authorize(Policy = "CanManageSupportCases")]
+    public async Task<IActionResult> DismissCase(int id, [FromBody] DismissCaseRequest req)
+    {
+        var userId = GetCurrentUserId();
+        var userName = await GetCurrentUserNameAsync(userId);
+        var role = User.IsInRole("Admin") ? "Admin" : "Staff";
+        try
+        {
+            return Ok(await _service.DismissCaseAsync(id, req, userId, userName, role));
+        }
+        catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
+        catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
+    }
+
+    // Them ghi chu trao doi vao truong hop ho tro danh cho Customer, Staff va Admin
     [HttpPost("{id:int}/notes")]
     public async Task<IActionResult> AddNote(int id, [FromBody] AddSupportCaseNoteRequest req)
     {
@@ -184,6 +220,7 @@ public class SupportCaseController : ControllerBase
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
         catch (UnauthorizedAccessException ex) { return StatusCode(403, new { message = ex.Message }); }
     }
+    // Helper: Extract current user id from JWT claims
     private int GetCurrentUserId()
     {
         var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
@@ -193,6 +230,7 @@ public class SupportCaseController : ControllerBase
         return int.TryParse(claim, out var id) ? id : 0;
     }
 
+    // Helper: Extract current user name from JWT claims or fallback to authentication database
     private async Task<string> GetCurrentUserNameAsync(int userId)
     {
         var name = User.FindFirst("fullName")?.Value
@@ -238,11 +276,26 @@ public class SupportCaseController : ControllerBase
         return "User";
     }
 
+    // Helper: Extract current user email from JWT claims
     private string GetCurrentUserEmail()
     {
         return User.FindFirst(ClaimTypes.Email)?.Value
         ?? User.FindFirst("email")?.Value
         ?? "";
     }
-}
 
+    [HttpGet("ticket-disputes")]
+    [Authorize(Policy = "CanManageSupportCases")]
+    public async Task<IActionResult> GetTicketDisputes([FromQuery] SupportCaseQuery query)
+    {
+        var userId = GetCurrentUserId();
+        var isAdmin = User.IsInRole("Admin");
+
+        var result = await _service.GetTicketDisputesAsync(
+            query,
+            userId,
+            isAdmin);
+
+        return Ok(result);
+    }
+}

@@ -65,6 +65,16 @@ const withFallback = async (path, method = "get", data = null, extraConfig = {})
           return await axiosClient.get("/organizer-requests/notifications");
         } catch (_) {}
       }
+      if (path === "/notifications/read-all" && method === "put") {
+        try {
+          return await axiosClient.put("/organizer-requests/notifications/read-all");
+        } catch (_) {}
+      }
+      if (path.includes("/notifications/") && path.endsWith("/read") && method === "put") {
+        try {
+          return await axiosClient.put(`/organizer-requests${path}`);
+        } catch (_) {}
+      }
       throw gatewayErr;
     }
   }

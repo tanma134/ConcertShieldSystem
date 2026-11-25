@@ -121,5 +121,79 @@ namespace TicketAPI.Repositories
 
             return (items, totalCount);
         }
+
+        public async Task<List<int>> ExpirePendingOrdersAsync(
+            DateTime now,
+            CancellationToken ct)
+        {
+            var expiredOrders = await _context.Orders
+                .Where(o => !o.IsDeleted
+                    && o.Status == "Pending"
+                    && o.ExpiresAt != null
+                    && o.ExpiresAt <= now)
+                .Select(o => o.OrderId)
+                .ToListAsync(ct);
+
+            if (expiredOrders.Count == 0)
+                return expiredOrders;
+
+            await _context.Orders
+                .Where(o => expiredOrders.Contains(o.OrderId)
+                    && o.Status == "Pending")
+                .ExecuteUpdateAsync(update => update
+                    .SetProperty(o => o.Status, "Expired"),
+                    ct);
+
+            return expiredOrders;
+        }
+
+        public Task<List<Order>> GetExpiredPendingOrdersAsync(DateTime now)
+        {
+            return _context.Orders
+                .Where(o => !o.IsDeleted
+                    && o.Status == "Pending"
+                    && o.ExpiresAt != null
+                    && o.ExpiresAt <= now)
+                .ToListAsync();
+        }
+
+        public async Task<bool> TryMarkOrderExpiredAsync(int orderId, DateTime now)
+        {
+            var changed = await _context.Orders
+                .Where(o => o.OrderId == orderId
+                    && !o.IsDeleted
+                    && o.Status == "Pending"
+                    && o.ExpiresAt != null
+                    && o.ExpiresAt <= now)
+                .ExecuteUpdateAsync(update => update
+                    .SetProperty(o => o.Status, "Expired"));
+
+            return changed > 0;
+        }
+
+        public Task<int?> GetExistingOrderIdByHoldAsync(string holdId, int customerId)
+        {
+            return _context.Orders
+                .Where(o =>
+                    o.HoldToken == holdId &&
+                    !o.IsDeleted &&
+                    o.CustomerId == customerId)
+                .Select(o => (int?)o.OrderId)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<int> GetCustomerEventTicketQuantityAsync(int customerId, int eventId)
+        {
+            return await _context.OrderDetails
+                .Where(d =>
+                    d.Order.CustomerId == customerId &&
+                    d.Order.EventId == eventId &&
+                    !d.Order.IsDeleted &&
+                    (d.Order.Status == "Pending" ||
+                     d.Order.Status == "PaymentPending" ||
+                     d.Order.Status == "Paid" ||
+                     d.Order.Status == "Held"))
+                .SumAsync(d => (int?)d.Quantity) ?? 0;
+        }
     }
 }

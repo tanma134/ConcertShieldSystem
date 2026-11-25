@@ -125,7 +125,7 @@ export default function OrganizerDashboardPage() {
           </div>
         )}
 
-        {loading && <div className="tb-loading">Loading dashboard...</div>}
+        {loading && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
         {!loading && error && <div className="tb-error">{error}</div>}
 
         {!loading && !error && summary && (

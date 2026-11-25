@@ -10,6 +10,7 @@ namespace PaymentAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class VnPayController : ControllerBase
     {
         private readonly IVnPayService _vnPayService;
@@ -28,10 +29,7 @@ namespace PaymentAPI.Controllers
             _logger = logger;
         }
 
-        // The "Check again" button on the payment result page.
-        // VNPay already confirmed this payment (signature checked when the customer came back), so the
-        // stored Success transaction is replayed to TicketAPI. Safe to repeat: TicketAPI treats a Paid order as done.
-        [Authorize]
+        [Authorize(Roles = "Customer")]
         [HttpPost("reconcile/{orderId:int}")]
         public async Task<IActionResult> Reconcile(int orderId)
         {
@@ -60,13 +58,13 @@ namespace PaymentAPI.Controllers
             });
         }
 
+        [AllowAnonymous]
         [HttpPost("create-payment")]
         public async Task<ActionResult<CreateVnPayPaymentResponseDto>> CreatePayment([FromBody] CreateVnPayPaymentRequestDto request)
         {
             if (request.OrderId <= 0 || request.FinalAmount <= 0)
                 return BadRequest("Invalid order or amount.");
 
-            // VNPay limits each transaction to under 1 billion VND.
             if (request.FinalAmount > 999_999_999L)
                 return BadRequest("Order amount exceeds the VNPay per-transaction limit (999,999,999 VND).");
 
@@ -81,13 +79,22 @@ namespace PaymentAPI.Controllers
                 clientIp = "127.0.0.1";
             }
 
-            await _paymentTransactionService.CreatePaymentTransactionAsync(
-                request.OrderId,
-                request.FinalAmount,
-                request.UserId,
-                clientIp,
-                request.DeviceFp,
-                request.SessionId);
+            var pendingTransaction = await _transactions.GetPendingByOrderIdAsync(request.OrderId, "VNPay");
+
+            if (pendingTransaction == null)
+            {
+                await _paymentTransactionService.CreatePaymentTransactionAsync(
+                    request.OrderId,
+                    request.FinalAmount,
+                    request.UserId,
+                    clientIp,
+                    request.DeviceFp,
+                    request.SessionId);
+            }
+            else if (pendingTransaction.Amount != request.FinalAmount)
+            {
+                return Conflict("A pending payment exists with a different amount.");
+            }
 
             var paymentUrl = _vnPayService.CreatePaymentUrl(
                 request.OrderId,
@@ -100,6 +107,7 @@ namespace PaymentAPI.Controllers
             });
         }
 
+        [AllowAnonymous]
         [HttpGet("vnpay-return")]
         public async Task<IActionResult> VnPayReturn()
         {
@@ -147,6 +155,23 @@ namespace PaymentAPI.Controllers
                 frontendStatus = "failed";
                 reason = "No matching payment was found for this order, or the amount does not match.";
             }
+            else if (result == "Payment cancelled")
+            {
+                if (!int.TryParse(orderIdText, out var orderId))
+                {
+                    frontendStatus = "failed";
+                    reason = "The order ID returned by VNPay is invalid.";
+                }
+                else if (await _ticketApiClient.CancelPendingOrderAsync(orderId))
+                {
+                    frontendStatus = "cancelled";
+                }
+                else
+                {
+                    frontendStatus = "pending";
+                    reason = "Payment was cancelled, but the order could not be cancelled yet.";
+                }
+            }
 
             var frontendUrl =
                 $"http://localhost:5173/payment/result" +
@@ -162,6 +187,7 @@ namespace PaymentAPI.Controllers
             return Redirect(frontendUrl);
         }
 
+        [AllowAnonymous]
         [HttpGet("vnpay-ipn")]
         public async Task<IActionResult> VnPayIpn()
         {
@@ -207,6 +233,31 @@ namespace PaymentAPI.Controllers
                     if (!confirmed)
                     {
                         return Ok(new { RspCode = "99", Message = "Order confirmation failed" });
+                    }
+                }
+                else if (result == "Payment cancelled")
+                {
+                    var orderIdText = query["vnp_TxnRef"].ToString();
+
+                    if (!int.TryParse(orderIdText, out var orderId))
+                    {
+                        return Ok(new
+                        {
+                            RspCode = "04",
+                            Message = "Invalid order ID"
+                        });
+                    }
+
+                    var cancelled =
+                        await _ticketApiClient.CancelPendingOrderAsync(orderId);
+
+                    if (!cancelled)
+                    {
+                        return Ok(new
+                        {
+                            RspCode = "99",
+                            Message = "Could not cancel the pending order"
+                        });
                     }
                 }
 

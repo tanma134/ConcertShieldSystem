@@ -62,8 +62,11 @@ const checkinApi = {
     return withFallback(`/checkin/monitor?${queryParams}`, "get");
   },
 
-  getGateAssignment: (eventId = 1) => {
-    return withFallback(`/checkin/gate-assignment?eventId=${eventId}`, "get");
+  // UC_15.1 / UC-54: View Gate Assignment
+  getGateAssignment: (eventId = 1, staffUserId = null) => {
+    const params = new URLSearchParams({ eventId });
+    if (staffUserId) params.append("staffUserId", staffUserId);
+    return withFallback(`/checkin/gate-assignment?${params.toString()}`, "get");
   },
 
   scanQrTicket: (payload) => {
@@ -111,8 +114,14 @@ const checkinApi = {
     return withFallback("/checkin/governance/events", "get");
   },
 
-  getOfflinePackage: (eventId = 1) => {
-    return withFallback(`/checkin/offline-package?eventId=${eventId}`, "get");
+  // ==========================================
+  // NHÓM 2: Offline Check-in
+  // ==========================================
+  // Enable Offline Check-in Mode (Preload Ticket Package)
+  getOfflinePackage: (eventId = 1, gateName = "") => {
+    const params = new URLSearchParams({ eventId });
+    if (gateName) params.append("gateName", gateName);
+    return withFallback(`/checkin/offline-package?${params.toString()}`, "get");
   },
 
   syncOfflineScans: (payload) => {

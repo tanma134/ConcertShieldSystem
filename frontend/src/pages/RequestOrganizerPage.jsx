@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import organizerRequestApi from "../api/organizerRequestApi";
+import policyApi from "../api/policyApi";
 import "../styles/organizerrequest.css";
 
 const STATUS_LABEL = {
@@ -50,6 +51,27 @@ const DOC_TYPE_LABEL = {
   PORTFOLIO: "Portfolio",
 };
 
+const VIETNAM_BANKS = [
+  "Vietcombank (VCB)",
+  "Techcombank (TCB)",
+  "MB Bank (MB)",
+  "VietinBank (CTG)",
+  "BIDV",
+  "ACB",
+  "VPBank",
+  "TPBank",
+  "Sacombank",
+  "HDBank",
+  "VIB",
+  "OCB",
+  "MSB",
+  "SeABank",
+  "Shinhan Bank",
+  "Standard Chartered",
+  "HSBC Vietnam",
+  "Other Bank",
+];
+
 function StatusBadge({ status }) {
   const cls =
     status === "Approved"
@@ -60,7 +82,7 @@ function StatusBadge({ status }) {
   return <span className={`org-badge ${cls}`}>{STATUS_LABEL[status] || status}</span>;
 }
 
-function FileUploadField({ label, required = false, fileData, onSelect, onRemove }) {
+function FileUploadField({ label, required = false, fileData, onSelect, onRemove, error }) {
   const inputRef = useRef(null);
 
   const handleFileChange = (e) => {
@@ -101,6 +123,7 @@ function FileUploadField({ label, required = false, fileData, onSelect, onRemove
             alignItems: "center",
             justifyContent: "center",
             gap: "8px",
+            ...(error ? { borderColor: "#ef4444" } : {}),
           }}
           onClick={() => inputRef.current?.click()}
         >
@@ -191,6 +214,11 @@ function FileUploadField({ label, required = false, fileData, onSelect, onRemove
           </button>
         </div>
       )}
+      {error && (
+        <span className="org-field-error" style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px", display: "block" }}>
+          {error}
+        </span>
+      )}
     </div>
   );
 }
@@ -202,11 +230,16 @@ export default function RequestOrganizerPage() {
     companyName: "",
     taxCode: "",
     representativeName: "",
+    bankAccountHolder: "",
+    bankAccountNumber: "",
+    bankName: "",
+    bankBranch: "",
     website: "",
     phoneNumber: "",
     experience: "",
   });
 
+  const [fieldErrors, setFieldErrors] = useState({});
   const [businessLicense, setBusinessLicense] = useState(null);
   const [representativeId, setRepresentativeId] = useState(null);
   const [portfolio, setPortfolio] = useState(null);
@@ -217,8 +250,24 @@ export default function RequestOrganizerPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [pricingPolicy, setPricingPolicy] = useState({ platformFeePercent: 5.0, payoutDays: 7, versionCode: "" });
 
   const hasPending = history.some((r) => r.status === "Pending");
+
+  const fetchPricingPolicy = async () => {
+    try {
+      const res = await policyApi.getPricingTerms();
+      if (res?.data?.data) {
+        setPricingPolicy({
+          platformFeePercent: res.data.data.platformFeePercent ?? 5.0,
+          payoutDays: res.data.data.payoutDays ?? 7,
+          versionCode: res.data.data.versionCode ?? ""
+        });
+      }
+    } catch {
+      // ignore
+    }
+  };
 
   const fetchHistory = async () => {
     try {
@@ -228,7 +277,7 @@ export default function RequestOrganizerPage() {
         await refreshRoles();
       }
     } catch {
-      // Ignore history fetch errors so the form remains usable.
+      // ignore
     } finally {
       setLoadingHistory(false);
     }
@@ -236,10 +285,98 @@ export default function RequestOrganizerPage() {
 
   useEffect(() => {
     fetchHistory();
+    fetchPricingPolicy();
   }, []);
 
+  useEffect(() => {
+    const handlePolicyUpdated = () => fetchPricingPolicy();
+    window.addEventListener("policy-updated", handlePolicyUpdated);
+    return () => window.removeEventListener("policy-updated", handlePolicyUpdated);
+  }, []);
+
+  const validateSingleField = (name, value) => {
+    let err = "";
+    const v = (value ?? "").trim();
+    if (name === "reason") {
+      if (!v) err = "Please enter your reason for becoming an organizer.";
+      else if (v.length < 10) err = "Reason must be at least 10 characters long.";
+    } else if (name === "taxCode") {
+      if (!v) err = "Tax code is required (Personal MST or Enterprise MST).";
+      else if (!/^[0-9A-Za-z-]{10,14}$/.test(v)) err = "Tax code must be 10 to 14 characters.";
+    } else if (name === "representativeName") {
+      if (!v) err = "Full legal representative name is required.";
+    } else if (name === "bankAccountHolder") {
+      if (!v) err = "Bank account holder name is required.";
+    } else if (name === "bankAccountNumber") {
+      if (!v) err = "Bank account number is required.";
+      else if (v.length < 6) err = "Bank account number must be at least 6 digits.";
+    } else if (name === "bankName") {
+      if (!v) err = "Please select or enter your bank name.";
+    } else if (name === "website") {
+      if (v && !/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/i.test(v)) {
+        err = "Please enter a valid website URL.";
+      }
+    } else if (name === "phoneNumber") {
+      if (v && !/^(0|\+84)[0-9]{9,10}$/.test(v)) {
+        err = "Phone number must be 10 digits starting with 0 or +84.";
+      }
+    }
+    return err;
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    const fieldsToValidate = [
+      "reason",
+      "taxCode",
+      "representativeName",
+      "bankAccountHolder",
+      "bankAccountNumber",
+      "bankName",
+      "website",
+      "phoneNumber",
+    ];
+
+    fieldsToValidate.forEach((f) => {
+      const err = validateSingleField(f, form[f]);
+      if (err) errors[f] = err;
+    });
+
+    if (!representativeId) {
+      errors.representativeId = "Representative ID / Passport file is required.";
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+    const err = validateSingleField(name, value);
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      if (err) {
+        next[name] = err;
+      } else {
+        delete next[name];
+      }
+      return next;
+    });
+  };
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    const err = validateSingleField(name, value);
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      if (err) {
+        next[name] = err;
+      } else {
+        delete next[name];
+      }
+      return next;
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -247,28 +384,8 @@ export default function RequestOrganizerPage() {
     setError("");
     setSuccess("");
 
-    if (!form.reason.trim()) {
-      setError("Please provide a reason.");
-      return;
-    }
-    if (!form.companyName.trim()) {
-      setError("Please provide your company name.");
-      return;
-    }
-    if (!form.taxCode.trim()) {
-      setError("Please provide your tax code.");
-      return;
-    }
-    if (!form.representativeName.trim()) {
-      setError("Please provide legal representative full name.");
-      return;
-    }
-    if (!businessLicense) {
-      setError("Please upload Business registration license.");
-      return;
-    }
-    if (!representativeId) {
-      setError("Please upload Representative ID / Passport.");
+    if (!validateForm()) {
+      setError("Please resolve the validation errors indicated below.");
       return;
     }
 
@@ -276,14 +393,20 @@ export default function RequestOrganizerPage() {
     try {
       const formData = new FormData();
       formData.append("reason", form.reason.trim());
-      formData.append("companyName", form.companyName.trim());
+      if (form.companyName?.trim()) formData.append("companyName", form.companyName.trim());
       formData.append("taxCode", form.taxCode.trim());
       formData.append("representativeName", form.representativeName.trim());
+      formData.append("bankAccountHolder", form.bankAccountHolder.trim());
+      formData.append("bankAccountNumber", form.bankAccountNumber.trim());
+      formData.append("bankName", form.bankName.trim());
+      if (form.bankBranch?.trim()) formData.append("bankBranch", form.bankBranch.trim());
       if (form.website?.trim()) formData.append("website", form.website.trim());
       if (form.phoneNumber?.trim()) formData.append("phoneNumber", form.phoneNumber.trim());
       if (form.experience?.trim()) formData.append("experience", form.experience.trim());
 
-      formData.append("businessLicenseFile", businessLicense.file);
+      if (businessLicense?.file) {
+        formData.append("businessLicenseFile", businessLicense.file);
+      }
       formData.append("representativeIdFile", representativeId.file);
       if (portfolio?.file) {
         formData.append("portfolioFile", portfolio.file);
@@ -296,6 +419,10 @@ export default function RequestOrganizerPage() {
         companyName: "",
         taxCode: "",
         representativeName: "",
+        bankAccountHolder: "",
+        bankAccountNumber: "",
+        bankName: "",
+        bankBranch: "",
         website: "",
         phoneNumber: "",
         experience: "",
@@ -351,23 +478,31 @@ export default function RequestOrganizerPage() {
                 <textarea
                   name="reason"
                   rows={4}
-                  placeholder="Why do you want to become an organizer?"
+                  placeholder="Enter your reasons for becoming an organizer"
                   value={form.reason}
                   onChange={handleChange}
+                  onBlur={handleBlur}
                   required
                   maxLength={1000}
+                  style={fieldErrors.reason ? { borderColor: "#ef4444" } : {}}
                 />
+                {fieldErrors.reason && (
+                  <span className="org-field-error" style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px", display: "block" }}>
+                    {fieldErrors.reason}
+                  </span>
+                )}
               </div>
 
               <div className="org-field">
-                <label>Company name *</label>
+                <label>
+                  Company name <span className="optional">(optional for individuals)</span>
+                </label>
                 <input
                   name="companyName"
                   type="text"
-                  placeholder="Your company or brand"
+                  placeholder="Enter company or organization name (leave blank if individual)"
                   value={form.companyName}
                   onChange={handleChange}
-                  required
                   maxLength={200}
                 />
               </div>
@@ -377,24 +512,143 @@ export default function RequestOrganizerPage() {
                 <input
                   name="taxCode"
                   type="text"
-                  placeholder=""
+                  placeholder="Enter personal or enterprise tax code"
                   value={form.taxCode}
                   onChange={handleChange}
+                  onBlur={handleBlur}
                   required
                   maxLength={50}
+                  style={fieldErrors.taxCode ? { borderColor: "#ef4444" } : {}}
                 />
+                {fieldErrors.taxCode && (
+                  <span className="org-field-error" style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px", display: "block" }}>
+                    {fieldErrors.taxCode}
+                  </span>
+                )}
               </div>
 
               <div className="org-field">
-                <label>Legal representative *</label>
+                <label>Legal representative full name *</label>
                 <input
                   name="representativeName"
                   type="text"
-                  placeholder=""
+                  placeholder="Enter legal representative or individual full name"
                   value={form.representativeName}
                   onChange={handleChange}
+                  onBlur={handleBlur}
                   required
                   maxLength={200}
+                  style={fieldErrors.representativeName ? { borderColor: "#ef4444" } : {}}
+                />
+                {fieldErrors.representativeName && (
+                  <span className="org-field-error" style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px", display: "block" }}>
+                    {fieldErrors.representativeName}
+                  </span>
+                )}
+              </div>
+
+              {/* PAYOUT & BANK ACCOUNT INFORMATION */}
+              <div
+                style={{
+                  background: "rgba(139, 92, 246, 0.08)",
+                  border: "1px solid rgba(139, 92, 246, 0.25)",
+                  borderRadius: "10px",
+                  padding: "16px",
+                  margin: "24px 0 16px 0",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", marginBottom: "6px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "700", color: "#c4b5fd" }}>
+                    Payment & Bank Account Information (Ticket Payout)
+                  </div>
+                  {pricingPolicy?.versionCode && (
+                    <span style={{ fontSize: "11px", color: "#a78bfa", background: "rgba(139, 92, 246, 0.2)", padding: "2px 8px", borderRadius: "999px", fontWeight: "600" }}>
+                      Policy {pricingPolicy.versionCode}
+                    </span>
+                  )}
+                </div>
+                <p style={{ margin: 0, fontSize: "13px", color: "#d1d5db", lineHeight: "1.5" }}>
+                  ConcertShield will transfer ticket sales revenue directly to your registered bank account. Net sales (after deducting the platform service fee of <strong>{pricingPolicy?.platformFeePercent ?? 5}%</strong>) will be deposited within <strong>{pricingPolicy?.payoutDays ?? 7} business days</strong> after the post-event sales report is finalized. If you need expedited disbursement, please contact our support team at <a href="mailto:support@concertshield.com" style={{ color: "#ec4899", textDecoration: "underline" }}>support@concertshield.com</a>.
+                </p>
+              </div>
+
+              <div className="org-field">
+                <label>Account Holder Name *</label>
+                <input
+                  name="bankAccountHolder"
+                  type="text"
+                  placeholder="Enter full name of account holder (e.g. NGUYEN VAN A)"
+                  value={form.bankAccountHolder}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  required
+                  maxLength={200}
+                  style={fieldErrors.bankAccountHolder ? { borderColor: "#ef4444" } : {}}
+                />
+                {fieldErrors.bankAccountHolder && (
+                  <span className="org-field-error" style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px", display: "block" }}>
+                    {fieldErrors.bankAccountHolder}
+                  </span>
+                )}
+              </div>
+
+              <div className="org-field">
+                <label>Bank Account Number *</label>
+                <input
+                  name="bankAccountNumber"
+                  type="text"
+                  placeholder="Enter bank account number"
+                  value={form.bankAccountNumber}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  required
+                  maxLength={100}
+                  style={fieldErrors.bankAccountNumber ? { borderColor: "#ef4444" } : {}}
+                />
+                {fieldErrors.bankAccountNumber && (
+                  <span className="org-field-error" style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px", display: "block" }}>
+                    {fieldErrors.bankAccountNumber}
+                  </span>
+                )}
+              </div>
+
+              <div className="org-field">
+                <label>Bank Name *</label>
+                <input
+                  name="bankName"
+                  list="vietnam-banks"
+                  type="text"
+                  placeholder="Select or enter bank name (e.g. Vietcombank)"
+                  value={form.bankName}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  required
+                  maxLength={150}
+                  style={fieldErrors.bankName ? { borderColor: "#ef4444" } : {}}
+                />
+                <datalist id="vietnam-banks">
+                  {VIETNAM_BANKS.map((b) => (
+                    <option key={b} value={b} />
+                  ))}
+                </datalist>
+                {fieldErrors.bankName && (
+                  <span className="org-field-error" style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px", display: "block" }}>
+                    {fieldErrors.bankName}
+                  </span>
+                )}
+              </div>
+
+              <div className="org-field">
+                <label>
+                  Bank Branch <span className="optional">(optional)</span>
+                </label>
+                <input
+                  name="bankBranch"
+                  type="text"
+                  placeholder="Enter bank branch (e.g. Ho Chi Minh City Branch)"
+                  value={form.bankBranch}
+                  onChange={handleChange}
+                  maxLength={150}
                 />
               </div>
 
@@ -405,11 +659,17 @@ export default function RequestOrganizerPage() {
                 <input
                   name="website"
                   type="text"
-                  placeholder="https://example.com"
+                  placeholder="Enter website URL"
                   value={form.website}
                   onChange={handleChange}
                   maxLength={255}
+                  style={fieldErrors.website ? { borderColor: "#ef4444" } : {}}
                 />
+                {fieldErrors.website && (
+                  <span className="org-field-error" style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px", display: "block" }}>
+                    {fieldErrors.website}
+                  </span>
+                )}
               </div>
 
               <div className="org-field">
@@ -419,11 +679,17 @@ export default function RequestOrganizerPage() {
                 <input
                   name="phoneNumber"
                   type="tel"
-                  placeholder=""
+                  placeholder="Enter contact phone number"
                   value={form.phoneNumber}
                   onChange={handleChange}
                   maxLength={20}
+                  style={fieldErrors.phoneNumber ? { borderColor: "#ef4444" } : {}}
                 />
+                {fieldErrors.phoneNumber && (
+                  <span className="org-field-error" style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px", display: "block" }}>
+                    {fieldErrors.phoneNumber}
+                  </span>
+                )}
               </div>
 
               <div className="org-field">
@@ -433,7 +699,7 @@ export default function RequestOrganizerPage() {
                 <textarea
                   name="experience"
                   rows={3}
-                  placeholder="Any relevant experience organizing events?"
+                  placeholder="Describe relevant event organization experience"
                   value={form.experience}
                   onChange={handleChange}
                   maxLength={2000}
@@ -441,19 +707,35 @@ export default function RequestOrganizerPage() {
               </div>
 
               <FileUploadField
-                label="Business registration license"
-                required
+                label="Business registration license (optional for individuals)"
+                required={false}
                 fileData={businessLicense}
-                onSelect={setBusinessLicense}
+                onSelect={(val) => {
+                  setBusinessLicense(val);
+                  setFieldErrors((prev) => {
+                    const n = { ...prev };
+                    delete n.businessLicense;
+                    return n;
+                  });
+                }}
                 onRemove={() => setBusinessLicense(null)}
+                error={fieldErrors.businessLicense}
               />
 
               <FileUploadField
                 label="Representative ID / Passport"
                 required
                 fileData={representativeId}
-                onSelect={setRepresentativeId}
+                onSelect={(val) => {
+                  setRepresentativeId(val);
+                  setFieldErrors((prev) => {
+                    const n = { ...prev };
+                    delete n.representativeId;
+                    return n;
+                  });
+                }}
                 onRemove={() => setRepresentativeId(null)}
+                error={fieldErrors.representativeId}
               />
 
               <FileUploadField
@@ -465,7 +747,7 @@ export default function RequestOrganizerPage() {
               />
 
               <button className="org-button" type="submit" disabled={submitting}>
-                {submitting ? "Submitting..." : "Submit request"}
+                {submitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Submit request"}
               </button>
             </form>
           )}
@@ -477,7 +759,7 @@ export default function RequestOrganizerPage() {
           </h2>
 
           {loadingHistory ? (
-            <p className="org-empty">Loading...</p>
+            <p className="org-empty"><span className="app-loading-spinner" role="status" aria-label="Loading" /></p>
           ) : history.length === 0 ? (
             <p className="org-empty">You haven't submitted any request yet.</p>
           ) : (
@@ -668,7 +950,7 @@ export default function RequestOrganizerPage() {
                       lineHeight: "1.5",
                     }}
                   >
-                    ⚠️ <strong>Lưu ý:</strong> Nếu trình duyệt không tải được file PDF từ Cloudinary (lỗi <em>deny or ACL failure 401</em>), vui lòng vào <strong>Cloudinary Console &gt; Settings (bánh răng) &gt; Security &gt; Bật "PDF and ZIP files delivery"</strong> rồi bấm Save.
+                    ⚠️ <strong>Note:</strong> If the browser fails to render the PDF file from Cloudinary (error <em>deny or ACL failure 401</em>), please navigate to <strong>Cloudinary Console &gt; Settings &gt; Security &gt; Enable "PDF and ZIP files delivery"</strong> and click Save.
                   </div>
                 </div>
               )}

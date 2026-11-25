@@ -16,6 +16,10 @@ public sealed class RedisQueueStore(IConfiguration configuration) : IRedisQueueS
     private static string Sessions(int eventId, int userId) => $"{Root(eventId)}:session:{userId}";
     private static string Joined(int eventId, int userId) => $"{Root(eventId)}:joined:{userId}";
     private static string Token(int eventId, string token) => $"{Root(eventId)}:token:{token}";
+    private static string AbuseRegistrationRequests(int eventId, int userId) => $"{Root(eventId)}:abuse:registration:{userId}";
+    private static string AbuseRepeatedRegistrations(int eventId, int userId) => $"{Root(eventId)}:abuse:repeat-registration:{userId}";
+    private static string RevokedToken(int eventId, string fingerprint) => $"{Root(eventId)}:revoked-token:{fingerprint}";
+    private static string AbuseTokenReplays(int eventId, string fingerprint) => $"{Root(eventId)}:abuse:token-replay:{fingerprint}";
     private static string Admission(int eventId, int userId) => $"{Root(eventId)}:admission:{userId}";
     private static string AdmissionWindow(int eventId) => $"{Root(eventId)}:admission-window";
     private static string Registrations(int eventId, string cycleKey) => $"{Root(eventId)}:registrations:{cycleKey}";
@@ -42,11 +46,127 @@ public sealed class RedisQueueStore(IConfiguration configuration) : IRedisQueueS
         return (int)result == 1;
     }
 
+    public Task<IReadOnlyList<long>> RecordRegistrationRequestAsync(
+        int eventId,
+        int userId,
+        long timestampMilliseconds,
+        CancellationToken cancellationToken) =>
+        RecordAttemptsAsync(AbuseRegistrationRequests(eventId, userId), timestampMilliseconds,
+            QueueAbuseDetection.AutomatedRequestWindowSeconds,
+            QueueAbuseDetection.AutomatedRequestThreshold, cancellationToken);
+
+    public Task<IReadOnlyList<long>> RecordRepeatedRegistrationAttemptAsync(
+        int eventId,
+        int userId,
+        long timestampMilliseconds,
+        CancellationToken cancellationToken) =>
+        RecordAttemptsAsync(AbuseRepeatedRegistrations(eventId, userId), timestampMilliseconds,
+            QueueAbuseDetection.MultipleRegistrationWindowSeconds,
+            QueueAbuseDetection.MultipleRegistrationAttemptsThreshold, cancellationToken);
+
+    public async Task<RevokedTokenReplaySnapshot?> RecordRevokedTokenReuseAsync(
+        int eventId,
+        string token,
+        long timestampMilliseconds,
+        CancellationToken cancellationToken)
+    {
+        var fingerprint = QueueAbuseDetection.TokenFingerprint(token);
+        const string script = """
+            local metadata = redis.call('GET', KEYS[1])
+            if not metadata then return {} end
+            local now = tonumber(ARGV[1])
+            local window = tonumber(ARGV[2])
+            redis.call('ZADD', KEYS[2], now, ARGV[3])
+            redis.call('ZREMRANGEBYSCORE', KEYS[2], '-inf', now - window)
+            local count = redis.call('ZCARD', KEYS[2])
+            local maximum = tonumber(ARGV[5])
+            if count > maximum then redis.call('ZREMRANGEBYRANK', KEYS[2], 0, -(maximum + 1)) end
+            redis.call('EXPIRE', KEYS[2], ARGV[4])
+            local attempts = redis.call('ZRANGE', KEYS[2], 0, -1, 'WITHSCORES')
+            local result = { metadata }
+            for _, value in ipairs(attempts) do table.insert(result, value) end
+            return result
+            """;
+        var result = (RedisResult[]?)await Db.ScriptEvaluateAsync(
+            script,
+            new RedisKey[]
+            {
+                RevokedToken(eventId, fingerprint),
+                AbuseTokenReplays(eventId, fingerprint)
+            },
+            new RedisValue[]
+            {
+                timestampMilliseconds,
+                TimeSpan.FromSeconds(QueueAbuseDetection.TokenReplayWindowSeconds).TotalMilliseconds,
+                Guid.NewGuid().ToString("N"),
+                QueueAbuseDetection.TokenReplayWindowSeconds,
+                QueueAbuseDetection.TokenReplayThreshold
+            });
+        if (result == null || result.Length < 1)
+            return null;
+
+        var metadata = ((string?)result[0])?.Split('|', 2);
+        if (metadata == null || metadata.Length != 2 ||
+            !int.TryParse(metadata[0], NumberStyles.None, CultureInfo.InvariantCulture, out var userId))
+            return null;
+
+        var timestamps = new List<long>((result.Length - 1) / 2);
+        for (var index = 2; index < result.Length; index += 2)
+        {
+            if (long.TryParse((string?)result[index], NumberStyles.Integer, CultureInfo.InvariantCulture, out var attemptTimestamp))
+                timestamps.Add(attemptTimestamp);
+        }
+
+        return new RevokedTokenReplaySnapshot(userId, metadata[1], fingerprint, timestamps);
+    }
+
+    private async Task<IReadOnlyList<long>> RecordAttemptsAsync(
+        string key,
+        long timestampMilliseconds,
+        int windowSeconds,
+        int maximumEntries,
+        CancellationToken cancellationToken)
+    {
+        const string script = """
+            local now = tonumber(ARGV[1])
+            local window = tonumber(ARGV[2])
+            redis.call('ZADD', KEYS[1], now, ARGV[3])
+            redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', now - window)
+            local count = redis.call('ZCARD', KEYS[1])
+            local maximum = tonumber(ARGV[5])
+            if count > maximum then redis.call('ZREMRANGEBYRANK', KEYS[1], 0, -(maximum + 1)) end
+            redis.call('EXPIRE', KEYS[1], ARGV[4])
+            return redis.call('ZRANGE', KEYS[1], 0, -1, 'WITHSCORES')
+            """;
+        var result = (RedisResult[]?)await Db.ScriptEvaluateAsync(
+            script,
+            new RedisKey[] { key },
+            new RedisValue[]
+            {
+                timestampMilliseconds,
+                TimeSpan.FromSeconds(windowSeconds).TotalMilliseconds,
+                Guid.NewGuid().ToString("N"),
+                windowSeconds,
+                maximumEntries
+            });
+        var timestamps = new List<long>((result?.Length ?? 0) / 2);
+        if (result == null)
+            return timestamps;
+
+        for (var index = 1; index < result.Length; index += 2)
+        {
+            if (long.TryParse((string?)result[index], NumberStyles.Integer, CultureInfo.InvariantCulture, out var attemptTimestamp))
+                timestamps.Add(attemptTimestamp);
+        }
+        return timestamps;
+    }
+
     public async Task ResetUserAsync(int eventId, int userId, string cycleKey, CancellationToken cancellationToken)
     {
         await Db.KeyDeleteAsync(Sessions(eventId, userId));
         await Db.KeyDeleteAsync(Joined(eventId, userId));
         await Db.KeyDeleteAsync(Admission(eventId, userId));
+        await Db.KeyDeleteAsync(AbuseRepeatedRegistrations(eventId, userId));
         await Db.SortedSetRemoveAsync(Waiting(eventId), userId.ToString(CultureInfo.InvariantCulture));
         await Db.SortedSetRemoveAsync(Order(eventId), userId.ToString(CultureInfo.InvariantCulture));
         await Db.SetRemoveAsync(Registrations(eventId, cycleKey), userId.ToString(CultureInfo.InvariantCulture));
@@ -115,10 +235,38 @@ public sealed class RedisQueueStore(IConfiguration configuration) : IRedisQueueS
         await Db.KeyDeleteAsync(Joined(eventId, userId));
     }
 
-    public async Task RevokeAsync(int eventId, int userId, string token, string cycleKey, CancellationToken cancellationToken)
+    public async Task RevokeAsync(int eventId, int userId, string sessionId, string token, string cycleKey, CancellationToken cancellationToken)
     {
-        await LeaveAsync(eventId, userId, token, cycleKey, cancellationToken);
-        await Db.StringSetAsync($"{Root(eventId)}:revoked:{userId}", "1", TimeSpan.FromDays(1));
+        var fingerprint = QueueAbuseDetection.TokenFingerprint(token);
+        const string script = """
+            redis.call('ZREM', KEYS[1], ARGV[1])
+            redis.call('ZREM', KEYS[2], ARGV[1])
+            redis.call('DEL', KEYS[3], KEYS[4], KEYS[5], KEYS[7])
+            redis.call('SREM', KEYS[6], ARGV[1])
+            redis.call('SET', KEYS[8], ARGV[2], 'EX', ARGV[3])
+            redis.call('SET', KEYS[9], '1', 'EX', ARGV[3])
+            return 1
+            """;
+        await Db.ScriptEvaluateAsync(
+            script,
+            new RedisKey[]
+            {
+                Waiting(eventId),
+                Order(eventId),
+                Admission(eventId, userId),
+                Token(eventId, token),
+                Sessions(eventId, userId),
+                Registrations(eventId, cycleKey),
+                Joined(eventId, userId),
+                RevokedToken(eventId, fingerprint),
+                $"{Root(eventId)}:revoked:{userId}"
+            },
+            new RedisValue[]
+            {
+                userId.ToString(CultureInfo.InvariantCulture),
+                $"{userId.ToString(CultureInfo.InvariantCulture)}|{sessionId}",
+                (int)TimeSpan.FromDays(1).TotalSeconds
+            });
     }
 
     public async Task<int> AdmitNextAsync(int eventId, int admissionRate, CancellationToken cancellationToken)

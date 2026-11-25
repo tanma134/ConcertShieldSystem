@@ -22,4 +22,5 @@ public partial class OrderAttendee
     public int? SeatId { get; set; }
 
     public virtual Order Order { get; set; } = null!;
+    public virtual ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();
 }

@@ -77,6 +77,12 @@ const eventApi = {
   approve: (id) => axiosClient.post(`/events/${id}/approve`),
 
   reject: (id, reason) => axiosClient.post(`/events/${id}/reject`, { reason }),
+
+  // ---- Event Gates (Cổng sự kiện và phân loại vé) ----
+  getGates: (eventId) => axiosClient.get(`/events/${eventId}/gates`),
+  createGate: (eventId, data) => axiosClient.post(`/events/${eventId}/gates`, data),
+  updateGate: (eventId, gateId, data) => axiosClient.put(`/events/${eventId}/gates/${gateId}`, data),
+  deleteGate: (eventId, gateId) => axiosClient.delete(`/events/${eventId}/gates/${gateId}`),
 };
 
 export default eventApi;

@@ -11,6 +11,8 @@ export default function QueueManagementPage() {
   const [sessions, setSessions] = useState([]);
   const [events, setEvents] = useState([]);
   const [filterEventId, setFilterEventId] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [search, setSearch] = useState("");
   const [configuration, setConfiguration] = useState(initialConfiguration);
   const [loading, setLoading] = useState(true);
@@ -18,11 +20,21 @@ export default function QueueManagementPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const load = useCallback(async (eventId = filterEventId) => {
+  const load = useCallback(async () => {
+    if (fromDate && toDate && fromDate > toDate) {
+      setError("Start date must be on or before end date.");
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const [sessionResponse, eventResponse] = await Promise.all([
-        queueAdminApi.getSessions(eventId),
+        queueAdminApi.getSessions({
+          ...(filterEventId ? { eventId: filterEventId } : {}),
+          ...(fromDate ? { fromDate } : {}),
+          ...(toDate ? { toDate } : {}),
+        }),
         events.length ? Promise.resolve(null) : eventApi.getAllAdmin({ page: 1, pageSize: 100, sortBy: "Title", sortOrder: "asc" }),
       ]);
       setSessions(sessionResponse.data || []);
@@ -36,7 +48,7 @@ export default function QueueManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [events.length, filterEventId]);
+  }, [events.length, filterEventId, fromDate, toDate]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => load(), 0);
@@ -146,7 +158,7 @@ export default function QueueManagementPage() {
               <input name="admissionRate" type="number" min="1" required value={configuration.admissionRate} onChange={updateConfiguration} />
             </label>
             <button className="admin-button" type="submit" disabled={saving || !selectedEvent}>
-              {saving ? "Opening..." : "Open Queue"}
+              {saving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Open Queue"}
             </button>
           </form>
         </section>
@@ -155,7 +167,7 @@ export default function QueueManagementPage() {
           {["REGISTERED", "WAITING", "ADMITTED", "BLOCKED"].map((status) => (
             <div className="summary-card" key={status}>
               <span className="label">{status}</span>
-              <div className="value">{loading ? "..." : count(status)}</div>
+              <div className="value">{loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : count(status)}</div>
               <span className="trend">Current sessions</span>
             </div>
           ))}
@@ -172,7 +184,7 @@ export default function QueueManagementPage() {
               </p>
             </div>
             <button className="admin-button-secondary" type="button" onClick={() => load()} disabled={loading}>
-              {loading ? "Loading..." : "Refresh"}
+              {loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Refresh"}
             </button>
           </div>
           <div className="toolbar-row queue-management-toolbar">
@@ -192,9 +204,17 @@ export default function QueueManagementPage() {
                 {events.map((event) => <option key={event.eventId} value={event.eventId}>{event.title}</option>)}
               </select>
             </label>
+            <label className="queue-filter-control">
+              <span>From date</span>
+              <input aria-label="Filter queue sessions from date" type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} />
+            </label>
+            <label className="queue-filter-control">
+              <span>To date</span>
+              <input aria-label="Filter queue sessions to date" type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} />
+            </label>
           </div>
           {loading ? (
-            <div className="empty-state">Loading queue sessions...</div>
+            <div className="empty-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
           ) : filteredSessions.length === 0 ? (
             <div className="empty-state">{search ? "No queue sessions match your search." : "No queue sessions found."}</div>
           ) : (

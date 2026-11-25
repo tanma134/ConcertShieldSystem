@@ -184,7 +184,7 @@ export default function GovernancePanel({ event, admin = false, onUpdated, onCom
       {notice && <p role="status" style={{ color: '#047857', fontWeight: 500 }}>{notice}</p>}
       <button className="tb-btn tb-btn-outline" disabled={busy || loading} onClick={load}>Refresh</button>
 
-      {loading ? <p>Loading governance records...</p> : record && (
+      {loading ? <p><span className="app-loading-spinner" role="status" aria-label="Loading" /></p> : record && (
         <>
           <p>Concert #{id} · {event.title} · <strong>Status: {record.status}</strong> · Version {record.version}</p>
           <p>Required: {record.requiredTypes.join(', ')}. PDF / PNG / JPEG, up to {Math.round(record.maxBytes / 1048576)} MB.</p>
@@ -232,7 +232,7 @@ export default function GovernancePanel({ event, admin = false, onUpdated, onCom
                 </div>
               </div>
               <button className="tb-btn tb-btn-primary" disabled={busy || !file}>
-                {busy ? 'Uploading document…' : 'Upload document'}
+                {busy ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : 'Upload document'}
               </button>
             </form>
           )}
@@ -562,7 +562,7 @@ export default function GovernancePanel({ event, admin = false, onUpdated, onCom
             </button>
           </form>
 
-          {reading ? <p>Loading affected records...</p> : affected && (
+          {reading ? <p><span className="app-loading-spinner" role="status" aria-label="Loading" /></p> : affected && (
             <>
               <div className="governance-table">
                 <table>

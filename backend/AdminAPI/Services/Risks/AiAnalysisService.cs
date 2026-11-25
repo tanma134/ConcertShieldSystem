@@ -1,9 +1,8 @@
 ﻿using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Channels;
-using AdminAPI.Data;
 using AdminAPI.Models;
-using Microsoft.EntityFrameworkCore;
+using AdminAPI.Repositories;
 
 namespace AdminAPI.Services.Risks;
 
@@ -41,13 +40,15 @@ public sealed class AiAnalysisService : IAiAnalysisService
         "\"key_signals\":[\"at most 5 short items\"],\"suggested_action\":\"block|hold|challenge|dismiss|investigate\"," +
         "\"caveats\":\"anything still uncertain, may be left empty\"}. Write in English, concisely and objectively.";
 
-    private readonly AdminDbContext _db;
+    private readonly IFraudAlertRepository _alerts;
+    private readonly IRiskDecisionRepository _decisions;
     private readonly IRiskConfigProvider _config;
     private readonly IAiChatClient _chat;
 
-    public AiAnalysisService(AdminDbContext db, IRiskConfigProvider config, IAiChatClient chat)
+    public AiAnalysisService(IFraudAlertRepository alerts, IRiskDecisionRepository decisions,
+        IRiskConfigProvider config, IAiChatClient chat)
     {
-        _db = db; _config = config; _chat = chat;
+        _alerts = alerts; _decisions = decisions; _config = config; _chat = chat;
     }
 
     public async Task<AiSummaryDto> SummarizeAlertAsync(int alertId, CancellationToken ct = default)
@@ -59,12 +60,10 @@ public sealed class AiAnalysisService : IAiAnalysisService
         if (!_chat.IsConfigured)
             throw new RiskServiceException(503, "Ai:ApiKey is not configured in AdminAPI.");
 
-        var alert = await _db.FraudAlerts.FirstOrDefaultAsync(a => a.FraudAlertId == alertId, ct)
+        var alert = await _alerts.GetForUpdateAsync(alertId, ct)
                     ?? throw new RiskServiceException(404, "Alert not found.");
 
-        var decisions = (await _db.RiskDecisions.AsNoTracking()
-                .Where(d => d.FraudAlertId == alertId).ToListAsync(ct))
-            .OrderByDescending(d => d.CreatedAt).Take(5).ToList();
+        var decisions = await _decisions.GetRecentByAlertAsync(alertId, 5, ct);
 
         var inputJson = JsonSerializer.Serialize(BuildInput(alert, decisions));
         var text = await _chat.CompleteAsync(SystemPrompt, $"<data>{inputJson}</data>", ct);
@@ -83,7 +82,7 @@ public sealed class AiAnalysisService : IAiAnalysisService
             generated_at = dto.GeneratedAt
         });
         alert.AiSummaryAt = dto.GeneratedAt;
-        await _db.SaveChangesAsync(ct);
+        await _alerts.SaveChangesAsync(ct);
         return dto;
     }
 

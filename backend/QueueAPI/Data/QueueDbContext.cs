@@ -136,7 +136,7 @@ public sealed class QueueDbContext(DbContextOptions<QueueDbContext> options) : D
             entity.Property(x => x.SessionId)
                 .HasColumnName("session_id");
 
-            entity.Property(x => x.QueueToken)
+            entity.Property(x => x.TokenFingerprint)
                 .HasColumnName("queue_token");
 
             entity.Property(x => x.AlertType)
@@ -157,6 +157,10 @@ public sealed class QueueDbContext(DbContextOptions<QueueDbContext> options) : D
                 .HasConversion(vietnamTimestampConverter);
 
             entity.HasIndex(x => new { x.EventId, x.CreatedAt });
+            entity.HasIndex(x => new { x.SessionId, x.AlertType })
+                .HasDatabaseName("ux_queue_abuse_alerts_session_type")
+                .IsUnique()
+                .HasFilter("\"alert_type\" IN ('MULTIPLE_REGISTRATION_ATTEMPTS', 'AUTOMATED_REQUEST_PATTERN', 'TOKEN_REPLAY')");
         });
 
     }

@@ -1,9 +1,8 @@
 ﻿using System.Net;
 using System.Text.Json;
-using AdminAPI.Data;
 using AdminAPI.DTOs;
 using AdminAPI.Models;
-using AdminAPI.Services.Risks;
+using AdminAPI.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace AdminAPI.Services.Risks;
@@ -28,14 +27,18 @@ public interface IFraudAlertService
 public sealed class FraudAlertService : IFraudAlertService
 {
     private static readonly string[] ManualScopes = { "ACCOUNT", "TICKET", "IP" };
-    private static readonly string[] ClosedStatuses = { "Restored", "Overturned" };
     private const int MaxManualBlockHours = 24 * 30;
-    // One user may be blocked on at most this many different scopes at the same time.
     private const int MaxActiveScopesPerUser = 2;
     private const int MinReasonLength = 10;
     private static readonly TimeSpan AlertMergeWindow = TimeSpan.FromMinutes(15);
+    private static readonly string[] CredentialActions = { "PASSWORD_CHANGED", "PASSWORD_RESET" };
 
-    private readonly AdminDbContext _db;
+    private readonly IFraudAlertRepository _alerts;
+    private readonly IRiskDecisionRepository _decisions;
+    private readonly IRiskListRepository _lists;
+    private readonly IRiskNotificationRepository _notifications;
+    private readonly IAuditLogRepository _audit;
+    private readonly IRiskAppealRepository _appeals;
     private readonly IRiskConfigProvider _config;
     private readonly RiskScoreCalculator _calc;
     private readonly ILogger<FraudAlertService> _logger;
@@ -44,12 +47,24 @@ public sealed class FraudAlertService : IFraudAlertService
 
     private readonly IAiSummaryQueue _aiQueue;
 
-    public FraudAlertService(AdminDbContext db, IRiskConfigProvider config, RiskScoreCalculator calc,
+    public FraudAlertService(IFraudAlertRepository alerts, IRiskDecisionRepository decisions,
+        IRiskListRepository lists, IRiskNotificationRepository notifications, IAuditLogRepository audit,
+        IRiskAppealRepository appeals, IRiskConfigProvider config, RiskScoreCalculator calc,
         IAiSummaryQueue aiQueue, ILogger<FraudAlertService> logger,
         ITicketRiskClient? tickets = null, IStaffDirectoryClient? accounts = null)
     {
-        _db = db; _config = config; _calc = calc; _aiQueue = aiQueue;
-        _logger = logger; _tickets = tickets; _accounts = accounts;
+        _alerts = alerts;
+        _decisions = decisions;
+        _lists = lists;
+        _notifications = notifications;
+        _audit = audit;
+        _appeals = appeals;
+        _config = config;
+        _calc = calc;
+        _aiQueue = aiQueue;
+        _logger = logger;
+        _tickets = tickets;
+        _accounts = accounts;
     }
 
     public async Task<IngestRiskEventResponse> IngestAsync(IngestRiskEventRequest req, CancellationToken ct = default)
@@ -73,7 +88,7 @@ public sealed class FraudAlertService : IFraudAlertService
         if (req.UserId is int uid)
         {
             if (cfg.Rules.TryGetValue("FRD_L02", out var l02) && l02.Enabled && fraud.All(r => r.Code != "FRD_L02")
-                && await HadBlockAsync(uid, now.AddSeconds(-Math.Max(1, l02.WindowSec)), ct))
+                && await _decisions.HasRecentBlockAsync(uid, now.AddSeconds(-Math.Max(1, l02.WindowSec)), ct))
                 fraud.Add(ToMatched("FRD_L02", l02, 1, "recent block"));
 
             // FRD_A03: password reset/change followed by ticket hold or order creation (booking events include EventId).
@@ -81,16 +96,14 @@ public sealed class FraudAlertService : IFraudAlertService
                 && fraud.All(r => r.Code != "FRD_A03"))
             {
                 var credSince = now.AddSeconds(-Math.Max(1, a03.WindowSec));
-                var credentialActions = new[] { "PASSWORD_CHANGED", "PASSWORD_RESET" };
-                if (await _db.AuditLogs.AsNoTracking().AnyAsync(a =>
-                        a.UserId == uid && credentialActions.Contains(a.Action) && a.CreatedAt >= credSince, ct))
+                if (await _audit.AnyAsync(uid, CredentialActions, credSince, ct))
                     fraud.Add(ToMatched("FRD_A03", a03, 1, "password changed shortly before booking"));
             }
 
             if (cfg.Rules.TryGetValue("TRU_05", out var t05) && t05.Enabled && trust.All(r => r.Code != "TRU_05"))
             {
                 var since = t05.WindowSec > 0 ? now.AddSeconds(-t05.WindowSec) : now.AddDays(-cfg.TrustRestoreDays);
-                if (await _db.RiskDecisions.AsNoTracking().AnyAsync(d => d.UserId == uid && d.RestoredAt != null && d.RestoredAt >= since, ct))
+                if (await _decisions.AnyRestoredSinceAsync(uid, since, ct))
                     trust.Add(ToMatched("TRU_05", t05, 1, "previously restored by staff"));
             }
         }
@@ -181,7 +194,7 @@ public sealed class FraudAlertService : IFraudAlertService
                 DecidedByType = "SYSTEM",
                 CreatedAt = now
             };
-            _db.RiskDecisions.Add(d);
+            await _decisions.AddAsync(d, ct);
             created.Add(d);
         }
 
@@ -190,11 +203,20 @@ public sealed class FraudAlertService : IFraudAlertService
             foreach (var byUser in created.Where(x => x.UserId.HasValue).GroupBy(x => x.UserId!.Value))
             {
                 foreach (var row in byUser) row.NotifiedAt = now;
-                _db.RiskNotifications.Add(RiskSupport.BlockNotice(byUser.First(), cfg, now));
+                await _notifications.AddAsync(RiskSupport.BlockNotice(byUser.First(), cfg, now), ct);
             }
         }
 
-        await _db.SaveChangesAsync(ct);
+        await _decisions.SaveChangesAsync(ct);
+
+        if (decision.Action == RiskAction.Block && !decision.IsShadow && _accounts != null)
+        {
+            foreach (var blockedUserId in created
+                         .Where(x => x.Scope == "ACCOUNT" && x.UserId.HasValue)
+                         .Select(x => x.UserId!.Value)
+                         .Distinct())
+                await _accounts.RevokeSessionsAsync(blockedUserId, CancellationToken.None);
+        }
 
         response.FraudAlertId = alert?.FraudAlertId;
 
@@ -213,18 +235,8 @@ public sealed class FraudAlertService : IFraudAlertService
         var fromUtc = from.HasValue ? ToUtc(from.Value) : toUtc.AddDays(-7);
         if (fromUtc > toUtc) throw new RiskServiceException(400, "From must be less than or equal to To.");
 
-        var q = _db.FraudAlerts.AsNoTracking().Where(a => a.CreatedAt >= fromUtc && a.CreatedAt <= toUtc);
-
-        var byLevel = await q.GroupBy(a => a.RiskLevel).Select(g => new { g.Key, Count = g.Count() }).ToListAsync();
-        var byType = await q.GroupBy(a => a.AlertType).Select(g => new { g.Key, Count = g.Count() }).ToListAsync();
-        var byStatus = await q.GroupBy(a => a.Status).Select(g => new { g.Key, Count = g.Count() }).ToListAsync();
-
         var slaCutoff = DateTime.UtcNow.AddHours(-cfg.AlertSlaHours);
-        var openHigh = await q.CountAsync(a => (a.Status == "Open" || a.Status == "InReview")
-                                                && (a.RiskLevel == "High" || a.RiskLevel == "Critical"));
-        var overdue = await q.CountAsync(a => (a.Status == "Open" || a.Status == "InReview")
-                                              && (a.RiskLevel == "High" || a.RiskLevel == "Critical")
-                                              && a.CreatedAt < slaCutoff);
+        var metrics = await _alerts.GetMetricsAsync(fromUtc, toUtc, slaCutoff);
 
         static List<CountItemDto> Map(IEnumerable<(string Key, int Count)> src, string[] order)
         {
@@ -236,12 +248,12 @@ public sealed class FraudAlertService : IFraudAlertService
         {
             From = fromUtc,
             To = toUtc,
-            Total = byLevel.Sum(x => x.Count),
-            OpenHighOrCritical = openHigh,
-            OverdueSla = overdue,
-            ByLevel = Map(byLevel.Select(x => (x.Key, x.Count)), new[] { "Critical", "High", "Medium", "Low" }),
-            ByType = Map(byType.Select(x => (x.Key, x.Count)), new[] { "Bot", "Fraud" }),
-            ByStatus = Map(byStatus.Select(x => (x.Key, x.Count)), new[] { "Open", "InReview", "Resolved", "FalsePositive", "Dismissed" })
+            Total = metrics.Total,
+            OpenHighOrCritical = metrics.OpenHighOrCritical,
+            OverdueSla = metrics.OverdueSla,
+            ByLevel = Map(metrics.ByLevel, new[] { "Critical", "High", "Medium", "Low" }),
+            ByType = Map(metrics.ByType, new[] { "Bot", "Fraud" }),
+            ByStatus = Map(metrics.ByStatus, new[] { "Open", "InReview", "Resolved", "FalsePositive", "Dismissed" })
         };
     }
 
@@ -250,17 +262,10 @@ public sealed class FraudAlertService : IFraudAlertService
         var page = Math.Max(1, qy.Page);
         var size = Math.Clamp(qy.PageSize, 1, 100);
 
-        var q = _db.FraudAlerts.AsNoTracking().AsQueryable();
-        if (!string.IsNullOrWhiteSpace(qy.RiskLevel)) q = q.Where(a => a.RiskLevel == qy.RiskLevel);
-        if (!string.IsNullOrWhiteSpace(qy.AlertType)) q = q.Where(a => a.AlertType == qy.AlertType);
-        if (!string.IsNullOrWhiteSpace(qy.Status)) q = q.Where(a => a.Status == qy.Status);
-        if (qy.UserId.HasValue) q = q.Where(a => a.UserId == qy.UserId);
-        if (qy.From.HasValue) { var f = ToUtc(qy.From.Value); q = q.Where(a => a.CreatedAt >= f); }
-        if (qy.To.HasValue) { var t = ToUtc(qy.To.Value); q = q.Where(a => a.CreatedAt <= t); }
-
-        var total = await q.CountAsync();
-        var rows = await q.OrderByDescending(a => a.CreatedAt)
-                          .Skip((page - 1) * size).Take(size).ToListAsync();
+        var (rows, total) = await _alerts.SearchAsync(qy,
+            qy.From.HasValue ? ToUtc(qy.From.Value) : null,
+            qy.To.HasValue ? ToUtc(qy.To.Value) : null,
+            page, size);
 
         return new PagedResult<FraudAlertListItemDto>
         {
@@ -273,11 +278,10 @@ public sealed class FraudAlertService : IFraudAlertService
 
     public async Task<FraudAlertDetailDto> GetDetailAsync(int id)
     {
-        var alert = await _db.FraudAlerts.AsNoTracking().FirstOrDefaultAsync(a => a.FraudAlertId == id)
+        var alert = await _alerts.GetByIdAsync(id)
                     ?? throw new RiskServiceException(404, "Alert not found.");
 
-        var decisions = await _db.RiskDecisions.AsNoTracking()
-            .Where(d => d.FraudAlertId == id).OrderBy(d => d.CreatedAt).ToListAsync();
+        var decisions = await _decisions.GetByAlertAsync(id);
 
         return new FraudAlertDetailDto
         {
@@ -328,14 +332,7 @@ public sealed class FraudAlertService : IFraudAlertService
         var page = Math.Max(1, qy.Page);
         var size = Math.Clamp(qy.PageSize, 1, 100);
 
-        var q = _db.RiskDecisions.AsNoTracking().Where(d => d.Action == "BLOCK");
-        if (!string.IsNullOrWhiteSpace(qy.Status)) q = q.Where(d => d.Status == qy.Status);
-        if (!string.IsNullOrWhiteSpace(qy.Scope)) q = q.Where(d => d.Scope == qy.Scope);
-        if (qy.UserId.HasValue) q = q.Where(d => d.UserId == qy.UserId);
-        if (qy.FraudAlertId.HasValue) q = q.Where(d => d.FraudAlertId == qy.FraudAlertId);
-
-        var total = await q.CountAsync();
-        var rows = await q.OrderByDescending(d => d.CreatedAt).Skip((page - 1) * size).Take(size).ToListAsync();
+        var (rows, total) = await _decisions.SearchBlocksAsync(qy, page, size);
 
         return new PagedResult<RiskBlockItemDto>
         {
@@ -376,7 +373,7 @@ public sealed class FraudAlertService : IFraudAlertService
 
         FraudAlert? alert = null;
         if (req.FraudAlertId.HasValue)
-            alert = await _db.FraudAlerts.FirstOrDefaultAsync(a => a.FraudAlertId == req.FraudAlertId.Value)
+            alert = await _alerts.GetForUpdateAsync(req.FraudAlertId.Value)
                     ?? throw new RiskServiceException(404, "Alert not found.");
 
         var userId = req.UserId ?? alert?.UserId;
@@ -393,11 +390,6 @@ public sealed class FraudAlertService : IFraudAlertService
         var probe = new BlockRequest { UserId = userId, TicketId = ticketId, SessionId = sessionId, DeviceFp = req.DeviceFp, IpAddress = ip?.ToString() };
         if (!ScopeHasTarget(scope, probe.ToIngestLike()))
             throw new RiskServiceException(400, $"Scope {scope} requires the matching target ({ScopeTargetName(scope)}).");
-
-        // ---- Target validation -------------------------------------------------
-        // A manual block is an action against a real person: the target must exist,
-        // be active, and (for tickets) actually own the ticket. Getting this wrong
-        // blocks an innocent account or notifies someone who does not exist.
 
         AccountInfo? target = null;
         if (userId.HasValue && scope is "ACCOUNT" or "TICKET" or "IP")
@@ -444,9 +436,7 @@ public sealed class FraudAlertService : IFraudAlertService
                 throw new RiskServiceException(409, $"Ticket #{ticketId} is already blocked.");
         }
 
-        var (whitelisted, _) = await LookupListsAsync(userId, req.DeviceFp, ip?.ToString(), null, now, default);
-        // Every block target must be off the whitelist. UserId is checked for TICKET and IP
-        // as well, because those blocks also apply to the account that owns them.
+        var (whitelisted, _) = await _lists.LookupAsync(LookupValues(userId, req.DeviceFp, ip?.ToString(), null), now);
         var targetValues = new List<(string Type, string Value)>();
         if (userId.HasValue && scope is "ACCOUNT" or "TICKET" or "IP")
             targetValues.Add(("USER", userId.Value.ToString()));
@@ -457,30 +447,11 @@ public sealed class FraudAlertService : IFraudAlertService
         if (targetValues.Any(tv => whitelisted.Contains(tv)))
             throw new RiskServiceException(400, "The target is on the internal whitelist and cannot be blocked.");
 
-        var activeBlocks = _db.RiskDecisions.AsNoTracking().Where(x =>
-            x.Action == "BLOCK" && x.Status == "Active" && !x.IsShadow && x.Scope == scope
-            && (x.ExpiresAt == null || x.ExpiresAt > now));
-        var dup = scope switch
-        {
-            "ACCOUNT" => await activeBlocks.AnyAsync(x => x.UserId == userId),
-            "TICKET" => await activeBlocks.AnyAsync(x => x.TicketId == ticketId),
-            "SESSION" => await activeBlocks.AnyAsync(x => x.SessionId == sessionId),
-            "DEVICE" => await activeBlocks.AnyAsync(x => x.DeviceFp == req.DeviceFp),
-            _ => await activeBlocks.AnyAsync(x => x.IpAddress == ip)
-        };
+        var dup = await _decisions.HasActiveBlockAsync(scope, userId, ticketId, sessionId, req.DeviceFp, ip, now);
         if (dup) throw new RiskServiceException(409, "This target is already blocked; no additional block was created.");
-
-        // A single account may not accumulate blocks across every scope at once.
-        // Without this, an admin could block ACCOUNT + TICKET + IP for the same person
-        // and the customer would have no way to understand or appeal the combination.
         if (userId.HasValue)
         {
-            var activeScopes = await _db.RiskDecisions.AsNoTracking()
-                .Where(x => x.UserId == userId && x.Action == "BLOCK" && x.Status == "Active" && !x.IsShadow
-                            && x.Scope != scope && (x.ExpiresAt == null || x.ExpiresAt > now))
-                .Select(x => x.Scope!)
-                .Distinct()
-                .ToListAsync();
+            var activeScopes = await _decisions.GetActiveBlockScopesAsync(userId.Value, scope, now);
 
             if (activeScopes.Count >= MaxActiveScopesPerUser)
                 throw new RiskServiceException(409,
@@ -488,8 +459,6 @@ public sealed class FraudAlertService : IFraudAlertService
                     $"({string.Join(", ", activeScopes)}). Restore one of them before adding another.");
         }
 
-        // For tickets, enforce the block in TicketAPI before recording the decision.
-        // The ticket status becomes "Blocked" and its QR can no longer be used.
         var ticketBlocked = false;
         if (scope == "TICKET" && _tickets != null)
         {
@@ -530,16 +499,16 @@ public sealed class FraudAlertService : IFraudAlertService
             ManualReason = reason,
             CreatedAt = now
         };
-        _db.RiskDecisions.Add(d);
+        await _decisions.AddAsync(d);
 
         if (userId.HasValue)
         {
             d.NotifiedAt = now;
-            _db.RiskNotifications.Add(RiskSupport.BlockNotice(d, cfg, now));
+            await _notifications.AddAsync(RiskSupport.BlockNotice(d, cfg, now));
         }
 
         if (alert != null && alert.Status is "Open" or "InReview"
-            && !await RiskSupport.HasPendingAppealAsync(_db, alert.FraudAlertId))
+            && !await _appeals.HasPendingForAlertAsync(alert.FraudAlertId))
         {
             alert.Status = "Resolved";
             alert.ReviewedBy = staffId;
@@ -552,7 +521,6 @@ public sealed class FraudAlertService : IFraudAlertService
         }
         catch
         {
-            // Best effort: do not leave a blocked ticket behind when the decision could not be saved.
             if (ticketBlocked && _tickets != null)
             {
                 try { await _tickets.UnblockTicketAsync(ticketId!.Value, "Risk decision could not be saved", staffId); }
@@ -560,6 +528,9 @@ public sealed class FraudAlertService : IFraudAlertService
             }
             throw;
         }
+        if (scope == "ACCOUNT" && userId.HasValue && _accounts != null)
+            await _accounts.RevokeSessionsAsync(userId.Value);
+
         return ToResult(d);
     }
 
@@ -570,7 +541,7 @@ public sealed class FraudAlertService : IFraudAlertService
         if (reason.Length < MinReasonLength || reason.Length > 500)
             throw new RiskServiceException(400, $"A reason is required, {MinReasonLength}-500 characters long.");
 
-        var d = await _db.RiskDecisions.FirstOrDefaultAsync(x => x.RiskDecisionId == decisionId)
+        var d = await _decisions.GetByIdAsync(decisionId, tracked: true)
                 ?? throw new RiskServiceException(404, "Decision not found.");
 
         if (d.Action != "BLOCK" && d.Action != "HOLD")
@@ -605,16 +576,15 @@ public sealed class FraudAlertService : IFraudAlertService
         d.RestoreReason = reason;
 
         if (d.UserId.HasValue)
-            _db.RiskNotifications.Add(RiskSupport.RestoreNotice(d, now));
+            await _notifications.AddAsync(RiskSupport.RestoreNotice(d, now));
 
-        if (d.FraudAlertId is int alertId && !await RiskSupport.HasPendingAppealAsync(_db, alertId))
+        if (d.FraudAlertId is int alertId && !await _appeals.HasPendingForAlertAsync(alertId))
         {
-            var stillActive = await _db.RiskDecisions.AsNoTracking().AnyAsync(x =>
-                x.FraudAlertId == alertId && x.RiskDecisionId != decisionId
-                && x.Status == "Active" && !x.IsShadow && (x.Action == "BLOCK" || x.Action == "HOLD"));
+            var stillActive = await _decisions.HasActiveRestrictionForAlertExceptAsync(alertId,
+                new[] { decisionId });
             if (!stillActive)
             {
-                var alert = await _db.FraudAlerts.FirstOrDefaultAsync(a => a.FraudAlertId == alertId);
+                var alert = await _alerts.GetForUpdateAsync(alertId);
                 if (alert != null && alert.Status is "Open" or "InReview" or "Resolved")
                 {
                     alert.Status = "FalsePositive";
@@ -630,7 +600,7 @@ public sealed class FraudAlertService : IFraudAlertService
 
     private async Task SaveAsync()
     {
-        try { await _db.SaveChangesAsync(); }
+        try { await _decisions.SaveChangesAsync(); }
         catch (DbUpdateConcurrencyException)
         {
             throw new RiskServiceException(409, "The data was just updated by someone else. Please reload and try again.");
@@ -729,51 +699,25 @@ public sealed class FraudAlertService : IFraudAlertService
         IpAddress = RiskSupport.MaskIp(d.IpAddress?.ToString())
     };
 
-    private Task<bool> HadBlockAsync(int userId, DateTime since, CancellationToken ct) =>
-        _db.RiskDecisions.AsNoTracking().AnyAsync(d =>
-            d.UserId == userId && d.Action == "BLOCK" && !d.IsShadow && d.CreatedAt >= since
-            && d.Status != "Restored" && d.Status != "Overturned", ct);
-
     private Task<int> CountRecentBlocksAsync(RiskConfig cfg, IngestRiskEventRequest req, IPAddress? ip,
-        DateTime now, CancellationToken ct)
-    {
-        var since = now.AddDays(-cfg.EscalationWindowDays);
-        var uid = req.UserId; var dev = req.DeviceFp;
-        return _db.RiskDecisions.AsNoTracking()
-            .Where(d => d.Action == "BLOCK" && !d.IsShadow && d.DecidedByType == "SYSTEM" && d.CreatedAt >= since
-                        && d.Status != "Restored" && d.Status != "Overturned"
-                        && ((uid != null && d.UserId == uid) || (dev != null && d.DeviceFp == dev)
-                            || (uid == null && ip != null && d.IpAddress == ip)))
-            .Select(d => d.CreatedAt)
-            .Distinct()
-            .CountAsync(ct);
-    }
+        DateTime now, CancellationToken ct) =>
+        _decisions.CountRecentBlocksAsync(req.UserId, req.DeviceFp, ip,
+            now.AddDays(-cfg.EscalationWindowDays), ct);
 
-    private async Task<(HashSet<(string, string)> White, HashSet<(string, string)> Black)> LookupListsAsync(
-        int? userId, string? deviceFp, string? ip, string? cardHash, DateTime now, CancellationToken ct)
+    private static List<string> LookupValues(int? userId, string? deviceFp, string? ip, string? cardHash)
     {
         var values = new List<string>();
         if (userId.HasValue) values.Add(userId.Value.ToString());
         if (!string.IsNullOrWhiteSpace(deviceFp)) values.Add(deviceFp);
         if (!string.IsNullOrWhiteSpace(ip)) values.Add(ip);
         if (!string.IsNullOrWhiteSpace(cardHash)) values.Add(cardHash);
-
-        var white = new HashSet<(string, string)>();
-        var black = new HashSet<(string, string)>();
-        if (values.Count == 0) return (white, black);
-
-        var rows = await _db.RiskLists.AsNoTracking()
-            .Where(l => (l.ExpiresAt == null || l.ExpiresAt > now) && values.Contains(l.ValueHash))
-            .ToListAsync(ct);
-        foreach (var l in rows)
-            (l.ListType == "WHITELIST" ? white : black).Add((l.ValueType, l.ValueHash));
-        return (white, black);
+        return values;
     }
 
     private async Task<string?> ResolveHardRuleAsync(IngestRiskEventRequest req, IPAddress? ip, DateTime now, CancellationToken ct)
     {
         var ipStr = ip?.ToString();
-        var (white, black) = await LookupListsAsync(req.UserId, req.DeviceFp, ipStr, req.CardHash, now, ct);
+        var (white, black) = await _lists.LookupAsync(LookupValues(req.UserId, req.DeviceFp, ipStr, req.CardHash), now, ct);
 
         if ((req.UserId.HasValue && white.Contains(("USER", req.UserId.Value.ToString())))
             || (req.DeviceFp != null && white.Contains(("DEVICE", req.DeviceFp)))
@@ -792,15 +736,10 @@ public sealed class FraudAlertService : IFraudAlertService
     {
         var type = decision.Dominant.ToString();
         var since = now - AlertMergeWindow;
-        var uid = req.UserId; var sid = req.SessionId;
 
         FraudAlert? existing = null;
-        if (uid != null || !string.IsNullOrWhiteSpace(sid))
-        {
-            existing = await _db.FraudAlerts.FirstOrDefaultAsync(a =>
-                a.Status == "Open" && a.AlertType == type && a.CreatedAt >= since
-                && (uid != null ? a.UserId == uid : a.SessionId == sid), ct);
-        }
+        if (req.UserId != null || !string.IsNullOrWhiteSpace(req.SessionId))
+            existing = await _alerts.FindOpenAlertAsync(type, req.UserId, req.SessionId, since, ct);
 
         var codes = string.Join(", ", (decision.Dominant == RiskType.Bot ? bot : fraud).Select(r => r.Code));
         var details = $"{type} score {decision.Score} ({decision.Level}); rules: {(codes.Length == 0 ? decision.HardRule ?? "-" : codes)}";
@@ -835,7 +774,7 @@ public sealed class FraudAlertService : IFraudAlertService
             Status = "Open",
             CreatedAt = now
         };
-        _db.FraudAlerts.Add(alert);
+        await _alerts.AddAsync(alert, ct);
         return alert;
     }
 }

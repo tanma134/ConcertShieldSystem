@@ -231,7 +231,7 @@ function ReturnQueue({ isAdmin }) {
         </div>
         {error && <div className="tb-error">{error}</div>}
         {loading ? (
-          <div className="tb-loading">Loading...</div>
+          <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
         ) : rows.length === 0 ? (
           <div className="tb-empty">No return requests.</div>
         ) : (
@@ -553,7 +553,7 @@ function ReturnQueue({ isAdmin }) {
             <div className="rp-modal-actions">
               <button className="tb-btn tb-btn-outline" disabled={decision.busy} onClick={() => setDecision(null)}>Cancel</button>
               <button className="tb-btn tb-btn-primary" disabled={decision.busy} onClick={confirmDecision}>
-                {decision.busy ? "Saving..." : decision.approve ? "Approve Request" : "Reject"}
+                {decision.busy ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : decision.approve ? "Approve & refund" : "Reject"}
               </button>
             </div>
           </div>

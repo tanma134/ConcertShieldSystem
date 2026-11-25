@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import AdminShell from "./AdminShell";
-import checkinApi from "../../api/checkinApi";
+import ticketApi from "../../api/ticketApi";
 import "./TicketGovernancePage.css";
 
 export default function TicketGovernancePage() {
@@ -73,7 +73,7 @@ export default function TicketGovernancePage() {
   const fetchStats = async () => {
     setLoadingStats(true);
     try {
-      const res = await checkinApi.getGovernanceStats();
+      const res = await ticketApi.getGovernanceStats();
       if (res?.data?.data) {
         setStats(res.data.data);
       }
@@ -87,7 +87,7 @@ export default function TicketGovernancePage() {
   const fetchEvents = async () => {
     setLoadingEvents(true);
     try {
-      const res = await checkinApi.getGovernanceEvents();
+      const res = await ticketApi.getGovernanceEvents();
       if (res?.data?.data) {
         const allEvents = res.data.data;
         setEvents(allEvents);
@@ -107,7 +107,7 @@ export default function TicketGovernancePage() {
   const fetchReconciliations = async () => {
     setLoadingReconciliations(true);
     try {
-      const res = await checkinApi.getReconciliationRecords();
+      const res = await ticketApi.getReconciliationRecords();
       if (res?.data?.data) {
         setReconciliations(res.data.data);
       }
@@ -129,7 +129,7 @@ export default function TicketGovernancePage() {
       };
       if (revocationEventFilter) params.eventId = revocationEventFilter;
 
-      const res = await checkinApi.getRevocationHistory(params);
+      const res = await ticketApi.getRevocationHistory(params);
       if (res?.data?.data) {
         setRevocations(res.data.data.items || []);
         setRevocationTotal(res.data.data.totalCount || 0);
@@ -152,7 +152,7 @@ export default function TicketGovernancePage() {
       };
       if (reissueEventFilter) params.eventId = reissueEventFilter;
 
-      const res = await checkinApi.getReissueHistory(params);
+      const res = await ticketApi.getReissueHistory(params);
       if (res?.data?.data) {
         setReissues(res.data.data.items || []);
         setReissueTotal(res.data.data.totalCount || 0);
@@ -185,14 +185,18 @@ export default function TicketGovernancePage() {
 
     setSubmittingBulk(true);
     try {
+      const actualReasonType = selectedEventObj?.status?.toLowerCase().includes("postpone")
+        ? "EVENT_POSTPONED"
+        : "EVENT_CANCELLED";
+
       const payload = {
         eventId: Number(selectedEventId),
-        reasonType,
+        reasonType: actualReasonType,
         reasonNote: reasonNote.trim(),
         notifyAttendees,
       };
 
-      const res = await checkinApi.bulkRevokeTickets(payload);
+      const res = await ticketApi.bulkRevokeTickets(payload);
       if (res?.data?.data) {
         setShowConfirmModal(false);
         setReasonNote("");
@@ -218,7 +222,11 @@ export default function TicketGovernancePage() {
           ...prev.filter((r) => r.reconciliationId !== newRec.reconciliationId),
         ]);
 
-        setSuccessResultModal(res.data.data);
+        const currentEvt = events.find((e) => e.eventId === Number(selectedEventId));
+        setSuccessResultModal({
+          ...res.data.data,
+          eventTitle: currentEvt?.title || res.data.data.eventTitle,
+        });
         await Promise.all([
           fetchStats(),
           fetchEvents(),
@@ -314,7 +322,7 @@ export default function TicketGovernancePage() {
             <div className="stat-info">
               <span className="stat-label">Total Revoked Tickets</span>
               <strong className="stat-val">
-                {loadingStats ? "..." : stats.totalRevokedTickets.toLocaleString()}
+                {loadingStats ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : stats.totalRevokedTickets.toLocaleString()}
               </strong>
               <span className="stat-sub">System-wide invalidations</span>
             </div>
@@ -324,7 +332,7 @@ export default function TicketGovernancePage() {
             <div className="stat-info">
               <span className="stat-label">Bulk Event Disruptions</span>
               <strong className="stat-val">
-                {loadingStats ? "..." : stats.totalBulkEvents}
+                {loadingStats ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : stats.totalBulkEvents}
               </strong>
               <span className="stat-sub">Reconciliation audit records</span>
             </div>
@@ -334,7 +342,7 @@ export default function TicketGovernancePage() {
             <div className="stat-info">
               <span className="stat-label">Reissued Tickets</span>
               <strong className="stat-val">
-                {loadingStats ? "..." : stats.totalReissuedTickets}
+                {loadingStats ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : stats.totalReissuedTickets}
               </strong>
               <span className="stat-sub">1-to-1 traceability: Old to New</span>
             </div>
@@ -431,14 +439,14 @@ export default function TicketGovernancePage() {
                     ) : (
                       eligibleEvents.map((ev) => (
                         <option key={ev.eventId} value={ev.eventId}>
-                          {ev.title} ({Number(ev.activeTicketsCount).toLocaleString()} active tickets)
+                          {ev.title} [{ev.status.toUpperCase()}] ({Number(ev.activeTicketsCount).toLocaleString()} active tickets)
                         </option>
                       ))
                     )}
                   </select>
                   {eligibleEvents.length === 0 && !loadingEvents && (
                     <div className="gov-empty-events-warning">
-                      <span>Currently there are no events with active tickets. All events have already been reconciled or cancelled.</span>
+                      <span>Currently there are no cancelled or rescheduled events with active tickets. All tickets have already been revoked or reconciled.</span>
                     </div>
                   )}
                   {selectedEventObj && eligibleEvents.length > 0 && (
@@ -487,42 +495,7 @@ export default function TicketGovernancePage() {
 
                 <div className="form-group">
                   <label className="form-label">
-                    Event Disruption Reason <span className="text-danger">*</span>
-                  </label>
-                  <div className="radio-group-boxes">
-                    <label className={`radio-box ${reasonType === "EVENT_CANCELLED" ? "selected" : ""}`}>
-                      <input
-                        type="radio"
-                        name="reasonType"
-                        value="EVENT_CANCELLED"
-                        checked={reasonType === "EVENT_CANCELLED"}
-                        onChange={() => setReasonType("EVENT_CANCELLED")}
-                      />
-                      <div className="box-content">
-                        <strong>Event Cancelled (Force Majeure)</strong>
-                        <span>Permanently cancel show due to severe weather, venue disruption, or artist withdrawal.</span>
-                      </div>
-                    </label>
-
-                    <label className={`radio-box ${reasonType === "EVENT_POSTPONED" ? "selected" : ""}`}>
-                      <input
-                        type="radio"
-                        name="reasonType"
-                        value="EVENT_POSTPONED"
-                        checked={reasonType === "EVENT_POSTPONED"}
-                        onChange={() => setReasonType("EVENT_POSTPONED")}
-                      />
-                      <div className="box-content">
-                        <strong>Event Postponed / Rescheduled</strong>
-                        <span>Hold show and revoke existing tickets to reissue replacement tickets for the new schedule.</span>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">
-                    Revocation Reason (Audit Justification) <span className="text-danger">*</span>
+                    Revocation Justification Reason <span className="text-danger">*</span>
                   </label>
                   <textarea
                     className="form-control"
@@ -594,7 +567,7 @@ export default function TicketGovernancePage() {
                 </div>
 
                 {loadingReconciliations ? (
-                  <div className="loading-spinner-box">Loading reconciliation records...</div>
+                  <div className="loading-spinner-box"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
                 ) : reconciliations.length === 0 ? (
                   <div className="empty-state">No bulk revocation reconciliation records found.</div>
                 ) : (
@@ -659,8 +632,8 @@ export default function TicketGovernancePage() {
                     </div>
                     <div className="modal-summary-table">
                       <div><span>Event:</span> <strong>{selectedEventObj?.title}</strong></div>
-                      <div><span>Estimated Tickets:</span> <strong>{selectedEventObj?.activeTicketsCount} tickets</strong></div>
-                      <div><span>Disruption Type:</span> <strong>{reasonType === "EVENT_CANCELLED" ? "Cancellation" : "Reschedule / Postpone"}</strong></div>
+                      <div><span>Event Status:</span> <strong>{selectedEventObj?.status?.toUpperCase()}</strong></div>
+                      <div><span>Active Tickets to Revoke:</span> <strong>{selectedEventObj?.activeTicketsCount} tickets</strong></div>
                       <div><span>Audit Justification:</span> <strong>{reasonNote}</strong></div>
                     </div>
                   </div>
@@ -679,7 +652,7 @@ export default function TicketGovernancePage() {
                       onClick={handleBulkRevokeSubmit}
                       disabled={submittingBulk}
                     >
-                      {submittingBulk ? "Processing atomic transaction..." : "I Confirm & Revoke All Tickets"}
+                      {submittingBulk ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "I Confirm & Revoke All Tickets"}
                     </button>
                   </div>
                 </div>
@@ -741,6 +714,7 @@ export default function TicketGovernancePage() {
                     <option value="EVENT_POSTPONED">Event Postponed (Bulk)</option>
                     <option value="FRAUD_PREVENTION">Fraud Prevention / Scalper Bot</option>
                     <option value="TICKET_EXCHANGE">Ticket Exchange / Upgrade</option>
+                    <option value="INDIVIDUAL_REVOCATION">Individual Revocation (Single)</option>
                   </select>
                 </div>
 
@@ -765,7 +739,7 @@ export default function TicketGovernancePage() {
 
               {/* Revocations Table */}
               {loadingRevocations ? (
-                <div className="loading-spinner-box">Loading revocation records...</div>
+                <div className="loading-spinner-box"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
               ) : revocations.length === 0 ? (
                 <div className="empty-state">No revoked tickets match the selected filters.</div>
               ) : (
@@ -916,7 +890,7 @@ export default function TicketGovernancePage() {
 
               {/* Reissue Table */}
               {loadingReissues ? (
-                <div className="loading-spinner-box">Loading reissue history records...</div>
+                <div className="loading-spinner-box"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
               ) : reissues.length === 0 ? (
                 <div className="empty-state">No ticket reissue records match the selected filters.</div>
               ) : (
@@ -1051,11 +1025,23 @@ export default function TicketGovernancePage() {
                 </button>
               </div>
               <div className="gov-modal-body">
-                <div className="success-banner">
-                  <span className="success-badge">ATOMIC TRANSACTION VERIFIED</span>
-                  <h4>{successResultModal.eventTitle}</h4>
-                  <p>{successResultModal.message}</p>
-                </div>
+                {(() => {
+                  const evObj = events.find((e) => e.eventId === successResultModal.eventId);
+                  const rawTitle = successResultModal.eventTitle || evObj?.title || `Event #${successResultModal.eventId}`;
+                  const formattedTitle = rawTitle.startsWith("Event #") && evObj?.title
+                    ? `Event #${successResultModal.eventId}: ${evObj.title}`
+                    : (rawTitle.includes(":") || rawTitle.startsWith("Event #") ? rawTitle : `Event #${successResultModal.eventId}: ${rawTitle}`);
+
+                  return (
+                    <div className="success-banner">
+                      <span className="success-badge">ATOMIC TRANSACTION VERIFIED</span>
+                      <h4>{formattedTitle}</h4>
+                      <p>
+                        Successfully revoked {Number(successResultModal.totalRevokedTickets).toLocaleString()} tickets for event &lsquo;{formattedTitle}&rsquo;. Reconciliation record #{successResultModal.reconciliationId} created.
+                      </p>
+                    </div>
+                  );
+                })()}
                 <div className="modal-summary-table">
                   <div>
                     <span>Reconciliation Record ID:</span>

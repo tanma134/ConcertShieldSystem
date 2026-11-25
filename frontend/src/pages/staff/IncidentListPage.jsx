@@ -311,7 +311,7 @@ export default function IncidentListPage() {
               <div className="inc-empty-icon">
                 <ClockIcon />
               </div>
-              <div className="inc-empty-title">Synchronizing incident database...</div>
+              <div className="inc-empty-title"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
             </div>
           ) : filteredIncidents.length === 0 ? (
             <div className="inc-empty-state">
@@ -486,7 +486,7 @@ export default function IncidentListPage() {
                     className="inc-btn inc-btn-danger"
                     disabled={isEscalating}
                   >
-                    {isEscalating ? "Escalating..." : "Confirm Escalation"}
+                    {isEscalating ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm Escalation"}
                   </button>
                 </div>
               </form>

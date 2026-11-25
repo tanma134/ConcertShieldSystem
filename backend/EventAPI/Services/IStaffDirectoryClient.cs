@@ -11,7 +11,7 @@ namespace EventAPI.Services
     // Reads the list of accounts that hold the Staff role from AuthenticationAPI.
     public interface IStaffDirectoryClient
     {
-        Task<List<StaffDirectoryEntry>> SearchAsync(string? query, string? bearerToken, CancellationToken ct = default);
+        Task<List<StaffDirectoryEntry>> SearchAsync(string? query, string? bearerToken, int? organizerId = null, CancellationToken ct = default);
 
         Task<List<StaffDirectoryEntry>> GetByIdsAsync(IEnumerable<int> ids, string? bearerToken, CancellationToken ct = default);
     }

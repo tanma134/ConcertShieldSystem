@@ -1,6 +1,8 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-// Shared sidebar layout; theme-dark.css provides .tb-* classes and --tb-* variables.
+import AdminNotificationBell from "./AdminNotificationBell";
+// Style chung của mọi khu vực có sidebar (Admin / Organizer / Staff).
+// theme-dark.css cung cấp .tb-btn, .tb-loading, .tb-empty và các biến --tb-*.
 import "../styles/theme-dark.css";
 import "../pages/admin/AdminDashboardPage.css";
 import "../styles/panelReadability.css";
@@ -46,12 +48,13 @@ export default function PanelShell({
   subnavActivePath = null,
   subnavLabel = "Section navigation",
   subnavIcon = null,
+  theme = "default",
 }) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
   return (
-    <div className="admin-shell">
+    <div className={`admin-shell ${theme === "light" ? "admin-shell-light" : ""}`}>
       <aside className="admin-sidebar">
         <div className="admin-brand">
           <div className="admin-brand-mark">CS</div>
@@ -89,10 +92,11 @@ export default function PanelShell({
           <strong>{user?.fullName || user?.email || roleLabel}</strong>
         </div>
       </aside>
-      <main className="admin-main">
+      <main className={`admin-main ${theme === "light" ? "admin-main-light" : ""}`}>
         <header className="admin-topbar">
           <div className="topbar-title">{title || `${roleLabel} Panel`}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <AdminNotificationBell />
             <button
               type="button"
               className="admin-button admin-logout"

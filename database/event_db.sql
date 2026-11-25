@@ -321,6 +321,13 @@ CREATE TABLE IF NOT EXISTS public.refund_policies
 
 );
 
+CREATE TABLE IF NOT EXISTS public.event_sale_confirmations (
+    order_id integer PRIMARY KEY,
+    event_id integer NOT NULL
+        REFERENCES public.events(event_id),
+    confirmed_at_utc timestamp with time zone NOT NULL DEFAULT now()
+);
+
 CREATE INDEX IF NOT EXISTS ix_refund_policies_event_id ON public.refund_policies(event_id);
 
 CREATE TABLE IF NOT EXISTS public.seat_maps
@@ -436,6 +443,19 @@ CREATE TABLE IF NOT EXISTS public.wishlists
 );
 
 CREATE INDEX IF NOT EXISTS ix_wishlists_user_id ON public.wishlists(user_id);
+
+CREATE TABLE IF NOT EXISTS public.event_reminder_deliveries (
+    event_id integer NOT NULL REFERENCES public.events(event_id) ON DELETE CASCADE,
+    user_id integer NOT NULL,
+    scheduled_start_at timestamp with time zone NOT NULL,
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    sent_at timestamp with time zone NULL,
+    attempt_count integer NOT NULL DEFAULT 0,
+    next_attempt_at timestamp with time zone NOT NULL DEFAULT now(),
+    CONSTRAINT pk_event_reminder_deliveries PRIMARY KEY (event_id, user_id, scheduled_start_at)
+);
+CREATE INDEX IF NOT EXISTS ix_event_reminder_deliveries_pending
+    ON public.event_reminder_deliveries(next_attempt_at) WHERE sent_at IS NULL;
 
 -- ------------------------------------------------------------------------------
 -- seating_templates: reusable venue layouts (UC_26.2 Apply Seating Template /
@@ -1071,3 +1091,21 @@ ALTER TABLE public.event_staff
     ADD COLUMN IF NOT EXISTS can_review_returns boolean NOT NULL DEFAULT false;
 CREATE INDEX IF NOT EXISTS ix_event_staff_return_reviewers
     ON public.event_staff (staff_user_id) WHERE is_active = true AND can_review_returns = true;
+
+-- ---------- 012 event gates (Cổng sự kiện & phân quyền loại vé) ----------
+CREATE TABLE IF NOT EXISTS public.event_gates (
+    gate_id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    event_id integer NOT NULL REFERENCES public.events(event_id) ON DELETE CASCADE,
+    gate_name varchar(100) NOT NULL,
+    description varchar(255) NULL,
+    allowed_ticket_types text NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS ix_event_gates_event_id ON public.event_gates(event_id);
+
+	CREATE TABLE IF NOT EXISTS public.event_sale_confirmations (
+    order_id integer PRIMARY KEY,
+    event_id integer NOT NULL
+        REFERENCES public.events(event_id),
+    confirmed_at_utc timestamp with time zone NOT NULL DEFAULT now()
+);

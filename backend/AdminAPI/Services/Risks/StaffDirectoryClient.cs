@@ -11,6 +11,12 @@ public interface IStaffDirectoryClient
     Task<bool> IsActiveStaffAsync(int userId, CancellationToken ct = default);
 
     Task<AccountInfo?> FindAccountAsync(int userId, CancellationToken ct = default);
+
+    /// <summary>
+    /// BR-112: ends every refresh token of a blocked account so the session cannot be
+    /// renewed. Best effort: a failure is logged, the block itself still applies.
+    /// </summary>
+    Task RevokeSessionsAsync(int userId, CancellationToken ct = default);
 }
 
 public sealed class StaffDirectoryClient : IStaffDirectoryClient
@@ -58,6 +64,22 @@ public sealed class StaffDirectoryClient : IStaffDirectoryClient
 
         var hit = accounts?.FirstOrDefault(a => a.UserId == userId);
         return hit == null ? null : new AccountInfo(hit.UserId, hit.IsActive, hit.Roles ?? new List<string>());
+    }
+
+    public async Task RevokeSessionsAsync(int userId, CancellationToken ct = default)
+    {
+        try
+        {
+            using var response = await _http.PostAsync($"api/internal/users/{userId}/revoke-sessions", null, ct);
+            if (!response.IsSuccessStatusCode)
+                _logger.LogWarning("Revoking sessions of user {UserId} returned {Status}",
+                    userId, (int)response.StatusCode);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Best effort: login and refresh are still refused while the block is active.
+            _logger.LogError(ex, "Revoking sessions of user {UserId} failed", userId);
+        }
     }
 
     private async Task<HttpResponseMessage> GetAsync(string path, int userId, CancellationToken ct)

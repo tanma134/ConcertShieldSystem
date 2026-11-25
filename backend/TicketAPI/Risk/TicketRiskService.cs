@@ -33,13 +33,19 @@ public sealed class TicketRiskService : ITicketRiskService
     public TicketRiskService(TicketDbContext db, IRiskGuard guard, IHoldService holds, ILogger<TicketRiskService> logger)
     { _db = db; _guard = guard; _holds = holds; _logger = logger; }
 
-    public async Task<RiskVerdict> CheckHoldAsync(HttpContext http, int userId, CreateHoldSessionRequest req, CancellationToken ct = default)
+    public async Task<RiskVerdict> CheckHoldAsync(
+        HttpContext http,
+        int userId,
+        CreateHoldSessionRequest req,
+        CancellationToken ct = default)
     {
-        // NOTE: the eKYC gate is handled once by HoldsController.CreateHoldSession,
-        // which calls this method - do not check it again here.
+        var ekyc = _guard.CheckEkycAsync(http, "hold");
+        if (!ekyc.Allowed)
+            return ekyc;
 
         var pre = await _guard.PreCheckAsync(http, userId, ct);
-        if (!pre.Allowed) return pre;
+        if (!pre.Allowed)
+            return pre;
 
         var evt = new RiskEvent { UserId = userId, EventId = req.EventId };
         try
@@ -47,7 +53,10 @@ public sealed class TicketRiskService : ITicketRiskService
             var incoming = Math.Max(req.Tickets.Sum(t => t.Quantity), req.SeatIds.Count);
             await AddTicketRulesAsync(http, evt, userId, req.EventId, incoming, ct);
         }
-        catch (Exception ex) { _logger.LogWarning(ex, "Risk rule calculation failed for hold (ignored)"); }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Risk rule calculation failed for hold (ignored)");
+        }
 
         return await _guard.EvaluateAsync(http, evt, isBooking: true, ct);
     }

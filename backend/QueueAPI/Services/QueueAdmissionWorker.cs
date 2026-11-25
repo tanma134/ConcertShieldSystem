@@ -1,15 +1,10 @@
-using Microsoft.EntityFrameworkCore;
-using QueueAPI.Data;
+using QueueAPI.Repositories;
 using QueueAPI.Time;
 
 namespace QueueAPI.Services;
 
 public sealed class QueueAdmissionWorker(IServiceScopeFactory scopeFactory, ILogger<QueueAdmissionWorker> logger) : BackgroundService
 {
-    private static readonly TimeSpan AbuseWindow = TimeSpan.FromMinutes(5);
-    private const int MaxUserSessionsInWindow = 2;
-    private const int MaxEventSessionsInWindow = 3;
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -17,14 +12,11 @@ public sealed class QueueAdmissionWorker(IServiceScopeFactory scopeFactory, ILog
             try
             {
                 using var scope = scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<QueueDbContext>();
+                var repository = scope.ServiceProvider.GetRequiredService<IQueueRepository>();
                 var redis = scope.ServiceProvider.GetRequiredService<IRedisQueueStore>();
                 var now = QueueTimeZone.Now;
-                await ScanRegistrationAbuseAsync(db, now, stoppingToken);
                 // timestamp without time zone values are Vietnam local wall-clock values.
-                var configs = await db.QueueConfigurations.AsNoTracking()
-                    .Where(x => x.PreQueueEndTime <= now)
-                    .ToListAsync(stoppingToken);
+                var configs = await repository.GetConfigurationsEndedBeforeAsync(now, stoppingToken);
                 foreach (var config in configs)
                 {
                     var cycleKey = config.PreQueueEndTime.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
@@ -33,21 +25,18 @@ public sealed class QueueAdmissionWorker(IServiceScopeFactory scopeFactory, ILog
                         await redis.FinalizeRandomizationAsync(config.EventId, cycleKey, stoppingToken);
                         var admitted = await redis.AdmitNextAsync(config.EventId, config.AdmissionRate, stoppingToken);
                         if (admitted > 0) logger.LogInformation("Queue admitted {Count} users for eventId={EventId}", admitted, config.EventId);
+                        await SyncQueueSessionStatusesAsync(repository, redis, config.EventId, stoppingToken);
                     }
 
-                    var admittedSessions = await db.QueueSessions
-                        .Where(x => x.EventId == config.EventId && x.Status == "ADMITTED")
-                        .Select(x => new { x.QueueSessionId, x.UserId })
-                        .ToListAsync(stoppingToken);
+                    var admittedSessions = await repository.GetAdmittedSessionsAsync(config.EventId, stoppingToken);
                     foreach (var session in admittedSessions)
                     {
                         if (!await redis.HasAdmissionAsync(config.EventId, session.UserId, stoppingToken))
                         {
-                            await db.QueueSessions
-                                .Where(x => x.QueueSessionId == session.QueueSessionId && x.Status == "ADMITTED")
-                                .ExecuteUpdateAsync(update => update
-                                    .SetProperty(x => x.Status, "EXPIRED")
-                                    .SetProperty(x => x.UpdatedAt, QueueTimeZone.Now), stoppingToken);
+                            await repository.ExpireAdmittedSessionAsync(
+                                session.QueueSessionId,
+                                QueueTimeZone.Now,
+                                stoppingToken);
                         }
                     }
                 }
@@ -58,63 +47,48 @@ public sealed class QueueAdmissionWorker(IServiceScopeFactory scopeFactory, ILog
         }
     }
 
-    private async Task ScanRegistrationAbuseAsync(QueueDbContext db, DateTime now, CancellationToken cancellationToken)
-    {
-        var windowStart = now - AbuseWindow;
-        var sessions = await db.QueueSessions.AsNoTracking()
-            .Where(x => x.CreatedAt >= windowStart &&
-                x.Status != "LEFT" && x.Status != "EXPIRED" &&
-                x.Status != "REVOKED" && x.Status != "BLOCKED")
-            .ToListAsync(cancellationToken);
-
-        var userGroups = sessions.GroupBy(x => x.UserId).Where(x => x.Count() > MaxUserSessionsInWindow);
-        foreach (var group in userGroups)
-        {
-            var current = group.OrderByDescending(x => x.CreatedAt).First();
-            await CreateAlertIfMissingAsync(db, current, "MULTIPLE_USER_SESSIONS",
-                $"RULE: User created {group.Count()} queue sessions within 5 minutes (limit: {MaxUserSessionsInWindow}).",
-                windowStart, cancellationToken);
-        }
-
-        var eventGroups = sessions.GroupBy(x => x.EventId).Where(x => x.Count() > MaxEventSessionsInWindow);
-        foreach (var group in eventGroups)
-        {
-            var current = group.OrderByDescending(x => x.CreatedAt).First();
-            await CreateAlertIfMissingAsync(db, current, "EVENT_SESSION_SPIKE",
-                $"RULE: Event received {group.Count()} queue sessions within 5 minutes (limit: {MaxEventSessionsInWindow}).",
-                windowStart, cancellationToken);
-        }
-    }
-
-    private async Task CreateAlertIfMissingAsync(
-        QueueDbContext db,
-        QueueAPI.Models.QueueSession session,
-        string alertType,
-        string behavior,
-        DateTime windowStart,
+    private async Task SyncQueueSessionStatusesAsync(
+        IQueueRepository repository,
+        IRedisQueueStore redis,
+        int eventId,
         CancellationToken cancellationToken)
     {
-        var exists = await db.AbuseAlerts.AnyAsync(x =>
-            x.SessionId == session.SessionId &&
-            x.AlertType == alertType &&
-            x.CreatedAt >= windowStart, cancellationToken);
-        if (exists) return;
+        var sessions = await repository.GetSyncableSessionsAsync(eventId, cancellationToken);
 
-        db.AbuseAlerts.Add(new QueueAPI.Models.AbuseAlert
+        var changed = 0;
+        foreach (var session in sessions)
         {
-            EventId = session.EventId,
-            UserId = session.UserId,
-            SessionId = session.SessionId,
-            QueueToken = session.QueueToken,
-            AlertType = alertType,
-            Severity = "HIGH",
-            Status = "OPEN",
-            DetectedBehavior = behavior,
-            CreatedAt = QueueTimeZone.Now
-        });
-        await db.SaveChangesAsync(cancellationToken);
-        logger.LogWarning(
-            "Automatic queue abuse alert created type={AlertType} eventId={EventId} userId={UserId} sessionId={SessionId}",
-            alertType, session.EventId, session.UserId, session.SessionId);
+            var result = await redis.GetStatusAsync(eventId, session.UserId, session.QueueToken, cancellationToken);
+            if (result.Status == "TOKEN_INVALID")
+            {
+                logger.LogWarning(
+                    "Queue session could not be synchronized because its Redis token is invalid eventId={EventId} userId={UserId}",
+                    eventId, session.UserId);
+                continue;
+            }
+
+            if (result.Status is not ("WAITING" or "ADMITTED"))
+                continue;
+
+            var position = result.Status == "WAITING" && result.Position > 0
+                ? result.Position
+                : (int?)null;
+            if (session.Status == result.Status && session.Position == position)
+                continue;
+
+            session.Status = result.Status;
+            session.Position = position;
+            session.UpdatedAt = QueueTimeZone.Now;
+            changed++;
+        }
+
+        if (changed > 0)
+        {
+            await repository.SaveChangesAsync(cancellationToken);
+            logger.LogInformation(
+                "Synchronized {Count} queue session statuses from Redis for eventId={EventId}",
+                changed, eventId);
+        }
     }
+
 }

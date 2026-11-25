@@ -3,32 +3,29 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using CheckinAPI.DTOs;
+using CheckinAPI.API;
+using CheckinAPI.Hubs;
+using Microsoft.AspNetCore.SignalR;
 using Npgsql;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace CheckinAPI.Services
 {
-    public interface ICheckinMonitorService
-    {
-        Task<CheckinMonitorResponseDTO> GetMonitorStatusAsync(int eventId, string? gateId, string? zone, int currentUserId, bool isAdmin);
-        Task<ScanResultResponseDTO> ScanQrTicketAsync(ScanQrRequestDTO request, int staffUserId, string staffUserName);
-        Task<ScanResultResponseDTO> ManualCheckinAsync(ManualCheckinRequestDTO request, int staffUserId, string staffUserName);
-        Task<LookupTicketResponseDTO> LookupTicketsAsync(LookupTicketRequestDTO request, int staffUserId);
-        Task<ScanHistoryResponseDTO> GetScanHistoryAsync(int eventId, string? gateId, string? statusFilter, int staffUserId);
-        Task<GateAssignmentResponseDTO> GetGateAssignmentAsync(int eventId, int staffUserId);
-    }
-
     public class CheckinMonitorService : ICheckinMonitorService
     {
         private readonly IConfiguration _configuration;
+        private readonly IEventApiClient _eventApiClient;
+        private readonly IHubContext<CheckinHub> _hubContext;
         private readonly ILogger<CheckinMonitorService> _logger;
         private readonly string _ticketDbConnection;
         private readonly string _eventDbConnection;
 
-        public CheckinMonitorService(IConfiguration configuration, ILogger<CheckinMonitorService> logger)
+        public CheckinMonitorService(IConfiguration configuration, ILogger<CheckinMonitorService> logger, IEventApiClient eventApiClient, IHubContext<CheckinHub> hubContext)
         {
             _configuration = configuration;
+            _eventApiClient = eventApiClient;
+            _hubContext = hubContext;
             _logger = logger;
             _ticketDbConnection = _configuration.GetConnectionString("DefaultConnection")
                 ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TICKET_POSTGRES") ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TEST_POSTGRES") ?? throw new InvalidOperationException("Missing ticket database connection string.");
@@ -274,7 +271,15 @@ namespace CheckinAPI.Services
             }
 
             string rawPayload = request.QrPayload.Trim();
-            string gateName = request.GateId == "GATE_B" ? "Gate B - North Wing" : "Gate A - Main Entrance";
+            var assignment = await GetGateAssignmentAsync(request.EventId, staffUserId);
+            if (!assignment.IsAssigned || !assignment.IsShiftActive)
+                return new ScanResultResponseDTO { Success = false, Status = "SHIFT_NOT_ACTIVE", Message = assignment.Message ?? "Staff is not assigned to an active shift." };
+            if (!string.IsNullOrWhiteSpace(request.GateId) &&
+                !string.Equals(request.GateId, assignment.GateId, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(request.GateId, assignment.GateName, StringComparison.OrdinalIgnoreCase))
+                return new ScanResultResponseDTO { Success = false, Status = "WRONG_GATE", Message = "Staff may only scan at their assigned gate." };
+            request.GateId = assignment.GateId;
+            string gateName = assignment.GateName;
 
             try
             {
@@ -426,10 +431,14 @@ namespace CheckinAPI.Services
                     };
                 }
 
+                var gateValidation = await ValidateGateTicketTypeAsync(ticketEventId, request.GateId, staffUserId, zoneName);
+                if (!gateValidation.IsValid)
+                    return new ScanResultResponseDTO { Success = false, Status = "WRONG_GATE", Message = gateValidation.ErrorMessage ?? "Ticket type is not allowed at this gate." };
+
                 // SUCCESS CHECK-IN
                 using (var updCmd = new NpgsqlCommand(@"
                     UPDATE tickets 
-                    SET is_checked_in = true, status = 'Used', checked_in_at = NOW(), checked_in_by = @staff, gate_id = @gate
+                    SET status = 'Used', checked_in_at = NOW(), checked_in_by = @staff, checked_in_gate = @gate
                     WHERE ticket_id = @tid;", conn))
                 {
                     updCmd.Parameters.AddWithValue("staff", staffUserId);
@@ -517,7 +526,15 @@ namespace CheckinAPI.Services
                 };
             }
 
-            string gateName = request.GateId == "GATE_B" ? "Gate B - North Wing" : "Gate A - Main Entrance";
+            var assignment = await GetGateAssignmentAsync(request.EventId, staffUserId);
+            if (!assignment.IsAssigned || !assignment.IsShiftActive)
+                return new ScanResultResponseDTO { Success = false, Status = "SHIFT_NOT_ACTIVE", Message = assignment.Message ?? "Staff is not assigned to an active shift." };
+            if (!string.IsNullOrWhiteSpace(request.GateId) &&
+                !string.Equals(request.GateId, assignment.GateId, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(request.GateId, assignment.GateName, StringComparison.OrdinalIgnoreCase))
+                return new ScanResultResponseDTO { Success = false, Status = "WRONG_GATE", Message = "Staff may only scan at their assigned gate." };
+            request.GateId = assignment.GateId;
+            string gateName = assignment.GateName;
 
             try
             {
@@ -551,7 +568,7 @@ namespace CheckinAPI.Services
                         WHERE (oa.citizen_id ILIKE @cccd OR o.full_name ILIKE @cccd)
                           AND (t.event_id = @eid OR @eid <= 0)
                           AND t.is_deleted = false
-                        ORDER BY t.is_checked_in ASC, t.ticket_id ASC
+                        ORDER BY (t.checked_in_at IS NOT NULL) ASC, t.ticket_id ASC
                         LIMIT 1;";
                 }
 
@@ -634,10 +651,14 @@ namespace CheckinAPI.Services
                     };
                 }
 
+                var gateValidation = await ValidateGateTicketTypeAsync(request.EventId, request.GateId, staffUserId, zoneName);
+                if (!gateValidation.IsValid)
+                    return new ScanResultResponseDTO { Success = false, Status = "WRONG_GATE", Message = gateValidation.ErrorMessage ?? "Ticket type is not allowed at this gate." };
+
                 // Update to Checked In
                 using (var updCmd = new NpgsqlCommand(@"
                     UPDATE tickets 
-                    SET is_checked_in = true, status = 'Used', checked_in_at = NOW(), checked_in_by = @staff, gate_id = @gate
+                    SET status = 'Used', checked_in_at = NOW(), checked_in_by = @staff, checked_in_gate = @gate
                     WHERE ticket_id = @tid;", conn))
                 {
                     updCmd.Parameters.AddWithValue("staff", staffUserId);
@@ -952,6 +973,7 @@ namespace CheckinAPI.Services
                 cmd.Parameters.AddWithValue("staff", staffUserId);
                 cmd.Parameters.AddWithValue("eid", eventId);
                 await cmd.ExecuteNonQueryAsync();
+                await BroadcastCheckinEventAsync(eventId, ticketCode, customerName, zoneName, gateName ?? "Main Gate", status);
             }
             catch (Exception ex)
             {
@@ -964,75 +986,172 @@ namespace CheckinAPI.Services
         // ==========================================
         public async Task<GateAssignmentResponseDTO> GetGateAssignmentAsync(int eventId, int staffUserId)
         {
-            try
+            int resolvedEventId = eventId;
+            string gateName = "Main Gate";
+            string? shiftStart = null;
+            string? shiftEnd = null;
+            DateOnly? shiftDate = null;
+            string eventTitle = $"Event #{eventId}";
+            bool isAssigned = false;
+
+            if (staffUserId > 0)
             {
-                using var conn = new NpgsqlConnection(_ticketDbConnection);
-                await conn.OpenAsync();
-
-                // 1. Query staff_gate_assignments
-                using (var cmd = new NpgsqlCommand(@"
-                    SELECT gate_id, gate_name, is_active, shift_start, shift_end
-                    FROM staff_gate_assignments
-                    WHERE (staff_user_id = @uid OR @uid <= 2) AND (event_id = @eid OR event_id = 20)
-                    ORDER BY assignment_id DESC LIMIT 1;", conn))
+                var assignmentInfo = await _eventApiClient.GetStaffAssignmentAsync(eventId, staffUserId);
+                if (assignmentInfo != null && assignmentInfo.CanCheckin)
                 {
-                    cmd.Parameters.AddWithValue("uid", staffUserId);
-                    cmd.Parameters.AddWithValue("eid", eventId);
-
-                    using var reader = await cmd.ExecuteReaderAsync();
-                    if (await reader.ReadAsync())
+                    isAssigned = true;
+                    resolvedEventId = assignmentInfo.EventId;
+                    gateName = string.IsNullOrWhiteSpace(assignmentInfo.GateName) ? "Main Gate" : assignmentInfo.GateName;
+                    shiftStart = assignmentInfo.ShiftStartTime;
+                    shiftEnd = assignmentInfo.ShiftEndTime;
+                    if (!string.IsNullOrWhiteSpace(assignmentInfo.ShiftDate) && DateOnly.TryParse(assignmentInfo.ShiftDate, out var dOnly))
                     {
-                        var gid = reader["gate_id"]?.ToString() ?? "GATE_A";
-                        var gname = reader["gate_name"]?.ToString() ?? "Gate A - Main Entrance";
-                        var shift = "Evening Shift";
-                        var start = reader["shift_start"] != DBNull.Value ? Convert.ToDateTime(reader["shift_start"]).ToString("HH:mm") : "17:30";
-                        var end = reader["shift_end"] != DBNull.Value ? Convert.ToDateTime(reader["shift_end"]).ToString("HH:mm") : "00:30";
-                        bool active = Convert.ToBoolean(reader["is_active"]);
-
-                        await reader.CloseAsync();
-
-                        // Count scans in current shift
-                        int scanCount = 0;
-                        using (var countCmd = new NpgsqlCommand("SELECT COUNT(*) FROM checkin_logs WHERE staff_user_id = @uid AND event_id = @eid;", conn))
-                        {
-                            countCmd.Parameters.AddWithValue("uid", staffUserId);
-                            countCmd.Parameters.AddWithValue("eid", eventId);
-                            scanCount = Convert.ToInt32(await countCmd.ExecuteScalarAsync());
-                        }
-
-                        return new GateAssignmentResponseDTO
-                        {
-                            IsAssigned = true,
-                            IsShiftActive = active,
-                            GateId = gid,
-                            GateName = gname,
-                            ShiftName = shift,
-                            ShiftStartTime = start,
-                            ShiftEndTime = end,
-                            TotalScannedInShift = scanCount,
-                            AllowedTicketTiers = new List<string> { "VIP Diamond", "Standard GA", "SVIP Zone", "General Admission" }
-                        };
+                        shiftDate = dOnly;
                     }
+                    eventTitle = !string.IsNullOrWhiteSpace(assignmentInfo.EventTitle) ? assignmentInfo.EventTitle : $"Event #{resolvedEventId}";
                 }
             }
-            catch (Exception ex)
+
+            if (!isAssigned)
             {
-                _logger.LogWarning(ex, "Error reading gate assignment from DB for Staff {StaffId}", staffUserId);
+                var eventInfoFallback = await _eventApiClient.GetEventInfoAsync(eventId);
+                return new GateAssignmentResponseDTO
+                {
+                    IsAssigned = false,
+                    EventId = eventId,
+                    EventTitle = eventInfoFallback?.Title ?? eventTitle,
+                    EventName = eventInfoFallback?.Title ?? eventTitle,
+                    IsShiftActive = false,
+                    GateId = "NONE",
+                    GateName = "Unassigned",
+                    ShiftName = "None",
+                    ShiftStartTime = "",
+                    ShiftEndTime = "",
+                    ShiftDate = null,
+                    TotalScannedInShift = 0,
+                    AllowedTicketTiers = new List<string>(),
+                    Message = "ACCESS DENIED: Staff account is not assigned to this event or admission gate."
+                };
             }
 
-            // Default assignment fallback
+            // Timezone check: Vietnam UTC+7
+            var nowVn = DateTime.UtcNow.AddHours(7);
+            var todayDate = DateOnly.FromDateTime(nowVn);
+
+            // For assigned staff, allow early check-in and active scanning
+            bool isShiftActive = true;
+            string statusMsg = "Shift is active and ready for check-in.";
+            if (shiftDate.HasValue && shiftDate.Value != todayDate)
+            {
+                statusMsg = $"Scheduled Shift Date: {shiftDate.Value:yyyy-MM-dd} (Early check-in active)";
+            }
+            else if (!string.IsNullOrWhiteSpace(shiftStart) && !string.IsNullOrWhiteSpace(shiftEnd))
+            {
+                statusMsg = $"Shift Hours: {shiftStart} - {shiftEnd} (Active)";
+            }
+
+            // Query allowed ticket tiers for this gate
+            var gates = await _eventApiClient.GetEventGatesAsync(resolvedEventId);
+            var matchedGate = gates.FirstOrDefault(g => string.Equals(g.GateName, gateName, StringComparison.OrdinalIgnoreCase));
+            var allowedTiers = matchedGate?.AllowedTicketTypeList ?? new List<string>();
+
             return new GateAssignmentResponseDTO
             {
                 IsAssigned = true,
-                IsShiftActive = true,
-                GateId = "GATE_A",
-                GateName = "Gate A - Main Entrance",
-                ShiftName = "All-Day Active Shift",
-                ShiftStartTime = "00:00",
-                ShiftEndTime = "23:59",
+                EventId = resolvedEventId,
+                EventTitle = eventTitle,
+                EventName = eventTitle,
+                IsShiftActive = isShiftActive,
+                GateId = matchedGate != null ? $"GATE_{matchedGate.GateId}" : "GATE_A",
+                GateName = gateName,
+                ShiftName = $"Shift ({shiftStart ?? "08:00"} - {shiftEnd ?? "17:00"})",
+                ShiftStartTime = shiftStart ?? "08:00",
+                ShiftEndTime = shiftEnd ?? "17:00",
+                ShiftDate = shiftDate?.ToString("yyyy-MM-dd"),
                 TotalScannedInShift = 0,
-                AllowedTicketTiers = new List<string> { "VIP Diamond", "Standard GA", "General Admission" }
+                AllowedTicketTiers = allowedTiers,
+                Message = statusMsg
             };
         }
+
+        private async Task<(bool IsValid, string GateName, string? ErrorMessage)> ValidateGateTicketTypeAsync(
+            int eventId,
+            string? reqGateId,
+            int staffUserId,
+            string zoneName,
+            string? ticketAssignedGate = null)
+        {
+            try
+            {
+                var gates = await _eventApiClient.GetEventGatesAsync(eventId);
+                if (gates.Count == 0)
+                {
+                    return (true, reqGateId ?? "Main Gate", null);
+                }
+
+                var matchedGate = gates.FirstOrDefault(g =>
+                    string.Equals(g.GateName, reqGateId, StringComparison.OrdinalIgnoreCase) ||
+                    $"GATE_{g.GateId}".Equals(reqGateId, StringComparison.OrdinalIgnoreCase));
+
+                string currentGateName = matchedGate?.GateName ?? reqGateId ?? "Gate";
+
+                // 1. Check if ticket is specifically assigned to a different Gate
+                if (!string.IsNullOrWhiteSpace(ticketAssignedGate) && !ticketAssignedGate.Equals("Main Gate", StringComparison.OrdinalIgnoreCase))
+                {
+                    bool gateMatches = string.Equals(ticketAssignedGate, reqGateId, StringComparison.OrdinalIgnoreCase) ||
+                                       (matchedGate != null && string.Equals(ticketAssignedGate, matchedGate.GateName, StringComparison.OrdinalIgnoreCase)) ||
+                                       (matchedGate != null && $"GATE_{matchedGate.GateId}".Equals(ticketAssignedGate, StringComparison.OrdinalIgnoreCase));
+
+                    if (!gateMatches)
+                    {
+                        return (false, currentGateName, $"Wrong Gate: Ticket is assigned to [{ticketAssignedGate}], but presented at [{currentGateName}].");
+                    }
+                }
+
+                // 2. Check if Gate allows this ticket type
+                if (matchedGate != null && matchedGate.AllowedTicketTypeList.Count > 0)
+                {
+                    bool allowed = matchedGate.AllowedTicketTypeList.Any(t =>
+                        t.Equals(zoneName, StringComparison.OrdinalIgnoreCase) ||
+                        zoneName.Contains(t, StringComparison.OrdinalIgnoreCase));
+
+                    if (!allowed)
+                    {
+                        return (false, matchedGate.GateName, $"Wrong Gate: Ticket [{zoneName}] is not permitted at [{matchedGate.GateName}].");
+                    }
+
+                    return (true, matchedGate.GateName, null);
+                }
+
+                return (true, currentGateName, null);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Gate validation error for Event {EventId}", eventId);
+                return (false, reqGateId ?? "Main Gate", "Gate validation is currently unavailable.");
+            }
+        }
+
+        private async Task BroadcastCheckinEventAsync(int eventId, string ticketCode, string customerName, string zoneName, string gateName, string status)
+        {
+            try
+            {
+                await _hubContext.Clients.Group($"event_monitor_{eventId}").SendAsync("CheckinEvent", new
+                {
+                    eventId,
+                    ticketCode,
+                    customerName,
+                    zoneName,
+                    gateName,
+                    status,
+                    timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not send SignalR checkin event broadcast for Event {EventId}", eventId);
+            }
+        }
+
     }
 }

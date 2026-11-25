@@ -80,6 +80,15 @@ function getTicketStatus(ticket) {
   };
 }
 
+function cleanEventTitle(title) {
+  if (!title) return "Event";
+  return String(title)
+    .replace(/\s*-\s*offline\s*sync\s*demo/gi, "")
+    .replace(/\s*offline\s*sync\s*demo/gi, "")
+    .replace(/\s*offlinesync\s*demo/gi, "")
+    .trim();
+}
+
 function getSeatDescription(ticket) {
   const zone = ticket.zoneName || ticket.seatZoneName;
   const row = ticket.rowLabel || ticket.seatRowLabel;
@@ -308,23 +317,7 @@ export default function TicketDetailsPage() {
       <>
         <Header />
         <main className="ticket-detail-page">
-          <div className="ticket-detail-state">Loading ticket...</div>
-        </main>
-        <Footer />
-      </>
-    );
-  }
-
-  if (error || !ticket) {
-    return (
-      <>
-        <Header />
-        <main className="ticket-detail-page">
-          <div className="ticket-detail-state is-error" role="alert">
-            <strong>Could not open this ticket</strong>
-            <p>{error || "Ticket not found."}</p>
-            <Link to="/my-tickets">Back to My Tickets</Link>
-          </div>
+          <div className="ticket-detail-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
         </main>
         <Footer />
       </>
@@ -449,9 +442,6 @@ export default function TicketDetailsPage() {
 
       <main className="ticket-detail-page">
         <div className="ticket-detail-container">
-          <Link to="/my-tickets" className="ticket-detail-back">
-            ← Back to My Tickets
-          </Link>
 
           <section className="ticket-event-card">
             {ticket.posterUrl && (
@@ -462,7 +452,7 @@ export default function TicketDetailsPage() {
 
             <div className="ticket-event-info">
               <p className="ticket-detail-eyebrow">Event</p>
-              <h1>{ticket.eventName || "Event"}</h1>
+              <h1>{cleanEventTitle(ticket.eventName)}</h1>
 
               <div className="ticket-event-facts">
                 {eventStart && (
@@ -525,6 +515,42 @@ export default function TicketDetailsPage() {
                 <div className="ticket-detail-field">
                   <span>Ticket holder</span>
                   <strong>{ticket.ownerName}</strong>
+                </div>
+              )}
+
+              <div className="ticket-detail-field">
+                <span>Check-in Gate{ticket.permittedGates && ticket.permittedGates.length > 1 ? "s" : ""}</span>
+                {ticket.permittedGates && ticket.permittedGates.length > 0 ? (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "4px" }}>
+                    {ticket.permittedGates.map((g, idx) => (
+                      <span
+                        key={idx}
+                        style={{
+                          display: "inline-block",
+                          background: "rgba(236, 72, 153, 0.12)",
+                          color: "#ff2d75",
+                          border: "1px solid rgba(236, 72, 153, 0.3)",
+                          padding: "3px 10px",
+                          borderRadius: "6px",
+                          fontSize: "0.88rem",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {g}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <strong>
+                    {ticket.gateName || ticket.gateId || "Main Gate"}
+                  </strong>
+                )}
+              </div>
+
+              {ticket.checkedInGate && (
+                <div className="ticket-detail-field">
+                  <span>Admitted Gate</span>
+                  <strong style={{ color: "#10b981" }}>{ticket.checkedInGate}</strong>
                 </div>
               )}
 
@@ -606,8 +632,9 @@ export default function TicketDetailsPage() {
 
             {historyLoading ? (
               <p className="ticket-history-state">
-                Loading ticket history...
-              </p>
+                <span className="app-loading-spinner" role="status" aria-label="Loading" /></p>
+
+
             ) : historyError ? (
               <p className="ticket-history-state is-error" role="alert">
                 {historyError}
@@ -641,9 +668,9 @@ export default function TicketDetailsPage() {
 
                       {(item.oldStatus || item.newStatus) && (
                         <p className="ticket-history-status">
-                          {item.oldStatus || "—"}
+                          {item.oldStatus || "-"}
                           {" → "}
-                          {item.newStatus || "—"}
+                          {item.newStatus || "-"}
                         </p>
                       )}
 
@@ -695,12 +722,12 @@ export default function TicketDetailsPage() {
             <p className="ticket-detail-eyebrow">Entry pass</p>
             <h2 id="ticket-qr-title">Your ticket QR code</h2>
             <p className="ticket-qr-event">
-              {ticket.eventName || "Event"}
+              {cleanEventTitle(ticket.eventName)}
             </p>
 
             {qrLoading && !qrImage ? (
               <div className="ticket-qr-placeholder">
-                Generating QR code...
+                <span className="app-loading-spinner" role="status" aria-label="Loading" />
               </div>
             ) : (
               qrImage && (
@@ -917,7 +944,7 @@ export default function TicketDetailsPage() {
                 disabled={submittingReturn}
                 onClick={handleSubmitReturn}
               >
-                {submittingReturn ? "Submitting..." : "Submit Refund Request"}
+                {submittingReturn ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Submit Refund Request"}
               </button>
             </div>
           </div>

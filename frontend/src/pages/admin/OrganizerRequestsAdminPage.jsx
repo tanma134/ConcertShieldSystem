@@ -60,13 +60,16 @@ function ReviewModal({ request, onClose, onDone }) {
   const [decision, setDecision] = useState("Approved");
   const [reviewNote, setReviewNote] = useState(request.reviewNote || "");
   const [rejectionReason, setRejectionReason] = useState(request.rejectionReason || "");
+  const [rejectionError, setRejectionError] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [previewDoc, setPreviewDoc] = useState(null);
 
   const handleSubmit = async () => {
     setError("");
+    setRejectionError("");
     if (decision === "Rejected" && !rejectionReason.trim()) {
+      setRejectionError("Please provide a rejection reason.");
       setError("Please provide a rejection reason.");
       return;
     }
@@ -189,6 +192,34 @@ function ReviewModal({ request, onClose, onDone }) {
               </span>
               <strong>{request.representativeName || "—"}</strong>
             </div>
+
+            {request.bankName && (
+              <div style={{ gridColumn: "1 / -1", background: "rgba(139, 92, 246, 0.08)", padding: "10px 12px", borderRadius: "8px", border: "1px solid rgba(139, 92, 246, 0.2)" }}>
+                <span style={{ color: "#c4b5fd", fontSize: "11px", fontWeight: "700", display: "block", marginBottom: "4px" }}>
+                  💳 PAYOUT BANK ACCOUNT DETAILS
+                </span>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "13px" }}>
+                  <div>
+                    <span style={{ color: "var(--org-text-faint)", fontSize: "11px", display: "block" }}>BANK NAME</span>
+                    <strong>{request.bankName}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: "var(--org-text-faint)", fontSize: "11px", display: "block" }}>ACCOUNT NUMBER</span>
+                    <strong style={{ color: "#38bdf8" }}>{request.bankAccountNumber}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: "var(--org-text-faint)", fontSize: "11px", display: "block" }}>ACCOUNT HOLDER</span>
+                    <strong>{request.bankAccountHolder}</strong>
+                  </div>
+                  {request.bankBranch && (
+                    <div>
+                      <span style={{ color: "var(--org-text-faint)", fontSize: "11px", display: "block" }}>BRANCH</span>
+                      <span>{request.bankBranch}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {request.phoneNumber && (
               <div>
@@ -485,7 +516,7 @@ function ReviewModal({ request, onClose, onDone }) {
                   rows={2}
                   value={reviewNote}
                   onChange={(e) => setReviewNote(e.target.value)}
-                  placeholder="Internal note..."
+                  placeholder="Enter internal review note"
                 />
               </div>
 
@@ -495,9 +526,18 @@ function ReviewModal({ request, onClose, onDone }) {
                   <textarea
                     rows={2}
                     value={rejectionReason}
-                    onChange={(e) => setRejectionReason(e.target.value)}
-                    placeholder="Let the user know why..."
+                    onChange={(e) => {
+                      setRejectionReason(e.target.value);
+                      if (rejectionError) setRejectionError("");
+                    }}
+                    placeholder="Enter reason for rejecting this organizer request"
+                    style={rejectionError ? { borderColor: "#ef4444" } : {}}
                   />
+                  {rejectionError && (
+                    <span style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px", display: "block" }}>
+                      {rejectionError}
+                    </span>
+                  )}
                 </div>
               )}
             </>
@@ -518,7 +558,7 @@ function ReviewModal({ request, onClose, onDone }) {
                   Cancel
                 </button>
                 <button className="org-button" onClick={handleSubmit} disabled={submitting}>
-                  {submitting ? "Saving..." : "Confirm"}
+                  {submitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm"}
                 </button>
               </>
             )}
@@ -634,7 +674,7 @@ function ReviewModal({ request, onClose, onDone }) {
                       lineHeight: "1.5",
                     }}
                   >
-                    ⚠️ <strong>Lưu ý:</strong> Nếu trình duyệt không tải được file PDF từ Cloudinary (lỗi <em>deny or ACL failure 401</em>), vui lòng vào <strong>Cloudinary Console &gt; Settings (bánh răng) &gt; Security &gt; Bật "PDF and ZIP files delivery"</strong> rồi bấm Save.
+                    ⚠️ <strong>Note:</strong> If the browser fails to load PDF files from Cloudinary (<em>deny or ACL failure 401</em> error), please go to <strong>Cloudinary Console &gt; Settings (gear icon) &gt; Security &gt; Enable "PDF and ZIP files delivery"</strong> and click Save.
                   </div>
                 </div>
               )}
@@ -694,7 +734,7 @@ export default function OrganizerRequestsAdminPage() {
             {error && <div className="org-alert org-alert--error">{error}</div>}
 
             {loading ? (
-              <p className="org-empty">Loading...</p>
+              <p className="org-empty"><span className="app-loading-spinner" role="status" aria-label="Loading" /></p>
             ) : requests.length === 0 ? (
               <p className="org-empty">No requests found.</p>
             ) : (

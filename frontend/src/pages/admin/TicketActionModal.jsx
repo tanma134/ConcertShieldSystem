@@ -124,7 +124,7 @@ export default function TicketActionModal({
               disabled={loading}
             >
               {loading
-                ? "Processing..."
+                ? <span className="app-loading-spinner" role="status" aria-label="Loading" />
                 : isReissue
                   ? "Confirm Re-issue"
                   : "Confirm Revoke"}

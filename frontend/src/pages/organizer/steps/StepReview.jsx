@@ -207,7 +207,7 @@ export default function StepReview({ eventId, event, onRefresh, onSaved, onBack,
 
       {error && <div className="ow-error">{error}</div>}
 
-      {checking && <div className="tb-loading">Checking submission eligibility...</div>}
+      {checking && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
 
       {!isCancelled && !checking && validation && (
         <div
@@ -296,7 +296,7 @@ export default function StepReview({ eventId, event, onRefresh, onSaved, onBack,
         {docError && <div className="ow-error" style={{ marginBottom: "16px" }}>{docError}</div>}
 
         {loadingCompliance ? (
-          <p className="ow-hint">Loading compliance documents...</p>
+          <p className="ow-hint"><span className="app-loading-spinner" role="status" aria-label="Loading" /></p>
         ) : (
           <>
             <div style={{ overflowX: "auto", border: "1px solid #f1f5f9", borderRadius: "10px", marginBottom: "18px" }}>
@@ -470,7 +470,7 @@ export default function StepReview({ eventId, event, onRefresh, onSaved, onBack,
                   disabled={uploadingDoc || !docFile}
                   style={{ height: "40px", whiteSpace: "nowrap", padding: "0 20px", fontWeight: 600 }}
                 >
-                  {uploadingDoc ? "Uploading..." : "Upload document"}
+                  {uploadingDoc ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Upload document"}
                 </button>
               </form>
             )}
@@ -556,7 +556,7 @@ export default function StepReview({ eventId, event, onRefresh, onSaved, onBack,
             onClick={handleSubmit}
             disabled={submitting || checking || (validation && !validation.isValid) || !allRequiredUploaded}
           >
-            {submitting ? "Submitting..." : "Submit for Review"}
+            {submitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Submit for Review"}
           </button>
         </div>
       )}

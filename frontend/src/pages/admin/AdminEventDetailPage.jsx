@@ -167,7 +167,7 @@ export default function AdminEventDetailPage() {
         </div>
 
         {error && <div className="ow-error">{error}</div>}
-        {loading && <div className="tb-loading">Loading...</div>}
+        {loading && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
 
         {result && (
           <div className={`admin-result-banner is-${result.type === "approved" ? "success" : result.type === "warning" ? "warning" : "danger"}`}>
@@ -560,7 +560,7 @@ export default function AdminEventDetailPage() {
                         submitting || cancelReason.trim().length < 10 || !cancelEvidenceFile
                       }
                     >
-                      {submitting ? "Cancelling..." : "Confirm Cancellation"}
+                      {submitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm Cancellation"}
                     </button>
                   </div>
                 </div>
@@ -589,7 +589,7 @@ export default function AdminEventDetailPage() {
                   onClick={requestApprove}
                   disabled={submitting || !complianceReady}
                 >
-                  {submitting ? "Working..." : "Approve & Publish"}
+                  {submitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Approve & Publish"}
                 </button>
               </div>
             )}
@@ -623,7 +623,7 @@ export default function AdminEventDetailPage() {
                       onClick={handleApprove}
                       disabled={submitting}
                     >
-                      {submitting ? "Publishing..." : "Yes, Approve & Publish"}
+                      {submitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Yes, Approve & Publish"}
                     </button>
                   </div>
                 </div>
@@ -647,7 +647,7 @@ export default function AdminEventDetailPage() {
                   className="tb-btn tb-btn-primary ow-btn-sm admin-btn-danger"
                   disabled={submitting}
                 >
-                  {submitting ? "Sending..." : "Confirm rejection"}
+                  {submitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm rejection"}
                 </button>
               </form>
             )}

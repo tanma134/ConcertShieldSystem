@@ -58,6 +58,7 @@ import MyOrdersPage from "../pages/customer/MyOrdersPage";
 import OrderDetailsPage from "../pages/customer/OrderDetailsPage";
 import RevenueDashboardPage from "../pages/organizer/RevenueDashboardPage";
 import CheckinManagementPage from "../pages/organizer/CheckinManagementPage";
+import OrganizerStaffPage from "../pages/organizer/OrganizerStaffPage";
 import TicketReturnReviewPage from "../pages/admin/TicketReturnReviewPage";
 import RefundReconciliationPage from "../pages/admin/RefundReconciliationPage";
 import EventGovernancePage from "../pages/organizer/EventGovernancePage";
@@ -89,6 +90,11 @@ import AdminTicketsPage from "../pages/admin/AdminTicketsPage";
 import AdminTicketDetailPage from "../pages/admin/AdminTicketDetailPage";
 import FailedTransactionQueuePage from "../pages/admin/FailedTransactionQueuePage";
 import TicketDisputeDemoPage from "../pages/admin/TicketDisputeDemoPage";
+import TicketIssuanceRecoveryQueuePage from "../pages/admin/TicketIssuanceRecoveryQueuePage";
+import TicketDisputeListPage from "../pages/admin/TicketDisputeListPage";
+import TicketDisputeDetailPage from "../pages/admin/TicketDisputeDetailPage";
+import NotFoundPage from "../pages/NotFoundPage";
+import ConcertOrderListPage from "../pages/organizer/ConcertOrderListPage";
 
 export default function AppRoutes() {
   return (
@@ -208,6 +214,15 @@ export default function AppRoutes() {
       />
 
       <Route
+        path="/admin/ticket-issuance-recovery"
+        element={
+          <ProtectedRoute adminOnly>
+            <TicketIssuanceRecoveryQueuePage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/admin/ticket-status-history"
         element={
           <ProtectedRoute adminOnly>
@@ -225,7 +240,32 @@ export default function AppRoutes() {
         }
       />
 
-      <Route path="/admin/ticket-disputes" element={<AdminRoute><TicketDisputeDemoPage /></AdminRoute>} />
+      <Route
+        path="/admin/ticket-disputes"
+        element={
+          <AdminRoute>
+            <TicketDisputeListPage />
+          </AdminRoute>
+        }
+      />
+
+      <Route
+        path="/admin/ticket-disputes/:id"
+        element={
+          <AdminRoute>
+            <TicketDisputeDetailPage />
+          </AdminRoute>
+        }
+      />
+
+      <Route
+        path="/organizer/events/:id/orders"
+        element={
+          <ProtectedRoute organizerOnly>
+            <ConcertOrderListPage />
+          </ProtectedRoute>
+        }
+      />
 
       {/* return review (Staff/Admin) */}
       <Route path="/staff/returns" element={<ProtectedRoute><TicketReturnReviewPage /></ProtectedRoute>} />
@@ -262,6 +302,9 @@ export default function AppRoutes() {
       <Route path="/organizer/events/:id/revenue" element={<ProtectedRoute organizerOnly><RevenueDashboardPage /></ProtectedRoute>} />
       <Route path="/organizer/events/:id/checkin" element={<ProtectedRoute organizerOnly><CheckinManagementPage /></ProtectedRoute>} />
       <Route path="/organizer/events/:id/staff" element={<ProtectedRoute organizerOnly><CheckinManagementPage /></ProtectedRoute>} />
+      <Route path="/organizer/checkin" element={<ProtectedRoute organizerOnly><CheckinManagementPage /></ProtectedRoute>} />
+      <Route path="/organizer/checkin-staff" element={<ProtectedRoute organizerOnly><CheckinManagementPage /></ProtectedRoute>} />
+      <Route path="/organizer/staff" element={<ProtectedRoute organizerOnly><OrganizerStaffPage /></ProtectedRoute>} />
 
       {/* Any logged-in Customer may create and configure a Draft concert. */}
       <Route
@@ -446,8 +489,7 @@ export default function AppRoutes() {
       {/* Organizer Verification & Real-time Check-in Monitor (UC_11.3, 14.1, 14.7) */}
       <Route path="/organizer/events/:eventId/realtime-checkin" element={<ProtectedRoute organizerOnly><RealtimeCheckinMonitorPage /></ProtectedRoute>} />
       <Route path="/organizer/realtime-checkin" element={<ProtectedRoute organizerOnly><RealtimeCheckinMonitorPage /></ProtectedRoute>} />
-      {/* Fallback route */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

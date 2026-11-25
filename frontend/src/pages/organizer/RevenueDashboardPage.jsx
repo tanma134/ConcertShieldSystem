@@ -141,12 +141,12 @@ export default function RevenueDashboardPage() {
           </button>
           <span className="rp-toolbar-spacer" />
           <button type="button" className="tb-btn tb-btn-outline" disabled={exporting} onClick={exportCsv}>
-            {exporting ? "Exporting..." : "Export CSV"}
+            {exporting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Export CSV"}
           </button>
         </div>
         {filterError && <div className="tb-error" style={{ marginBottom: 14 }}>{filterError}</div>}
 
-        {loading && <div className="tb-loading">Loading...</div>}
+        {loading && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
         {!loading && error && <div className="tb-error">{error}</div>}
 
         {!loading && !error && summary && (

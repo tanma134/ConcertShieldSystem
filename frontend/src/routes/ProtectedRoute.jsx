@@ -12,7 +12,11 @@ export default function ProtectedRoute({
   organizerOnly = false,
   staffOnly = false,
 }) {
-  const { isAuthenticated, isAdmin, isOrganizer, isStaff } = useAuth();
+  const { isAuthenticated, authReady, isAdmin, isOrganizer, isStaff } = useAuth();
+
+  if (!authReady) {
+    return null;
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

@@ -206,5 +206,61 @@ namespace TicketAPI.API
                 return Array.Empty<int>();
             }
         }
+
+        public async Task<List<TicketAPI.DTOs.EventSelectionDTO>> GetDisruptedEventsForGovernanceAsync()
+        {
+            try
+            {
+                using var response = await _httpClient.GetAsync("api/internal/governance/candidate-events");
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("Failed to fetch candidate governance events from EventAPI. Status: {StatusCode}", response.StatusCode);
+                    return new List<TicketAPI.DTOs.EventSelectionDTO>();
+                }
+
+                var json = await response.Content.ReadAsStringAsync();
+                using var jsonDoc = JsonDocument.Parse(json);
+                if (jsonDoc.RootElement.TryGetProperty("data", out var dataElement) && dataElement.ValueKind == JsonValueKind.Array)
+                {
+                    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                    return JsonSerializer.Deserialize<List<TicketAPI.DTOs.EventSelectionDTO>>(dataElement.GetRawText(), options)
+                           ?? new List<TicketAPI.DTOs.EventSelectionDTO>();
+                }
+                return new List<TicketAPI.DTOs.EventSelectionDTO>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching candidate governance events from EventAPI");
+                return new List<TicketAPI.DTOs.EventSelectionDTO>();
+            }
+        }
+
+        public async Task<List<EventGateDto>> GetEventGatesAsync(int eventId)
+        {
+            try
+            {
+                using var response = await _httpClient.GetAsync($"api/events/{eventId}/gates");
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("EventAPI returned status {StatusCode} when fetching gates for event {EventId}", response.StatusCode, eventId);
+                    return new List<EventGateDto>();
+                }
+
+                var json = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Array)
+                {
+                    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                    return JsonSerializer.Deserialize<List<EventGateDto>>(data.GetRawText(), options) ?? new List<EventGateDto>();
+                }
+
+                return new List<EventGateDto>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching gates from EventAPI for event {EventId}", eventId);
+                return new List<EventGateDto>();
+            }
+        }
     }
 }

@@ -74,7 +74,7 @@ export default function AppealReviewPage() {
     }
   };
 
-  if (loading) return <Shell title="Appeal"><div className="empty-state">Loading...</div></Shell>;
+  if (loading) return <Shell title="Appeal"><div className="empty-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div></Shell>;
   if (!a) {
     return (
       <Shell title="Appeal">
@@ -215,7 +215,7 @@ export default function AppealReviewPage() {
               <div className="fr-row end">
                 <button type="button" className="admin-button-secondary" onClick={() => navigate("/admin/risk/appeals")}>Cancel</button>
                 <button type="submit" className="admin-button" disabled={busy}>
-                  {busy ? "Processing..." : "Resolve appeal"}
+                  {busy ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Resolve appeal"}
                 </button>
               </div>
             </>

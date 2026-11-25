@@ -68,6 +68,7 @@
 .co-button-primary {
   border-color: #9148e4;
   background: #8139d5;
+  color: white;
 }
 
 .co-button-primary:hover:not(:disabled) {

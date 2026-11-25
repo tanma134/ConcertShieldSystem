@@ -240,8 +240,9 @@ export default function SupportCaseDetailPage() {
     return (
       <Shell title="Support Case Details">
         <div className="sc-container" style={{ textAlign: "center", padding: "60px" }}>
-          Loading case information...
-        </div>
+          <span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
+
+
       </Shell>
     );
   }
@@ -259,7 +260,7 @@ export default function SupportCaseDetailPage() {
     );
   }
 
-  const isClosed = detail.status === "Closed" || detail.status === "Resolved";
+  const isClosed = ["Closed", "Resolved", "Dismissed"].includes(detail.status);
   const evidenceMatch = detail?.description?.match(/\[Supporting Evidence Attached:\s*([^\]]+)\]/i);
   const evidenceFileName = evidenceMatch ? evidenceMatch[1].trim() : null;
   const cleanDescription = detail?.description
@@ -494,7 +495,7 @@ export default function SupportCaseDetailPage() {
                       className="sc-btn sc-btn-primary sc-btn-sm"
                       disabled={addingNote || !noteContent.trim()}
                     >
-                      {addingNote ? "Saving..." : "Post Note"}
+                      {addingNote ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Post Note"}
                     </button>
                   </div>
                 </form>
@@ -725,7 +726,7 @@ export default function SupportCaseDetailPage() {
                     Cancel
                   </button>
                   <button type="submit" className="sc-btn sc-btn-primary" disabled={assigning}>
-                    {assigning ? "Saving..." : "Confirm Assignment"}
+                    {assigning ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm Assignment"}
                   </button>
                 </div>
               </form>
@@ -779,7 +780,7 @@ export default function SupportCaseDetailPage() {
                     Cancel
                   </button>
                   <button type="submit" className="sc-btn sc-btn-success" disabled={resolving}>
-                    {resolving ? "Closing..." : "Confirm & Close Case"}
+                    {resolving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm & Close Case"}
                   </button>
                 </div>
               </form>
@@ -963,7 +964,7 @@ export default function SupportCaseDetailPage() {
               </div>
               <div className="sc-modal-body">
                 {loadingOrderModal ? (
-                  <div style={{ padding: "30px", textAlign: "center", color: "#64748b" }}>Loading order information...</div>
+                  <div style={{ padding: "30px", textAlign: "center", color: "#64748b" }}><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
                 ) : orderModalData ? (
                   <div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid #e2e8f0" }}>

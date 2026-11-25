@@ -79,7 +79,7 @@ export default function RiskDecisionDetailPage() {
     }
   };
 
-  if (loading) return <Shell title="Risk Decision"><div className="empty-state">Loading...</div></Shell>;
+  if (loading) return <Shell title="Risk Decision"><div className="empty-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div></Shell>;
   if (!d) {
     return (
       <Shell title="Risk Decision">
@@ -131,7 +131,7 @@ export default function RiskDecisionDetailPage() {
             <div className="fr-row end">
               <button type="button" className="admin-button-secondary" onClick={() => setRestoreOpen(false)}>Cancel</button>
               <button type="button" className="admin-button" disabled={busy} onClick={restore}>
-                {busy ? "Processing..." : "Confirm restore"}
+                {busy ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm restore"}
               </button>
             </div>
           </div>

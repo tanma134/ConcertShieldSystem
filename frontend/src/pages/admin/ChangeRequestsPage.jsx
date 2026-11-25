@@ -85,7 +85,7 @@ export default function ChangeRequestsPage() {
     {notice&&<div role="status">{notice}</div>}
     <label>Status <select value={filter} onChange={e=>{setFilter(e.target.value);setSelected(null);}}><option value="">All</option><option>Pending</option><option>Approved</option><option>Rejected</option></select></label>{' '}
     <button type="button" className="tb-btn tb-btn-outline" disabled={loading} onClick={load}>Refresh</button>
-    {loading?<p>Loading change requests...</p>:items.length===0?<p>No change requests.</p>:
+    {loading?<p><span className="app-loading-spinner" role="status" aria-label="Loading" /></p>:items.length===0?<p>No change requests.</p>:
     <div className="governance-table"><table><thead><tr><th>Request</th><th>Event</th><th>Type</th><th>Organizer</th><th>Status</th><th>Submitted</th><th></th></tr></thead>
       <tbody>{items.map(i=><tr key={i.id}><td>{code(i.id)}</td><td>{i.eventTitle} (#{i.eventId})</td><td><span style={{display:'inline-block',padding:'2px 8px',borderRadius:'6px',fontSize:'11px',fontWeight:700,background:i.type==='Cancel'?'#fee2e2':i.type==='Postpone'?'#fef3c7':'#e0e7ff',color:i.type==='Cancel'?'#b91c1c':i.type==='Postpone'?'#b45309':'#3730a3'}}>{i.type.toUpperCase()}</span></td><td>Organizer #{i.organizerId}</td><td>{i.status.toUpperCase()}</td><td>{date(i.submittedAt)}</td>
         <td><button type="button" className="tb-btn tb-btn-outline" onClick={()=>open(i)}>{i.status==='Pending'?'Review':'View'}</button></td></tr>)}</tbody></table></div>}
@@ -371,7 +371,7 @@ export default function ChangeRequestsPage() {
                   marginTop: "2px",
                 }}
               >
-                {impact === null ? "..." : impact?.orders ?? "N/A"}
+                {impact === null ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : impact?.orders ?? "N/A"}
               </div>
             </div>
             <div
@@ -396,7 +396,7 @@ export default function ChangeRequestsPage() {
                   marginTop: "2px",
                 }}
               >
-                {impact === null ? "..." : impact?.tickets ?? "N/A"}
+                {impact === null ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : impact?.tickets ?? "N/A"}
               </div>
             </div>
             <div
@@ -421,7 +421,7 @@ export default function ChangeRequestsPage() {
                   marginTop: "2px",
                 }}
               >
-                {impact === null ? "..." : money(impact?.totalPaid)}
+                {impact === null ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : money(impact?.totalPaid)}
               </div>
             </div>
           </div>

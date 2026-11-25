@@ -56,14 +56,26 @@ namespace PaymentAPI.Repositories
                     x.PaymentTransactionId == paymentTransactionId);
         }
 
-        public Task<int> CountFailedSinceAsync(int userId, DateTime since, CancellationToken ct = default)
+        public Task<int> CountFailedSinceAsync(int userId, DateTime since)
         {
             return _context.PaymentTransactions
                 .AsNoTracking()
                 .CountAsync(x => x.UserId == userId &&
                                  x.Status == "Failed" &&
                                  x.RespondedAt != null &&
-                                 x.RespondedAt >= since, ct);
+                                 x.RespondedAt >= since);
+        }
+
+        public Task<int> CancelPendingByOrderIdAsync(int orderId, string gateway)
+        {
+            return _context.PaymentTransactions
+                .Where(x =>
+                    x.OrderId == orderId &&
+                    x.Gateway == gateway &&
+                    x.Status == "Pending")
+                .ExecuteUpdateAsync(update => update
+                    .SetProperty(x => x.Status, "Cancelled")
+                    .SetProperty(x => x.RespondedAt, DateTime.UtcNow));
         }
     }
 }

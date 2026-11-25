@@ -131,6 +131,12 @@ public class ResolveCaseRequest
  public string Resolution { get; set; } = string.Empty;
 }
 
+public class DismissCaseRequest
+{
+ [Required(ErrorMessage = "A dismissal reason is required")]
+ public string Reason { get; set; } = string.Empty;
+}
+
 // Query parameters DTO for filtering support cases
 public class SupportCaseQuery
 {
@@ -140,4 +146,7 @@ public class SupportCaseQuery
  public string? SearchTerm { get; set; }
  public int Page { get; set; } = 1;
  public int PageSize { get; set; } = 20;
+
+ public bool TicketDisputesOnly { get; set; }
+ public bool ActiveOnly { get; set; }
 }

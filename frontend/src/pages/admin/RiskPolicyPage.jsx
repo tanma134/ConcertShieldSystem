@@ -215,7 +215,7 @@ export default function RiskPolicyPage() {
       </div>
 
       {loading ? (
-        <div className="empty-state">Loading...</div>
+        <div className="empty-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
       ) : items.length === 0 ? (
         <div className="empty-state">No risk parameters found.</div>
       ) : tab === "risk_config" ? (
@@ -281,7 +281,7 @@ export default function RiskPolicyPage() {
               </div>
               <div className="fr-row end">
                 <button type="button" className="admin-button-secondary" disabled={saving} onClick={() => setConfirm(false)}>Back</button>
-                <button type="submit" className="admin-button" disabled={saving}>{saving ? "Saving..." : "Apply changes"}</button>
+                <button type="submit" className="admin-button" disabled={saving}>{saving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Apply changes"}</button>
               </div>
             </form>
           </div>

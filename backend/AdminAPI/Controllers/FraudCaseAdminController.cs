@@ -24,7 +24,18 @@ namespace AdminAPI.Controllers
 
         [HttpGet]
         public Task<IActionResult> List([FromQuery] FraudCaseQuery query) =>
-            Run(async () => Ok(await _service.SearchAsync(query)));
+            Run(async () =>
+            {
+                // BR-236: Staff only see the cases assigned to them. The filter from the
+                // query string is overwritten, so a Staff caller cannot widen the scope.
+                if (User.IsInRole("Staff") && !User.IsInRole("Admin"))
+                {
+                    query.AssignedTo = GetCurrentUserId();
+                    query.Unassigned = null;
+                }
+
+                return Ok(await _service.SearchAsync(query));
+            });
 
         [HttpPost("{id:int}/assign")]
         [Authorize(Roles = "Admin")]

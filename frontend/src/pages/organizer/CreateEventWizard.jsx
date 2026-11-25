@@ -158,7 +158,7 @@ export default function CreateEventWizard() {
           </div>
         )}
 
-        {loading && <div className="tb-loading">Loading...</div>}
+        {loading && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
         {!loading && error && <div className="tb-error">{error}</div>}
 
         {!loading && !error && (

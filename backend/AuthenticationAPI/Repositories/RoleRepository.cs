@@ -35,6 +35,12 @@ namespace AuthenticationAPI.Repositories
                     (!excludeId.HasValue || r.RoleId != excludeId.Value));
         }
 
+        public async Task<bool> HasAssignedUsersAsync(int roleId)
+        {
+            return await _context.UserRoles
+                .AnyAsync(userRole => userRole.RoleId == roleId);
+        }
+
         public async Task AddAsync(Role role)
         {
             await _context.Roles.AddAsync(role);

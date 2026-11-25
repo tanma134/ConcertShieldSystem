@@ -372,3 +372,145 @@
   font-size: 13px;
   cursor: pointer;
 }
+
+/* Light Theme for Realtime Checkin Monitor */
+.rcm-light-theme {
+  background-color: #f8fafc;
+  color: #0f172a;
+  min-height: 100%;
+  padding-bottom: 40px;
+}
+
+.rcm-light-theme .rcm-header-bar {
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+
+.rcm-light-theme .rcm-header-title h1 {
+  color: #0f172a;
+}
+
+.rcm-light-theme .rcm-header-subtitle {
+  color: #64748b;
+}
+
+.rcm-light-theme .rcm-select {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #1e293b;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-weight: 600;
+}
+
+.rcm-light-theme .rcm-btn {
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.rcm-light-theme .rcm-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.rcm-light-theme .rcm-btn-primary {
+  background: linear-gradient(135deg, #7c3aed, #d61f6e);
+  color: #ffffff;
+  border: none;
+}
+
+.rcm-light-theme .rcm-metric-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.rcm-light-theme .rcm-metric-card:hover {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+}
+
+.rcm-light-theme .rcm-metric-label {
+  color: #64748b;
+}
+
+.rcm-light-theme .rcm-metric-value {
+  color: #0f172a;
+}
+
+.rcm-light-theme .rcm-progress-bar-bg {
+  background: #f1f5f9;
+}
+
+.rcm-light-theme .rcm-telemetry-banner {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.rcm-light-theme .rcm-telemetry-text div:first-child {
+  color: #64748b;
+}
+
+.rcm-light-theme .rcm-telemetry-text div:last-child {
+  color: #0f172a;
+}
+
+.rcm-light-theme .rcm-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.rcm-light-theme .rcm-card-title {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.rcm-light-theme .rcm-gate-item,
+.rcm-light-theme .rcm-zone-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.rcm-light-theme .rcm-gate-name,
+.rcm-light-theme .rcm-zone-name {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.rcm-light-theme .rcm-gate-stats,
+.rcm-light-theme .rcm-zone-stats {
+  color: #64748b;
+}
+
+.rcm-light-theme .rcm-gate-badge.status-normal {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.rcm-light-theme .rcm-table {
+  background: #ffffff;
+}
+
+.rcm-light-theme .rcm-table th {
+  background: #f8fafc;
+  color: #475569;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.rcm-light-theme .rcm-table td {
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+}
+
+.rcm-light-theme .rcm-table tr:hover td {
+  background: #f8fafc;
+}

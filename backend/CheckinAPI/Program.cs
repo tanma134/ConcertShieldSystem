@@ -1,7 +1,11 @@
 using System.Text;
+using CheckinAPI.API;
+using CheckinAPI.Data;
 using CheckinAPI.Hubs;
+using CheckinAPI.Repositories;
 using CheckinAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,9 +16,24 @@ builder.Services.AddSignalR();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Register Checkin Services
+// Configure EF Core DbContext
+builder.Services.AddDbContext<CheckinDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? "Host=localhost;Port=5432;Database=ticket_db;Username=postgres;Password=123456"));
+
+// Register EventApiClient
+builder.Services.AddHttpClient<IEventApiClient, EventApiClient>(client =>
+{
+    var eventApiUrl = builder.Configuration["ApiSettings:EventApiUrl"] ?? "https://localhost:7289/";
+    client.BaseAddress = new Uri(eventApiUrl);
+    var key = builder.Configuration["InternalApiKey"] ?? "dev_internal_shared_secret_key_2026";
+    client.DefaultRequestHeaders.Add("X-Internal-Api-Key", key);
+});
+
+// Register Repositories and Services
+builder.Services.AddScoped<ICheckinRepository, CheckinRepository>();
 builder.Services.AddScoped<ICheckinMonitorService, CheckinMonitorService>();
-builder.Services.AddScoped<ITicketGovernanceService, TicketGovernanceService>();
+builder.Services.AddScoped<IOfflineCheckinService, OfflineCheckinService>();
 
 // CORS Configuration
 builder.Services.AddCors(options =>

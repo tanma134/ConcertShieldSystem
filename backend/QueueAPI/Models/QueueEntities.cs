@@ -34,7 +34,7 @@ public sealed class AbuseAlert
     public int EventId { get; set; }
     public int UserId { get; set; }
     public string SessionId { get; set; } = string.Empty;
-    public string QueueToken { get; set; } = string.Empty;
+    public string TokenFingerprint { get; set; } = string.Empty;
     public string AlertType { get; set; } = string.Empty;
     public string Severity { get; set; } = "LOW";
     public string Status { get; set; } = "OPEN";

@@ -141,7 +141,7 @@ export default function RegisterPage() {
                 cursor: agreedPolicies ? "pointer" : "not-allowed",
               }}
             >
-              {loading ? "Processing..." : "Sign Up"}
+              {loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Sign Up"}
             </button>
           </form>
 

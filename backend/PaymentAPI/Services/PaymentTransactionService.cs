@@ -46,8 +46,12 @@ namespace PaymentAPI.Services
             string status,
             string? responsePayload)
         {
-            if (status != "Success" && status != "Failed")
+            if (status != "Success" &&
+                status != "Failed" &&
+                status != "Cancelled")
+            {
                 throw new ArgumentException("Trạng thái thanh toán không hợp lệ.");
+            }
 
             var transaction =
                 await _repository.GetLatestByOrderIdAsync(orderId, "VNPay");
@@ -64,6 +68,9 @@ namespace PaymentAPI.Services
             if (transaction.Status == "Success")
                 return status == "Success";
 
+            if (transaction.Status == "Cancelled")
+                return status == "Cancelled";
+
             if (transaction.Status == "Failed" && status == "Failed")
                 return true;
 
@@ -74,11 +81,18 @@ namespace PaymentAPI.Services
 
             await _repository.UpdateAsync(transaction);
 
-            // Track repeated failed payments (FRD_P01).
             if (status == "Failed")
                 await _risk.OnPaymentFailedAsync(transaction);
 
             return true;
+        }
+
+        public async Task<int> CancelPendingPaymentsAsync(int orderId)
+        {
+            if (orderId <= 0)
+                throw new ArgumentOutOfRangeException(nameof(orderId));
+
+            return await _repository.CancelPendingByOrderIdAsync(orderId, "VNPay");
         }
     }
 }

@@ -84,7 +84,7 @@ export default function AppealAdminListPage() {
         </form>
 
         {loading ? (
-          <div className="empty-state">Loading...</div>
+          <div className="empty-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
         ) : items.length === 0 ? (
           <div className="empty-state">No appeals match the current filters.</div>
         ) : (

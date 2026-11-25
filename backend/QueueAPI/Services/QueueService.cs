@@ -1,18 +1,17 @@
 using System.Security.Cryptography;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using QueueAPI.Data;
+using Microsoft.EntityFrameworkCore.Update;
+using Npgsql;
 using QueueAPI.DTOs;
 using QueueAPI.Models;
+using QueueAPI.Repositories;
 using QueueAPI.Time;
 
 namespace QueueAPI.Services;
 
-public sealed class QueueService(QueueDbContext db, IRedisQueueStore redis, IHttpClientFactory httpClientFactory, ILogger<QueueService> logger) : IQueueService
+public sealed class QueueService(IQueueRepository repository, IRedisQueueStore redis, IHttpClientFactory httpClientFactory, ILogger<QueueService> logger) : IQueueService
 {
-    private static readonly TimeSpan AbuseWindow = TimeSpan.FromMinutes(5);
-    private const int MaxUserSessionsInWindow = 2;
-    private const int MaxEventSessionsInWindow = 3;
-
     public async Task<ConfigureQueueResponse> ConfigureAsync(int eventId, ConfigureQueueRequest request, int userId)
     {
         await ValidateEventAsync(eventId);
@@ -22,11 +21,12 @@ public sealed class QueueService(QueueDbContext db, IRedisQueueStore redis, IHtt
         var end = QueueTimeZone.ToVietnam(request.PreQueueEndTime);
         if (start >= end) throw new ArgumentException("Pre-queue start time must be before end time.");
         if (request.AdmissionRate <= 0) throw new ArgumentException("Admission rate must be greater than zero.");
-        var config = await db.QueueConfigurations.SingleOrDefaultAsync(x => x.EventId == eventId);
+        var config = await repository.GetConfigurationByEventIdAsync(eventId);
         if (config == null)
         {
             config = new QueueConfiguration { EventId = eventId };
-            db.QueueConfigurations.Add(config);
+            await repository.AddConfigurationAsync(config);
+            
         }
         config.PreQueueStartTime = start;
         config.PreQueueEndTime = end;
@@ -34,7 +34,7 @@ public sealed class QueueService(QueueDbContext db, IRedisQueueStore redis, IHtt
         config.QueueEnabled = request.QueueEnabled;
         config.FairnessPolicy = request.FairnessPolicy.Trim().ToUpperInvariant();
         config.UpdatedAt = QueueTimeZone.Now;
-        await db.SaveChangesAsync();
+        await repository.SaveChangesAsync();
         logger.LogInformation("Queue configured eventId={EventId} userId={UserId}", eventId, userId);
         return new(eventId, QueueTimeZone.AsVietnamOffset(start), QueueTimeZone.AsVietnamOffset(end), config.AdmissionRate, config.QueueEnabled, config.FairnessPolicy);
     }
@@ -47,9 +47,19 @@ public sealed class QueueService(QueueDbContext db, IRedisQueueStore redis, IHtt
         if (!config.QueueEnabled) throw new InvalidOperationException("QUEUE_NOT_AVAILABLE");
         if (now < config.PreQueueStartTime) throw new InvalidOperationException("PREQUEUE_NOT_OPEN");
         if (now > config.PreQueueEndTime) throw new InvalidOperationException("PREQUEUE_CLOSED");
-        var existing = await db.QueueSessions.SingleOrDefaultAsync(x => x.EventId == eventId && x.UserId == userId);
+        var requestTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var registrationTimestamps = await redis.RecordRegistrationRequestAsync(
+            eventId, userId, requestTimestamp, CancellationToken.None);
+        var existing = await repository.GetSessionAsync(eventId, userId);
         if (existing != null && existing.Status is not ("LEFT" or "EXPIRED"))
         {
+            await DetectAutomatedRequestPatternAsync(existing, registrationTimestamps, now);
+            if (existing.Status is "REVOKED" or "BLOCKED")
+                throw new InvalidOperationException("ALREADY_REGISTERED");
+
+            var repeatedTimestamps = await redis.RecordRepeatedRegistrationAttemptAsync(
+                eventId, userId, requestTimestamp, CancellationToken.None);
+            await DetectMultipleRegistrationAttemptsAsync(existing, repeatedTimestamps, now);
             if (await redis.RegisterAsync(eventId, userId, existing.QueueToken, cycleKey, CancellationToken.None))
                 throw new InvalidOperationException("ALREADY_REGISTERED");
             throw new InvalidOperationException("QUEUE_REGISTRATION_UNAVAILABLE");
@@ -61,7 +71,7 @@ public sealed class QueueService(QueueDbContext db, IRedisQueueStore redis, IHtt
         if (existing == null)
         {
             existing = new QueueSession { EventId = eventId, UserId = userId };
-            db.QueueSessions.Add(existing);
+            await repository.AddSessionAsync(existing);
         }
 
         existing.SessionId = Guid.NewGuid().ToString("N");
@@ -70,12 +80,12 @@ public sealed class QueueService(QueueDbContext db, IRedisQueueStore redis, IHtt
         existing.Position = null;
         existing.CreatedAt = QueueTimeZone.Now;
         existing.UpdatedAt = existing.CreatedAt;
-        await db.SaveChangesAsync();
+        await repository.SaveChangesAsync();
 
+        await DetectAutomatedRequestPatternAsync(existing, registrationTimestamps, now);
         if (!await redis.RegisterAsync(eventId, userId, token, cycleKey, CancellationToken.None))
             throw new InvalidOperationException("ALREADY_REGISTERED");
 
-        await DetectRegistrationAbuseAsync(existing, now);
         return ToResponse(eventId, token, "REGISTERED", null, 0, null, config);
     }
 
@@ -103,7 +113,7 @@ public sealed class QueueService(QueueDbContext db, IRedisQueueStore redis, IHtt
         session.Status = result.Status;
         session.Position = result.Position == 0 ? null : result.Position;
         session.UpdatedAt = QueueTimeZone.Now;
-        await db.SaveChangesAsync();
+        await repository.SaveChangesAsync();
         return ToResponse(eventId, session.QueueToken, result.Status, result.Position == 0 ? null : result.Position, result.Total, null, config);
     }
 
@@ -123,12 +133,13 @@ public sealed class QueueService(QueueDbContext db, IRedisQueueStore redis, IHtt
             throw new UnauthorizedAccessException("TOKEN_INVALID");
 
         var status = result.Status;
-        if (session.Status == "ADMITTED" && status != "ADMITTED")
+        if (session.Status == "EXPIRED" ||
+            (session.Status == "ADMITTED" && status != "ADMITTED"))
             status = "EXPIRED";
         session.Status = status == "PREQUEUE" ? "REGISTERED" : status;
         session.Position = status == "EXPIRED" ? null : result.Position == 0 ? null : result.Position;
         session.UpdatedAt = QueueTimeZone.Now;
-        await db.SaveChangesAsync();
+        await repository.SaveChangesAsync();
         return ToResponse(eventId, session.QueueToken, status, session.Position, result.Total, result.AdmissionExpiresAt, config);
     }
 
@@ -139,78 +150,166 @@ public sealed class QueueService(QueueDbContext db, IRedisQueueStore redis, IHtt
         await redis.LeaveAsync(eventId, userId, session.QueueToken, CycleKey(config), CancellationToken.None);
         session.Status = "LEFT";
         session.UpdatedAt = QueueTimeZone.Now;
-        await db.SaveChangesAsync();
+        await repository.SaveChangesAsync();
     }
 
-    private async Task<QueueConfiguration> GetConfigAsync(int eventId) => await db.QueueConfigurations.SingleOrDefaultAsync(x => x.EventId == eventId)
+    private async Task<QueueConfiguration> GetConfigAsync(int eventId) => await repository.GetConfigurationByEventIdAsync(eventId)
         ?? throw new KeyNotFoundException("EVENT_NOT_FOUND");
 
     private async Task<QueueSession> GetSessionAsync(int eventId, int userId, string? token)
     {
-        var session = await db.QueueSessions.SingleOrDefaultAsync(x => x.EventId == eventId && x.UserId == userId);
+        var session = await repository.GetSessionAsync(eventId, userId);
         if (session == null || (token != null && !string.Equals(token, session.QueueToken, StringComparison.Ordinal)))
+        {
+            await DetectRevokedTokenReplayAsync(eventId, token);
             throw new UnauthorizedAccessException("TOKEN_INVALID");
+        }
+        if (session.Status is "REVOKED" or "BLOCKED")
+            await DetectRevokedTokenReplayAsync(eventId, token);
         if (session.Status is "LEFT" or "REVOKED" or "BLOCKED") throw new InvalidOperationException("TOKEN_REVOKED");
         return session;
     }
 
-    private async Task DetectRegistrationAbuseAsync(QueueSession currentSession, DateTime now)
+    private async Task DetectMultipleRegistrationAttemptsAsync(
+        QueueSession session,
+        IReadOnlyList<long> timestamps,
+        DateTime detectedAt)
     {
-        var windowStart = now - AbuseWindow;
-        var recentSessions = await db.QueueSessions
-            .AsNoTracking()
-            .Where(x => x.CreatedAt >= windowStart &&
-                x.Status != "LEFT" &&
-                x.Status != "EXPIRED" &&
-                x.Status != "REVOKED" &&
-                x.Status != "BLOCKED")
-            .ToListAsync();
+        if (timestamps.Count < QueueAbuseDetection.MultipleRegistrationAttemptsThreshold)
+            return;
 
-        var userSessionCount = recentSessions.Count(x => x.UserId == currentSession.UserId);
-        if (userSessionCount > MaxUserSessionsInWindow)
-        {
-            await CreateAutomaticAlertAsync(
-                currentSession,
-                "MULTIPLE_USER_SESSIONS",
-                $"RULE: User created {userSessionCount} queue sessions within 5 minutes (limit: {MaxUserSessionsInWindow}).",
-                windowStart);
-        }
-
-        var eventSessionCount = recentSessions.Count(x => x.EventId == currentSession.EventId);
-        if (eventSessionCount > MaxEventSessionsInWindow)
-        {
-            await CreateAutomaticAlertAsync(
-                currentSession,
-                "EVENT_SESSION_SPIKE",
-                $"RULE: Event received {eventSessionCount} queue sessions within 5 minutes (limit: {MaxEventSessionsInWindow}).",
-                windowStart);
-        }
+        await CreateAutomaticAlertAsync(
+            session.EventId,
+            session.UserId,
+            session.SessionId,
+            QueueAbuseDetection.TokenFingerprint(session.QueueToken),
+            "MULTIPLE_REGISTRATION_ATTEMPTS",
+            "LOW",
+            new
+            {
+                attemptCount = timestamps.Count,
+                detectionWindowSeconds = QueueAbuseDetection.MultipleRegistrationWindowSeconds,
+                attemptTimestamps = ToVietnamTimestamps(timestamps),
+                detectionTime = QueueTimeZone.AsVietnamOffset(detectedAt)
+            },
+            detectedAt);
     }
 
-    private async Task CreateAutomaticAlertAsync(QueueSession session, string alertType, string behavior, DateTime windowStart)
+    private async Task DetectAutomatedRequestPatternAsync(
+        QueueSession session,
+        IReadOnlyList<long> timestamps,
+        DateTime detectedAt)
     {
-        var alreadyAlerted = await db.AbuseAlerts.AnyAsync(x =>
-            x.SessionId == session.SessionId &&
-            x.AlertType == alertType &&
-            x.CreatedAt >= windowStart);
-        if (alreadyAlerted) return;
+        if (!QueueAbuseDetection.HasRegularAutomatedRequestPattern(timestamps, out var coefficientOfVariation))
+            return;
 
-        db.AbuseAlerts.Add(new AbuseAlert
+        await CreateAutomaticAlertAsync(
+            session.EventId,
+            session.UserId,
+            session.SessionId,
+            QueueAbuseDetection.TokenFingerprint(session.QueueToken),
+            "AUTOMATED_REQUEST_PATTERN",
+            "MEDIUM",
+            new
+            {
+                requestCount = QueueAbuseDetection.AutomatedRequestThreshold,
+                detectionWindowSeconds = QueueAbuseDetection.AutomatedRequestWindowSeconds,
+                requestTimestamps = ToVietnamTimestamps(
+                    timestamps.OrderByDescending(timestamp => timestamp)
+                        .Take(QueueAbuseDetection.AutomatedRequestThreshold)
+                        .OrderBy(timestamp => timestamp)
+                        .ToArray()),
+                coefficientOfVariation,
+                maximumCoefficientOfVariation = QueueAbuseDetection.AutomatedRequestMaxCoefficientOfVariation,
+                detectionTime = QueueTimeZone.AsVietnamOffset(detectedAt)
+            },
+            detectedAt);
+    }
+
+    private async Task DetectRevokedTokenReplayAsync(int eventId, string? token)
+    {
+        if (string.IsNullOrEmpty(token))
+            return;
+
+        var snapshot = await redis.RecordRevokedTokenReuseAsync(
+            eventId, token, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), CancellationToken.None);
+        if (snapshot == null || snapshot.AttemptTimestamps.Count < QueueAbuseDetection.TokenReplayThreshold)
+            return;
+
+        var detectedAt = QueueTimeZone.Now;
+        await CreateAutomaticAlertAsync(
+            eventId,
+            snapshot.UserId,
+            snapshot.SessionId,
+            snapshot.TokenFingerprint,
+            "TOKEN_REPLAY",
+            "HIGH",
+            new
+            {
+                invalidTokenReuseAttemptCount = snapshot.AttemptTimestamps.Count,
+                detectionWindowSeconds = QueueAbuseDetection.TokenReplayWindowSeconds,
+                tokenFingerprint = snapshot.TokenFingerprint,
+                attemptTimestamps = ToVietnamTimestamps(snapshot.AttemptTimestamps),
+                detectionTime = QueueTimeZone.AsVietnamOffset(detectedAt)
+            },
+            detectedAt);
+    }
+
+    private async Task CreateAutomaticAlertAsync(
+        int eventId,
+        int userId,
+        string sessionId,
+        string tokenFingerprint,
+        string alertType,
+        string severity,
+        object evidence,
+        DateTime detectedAt)
+    {
+        if (await repository.AbuseAlertExistsAsync(sessionId, alertType))
+            return;
+
+        var alert = new AbuseAlert
         {
-            EventId = session.EventId,
-            UserId = session.UserId,
-            SessionId = session.SessionId,
-            QueueToken = session.QueueToken,
+            EventId = eventId,
+            UserId = userId,
+            SessionId = sessionId,
+            TokenFingerprint = tokenFingerprint,
             AlertType = alertType,
-            Severity = "HIGH",
+            Severity = severity,
             Status = "OPEN",
-            DetectedBehavior = behavior,
-            CreatedAt = QueueTimeZone.Now
-        });
-        await db.SaveChangesAsync();
+            DetectedBehavior = JsonSerializer.Serialize(evidence),
+            CreatedAt = detectedAt
+        };
+        await repository.AddAbuseAlertAsync(alert);
+        try
+        {
+            await repository.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception) when (IsDuplicateAlertIncident(exception))
+        {
+            repository.DetachAbuseAlert(alert);
+            return;
+        }
+
         logger.LogWarning(
             "Automatic queue abuse alert created type={AlertType} eventId={EventId} userId={UserId} sessionId={SessionId}",
-            alertType, session.EventId, session.UserId, session.SessionId);
+            alertType, eventId, userId, sessionId);
+    }
+
+    private static IReadOnlyList<DateTimeOffset> ToVietnamTimestamps(IEnumerable<long> timestamps) =>
+        timestamps.Select(timestamp =>
+            DateTimeOffset.FromUnixTimeMilliseconds(timestamp).ToOffset(TimeSpan.FromHours(7))).ToArray();
+
+    private static bool IsDuplicateAlertIncident(DbUpdateException exception)
+    {
+        for (Exception? current = exception; current != null; current = current.InnerException)
+        {
+            if (current is PostgresException postgresException &&
+                postgresException.SqlState == PostgresErrorCodes.UniqueViolation &&
+                postgresException.ConstraintName == "ux_queue_abuse_alerts_session_type")
+                return true;
+        }
+        return false;
     }
 
     private static QueueStatusResponse ToResponse(int eventId, string token, string status, int? position, int total, DateTimeOffset? expiresAt, QueueConfiguration config) =>

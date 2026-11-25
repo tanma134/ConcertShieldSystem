@@ -422,3 +422,16 @@ CREATE INDEX IF NOT EXISTS ix_status_histories_event_created ON public.status_hi
 CREATE INDEX IF NOT EXISTS ix_status_histories_target_created ON public.status_histories (target_type, target_id, created_at);
 CREATE INDEX IF NOT EXISTS ix_status_histories_order_created ON public.status_histories (order_id, created_at);
 CREATE INDEX IF NOT EXISTS ix_status_histories_ticket_created ON public.status_histories (ticket_id, created_at);
+
+ALTER TABLE public.tickets
+ADD COLUMN IF NOT EXISTS order_attendee_id integer NULL;
+
+ALTER TABLE public.tickets
+ADD CONSTRAINT fk_tickets_order_attendee
+FOREIGN KEY (order_attendee_id)
+REFERENCES public.order_attendees(attendee_id)
+ON DELETE RESTRICT;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_tickets_order_attendee
+ON public.tickets(order_attendee_id)
+WHERE order_attendee_id IS NOT NULL;

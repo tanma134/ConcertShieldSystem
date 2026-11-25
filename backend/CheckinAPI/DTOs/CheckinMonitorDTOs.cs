@@ -330,6 +330,9 @@ namespace CheckinAPI.DTOs
         [JsonPropertyName("shiftEndTime")]
         public string ShiftEndTime { get; set; } = "23:00";
 
+        [JsonPropertyName("shiftDate")]
+        public string? ShiftDate { get; set; }
+
         [JsonPropertyName("totalScannedInShift")]
         public int TotalScannedInShift { get; set; } = 354;
 

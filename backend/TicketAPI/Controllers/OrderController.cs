@@ -26,15 +26,16 @@ namespace TicketAPI.Controllers
             _paymentApiClient = paymentApiClient;
         }
 
+        [Authorize(Roles = "Customer")]
         [HttpPost("create")]
         public async Task<IActionResult> CreateOrder([FromBody] CreateOrderDTO dto)
         {
             if (!ModelState.IsValid)
-                return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ", errors = ModelState });
+                return BadRequest(new { success = false, message = "Invalid data.", errors = ModelState });
 
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
-                return Unauthorized(new { success = false, message = "Token không hợp lệ!" });
+                return Unauthorized(new { success = false, message = "Invalid token." });
 
             // Risk Engine: check blocks and record suspicious rules (fail-open if AdminAPI errors).
             var verdict = await _risk.CheckOrderAsync(HttpContext, userId, dto);
@@ -54,16 +55,13 @@ namespace TicketAPI.Controllers
 
                 if (order.FinalAmount <= 0) return BadRequest("Invalid amount");
 
-                CancellationToken cancellationToken = default;
-
-                // Forward real client IP and device fingerprint to PaymentAPI.
                 var rc = RiskRequestContext.From(HttpContext);
                 order.UserId = userId;
                 order.ClientIp = rc.Ip ?? "127.0.0.1";
                 order.DeviceFp = rc.DeviceFp;
                 order.SessionId = rc.SessionId;
 
-                var paymentUrl = await _paymentApiClient.CreateVnPayPaymentAsync(order, cancellationToken);
+                var paymentUrl = await _paymentApiClient.CreateVnPayPaymentAsync(order);
 
                 return Ok(new
                 {
@@ -76,7 +74,7 @@ namespace TicketAPI.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Lỗi tạo đơn hàng cho user {UserId}", userId);
+                _logger.LogWarning(ex, "Failed to create an order for user {UserId}", userId);
 
                 return BadRequest(new
                 {
@@ -86,11 +84,12 @@ namespace TicketAPI.Controllers
             }
         }
 
+        [AllowAnonymous]
         [HttpGet("events/{eventId}/booked-seats")]
         public async Task<IActionResult> GetBookedSeatIds(int eventId)
         {
             if (eventId <= 0)
-                return BadRequest(new { success = false, message = "EventId không hợp lệ." });
+                return BadRequest(new { success = false, message = "Invalid event ID." });
 
             var seatIds = await _orderService.GetBookedSeatIdsAsync(eventId);
 
@@ -101,6 +100,7 @@ namespace TicketAPI.Controllers
             });
         }
 
+        [Authorize(Roles = "Customer,Admin,Staff,SupportStaff,SecurityStaff,Organizer")]
         [HttpGet("{orderId}")]
         public async Task<IActionResult> GetOrderById(int orderId)
         {
@@ -114,7 +114,7 @@ namespace TicketAPI.Controllers
                 return Unauthorized(new
                 {
                     success = false,
-                    message = "Token không hợp lệ."
+                    message = "Invalid token."
                 });
             }
 
@@ -143,7 +143,7 @@ namespace TicketAPI.Controllers
                 return NotFound(new
                 {
                     success = false,
-                    message = "Không tìm thấy đơn hàng."
+                    message = "Order not found."
                 });
             }
 
@@ -180,6 +180,7 @@ namespace TicketAPI.Controllers
             });
         }
 
+        [AllowAnonymous]
         [HttpPut("{orderId}/confirm-payment")]
         public async Task<IActionResult> ConfirmPayment(
             int orderId,
@@ -233,6 +234,7 @@ namespace TicketAPI.Controllers
             }
         }
 
+        [Authorize(Roles = "Customer")]
         [HttpPost("tickets/{ticketId:int}/qr/rotate")]
         public async Task<IActionResult> RotateTicketQr(int ticketId)
         {
@@ -262,6 +264,7 @@ namespace TicketAPI.Controllers
             }
         }
 
+        [Authorize(Roles = "Customer")]
         [HttpGet("my-orders")]
         public async Task<IActionResult> GetMyOrderHistory()
         {
@@ -281,6 +284,108 @@ namespace TicketAPI.Controllers
                 success = true,
                 data = orders
             });
+        }
+
+        [AllowAnonymous]
+        [HttpGet("{orderId:int}/reconciliation-info")]
+        public async Task<IActionResult> GetReconciliationInfo(
+    int orderId,
+    [FromHeader(Name = "X-Internal-Api-Key")] string apiKey,
+    [FromServices] IConfiguration configuration)
+        {
+            var expectedKey = configuration["InternalApiKey"];
+
+            if (string.IsNullOrWhiteSpace(expectedKey) ||
+                !string.Equals(apiKey, expectedKey, StringComparison.Ordinal))
+            {
+                return Unauthorized(new { success = false, message = "Invalid service credentials." });
+            }
+
+            var info = await _orderService.GetOrderReconciliationInfoAsync(orderId);
+
+            if (info == null)
+                return NotFound(new { success = false, message = "Order not found." });
+
+            return Ok(new { success = true, data = info });
+        }
+
+        [AllowAnonymous]
+        [HttpPost("{orderId:int}/repair-paid-artifacts")]
+        public async Task<IActionResult> RepairPaidArtifacts(
+            int orderId,
+            [FromBody] ConfirmOrderPaymentRequestDTO request,
+            [FromHeader(Name = "X-Internal-Api-Key")] string apiKey,
+            [FromServices] IConfiguration configuration)
+        {
+            var expectedKey = configuration["InternalApiKey"];
+
+            if (string.IsNullOrWhiteSpace(expectedKey) ||
+                !string.Equals(apiKey, expectedKey, StringComparison.Ordinal))
+            {
+                return Unauthorized(new { success = false, message = "Invalid service credentials." });
+            }
+
+            try
+            {
+                await _orderService.RepairPaidOrderArtifactsAsync(
+                    orderId,
+                    request.Amount,
+                    request.TransactionRef);
+
+                return Ok(new { success = true, message = "Ticket artifacts repaired." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { success = false, message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { success = false, message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        [AllowAnonymous]
+        [HttpPost("{orderId:int}/cancel-pending")]
+        public async Task<IActionResult> CancelPendingOrder(
+            int orderId,
+            [FromHeader(Name = "X-Internal-Api-Key")] string apiKey,
+            [FromServices] IConfiguration configuration)
+        {
+            var expectedKey = configuration["InternalApiKey"];
+
+            if (string.IsNullOrWhiteSpace(expectedKey) ||
+                !string.Equals(apiKey, expectedKey, StringComparison.Ordinal))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "Invalid service credentials."
+                });
+            }
+
+            try
+            {
+                await _orderService.CancelPendingOrderAsync(orderId);
+
+                return Ok(new
+                {
+                    success = true,
+                    orderId,
+                    message = "Pending order cancelled and hold released."
+                });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { success = false, message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { success = false, message = ex.Message });
+            }
         }
     }
 }

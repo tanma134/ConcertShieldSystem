@@ -3,6 +3,7 @@ import { AuthProvider } from "./context/AuthContext";
 import AppRoutes from "./routes/AppRoutes";
 import NotificationToast from "./components/NotificationToast";
 import { ToastProvider } from "./components/ToastProvider";
+import ActiveHoldGuard from "./components/ActiveHoldGuard";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 function App() {
@@ -11,6 +12,7 @@ function App() {
       <BrowserRouter>
         <AuthProvider>
           <ToastProvider>
+            <ActiveHoldGuard />
             <AppRoutes />
           </ToastProvider>
           <NotificationToast />

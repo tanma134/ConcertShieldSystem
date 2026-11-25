@@ -36,7 +36,7 @@ public sealed class PaymentRiskService : IPaymentRiskService
             if (!_cfg.GetValue("Risk:Enabled", true) || tx.UserId == null) return;
 
             var since = DateTime.UtcNow - Window;
-            var failed = await _transactions.CountFailedSinceAsync(tx.UserId.Value, since, ct);
+            var failed = await _transactions.CountFailedSinceAsync(tx.UserId.Value, since);
             if (failed < FailedThreshold) return;
 
             var evt = new RiskEvent
@@ -51,8 +51,6 @@ public sealed class PaymentRiskService : IPaymentRiskService
             evt.FraudRules.Add(new RuleHit("FRD_P01", 1, $"{failed} failed payments in 10 minutes"));
             if (tx.DeviceFp == null) evt.SignalsMissing.Add("device_fp");
 
-            // VNPay callback has no waiting user, so only record here;
-            // blocking takes effect on the next TicketAPI PreCheckAsync.
             await _client.IngestAsync(evt, ct);
         }
         catch (Exception ex)

@@ -234,7 +234,7 @@ export default function FraudCaseListPage() {
         </form>
 
         {loading ? (
-          <div className="empty-state">Loading...</div>
+          <div className="empty-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
         ) : items.length === 0 ? (
           <div className="empty-state">No cases match the current filters.</div>
         ) : (
@@ -335,7 +335,7 @@ export default function FraudCaseListPage() {
             <div className="fr-info">Assigning moves the case to <b>InReview</b>. The assigned Staff member reviews it and recommends an outcome; an Admin makes the final decision.</div>
             <div className="fr-row end">
               <button type="button" className="admin-button-secondary" disabled={busy} onClick={() => setAssign(null)}>Cancel</button>
-              <button type="submit" className="admin-button" disabled={busy}>{busy ? "Assigning..." : "Assign case"}</button>
+              <button type="submit" className="admin-button" disabled={busy}>{busy ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Assign case"}</button>
             </div>
           </form>
         </Modal>
@@ -364,7 +364,7 @@ export default function FraudCaseListPage() {
             </div>
             <div className="fr-row end">
               <button type="button" className="admin-button-secondary" disabled={busy} onClick={() => setRecommend(null)}>Cancel</button>
-              <button type="submit" className="admin-button" disabled={busy}>{busy ? "Sending..." : "Send review"}</button>
+              <button type="submit" className="admin-button" disabled={busy}>{busy ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Send review"}</button>
             </div>
           </form>
         </Modal>
@@ -393,7 +393,7 @@ export default function FraudCaseListPage() {
             </div>
             <div className="fr-row end">
               <button type="button" className="admin-button-secondary" disabled={busy} onClick={() => setResolve(null)}>Cancel</button>
-              <button type="submit" className="admin-button" disabled={busy}>{busy ? "Saving..." : "Resolve case"}</button>
+              <button type="submit" className="admin-button" disabled={busy}>{busy ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Resolve case"}</button>
             </div>
           </form>
         </Modal>

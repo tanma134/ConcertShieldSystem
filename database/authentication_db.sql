@@ -296,3 +296,16 @@ VALUES (1, 30, false, NOW()) ON CONFLICT (id) DO NOTHING;
 -- =================================================================
 -- Non-destructive avatar metadata migration. Image binaries remain in Cloudinary.
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS avatar_public_id text;
+
+-- =================================================================
+-- ORGANIZER STAFF MEMBERS MAPPING
+-- =================================================================
+CREATE TABLE IF NOT EXISTS public.organizer_staff_members (
+    organizer_id integer NOT NULL,
+    staff_user_id integer NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT pk_organizer_staff_members PRIMARY KEY (organizer_id, staff_user_id)
+);
+CREATE INDEX IF NOT EXISTS ix_organizer_staff_organizer ON public.organizer_staff_members(organizer_id);
+CREATE INDEX IF NOT EXISTS ix_organizer_staff_staff ON public.organizer_staff_members(staff_user_id);
+

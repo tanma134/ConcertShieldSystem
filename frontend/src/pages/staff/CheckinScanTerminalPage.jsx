@@ -190,7 +190,7 @@ export default function CheckinScanTerminalPage() {
                 cursor: loading || !ticketInput.trim() ? "not-allowed" : "pointer",
               }}
             >
-              {loading ? "Scanning..." : scanType === "Entry" ? "Confirm Entry" : "Confirm Exit"}
+              {loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : scanType === "Entry" ? "Confirm Entry" : "Confirm Exit"}
             </button>
           </form>
         </div>

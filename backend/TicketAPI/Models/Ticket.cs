@@ -31,6 +31,8 @@ public partial class Ticket
 
     public string? CheckedInGate { get; set; }
 
+    public string? GateId { get; set; }
+
     public DateTime? LastExitAt { get; set; }
 
     public bool IsInside { get; set; }
@@ -42,6 +44,9 @@ public partial class Ticket
     public DateTime? DeletedAt { get; set; }
 
     public int? DeletedBy { get; set; }
+    public int? OrderAttendeeId { get; set; }
+
+    public virtual OrderAttendee? OrderAttendee { get; set; }
 
     public virtual Order Order { get; set; } = null!;
 

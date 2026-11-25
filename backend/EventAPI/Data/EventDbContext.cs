@@ -24,6 +24,8 @@ namespace EventAPI.Data
 
         public virtual DbSet<EventSaleConfirmation> EventSaleConfirmations { get; set; } = null!;
         public virtual DbSet<EventStaff> EventStaff { get; set; } = null!;
+        public virtual DbSet<EventReminderDelivery> EventReminderDeliveries { get; set; } = null!;
+        public virtual DbSet<EventGate> EventGates { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -384,7 +386,13 @@ namespace EventAPI.Data
                 entity.Property(x => x.EventId).HasColumnName("event_id");
                 entity.Property(x => x.StaffUserId).HasColumnName("staff_user_id");
                 entity.Property(x => x.GateName).HasMaxLength(100).HasDefaultValue("Main Gate").HasColumnName("gate_name");
+                entity.Property(x => x.ShiftDate).HasColumnName("shift_date");
+                entity.Property(x => x.ShiftStartTime).HasMaxLength(50).HasColumnName("shift_start_time");
+                entity.Property(x => x.ShiftEndTime).HasMaxLength(50).HasColumnName("shift_end_time");
+                entity.Property(x => x.CanCheckin).HasDefaultValue(true).HasColumnName("can_checkin");
                 entity.Property(x => x.CanReviewReturns).HasDefaultValue(false).HasColumnName("can_review_returns");
+                entity.Property(x => x.CanManageIncidents).HasDefaultValue(false).HasColumnName("can_manage_incidents");
+                entity.Property(x => x.CanManageSupportCases).HasDefaultValue(false).HasColumnName("can_manage_support_cases");
                 entity.Property(x => x.AssignedBy).HasColumnName("assigned_by");
                 entity.Property(x => x.AssignedAt).HasColumnName("assigned_at");
                 entity.Property(x => x.IsActive).HasDefaultValue(true).HasColumnName("is_active");
@@ -399,6 +407,40 @@ namespace EventAPI.Data
                     .WithMany()
                     .HasForeignKey(x => x.EventId)
                     .HasConstraintName("fk_event_staff_event");
+            });
+
+            modelBuilder.Entity<EventReminderDelivery>(entity =>
+            {
+                entity.ToTable("event_reminder_deliveries");
+                entity.HasKey(x => new { x.EventId, x.UserId, x.ScheduledStartAt });
+
+                entity.Property(x => x.EventId).HasColumnName("event_id");
+                entity.Property(x => x.UserId).HasColumnName("user_id");
+                entity.Property(x => x.ScheduledStartAt).HasColumnName("scheduled_start_at").HasColumnType("timestamp with time zone");
+                entity.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("now()");
+                entity.Property(x => x.SentAt).HasColumnName("sent_at");
+                entity.Property(x => x.AttemptCount).HasColumnName("attempt_count").HasDefaultValue(0);
+                entity.Property(x => x.NextAttemptAt).HasColumnName("next_attempt_at").HasDefaultValueSql("now()");
+
+                entity.HasIndex(x => x.NextAttemptAt)
+                    .HasDatabaseName("ix_event_reminder_deliveries_pending")
+                    .HasFilter("sent_at IS NULL");
+            });
+
+            // Event Gates
+            modelBuilder.Entity<EventGate>(entity =>
+            {
+                entity.ToTable("event_gates");
+                entity.HasKey(x => x.GateId);
+                entity.Property(x => x.GateId)
+                    .ValueGeneratedOnAdd()
+                    .HasColumnName("gate_id");
+                entity.Property(x => x.EventId).HasColumnName("event_id");
+                entity.Property(x => x.GateName).HasMaxLength(100).IsRequired().HasColumnName("gate_name");
+                entity.Property(x => x.Description).HasMaxLength(255).HasColumnName("description");
+                entity.Property(x => x.AllowedTicketTypes).HasColumnName("allowed_ticket_types");
+                entity.Property(x => x.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.HasOne(x => x.Event).WithMany().HasForeignKey(x => x.EventId);
             });
         }
     }

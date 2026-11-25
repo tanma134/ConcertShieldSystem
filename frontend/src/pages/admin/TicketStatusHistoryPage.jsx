@@ -31,10 +31,10 @@ const ACTION_LABELS = {
 };
 
 function formatDate(value) {
-  if (!value) return "—";
+  if (!value) return "-";
 
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
+  if (Number.isNaN(date.getTime())) return "-";
 
   return date.toLocaleString("en-US", {
     dateStyle: "medium",
@@ -68,9 +68,9 @@ function getTargetLabel(item) {
 }
 
 function getStatusChange(item) {
-  if (!item.oldStatus && !item.newStatus) return "—";
+  if (!item.oldStatus && !item.newStatus) return "-";
 
-  return `${item.oldStatus || "—"} → ${item.newStatus || "—"}`;
+  return `${item.oldStatus || "-"} → ${item.newStatus || "-"}`;
 }
 
 export default function TicketStatusHistoryPage() {
@@ -260,7 +260,7 @@ export default function TicketStatusHistoryPage() {
           </div>
 
           {loading ? (
-            <div className="tsh-state">Loading status history...</div>
+            <div className="tsh-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
           ) : error ? null : items.length === 0 ? (
             <div className="tsh-state">
               No status history matches these filters.
@@ -319,7 +319,7 @@ export default function TicketStatusHistoryPage() {
                           !item.orderId &&
                           !item.ticketId &&
                           !item.actorRole &&
-                          "—"}
+                          "-"}
                       </td>
                     </tr>
                   ))}
@@ -331,7 +331,7 @@ export default function TicketStatusHistoryPage() {
           <footer className="tsh-pagination">
             <span>
               {totalCount > 0
-                ? `Showing ${(page - 1) * PAGE_SIZE + 1}–${Math.min(
+                ? `Showing ${(page - 1) * PAGE_SIZE + 1}-${Math.min(
                     page * PAGE_SIZE,
                     totalCount
                   )} of ${totalCount}`

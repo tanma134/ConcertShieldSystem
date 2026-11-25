@@ -1,8 +1,8 @@
-﻿using System.Text;
+using System.Text;
 using AdminAPI.Data;
+using AdminAPI.Repositories;
 using AdminAPI.Services;
 using AdminAPI.Services.Risks;
-using AdminAPI.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -24,6 +24,8 @@ builder.Services.AddScoped<ISupportCaseService>(sp => new SupportCaseService(
     sp.GetRequiredService<IHttpClientFactory>(),
     sp.GetRequiredService<IConfiguration>()));
 builder.Services.AddScoped<ISupportCaseRepository, SupportCaseRepository>();
+builder.Services.AddScoped<ISystemPolicyService, SystemPolicyService>();
+builder.Services.AddAdminRepositories();
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtSection["Key"]
@@ -57,9 +59,6 @@ builder.Services.AddAuthorization(options =>
 
  options.AddPolicy("CanManageSupportCases", policy =>
  policy.RequireRole("Admin", "Staff", "SupportStaff", "SecurityStaff"));
-
- // Restrict fraud-risk management to Admin; optionally require
- // fraud.manage or risk.manage JWT permission claim.
  options.AddPolicy("CanReviewFraud", policy =>
  {
  policy.RequireRole("Admin");

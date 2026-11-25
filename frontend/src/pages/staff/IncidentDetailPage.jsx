@@ -374,8 +374,7 @@ export default function IncidentDetailPage() {
             <div className="inc-empty-icon">
               <ClockIcon />
             </div>
-            <div className="inc-empty-title">Loading incident #{id}...</div>
-            <div className="inc-empty-desc">Synchronizing dossier from Incident Command Center...</div>
+            <div className="inc-empty-title"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
           </div>
         </div>
       </Shell>
@@ -855,7 +854,7 @@ export default function IncidentDetailPage() {
                     className="inc-btn inc-btn-primary"
                     disabled={isUploading}
                   >
-                    {isUploading ? "Uploading to Cloudinary..." : "Upload Evidence"}
+                    {isUploading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Upload Evidence"}
                   </button>
                 </div>
               </form>
@@ -1004,7 +1003,7 @@ export default function IncidentDetailPage() {
                     className="inc-btn inc-btn-primary"
                     disabled={isUpdating}
                   >
-                    {isUpdating ? "Saving..." : "Save Updates"}
+                    {isUpdating ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Save Updates"}
                   </button>
                 </div>
               </form>
@@ -1072,7 +1071,7 @@ export default function IncidentDetailPage() {
                     className="inc-btn inc-btn-danger"
                     disabled={isEscalating}
                   >
-                    {isEscalating ? "Escalating..." : "Confirm Escalation"}
+                    {isEscalating ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm Escalation"}
                   </button>
                 </div>
               </form>
@@ -1157,7 +1156,7 @@ export default function IncidentDetailPage() {
                     className="inc-btn inc-btn-success"
                     disabled={isResolving}
                   >
-                    {isResolving ? "Submitting..." : "Confirm Resolution"}
+                    {isResolving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm Resolution"}
                   </button>
                 </div>
               </form>

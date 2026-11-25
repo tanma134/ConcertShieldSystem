@@ -161,7 +161,7 @@ export default function NotificationCenterPage() {
         </div>
 
         {loading ? (
-          <div className="nc-empty">Loading notifications...</div>
+          <div className="nc-empty"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
         ) : filteredItems.length === 0 ? (
           <div className="nc-empty">
             <div className="nc-empty-icon">🔔</div>

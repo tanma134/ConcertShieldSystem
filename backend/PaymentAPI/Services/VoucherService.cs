@@ -29,26 +29,26 @@ namespace PaymentAPI.Services
         {
             if (string.IsNullOrWhiteSpace(dto.Code))
             {
-                throw new ArgumentException("Mã voucher không được để trống.");
+                throw new ArgumentException("Voucher code cannot be empty.");
             }
 
             var trimmedCode = dto.Code.Trim();
             if (trimmedCode.Contains(' '))
             {
-                throw new ArgumentException("Mã voucher không được chứa khoảng trắng.");
+                throw new ArgumentException("Voucher code cannot contain whitespace.");
             }
 
             var normalizedCode = trimmedCode.ToUpperInvariant();
 
             if (await _voucherRepository.CodeExistsAsync(normalizedCode))
             {
-                throw new InvalidOperationException($"Mã voucher '{normalizedCode}' đã tồn tại trong hệ thống.");
+                throw new InvalidOperationException($"Voucher code '{normalizedCode}' already exists in the system.");
             }
 
             var scope = (dto.Scope ?? "").Trim().ToUpperInvariant();
             if (scope != "SYSTEM" && scope != "ORGANIZER" && scope != "EVENT")
             {
-                throw new ArgumentException("Scope không hợp lệ. Chỉ chấp nhận SYSTEM, ORGANIZER hoặc EVENT.");
+                throw new ArgumentException("Invalid voucher scope. Allowed values: SYSTEM, ORGANIZER, or EVENT.");
             }
 
             int? organizerId = dto.OrganizerId;
@@ -58,7 +58,7 @@ namespace PaymentAPI.Services
             {
                 if (!isAdmin)
                 {
-                    throw new UnauthorizedAccessException("Chỉ Quản trị viên (Admin) mới có quyền tạo Voucher toàn hệ thống (SYSTEM).");
+                    throw new UnauthorizedAccessException("Only System Administrators can create SYSTEM vouchers.");
                 }
                 organizerId = null;
                 eventId = null;
@@ -75,7 +75,7 @@ namespace PaymentAPI.Services
             {
                 if (!eventId.HasValue || eventId.Value <= 0)
                 {
-                    throw new ArgumentException("event_id là bắt buộc khi tạo Voucher theo Sự kiện (EVENT).");
+                    throw new ArgumentException("Event ID is required when creating an EVENT scope voucher.");
                 }
                 if (!organizerId.HasValue || organizerId.Value <= 0)
                 {
@@ -86,7 +86,7 @@ namespace PaymentAPI.Services
             var discountType = (dto.DiscountType ?? "").Trim().ToUpperInvariant();
             if (discountType != "PERCENT" && discountType != "FIXED")
             {
-                throw new ArgumentException("Loại giảm giá (discount_type) không hợp lệ. Chỉ chấp nhận PERCENT hoặc FIXED.");
+                throw new ArgumentException("Invalid discount type. Allowed values: PERCENT or FIXED.");
             }
 
             long? discountAmount = null;
@@ -97,7 +97,7 @@ namespace PaymentAPI.Services
             {
                 if (!dto.DiscountPercent.HasValue || dto.DiscountPercent.Value <= 0 || dto.DiscountPercent.Value > 100)
                 {
-                    throw new ArgumentException("Phần trăm giảm giá phải lớn hơn 0 và không vượt quá 100%.");
+                    throw new ArgumentException("Discount percentage must be greater than 0 and not exceed 100%.");
                 }
                 discountPercent = dto.DiscountPercent.Value;
                 maxDiscountAmount = dto.MaxDiscountAmount.HasValue && dto.MaxDiscountAmount.Value > 0 
@@ -108,7 +108,7 @@ namespace PaymentAPI.Services
             {
                 if (!dto.DiscountAmount.HasValue || dto.DiscountAmount.Value <= 0)
                 {
-                    throw new ArgumentException("Số tiền giảm giá cố định phải lớn hơn 0.");
+                    throw new ArgumentException("Fixed discount amount must be greater than 0.");
                 }
                 discountAmount = dto.DiscountAmount.Value;
             }
@@ -123,12 +123,12 @@ namespace PaymentAPI.Services
 
             if (startsAt >= endsAt)
             {
-                throw new ArgumentException("Thời gian bắt đầu (starts_at) phải trước thời gian kết thúc (ends_at).");
+                throw new ArgumentException("Start date (starts_at) must be earlier than end date (ends_at).");
             }
 
             if (dto.TotalQuantity <= 0)
             {
-                throw new ArgumentException("Tổng số lượng voucher phải lớn hơn 0.");
+                throw new ArgumentException("Total voucher quantity must be greater than 0.");
             }
 
             var maxUsagePerUser = dto.MaxUsagePerUser < 1 ? 1 : dto.MaxUsagePerUser;
@@ -294,7 +294,7 @@ namespace PaymentAPI.Services
             }
             else if (!isAdmin && !isOrganizer)
             {
-                throw new UnauthorizedAccessException("Bạn không có quyền xem danh sách voucher.");
+                throw new UnauthorizedAccessException("You do not have permission to view the voucher catalog.");
             }
 
             var paged = await _voucherRepository.GetPagedAsync(
@@ -320,14 +320,14 @@ namespace PaymentAPI.Services
             var voucher = await _voucherRepository.GetByIdAsync(id);
             if (voucher == null)
             {
-                throw new KeyNotFoundException($"Không tìm thấy voucher với ID {id}.");
+                throw new KeyNotFoundException($"Voucher with ID {id} not found.");
             }
 
             if (!isAdmin && isOrganizer)
             {
                 if (voucher.OrganizerId != currentUserId && voucher.CreatedBy != currentUserId)
                 {
-                    throw new UnauthorizedAccessException("Bạn không có quyền truy cập voucher này.");
+                    throw new UnauthorizedAccessException("You do not have permission to access this voucher.");
                 }
             }
 
@@ -339,14 +339,14 @@ namespace PaymentAPI.Services
             var voucher = await _voucherRepository.GetByIdAsync(voucherId);
             if (voucher == null)
             {
-                throw new KeyNotFoundException($"Không tìm thấy voucher với ID {voucherId}.");
+                throw new KeyNotFoundException($"Voucher with ID {voucherId} not found.");
             }
 
             if (!isAdmin && isOrganizer)
             {
                 if (voucher.OrganizerId != currentUserId && voucher.CreatedBy != currentUserId)
                 {
-                    throw new UnauthorizedAccessException("Bạn không có quyền xem lịch sử sử dụng của voucher này.");
+                    throw new UnauthorizedAccessException("You do not have permission to view this voucher's usage history.");
                 }
             }
 
@@ -367,14 +367,23 @@ namespace PaymentAPI.Services
             var voucher = await _voucherRepository.GetByIdAsync(id);
             if (voucher == null)
             {
-                throw new KeyNotFoundException($"Không tìm thấy voucher với ID {id}.");
+                throw new KeyNotFoundException($"Voucher with ID {id} not found.");
+            }
+
+            if (!isAdmin && !isOrganizer)
+            {
+                throw new UnauthorizedAccessException("You do not have permission to update voucher status.");
             }
 
             if (!isAdmin && isOrganizer)
             {
+                if (voucher.Scope == "SYSTEM")
+                {
+                    throw new UnauthorizedAccessException("Organizers cannot update system-level vouchers.");
+                }
                 if (voucher.OrganizerId != currentUserId && voucher.CreatedBy != currentUserId)
                 {
-                    throw new UnauthorizedAccessException("Bạn không có quyền cập nhật trạng thái voucher này.");
+                    throw new UnauthorizedAccessException("You do not have permission to update this voucher status.");
                 }
             }
 
@@ -391,11 +400,24 @@ namespace PaymentAPI.Services
                 throw new KeyNotFoundException($"Voucher with ID {id} not found.");
             }
 
+            if (!isAdmin && !isOrganizer)
+            {
+                throw new UnauthorizedAccessException("You do not have permission to update vouchers.");
+            }
+
             if (!isAdmin && isOrganizer)
             {
+                if (voucher.Scope == "SYSTEM")
+                {
+                    throw new UnauthorizedAccessException("Organizers cannot update system-level vouchers.");
+                }
                 if (voucher.OrganizerId != currentUserId && voucher.CreatedBy != currentUserId)
                 {
                     throw new UnauthorizedAccessException("You do not have permission to update this voucher.");
+                }
+                if (!string.IsNullOrWhiteSpace(dto.Scope) && dto.Scope.Trim().ToUpperInvariant() == "SYSTEM")
+                {
+                    throw new UnauthorizedAccessException("Organizers cannot elevate voucher scope to SYSTEM.");
                 }
             }
 
@@ -451,12 +473,12 @@ namespace PaymentAPI.Services
                 }
             }
 
-            // 2. Total quantity constraint: total_quantity >= used_quantity
+            // 2. Total quantity constraint: cannot reduce usage limit below current used count
             if (dto.TotalQuantity.HasValue)
             {
                 if (dto.TotalQuantity.Value < voucher.UsedQuantity)
                 {
-                    throw new ArgumentException($"Total quantity ({dto.TotalQuantity.Value}) cannot be less than used quantity ({voucher.UsedQuantity}).");
+                    throw new ArgumentException($"Cannot reduce usage limit below current used count ({voucher.UsedQuantity}).");
                 }
                 voucher.TotalQuantity = dto.TotalQuantity.Value;
             }
@@ -488,18 +510,42 @@ namespace PaymentAPI.Services
                 }
             }
 
-            // ends_at shortening constraint: New ends_at must be >= now. (To deactivate immediately, set is_active to false)
-            if (dto.EndsAt.HasValue && newEndsAt < now)
+            // ends_at shortening constraint: New ends_at must be > now. (To deactivate immediately, set is_active to false)
+            if (dto.EndsAt.HasValue && newEndsAt <= now)
             {
-                throw new InvalidOperationException("New end date cannot be in the past. To deactivate voucher immediately, set status to Inactive.");
+                throw new InvalidOperationException("End date must be in the future (after current update time). To deactivate voucher immediately, set status to Inactive.");
             }
 
             voucher.StartsAt = newStartsAt;
             voucher.EndsAt = newEndsAt;
 
-            if (dto.DiscountAmount.HasValue) voucher.DiscountAmount = dto.DiscountAmount.Value;
-            if (dto.DiscountPercent.HasValue) voucher.DiscountPercent = dto.DiscountPercent.Value;
-            if (dto.MaxDiscountAmount.HasValue) voucher.MaxDiscountAmount = dto.MaxDiscountAmount.Value;
+            if (dto.DiscountAmount.HasValue && dto.DiscountAmount.Value != voucher.DiscountAmount)
+            {
+                if (voucher.UsedQuantity > 0)
+                {
+                    throw new InvalidOperationException("Discount amount cannot be modified once the voucher has been used.");
+                }
+                voucher.DiscountAmount = dto.DiscountAmount.Value;
+            }
+
+            if (dto.DiscountPercent.HasValue && dto.DiscountPercent.Value != voucher.DiscountPercent)
+            {
+                if (voucher.UsedQuantity > 0)
+                {
+                    throw new InvalidOperationException("Discount percentage cannot be modified once the voucher has been used.");
+                }
+                voucher.DiscountPercent = dto.DiscountPercent.Value;
+            }
+
+            if (dto.MaxDiscountAmount.HasValue && dto.MaxDiscountAmount.Value != voucher.MaxDiscountAmount)
+            {
+                if (voucher.UsedQuantity > 0)
+                {
+                    throw new InvalidOperationException("Max discount amount cannot be modified once the voucher has been used.");
+                }
+                voucher.MaxDiscountAmount = dto.MaxDiscountAmount.Value;
+            }
+
             if (dto.MinOrderAmount.HasValue) voucher.MinOrderAmount = dto.MinOrderAmount.Value;
             if (dto.MaxUsagePerUser.HasValue && dto.MaxUsagePerUser.Value > 0) voucher.MaxUsagePerUser = dto.MaxUsagePerUser.Value;
             if (dto.IsActive.HasValue) voucher.IsActive = dto.IsActive.Value;
@@ -513,17 +559,34 @@ namespace PaymentAPI.Services
             var voucher = await _voucherRepository.GetByIdAsync(id);
             if (voucher == null)
             {
-                throw new KeyNotFoundException($"Không tìm thấy voucher với ID {id}.");
+                throw new KeyNotFoundException($"Voucher with ID {id} not found.");
+            }
+
+            if (!isAdmin && !isOrganizer)
+            {
+                throw new UnauthorizedAccessException("You do not have permission to delete vouchers.");
             }
 
             if (!isAdmin && isOrganizer)
             {
+                if (voucher.Scope == "SYSTEM")
+                {
+                    throw new UnauthorizedAccessException("Organizers cannot delete system-level vouchers.");
+                }
                 if (voucher.OrganizerId != currentUserId && voucher.CreatedBy != currentUserId)
                 {
-                    throw new UnauthorizedAccessException("Bạn không có quyền xóa voucher này.");
+                    throw new UnauthorizedAccessException("You do not have permission to delete this voucher.");
                 }
             }
 
+            // Block deletion if the voucher has already been used
+            if (voucher.UsedQuantity > 0)
+            {
+                throw new InvalidOperationException($"Cannot delete a voucher that has already been used ({voucher.UsedQuantity} time(s)). Deactivate it instead.");
+            }
+
+            // Soft-delete: mark inactive and deleted to avoid foreign key constraints
+            voucher.IsActive = false;
             voucher.IsDeleted = true;
             voucher.DeletedAt = DateTime.UtcNow;
             voucher.DeletedBy = currentUserId;
@@ -585,35 +648,35 @@ namespace PaymentAPI.Services
             };
 
             if (string.IsNullOrWhiteSpace(request.Code))
-                return Invalid("Vui lòng nhập mã voucher.");
+                return Invalid("Please enter a voucher code.");
 
             if (request.EventId <= 0)
-                return Invalid("Event không hợp lệ.");
+                return Invalid("Invalid event.");
 
             if (request.OrderAmount <= 0)
-                return Invalid("Giá trị đơn hàng không hợp lệ.");
+                return Invalid("Invalid order amount.");
 
             var voucher = await _voucherRepository.GetByCodeAsync(request.Code);
 
             if (voucher == null)
-                return Invalid("Không tìm thấy voucher.");
+                return Invalid("Voucher not found.");
 
             var now = DateTime.UtcNow;
 
             if (!voucher.IsActive)
-                return Invalid("Voucher hiện không hoạt động.");
+                return Invalid("This voucher is currently inactive.");
 
             if (now < voucher.StartsAt || now > voucher.EndsAt)
-                return Invalid("Voucher chưa đến thời gian sử dụng hoặc đã hết hạn.");
+                return Invalid("This voucher is not yet valid or has expired.");
 
             if (voucher.UsedQuantity >= voucher.TotalQuantity)
-                return Invalid("Voucher đã hết lượt sử dụng.");
+                return Invalid("This voucher has reached its usage limit.");
 
             if (request.OrderAmount < (voucher.MinOrderAmount ?? 0))
-                return Invalid("Đơn hàng chưa đạt giá trị tối thiểu để sử dụng voucher.");
+                return Invalid("The order does not meet the minimum amount required for this voucher.");
 
             if (voucher.Scope == "EVENT" && voucher.EventId != request.EventId)
-                return Invalid("Voucher không áp dụng cho sự kiện này.");
+                return Invalid("This voucher does not apply to this event.");
 
             var eventOrganizerId = await _eventApiClient.GetOrganizerIdByEventIdAsync(request.EventId);
 
@@ -626,26 +689,26 @@ namespace PaymentAPI.Services
             };
 
             if (!isApplicable)
-                return Invalid("Voucher không áp dụng cho sự kiện này.");
+                return Invalid("This voucher does not apply to this event.");
 
             if (voucher.Scope != "SYSTEM" &&
                 voucher.Scope != "EVENT" &&
                 voucher.Scope != "ORGANIZER")
             {
-                return Invalid("Phạm vi voucher không hợp lệ.");
+                return Invalid("Invalid voucher scope.");
             }
 
             var userUsageCount = await _voucherRepository.CountUserUsagesAsync(voucher.VoucherId, userId);
 
             if (userUsageCount >= voucher.MaxUsagePerUser)
-                return Invalid("Bạn đã sử dụng voucher này đủ số lần cho phép.");
+                return Invalid("You have reached the usage limit for this voucher.");
 
             decimal calculatedDiscount;
 
             if (voucher.DiscountType == "PERCENT")
             {
                 if (!voucher.DiscountPercent.HasValue)
-                    return Invalid("Cấu hình phần trăm giảm giá của voucher không hợp lệ.");
+                    return Invalid("The voucher's percentage discount configuration is invalid.");
 
                 calculatedDiscount = request.OrderAmount * voucher.DiscountPercent.Value / 100m;
 
@@ -657,13 +720,13 @@ namespace PaymentAPI.Services
             else if (voucher.DiscountType == "FIXED")
             {
                 if (!voucher.DiscountAmount.HasValue)
-                    return Invalid("Cấu hình số tiền giảm giá của voucher không hợp lệ.");
+                    return Invalid("The voucher's fixed discount configuration is invalid.");
 
                 calculatedDiscount = voucher.DiscountAmount.Value;
             }
             else
             {
-                return Invalid("Loại giảm giá của voucher không hợp lệ.");
+                return Invalid("Invalid voucher discount type.");
             }
 
             var discountAmount = (long)Math.Round(calculatedDiscount, MidpointRounding.AwayFromZero);
@@ -676,7 +739,7 @@ namespace PaymentAPI.Services
                 Code = voucher.Code,
                 DiscountAmount = discountAmount,
                 FinalAmount = request.OrderAmount - discountAmount,
-                Message = "Áp dụng voucher thành công.",
+                Message = "Voucher applied successfully.",
                 VoucherId = voucher.VoucherId
             };
         }
@@ -686,7 +749,7 @@ namespace PaymentAPI.Services
             int userId)
         {
             if (eventId <= 0)
-                throw new ArgumentException("Event không hợp lệ.");
+                throw new ArgumentException("Invalid event.");
 
             var eventOrganizerId =
                 await _eventApiClient.GetOrganizerIdByEventIdAsync(eventId);

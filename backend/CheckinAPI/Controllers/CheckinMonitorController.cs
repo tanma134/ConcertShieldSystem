@@ -163,11 +163,15 @@ namespace CheckinAPI.Controllers
         /// BR-399, BR-400
         /// </summary>
         [HttpGet("gate-assignment")]
-        public async Task<IActionResult> GetGateAssignment([FromQuery] int eventId = 1)
+        public async Task<IActionResult> GetGateAssignment([FromQuery] int eventId = 1, [FromQuery] int? staffUserId = null)
         {
             try
             {
                 var userId = GetCurrentUserId();
+                if (userId <= 0 && staffUserId.HasValue && staffUserId.Value > 0)
+                {
+                    userId = staffUserId.Value;
+                }
                 var result = await _monitorService.GetGateAssignmentAsync(eventId, userId);
                 return Ok(new { success = true, data = result });
             }

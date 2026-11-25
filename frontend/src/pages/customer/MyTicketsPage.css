@@ -46,12 +46,21 @@
   white-space: nowrap;
 }
 
-.mt-tabs {
+.mt-toolbar {
   display: flex;
-  gap: 8px;
-  overflow-x: auto;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
   margin-bottom: 22px;
   border-bottom: 1px solid #f1ecfa;
+}
+
+.mt-tabs {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 8px;
+  overflow-x: auto;
 }
 
 .mt-tabs button {
@@ -85,6 +94,73 @@
   background: #f1ecfa;
   font-size: 12px;
   text-align: center;
+}
+
+.mt-date-filter {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+  gap: 12px;
+  padding-bottom: 8px;
+  margin: 0;
+}
+
+.mt-date-filter label {
+  display: grid;
+  gap: 6px;
+  color: #6b6480;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mt-date-filter input {
+  width: 142px;
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid #ddd4e9;
+  border-radius: 8px;
+  color: #2a2438;
+  background: #fff;
+  font: inherit;
+}
+
+@media (max-width: 900px) {
+  .mt-toolbar {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .mt-tabs {
+    flex-basis: 100%;
+  }
+
+  .mt-date-filter {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .mt-date-filter {
+    width: 100%;
+    justify-content: flex-start;
+    margin-left: 0;
+  }
+
+  .mt-date-filter input {
+    width: min(142px, calc((100vw - 64px) / 2));
+  }
+}
+
+.mt-date-filter button {
+  min-height: 38px;
+  padding: 7px 12px;
+  border: 1px solid #d8b4fe;
+  border-radius: 8px;
+  color: #7e22ce;
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
 }
 
 .mt-orders {

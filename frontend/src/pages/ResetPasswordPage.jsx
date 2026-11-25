@@ -81,7 +81,7 @@ export default function ResetPasswordPage() {
             </div>
 
             <button className="auth-button" type="submit" disabled={loading}>
-              {loading ? "Updating..." : "Reset Password"}
+              {loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Reset Password"}
             </button>
           </form>
 

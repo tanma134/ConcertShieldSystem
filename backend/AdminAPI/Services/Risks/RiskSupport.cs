@@ -1,6 +1,4 @@
-﻿using AdminAPI.Data;
-using AdminAPI.Models;
-using Microsoft.EntityFrameworkCore;
+﻿using AdminAPI.Models;
 
 namespace AdminAPI.Services.Risks;
 
@@ -16,13 +14,6 @@ internal static class RiskSupport
 
     public static string? MaskToken(string? s) =>
         string.IsNullOrEmpty(s) ? null : s.Length > 8 ? s[..8] + "…" : s;
-
-    public static Task<bool> HasPendingAppealAsync(AdminDbContext db, int alertId, int? exceptAppealId = null,
-        CancellationToken ct = default) =>
-        db.RiskAppeals.AsNoTracking().AnyAsync(a =>
-            a.Status == "Pending"
-            && (exceptAppealId == null || a.RiskAppealId != exceptAppealId)
-            && db.RiskDecisions.Any(d => d.RiskDecisionId == a.RiskDecisionId && d.FraudAlertId == alertId), ct);
 
     private static string Subject(string? scope) => scope?.ToUpperInvariant() switch
     {
