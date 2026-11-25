@@ -4,10 +4,8 @@ namespace PaymentAPI.Risk;
 
 public interface IRiskClient
 {
-    /// <summary>Gửi rule đã khớp sang AdminAPI. Trả null nếu AdminAPI lỗi/chậm (fail-open).</summary>
     Task<RiskResult?> IngestAsync(RiskEvent evt, CancellationToken ct = default);
 
-    /// <summary>Hỏi AdminAPI xem user/IP/device/session có đang bị block thật không.</summary>
     Task<BlockCheckResult?> CheckBlockAsync(int? userId, string? ip, string? deviceFp, string? sessionId, CancellationToken ct = default);
 }
 
@@ -36,7 +34,7 @@ public class RiskClient : IRiskClient
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
-            // AdminAPI chết/chậm thì KHÔNG được làm hỏng luồng đặt vé/đăng nhập.
+            // Fail-open so AdminAPI outages or latency do not block booking or login.
             _logger.LogWarning(ex, "Risk ingest failed (fail-open)");
             return null;
         }

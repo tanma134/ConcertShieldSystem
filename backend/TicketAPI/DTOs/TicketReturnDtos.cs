@@ -6,6 +6,10 @@ public class SubmitTicketReturnDto
     public int TicketId { get; set; }
 
     public string? Reason { get; set; }
+    public string? BankAccountName { get; set; }
+    public string? BankAccountNumber { get; set; }
+    public string? BankName { get; set; }
+    public string? ProofUrl { get; set; }
 }
 
 // One return request as shown to the customer.
@@ -16,6 +20,7 @@ public class TicketReturnDto
     public int OrderId { get; set; }
     public int EventId { get; set; }
     public int RequesterUserId { get; set; }
+    public string? CustomerName { get; set; }
     public string? EventName { get; set; }
     public string? TicketTypeName { get; set; }
     public string Reason { get; set; } = null!;
@@ -32,6 +37,13 @@ public class TicketReturnDto
     public string? RefundReference { get; set; }
     public string? RefundError { get; set; }
     public bool CanRetryRefund { get; set; }
+    public string? BankAccountName { get; set; }
+    public string? BankAccountNumber { get; set; }
+    public string? BankName { get; set; }
+    public string? ManualRefundReference { get; set; }
+    public int? ManualRefundProcessedBy { get; set; }
+    public DateTime? ManualRefundProcessedAt { get; set; }
+    public string? ProofUrl { get; set; }
 }
 
 
@@ -42,6 +54,13 @@ public class ReviewTicketReturnDto
     public string? ReviewNote { get; set; }
 }
 
+public class ConfirmManualRefundDto
+{
+    public string Reference { get; set; } = null!;
+    public long Amount { get; set; }
+    public string? Note { get; set; }
+}
+
 // One ticket in "My tickets", with whether it can be returned right now.
 public class MyTicketDto
 {
@@ -50,6 +69,7 @@ public class MyTicketDto
     public int OrderId { get; set; }
     public int EventId { get; set; }
     public int RequesterUserId { get; set; }
+    public string? CustomerName { get; set; }
     public string? EventName { get; set; }
     public string? PosterUrl { get; set; }
     public DateTime? StartsAt { get; set; }

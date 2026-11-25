@@ -13,6 +13,7 @@ const STATUS_LABELS = {
   Draft: "Draft",
   Pending: "Pending Review",
   Published: "On Sale",
+  Postponed: "Postponed",
   Rejected: "Rejected",
   Cancelled: "Cancelled",
 };
@@ -21,6 +22,7 @@ const STATUS_CLASS = {
   Draft: "mc-status-draft",
   Pending: "mc-status-pending",
   Published: "mc-status-published",
+  Postponed: "mc-status-pending",
   Rejected: "mc-status-rejected",
   Cancelled: "mc-status-cancelled",
 };
@@ -238,12 +240,12 @@ export default function OrganizerDashboardPage() {
                 <table className="od-table">
                   <thead>
                     <tr>
-                      <th style={{ width: "26%" }}>Event</th>
-                      <th style={{ width: "10%" }}>Status</th>
-                      <th style={{ width: "13%" }}>Starts</th>
-                      <th style={{ width: "11%" }}>Tickets Sold</th>
-                      <th style={{ width: "12%" }}>Revenue</th>
-                      <th style={{ width: "28%", textAlign: "right" }}>Actions</th>
+                      <th style={{ width: "30%" }}>Event</th>
+                      <th style={{ width: "12%", whiteSpace: "nowrap" }}>Status</th>
+                      <th style={{ width: "14%", whiteSpace: "nowrap" }}>Starts</th>
+                      <th style={{ width: "11%", whiteSpace: "nowrap" }}>Tickets Sold</th>
+                      <th style={{ width: "13%", whiteSpace: "nowrap" }}>Revenue</th>
+                      <th style={{ width: "20%", textAlign: "right" }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -258,7 +260,7 @@ export default function OrganizerDashboardPage() {
                             {ev.title}
                           </Link>
                         </td>
-                        <td>
+                        <td style={{ whiteSpace: "nowrap" }}>
                           <span
                             className={
                               "mc-status-pill " + (STATUS_CLASS[ev.status] || "")
@@ -267,15 +269,18 @@ export default function OrganizerDashboardPage() {
                             {STATUS_LABELS[ev.status] || ev.status}
                           </span>
                         </td>
-                        <td>{formatDate(ev.startsAt)}</td>
-                        <td>
+                        <td style={{ whiteSpace: "nowrap" }}>{formatDate(ev.startsAt)}</td>
+                        <td style={{ whiteSpace: "nowrap" }}>
                           {ev.soldTickets ?? 0} / {ev.totalTickets ?? 0}
                         </td>
-                        <td style={{ fontWeight: 600 }}>
+                        <td style={{ fontWeight: 600, whiteSpace: "nowrap" }}>
                           {formatPrice(ev.revenue ?? 0)}
                         </td>
                         <td>
-                          <div className="od-action-group">
+                          <div
+                            className="od-action-group"
+                            style={{ display: "flex", flexWrap: "wrap", justifyContent: "flex-end", gap: "6px" }}
+                          >
                             {ev.status === "Published" ? (
                               <>
                                 <Link
@@ -283,14 +288,7 @@ export default function OrganizerDashboardPage() {
                                   className="od-action-btn od-action-btn-primary"
                                   title="Submit Event Change Request - Reschedule, Postpone, or Cancel"
                                 >
-                                  Change Request
-                                </Link>
-                                <Link
-                                  to={`/organizer/events/${ev.eventId}/edit`}
-                                  className="od-action-btn"
-                                  title="View event configuration"
-                                >
-                                  View
+                                  Change
                                 </Link>
                                 <Link
                                   to={`/organizer/events/${ev.eventId}/revenue`}

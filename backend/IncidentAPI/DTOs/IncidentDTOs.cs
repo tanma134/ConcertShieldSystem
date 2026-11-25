@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace IncidentAPI.DTOs;
 
-// Request DTO cho Report Incident
 public class CreateIncidentRequest
 {
     [Required]
@@ -28,7 +27,6 @@ public class CreateIncidentRequest
     public string Description { get; set; } = null!;
 }
 
-// Request DTO cho Update Incident
 public class UpdateIncidentRequest
 {
     public string? Title { get; set; }
@@ -40,7 +38,6 @@ public class UpdateIncidentRequest
     public string? UpdateNote { get; set; }
 }
 
-// Request DTO cho quick status patch
 public class UpdateStatusRequest
 {
     [Required]
@@ -48,7 +45,6 @@ public class UpdateStatusRequest
     public string? Note { get; set; }
 }
 
-// Request DTO cho Escalate Incident
 public class EscalateIncidentRequest
 {
     [Required]
@@ -56,7 +52,6 @@ public class EscalateIncidentRequest
     public int? AdminId { get; set; }
 }
 
-// Request DTO cho Resolve Incident
 public class ResolveIncidentRequest
 {
     [Required]
@@ -66,7 +61,6 @@ public class ResolveIncidentRequest
     public string ActionTaken { get; set; } = null!;
 }
 
-// DTO Response tóm tắt trong danh sách
 public class IncidentListItemDto
 {
     public int Id { get; set; }
@@ -87,7 +81,6 @@ public class IncidentListItemDto
     public DateTime? UpdatedAt { get; set; }
 }
 
-// DTO Response chi tiết sự cố
 public class IncidentDetailDto
 {
     public int Id { get; set; }
@@ -116,7 +109,6 @@ public class IncidentDetailDto
     public List<IncidentUpdateDto> Updates { get; set; } = new();
 }
 
-// DTO cho Bằng chứng
 public class IncidentEvidenceDto
 {
     public int Id { get; set; }
@@ -133,7 +125,6 @@ public class IncidentEvidenceDto
     public DateTime UploadedAt { get; set; }
 }
 
-// DTO cho Lịch sử cập nhật / Timeline
 public class IncidentUpdateDto
 {
     public int Id { get; set; }
@@ -147,7 +138,6 @@ public class IncidentUpdateDto
     public DateTime CreatedAt { get; set; }
 }
 
-// DTO cho Kết quả giải quyết
 public class ResolutionDto
 {
     public int IncidentId { get; set; }
@@ -159,7 +149,6 @@ public class ResolutionDto
     public DateTime? ResolvedAt { get; set; }
 }
 
-// Query parameters cho bộ lọc tìm kiếm
 public class IncidentQuery
 {
     public int? EventId { get; set; }

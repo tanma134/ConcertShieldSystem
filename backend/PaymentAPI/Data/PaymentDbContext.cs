@@ -223,7 +223,7 @@ public partial class PaymentDbContext : DbContext
                 .HasDefaultValueSql("now()")
                 .HasColumnName("used_at");
 
-            // Cùng điều kiện lọc với Voucher để EF không cảnh báo (10622).
+            // Match Voucher's query filter to avoid EF Core warning 10622.
             entity.HasQueryFilter(e => !e.Voucher.IsDeleted);
 
             entity.HasOne(d => d.Voucher).WithMany(p => p.VoucherUsages)

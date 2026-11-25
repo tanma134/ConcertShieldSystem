@@ -414,7 +414,7 @@ export default function AdminEventDetailPage() {
                     </div>
                   </div>
 
-                  {/* Bằng chứng pháp lý / Công văn có mộc đỏ hoặc công chứng */}
+                  {/* Legal evidence / official notice */}
                   <div className="ow-field" style={{ margin: "16px 0" }}>
                     <label
                       style={{

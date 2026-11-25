@@ -8,7 +8,6 @@ import "../pages/admin/AdminDashboardPage.css";
 import "../styles/panelReadability.css";
 import "../styles/adminShell.css";
 
-// Icon dạng SVG inline (không cần thêm thư viện).
 export function Icon({ children, size = 18 }) {
   return (
     <svg
@@ -35,9 +34,8 @@ const LogoutIcon = (
   </Icon>
 );
 
-// Khung trang có sidebar dùng chung cho Admin, Organizer và Staff.
-// links: [[đường dẫn, nhãn, end?], ...] hoặc [{ to, label, end, icon, active, badge }, ...]
-// subnav: [[đường dẫn, nhãn], ...] — thanh tab của nhóm hiện tại (tuỳ chọn).
+// links: [[to, label, end?], ...] or [{ to, label, end, icon, active, badge }, ...]
+// subnav: optional [[to, label], ...] tabs for the active section.
 export default function PanelShell({
   children,
   title,

@@ -38,7 +38,6 @@ export default function AdminDashboardPage() {
         voucherApi.getVouchers({ limit: 1 }),
       ]);
 
-      // Nếu request bị hủy (component unmount) thì không set state nữa
       if (signal?.aborted) return;
 
       const users = usersResponse.status === "fulfilled" ? (usersResponse.value?.data || []) : [];
@@ -61,7 +60,6 @@ export default function AdminDashboardPage() {
         setTotalVouchers(vCount);
       }
     } catch (requestError) {
-      // Bỏ qua lỗi do abort (component unmount)
       if (requestError?.name === "CanceledError" || requestError?.code === "ERR_CANCELED") {
         return;
       }

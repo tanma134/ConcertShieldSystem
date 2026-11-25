@@ -58,7 +58,6 @@ namespace TicketAPI.Repositories
                 .FirstOrDefaultAsync(t => t.TicketId == ticketId && t.OwnerUserId == userId && !t.IsDeleted);
         }
 
-        // Lấy danh sách vé thuộc quyền sở hữu của người dùng để xử lý hoàn theo lô
         public async Task<List<Ticket>> GetTicketsForReturnAsync(IEnumerable<int> ticketIds, int userId)
         {
             return await _context.Tickets
@@ -68,7 +67,6 @@ namespace TicketAPI.Repositories
                 .ToListAsync();
         }
 
-        // Lấy thời điểm tạo yêu cầu hoàn vé gần nhất của tài khoản để kiểm tra giãn cách (cooldown)
         public async Task<DateTime?> GetLatestRequestCreatedAtByUserAsync(int userId)
         {
             return await _context.TicketReturnRequests
@@ -90,7 +88,6 @@ namespace TicketAPI.Repositories
             await _context.TicketReturnRequests.AddAsync(request);
         }
 
-        // Thêm nhiều yêu cầu hoàn vé cùng lúc trong giao dịch batch
         public async Task AddRequestsAsync(IEnumerable<TicketReturnRequest> requests)
         {
             await _context.TicketReturnRequests.AddRangeAsync(requests);
@@ -104,7 +101,12 @@ namespace TicketAPI.Repositories
                 .Where(r => r.RequesterUserId == userId);
 
             if (!string.IsNullOrWhiteSpace(status))
-                query = query.Where(r => r.Status == status);
+            {
+                if (status == ReturnRequestStatuses.Approved)
+                    query = query.Where(r => r.Status == ReturnRequestStatuses.Approved || r.Status == "ApprovedPendingManualRefund");
+                else
+                    query = query.Where(r => r.Status == status);
+            }
 
             return await query.OrderByDescending(r => r.CreatedAt).ToListAsync();
         }
@@ -138,7 +140,12 @@ namespace TicketAPI.Repositories
             }
 
             if (!string.IsNullOrWhiteSpace(status))
-                query = query.Where(r => r.Status == status);
+            {
+                if (status == ReturnRequestStatuses.Approved)
+                    query = query.Where(r => r.Status == ReturnRequestStatuses.Approved || r.Status == "ApprovedPendingManualRefund");
+                else
+                    query = query.Where(r => r.Status == status);
+            }
 
             return await query.OrderByDescending(r => r.CreatedAt).ToListAsync();
         }

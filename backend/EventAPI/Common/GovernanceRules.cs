@@ -4,10 +4,8 @@ namespace EventAPI.Common;
 
 public static class GovernanceRules
 {
-    // Chuan hoa du lieu va kiem tra tinh hop le cua yeu cau doi lich o phia backend
     public static ChangeInput ValidateChange(Event ev, ChangeInput input, DateTime now)
     {
-        // Luu y: Chi su kien Published hoac Postponed moi duoc phep thay doi lich trinh
         var status = EventStatus.Normalize(ev.Status);
         if (status != EventStatus.Published && status != EventStatus.Postponed)
             throw new InvalidOperationException("Only Published or Postponed concerts support schedule changes.");
@@ -25,7 +23,6 @@ public static class GovernanceRules
             throw new ArgumentException("New start and end are required.");
         var start = input.NewStartsAt.Value.UtcDateTime;
         var end = input.NewEndsAt.Value.UtcDateTime;
-        // Luu y: Reschedule bat buoc thoi gian bat dau moi phai o tuong lai va ket thuc sau bat dau
         if (start <= now || end <= start)
             throw new ArgumentException("New start must be in the future and end must be after start.");
         if (status != EventStatus.Postponed && start == ev.StartsAt && end == ev.EndsAt)
@@ -33,7 +30,6 @@ public static class GovernanceRules
         return input with { Reason = reason };
     }
 
-    // Kiem tra tinh hop le cua quyet dinh tham dinh ho so phap ly
     public static string ValidateReview(string decision, string? notes, bool compliance)
     {
         var allowed = compliance ? new[] { "Approved", "Rejected", "RequestMoreInfo" } : new[] { "Approved", "Rejected" };
@@ -43,14 +39,11 @@ public static class GovernanceRules
         return clean;
     }
 
-    // Kiem tra bo ho so da day du cac loai giay to phap ly theo yeu cau
     public static bool IsComplete(int version, IEnumerable<string> required, IEnumerable<string> present)
         => version > 0 && !required.Except(present).Any();
 
-    // Kiem tra tinh hop le cua quyet dinh phe duyet va ghi chu cua Admin khi doi lich
     public static string ValidateChangeReview(string decision, string? notes)
     {
-        // Luu y: Quyet dinh bat buoc la Approved hoac Rejected, tu choi phai co ghi chu toi thieu 10 ky tu
         if (decision != "Approved" && decision != "Rejected") throw new ArgumentException("Invalid review decision.");
         var clean = notes?.Trim() ?? "";
         if (clean.Length > 1000) throw new ArgumentException("Admin note must contain at most 1000 characters.");
@@ -58,14 +51,11 @@ public static class GovernanceRules
         return clean;
     }
 
-    // Kiem tra concert da duoc Admin phe duyet day du ho so phap ly hay chua
     public static bool ComplianceApproved(Event ev) => ev.ComplianceVersion > 0 &&
         ev.ComplianceStatus == "Approved" && ev.ComplianceReviewedVersion == ev.ComplianceVersion;
 
-    // Kiem tra chu ky file va dinh dang PDF PNG JPEG hop le truoc khi xu ly
     public static string ValidateFile(string name, string mime, byte[] bytes, long maxBytes)
     {
-        // Luu y: Gioi han dung luong toi da 20MB va kiem tra magic bytes de ngan chan ma doc
         if (bytes.Length == 0 || bytes.LongLength > maxBytes) throw new ArgumentException("File is empty or exceeds the maximum size.");
         var ext = Path.GetExtension(name).ToLowerInvariant();
         var pdf = bytes.Length >= 5 && bytes.AsSpan(0, 5).SequenceEqual("%PDF-"u8);

@@ -6,14 +6,10 @@ using Microsoft.Extensions.Logging;
 
 namespace IncidentAPI.Services;
 
-// Triển khai thực tế của ICloudinaryService dùng CloudinaryDotNet SDK
-// Lưu bằng chứng sự cố vào thư mục "incidents/evidence" trên Cloudinary
 public class CloudinaryService : ICloudinaryService
 {
-    // Giới hạn kích thước file tối đa: 20MB để tránh lạm dụng
     private const long MaxFileSizeBytes = 20 * 1024 * 1024;
 
-    // Các loại MIME được chấp nhận: ảnh, video, tài liệu
     private static readonly HashSet<string> AllowedMimeTypes = new(StringComparer.OrdinalIgnoreCase)
     {
         "image/jpeg", "image/png", "image/gif", "image/webp",
@@ -29,7 +25,6 @@ public class CloudinaryService : ICloudinaryService
     {
         _logger = logger;
 
-        // Đọc cấu hình Cloudinary từ appsettings.json
         var cloudName = config["Cloudinary:CloudName"]
             ?? throw new InvalidOperationException("Thiếu cấu hình Cloudinary:CloudName");
         var apiKey = config["Cloudinary:ApiKey"]
@@ -37,35 +32,27 @@ public class CloudinaryService : ICloudinaryService
         var apiSecret = config["Cloudinary:ApiSecret"]
             ?? throw new InvalidOperationException("Thiếu cấu hình Cloudinary:ApiSecret");
 
-        // Khởi tạo Cloudinary client với credentials
         var account = new Account(cloudName, apiKey, apiSecret);
         _cloudinary = new Cloudinary(account);
-        _cloudinary.Api.Secure = true; // Luôn dùng HTTPS
+        _cloudinary.Api.Secure = true;
     }
 
-    // Upload file lên Cloudinary
-    // Xác thực file trước, sau đó upload và trả về URL + Public ID
     public async Task<CloudinaryUploadResult> UploadFileAsync(IFormFile file, string folder, CancellationToken ct = default)
     {
-        // Kiểm tra file không được null hoặc rỗng
         if (file == null || file.Length == 0)
             throw new IncidentServiceException(400, "File không hợp lệ hoặc rỗng.");
 
-        // Kiểm tra kích thước file không vượt giới hạn
         if (file.Length > MaxFileSizeBytes)
             throw new IncidentServiceException(400, $"File vượt quá giới hạn {MaxFileSizeBytes / 1024 / 1024}MB.");
 
-        // Kiểm tra loại MIME có được phép không
         var mimeType = file.ContentType?.ToLowerInvariant() ?? "";
         if (!AllowedMimeTypes.Contains(mimeType))
             throw new IncidentServiceException(400, $"Loại file không được hỗ trợ: {mimeType}. Chỉ chấp nhận ảnh, video, PDF và audio.");
 
-        // Xác định resource type dựa trên MIME
         var resourceType = mimeType.StartsWith("image/") ? ResourceType.Image
             : mimeType.StartsWith("video/") ? ResourceType.Video
             : ResourceType.Raw;
 
-        // Đặt tên public ID an toàn, tránh ký tự đặc biệt
         var safeFileName = Path.GetFileNameWithoutExtension(file.FileName ?? "evidence")
             .Replace(" ", "_")
             .Replace(".", "_");
@@ -75,7 +62,6 @@ public class CloudinaryService : ICloudinaryService
         {
             using var stream = file.OpenReadStream();
 
-            // Tạo upload params tùy theo loại resource
             if (resourceType == ResourceType.Image)
             {
                 var imageParams = new ImageUploadParams
@@ -83,7 +69,6 @@ public class CloudinaryService : ICloudinaryService
                     File = new FileDescription(file.FileName, stream),
                     PublicId = publicId,
                     Overwrite = false,
-                    // Tự động xoay theo EXIF metadata
                     Transformation = new Transformation().Quality("auto").FetchFormat("auto")
                 };
 
@@ -124,7 +109,6 @@ public class CloudinaryService : ICloudinaryService
             }
             else
             {
-                // PDF, Audio - upload như raw file
                 var rawParams = new RawUploadParams
                 {
                     File = new FileDescription(file.FileName, stream),
@@ -148,7 +132,6 @@ public class CloudinaryService : ICloudinaryService
         }
         catch (IncidentServiceException)
         {
-            // Ném lại lỗi đã được xử lý
             throw;
         }
         catch (Exception ex)
@@ -158,8 +141,6 @@ public class CloudinaryService : ICloudinaryService
         }
     }
 
-    // Xóa file trên Cloudinary theo Public ID
-    // Trả về true nếu xóa thành công, false nếu không tìm thấy
     public async Task<bool> DeleteFileAsync(string publicId, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(publicId)) return false;

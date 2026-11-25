@@ -21,7 +21,6 @@ namespace EventAPI.Services
             _eventAccessService = eventAccessService;
         }
 
-        // Lay danh sach cac chinh sach hoan ve da cau hinh cua concert
         public async Task<List<RefundPolicyResponseDTO>> GetByEventIdAsync(int eventId, int? callerId, bool isAdmin)
         {
             await _eventAccessService.EnsureVisibleAsync(eventId, callerId, isAdmin);
@@ -29,11 +28,9 @@ namespace EventAPI.Services
             return items.Select(Map).ToList();
         }
 
-        // Tao moi chinh sach hoan ve voi moc thoi gian va phan tram hoan
         public async Task<RefundPolicyResponseDTO> CreateAsync(
             int eventId, CreateRefundPolicyDTO dto, int callerId, bool isAdmin)
         {
-            // Luu y: Chinh sach hoan ve chi duoc them khi concert o trang thai Draft hoac Rejected
             var ev = await GetEditableEventAsync(eventId, callerId, isAdmin);
 
             var existing = await _refundPolicyRepository.GetByEventIdAsync(eventId);
@@ -56,11 +53,9 @@ namespace EventAPI.Services
             return Map(created);
         }
 
-        // Cap nhat moc thoi gian va ty le hoan ve cho su kien
         public async Task<RefundPolicyResponseDTO> UpdateAsync(
             int refundPolicyId, UpdateRefundPolicyDTO dto, int callerId, bool isAdmin)
         {
-            // Luu y: DeadlineBeforeEventHours phai lon hon 0 va RefundPercent phai tu 0 den 100
             var entity = await _refundPolicyRepository.GetByIdAsync(refundPolicyId)
                 ?? throw new KeyNotFoundException($"Refund policy {refundPolicyId} not found.");
 
@@ -83,10 +78,8 @@ namespace EventAPI.Services
             return Map(entity);
         }
 
-        // Xoa chinh sach hoan ve khoi concert
         public async Task DeleteAsync(int refundPolicyId, int callerId, bool isAdmin)
         {
-            // Luu y: Kiem tra quyen so huu cua Organizer truoc khi xoa chinh sach
             var entity = await _refundPolicyRepository.GetByIdAsync(refundPolicyId)
                 ?? throw new KeyNotFoundException($"Refund policy {refundPolicyId} not found.");
 
@@ -94,7 +87,6 @@ namespace EventAPI.Services
             await _refundPolicyRepository.DeleteAsync(refundPolicyId);
         }
 
-        // Kiem tra quyen so huu va dieu kien concert phai o trang thai Draft hoac Rejected
         private async Task<Event> GetEditableEventAsync(int eventId, int callerId, bool isAdmin)
         {
             var ev = await _eventRepository.GetByIdAsync(eventId)

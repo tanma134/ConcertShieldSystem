@@ -7,7 +7,6 @@ using TicketAPI.Models;
 
 namespace TicketAPI.Services
 {
-    // submit, track and cancel ticket return requests.
     public class TicketReturnService : ITicketReturnService
     {
         private readonly ITicketReturnRepository _returnRepository;
@@ -35,7 +34,6 @@ namespace TicketAPI.Services
         {
         }
 
-        // Every paid ticket the user owns, with whether it can be returned right now.
         public async Task<List<MyTicketDto>> ListMyTicketsAsync(int userId)
         {
             var now = DateTime.UtcNow;
@@ -122,6 +120,10 @@ namespace TicketAPI.Services
                 EventId = ticket.EventId,
                 RequesterUserId = userId,
                 Reason = reason.Reason,
+                BankAccountName = RequiredBankField(dto.BankAccountName, "Bank account name"),
+                BankAccountNumber = RequiredBankField(dto.BankAccountNumber, "Bank account number"),
+                BankName = RequiredBankField(dto.BankName, "Bank name"),
+                ProofUrl = string.IsNullOrWhiteSpace(dto.ProofUrl) ? null : dto.ProofUrl.Trim(),
                 Status = ReturnRequestStatuses.Pending,
                 // The percentage is frozen at submission, so a later policy change cannot alter this request.
                 RefundAmount = ComputeRefund(ticket, eligibility.RefundPercent),
@@ -147,14 +149,12 @@ namespace TicketAPI.Services
             return MapRequest(request, ticket);
         }
 
-        // the user's requests, newest first, optionally filtered by status.
         public async Task<List<TicketReturnDto>> ListMineAsync(int userId, string? status)
         {
             var requests = await _returnRepository.ListMineAsync(userId, status);
             return requests.Select(r => MapRequest(r, r.Ticket)).ToList();
         }
 
-        // one request. Other people's requests look like "not found".
         public async Task<TicketReturnDto> GetMineAsync(int userId, int requestId)
         {
             var request = await _returnRepository.GetMineAsync(userId, requestId)
@@ -163,7 +163,6 @@ namespace TicketAPI.Services
             return MapRequest(request, request.Ticket);
         }
 
-        // withdraws a Pending request and gives the ticket back to its owner.
         public async Task<TicketReturnDto> CancelAsync(int userId, int requestId)
         {
             var request = await _returnRepository.GetMineForCancelAsync(userId, requestId)
@@ -192,7 +191,7 @@ namespace TicketAPI.Services
             return requests.Select(r => MapRequest(r, r.Ticket)).ToList();
         }
 
-        // Staff/Admin approves or rejects a Pending request. Approving also pays the money back.
+        // Staff/Admin approves or rejects a pending request. Approval only schedules a manual payout.
         public async Task<TicketReturnDto> ReviewAsync(int reviewerUserId, int requestId, ReviewTicketReturnDto dto, IReadOnlyCollection<int>? eventScope = null)
         {
             var request = await LoadForReviewAsync(requestId, eventScope);
@@ -246,24 +245,51 @@ namespace TicketAPI.Services
                 return MapRequest(request, request.Ticket);
             }
 
-            await PayBackAsync(request);
             return MapRequest(request, request.Ticket);
         }
 
-        // Staff/Admin retries the payout of an approved return whose refund failed.
-        public async Task<TicketReturnDto> RetryRefundAsync(int reviewerUserId, int requestId, IReadOnlyCollection<int>? eventScope = null)
+        public async Task<TicketReturnDto> ConfirmManualRefundAsync(int reviewerUserId, int requestId, ConfirmManualRefundDto dto, IReadOnlyCollection<int>? eventScope = null)
         {
             var request = await LoadForReviewAsync(requestId, eventScope);
 
-            if (request.Status != ReturnRequestStatuses.RefundFailed && request.Status != ReturnRequestStatuses.Approved)
-                throw new InvalidOperationException("Only an approved return whose refund has not been paid can be retried.");
+            if (request.Status != ReturnRequestStatuses.Approved && request.Status != ReturnRequestStatuses.RefundFailed && request.Status != ReturnRequestStatuses.RefundProcessing)
+                throw new InvalidOperationException("Only an approved return can be marked as manually refunded.");
+            if (dto.Amount != request.RefundAmount || string.IsNullOrWhiteSpace(dto.Reference))
+                throw new ArgumentException("The transferred amount must match the approved refund and include a bank reference.");
+            request.Status = ReturnRequestStatuses.Refunded;
+            request.ManualRefundReference = dto.Reference.Trim();
+            request.ManualRefundProcessedBy = reviewerUserId;
+            request.ManualRefundProcessedAt = DateTime.UtcNow;
+            request.RefundReference = request.ManualRefundReference;
+            request.RefundedAt = request.ManualRefundProcessedAt;
+            request.ReviewNote = string.IsNullOrWhiteSpace(dto.Note) ? request.ReviewNote : dto.Note.Trim();
+            request.UpdatedAt = DateTime.UtcNow;
+            await _returnRepository.SyncOrderRefundStatusAsync(request.OrderId);
+            await _returnRepository.SaveChangesAsync();
 
-            request.ReviewedBy ??= reviewerUserId;
-            await PayBackAsync(request);
+            // Record the completed manual bank transfer in PaymentAPI so reconciliation reports stay in sync.
+            await _paymentClient.RecordManualRefundAsync(
+                request.TicketReturnRequestId,
+                request.OrderId,
+                request.RefundAmount,
+                request.ManualRefundReference!,
+                reviewerUserId,
+                request.Ticket.Order?.FullName,
+                request.Ticket.Order?.EventId,
+                request.Ticket.Order?.EventName,
+                request.Reason);
+
             return MapRequest(request, request.Ticket);
         }
 
-        // Asks PaymentAPI to pay the refund and stores the outcome (Refunded or RefundFailed).
+        private static string RequiredBankField(string? value, string field)
+        {
+            if (string.IsNullOrWhiteSpace(value)) throw new ArgumentException($"{field} is required.");
+            var result = value.Trim();
+            if (result.Length > 150) throw new ArgumentException($"{field} is too long.");
+            return result;
+        }
+
         private async Task PayBackAsync(TicketReturnRequest request)
         {
             var outcome = await _paymentClient.RefundAsync(
@@ -283,8 +309,7 @@ namespace TicketAPI.Services
                 request.RefundReference = outcome.Reference;
                 request.RefundError = null;
 
-                // Sync Order status if all tickets in the order have been returned / refunded
-                await _returnRepository.SyncOrderRefundStatusAsync(request.OrderId);
+                        await _returnRepository.SyncOrderRefundStatusAsync(request.OrderId);
             }
             else
             {
@@ -319,7 +344,7 @@ namespace TicketAPI.Services
             return request;
         }
 
-        // Chỉ vé thực sự thuộc snapshot mới nhận chính sách đổi lịch; không mở quyền cho toàn bộ event.
+        // Only tickets included in the snapshot receive the reschedule policy; do not open it to the whole event.
         private ReturnEligibility EvaluatePolicy(Ticket ticket, bool hasOpen, DateTime now, IReadOnlyList<RefundTier> tiers, AppliedEventChange? change)
         {
             if (change != null)
@@ -330,7 +355,6 @@ namespace TicketAPI.Services
             return TicketReturnPolicy.Evaluate(BuildFacts(ticket, hasOpen), now, tiers);
         }
 
-        // Collects the facts the policy needs from a ticket and its order.
         private static TicketReturnFacts BuildFacts(Ticket ticket, bool hasOpenRequest)
         {
             return new TicketReturnFacts(
@@ -384,7 +408,6 @@ namespace TicketAPI.Services
             }
         }
 
-        // Converts a request and its ticket into the DTO shown to the customer.
         private static TicketReturnDto MapRequest(TicketReturnRequest request, Ticket ticket)
         {
             return new TicketReturnDto
@@ -394,6 +417,7 @@ namespace TicketAPI.Services
                 OrderId = request.OrderId,
                 EventId = request.EventId,
                 RequesterUserId = request.RequesterUserId,
+                CustomerName = ticket.Order?.FullName,
                 EventName = ticket.Order?.EventName,
                 TicketTypeName = ticket.TicketTypeName,
                 Reason = request.Reason,
@@ -410,7 +434,15 @@ namespace TicketAPI.Services
                 RefundReference = request.RefundReference,
                 RefundError = request.RefundError,
                 CanRetryRefund = request.Status == ReturnRequestStatuses.RefundFailed
+                ,BankAccountName = request.BankAccountName
+                ,BankAccountNumber = request.BankAccountNumber
+                ,BankName = request.BankName
+                ,ManualRefundReference = request.ManualRefundReference
+                ,ManualRefundProcessedBy = request.ManualRefundProcessedBy
+                ,ManualRefundProcessedAt = request.ManualRefundProcessedAt
+                ,ProofUrl = request.ProofUrl
             };
         }
     }
 }
+

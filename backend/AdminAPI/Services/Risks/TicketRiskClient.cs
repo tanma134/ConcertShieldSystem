@@ -3,7 +3,6 @@ using System.Text.Json;
 
 namespace AdminAPI.Services.Risks;
 
-/// <summary>Outcome of asking TicketAPI to revoke a ticket and pay the refund back.</summary>
 public sealed record TicketRiskRevokeResult(
     bool TicketRevoked,
     string RefundStatus,
@@ -11,17 +10,11 @@ public sealed record TicketRiskRevokeResult(
     string? RefundReference,
     string? RefundError);
 
-/// <summary>
-/// Internal client used by the risk engine to keep tickets in sync with risk decisions.
-/// Calls TicketAPI's /api/internal/tickets/risk/* endpoints; those endpoints are protected
-/// with the shared X-Internal-Api-Key and are never exposed through the gateway.
-/// </summary>
-/// <summary>Ticket facts returned by TicketAPI before a manual block is created.</summary>
+// Internal client for TicketAPI /api/internal/tickets/risk/* (X-Internal-Api-Key, never gateway-exposed).
 public sealed record TicketInfo(int TicketId, int OwnerUserId, int EventId, string? Status, DateTime? CheckedInAt);
 
 public interface ITicketRiskClient
 {
-    /// <summary>Returns null when the ticket does not exist.</summary>
     Task<TicketInfo?> FindTicketAsync(int ticketId, CancellationToken ct = default);
 
     Task BlockTicketAsync(int ticketId, int userId, string reason, int staffId,

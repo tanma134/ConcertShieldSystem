@@ -63,7 +63,7 @@ export default function RetryRefundModal({
             disabled={submitting}
             onClick={onClose}
           >
-            ✕
+            Close
           </button>
         </div>
 

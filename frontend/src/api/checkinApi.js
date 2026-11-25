@@ -1,11 +1,6 @@
 import axios from "axios";
 
-// Direct CheckinAPI URL (bypasses gateway if gateway is offline)
-// Direct HTTP: http://localhost:5288 (CheckinAPI)
-// Direct HTTPS: https://localhost:7330
-// Gateway: https://localhost:7164/api
-
-// Multi-endpoint client pool: supports HTTP directly (5288), HTTPS directly (7330), and Gateway (7164)
+// Multi-endpoint pool (direct HTTP 5288, direct HTTPS 7330, gateway 7164) to bypass an offline gateway
 const http5288Client = axios.create({
   baseURL: "http://localhost:5288/api",
   headers: { "Content-Type": "application/json" },
@@ -62,7 +57,6 @@ const withFallback = async (path, method = "get", data = null, extraConfig = {})
 };
 
 const checkinApi = {
-  // Monitor Real-time Check-in Status
   getMonitorStatus: (eventId, params = {}) => {
     const queryParams = new URLSearchParams({ eventId, ...params }).toString();
     return withFallback(`/checkin/monitor?${queryParams}`, "get");
@@ -75,60 +69,47 @@ const checkinApi = {
     return withFallback(`/checkin/gate-assignment?${params.toString()}`, "get");
   },
 
-  // Scan Dynamic QR Ticket
   scanQrTicket: (payload) => {
     return withFallback("/checkin/scan-qr", "post", payload);
   },
 
-  // Manual Check-in
   manualCheckin: (payload) => {
     return withFallback("/checkin/manual-checkin", "post", payload);
   },
 
-  // Lookup Ticket
   lookupTickets: (params = {}) => {
     const queryParams = new URLSearchParams(params).toString();
     return withFallback(`/checkin/lookup-ticket?${queryParams}`, "get");
   },
 
-  // View Check-in Scan History
   getScanHistory: (eventId = 1, params = {}) => {
     const queryParams = new URLSearchParams({ eventId, ...params }).toString();
     return withFallback(`/checkin/scan-history?${queryParams}`, "get");
   },
 
-  // ==========================================
-  // NHÓM 1: Ticket Governance
-  // ==========================================
-  // Bulk Revoke Tickets (event change)
   bulkRevokeTickets: (payload) => {
     return withFallback("/checkin/governance/bulk-revoke", "post", payload);
   },
 
-  // View Ticket Revocation History
   getRevocationHistory: (params = {}) => {
     const queryParams = new URLSearchParams(params).toString();
     return withFallback(`/checkin/governance/revocations?${queryParams}`, "get");
   },
 
-  // View Reissue History (1-1 Traceability)
   getReissueHistory: (params = {}) => {
     const queryParams = new URLSearchParams(params).toString();
     return withFallback(`/checkin/governance/reissues?${queryParams}`, "get");
   },
 
-  // Reconciliation Records
   getReconciliationRecords: (eventId) => {
     const path = eventId ? `/checkin/governance/reconciliations?eventId=${eventId}` : "/checkin/governance/reconciliations";
     return withFallback(path, "get");
   },
 
-  // Governance Stats
   getGovernanceStats: () => {
     return withFallback("/checkin/governance/stats", "get");
   },
 
-  // Governance Events list
   getGovernanceEvents: () => {
     return withFallback("/checkin/governance/events", "get");
   },
@@ -143,12 +124,10 @@ const checkinApi = {
     return withFallback(`/checkin/offline-package?${params.toString()}`, "get");
   },
 
-  // Sync Offline Check-in Records
   syncOfflineScans: (payload) => {
     return withFallback("/checkin/offline-sync", "post", payload);
   },
 
-  // Resolve Offline Sync Conflicts
   getOfflineConflicts: (params = {}) => {
     const queryParams = new URLSearchParams(params).toString();
     return withFallback(`/checkin/conflicts?${queryParams}`, "get");

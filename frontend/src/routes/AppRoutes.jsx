@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import RegisterPage from "../pages/RegisterPage";
 import VerifyEmailPage from "../pages/VerifyEmailPage";
 import LoginPage from "../pages/LoginPage";
@@ -149,9 +149,36 @@ export default function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route path="/my_tickets" element={<Navigate to="/my-tickets" replace />} />
+      <Route path="/my%20tickets" element={<Navigate to="/my-tickets" replace />} />
+      <Route path="/tickets" element={<Navigate to="/my-tickets" replace />} />
 
       <Route
         path="/my-tickets/:ticketId"
+        element={
+          <ProtectedRoute>
+            <TicketDetailsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/my_tickets/:ticketId"
+        element={
+          <ProtectedRoute>
+            <TicketDetailsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/my%20tickets/:ticketId"
+        element={
+          <ProtectedRoute>
+            <TicketDetailsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tickets/:ticketId"
         element={
           <ProtectedRoute>
             <TicketDetailsPage />

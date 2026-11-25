@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AdminAPI.Services.Risks;
 
-
 public sealed class FraudCaseService : IFraudCaseService
 {
     private static readonly string[] OpenStatuses = { "Open", "InReview" };

@@ -35,7 +35,7 @@ export default function ProcessRefundModal({
         if (active) {
           setError(
             err.response?.data?.message ||
-              "Could not load order payment details."
+            "Could not load order payment details."
           );
         }
       } finally {
@@ -104,12 +104,12 @@ export default function ProcessRefundModal({
   const transactionId = orderSummary?.transactionId || `#PAY-${orderId}`;
   const purchaseDate = orderSummary?.purchaseDate
     ? new Date(orderSummary.purchaseDate).toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
     : "Sep 15, 2026 • 14:32";
 
   return (

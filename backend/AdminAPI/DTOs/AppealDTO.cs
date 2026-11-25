@@ -20,7 +20,6 @@ namespace AdminAPI.DTOs
  public string? ExistingAppealStatus { get; set; }
  }
 
-
  public class RiskDecisionAdminDto : RiskDecisionDetailDto
  {
  public int? UserId { get; set; }
@@ -28,8 +27,6 @@ namespace AdminAPI.DTOs
  public int? TicketId { get; set; }
  public int? FraudAlertId { get; set; }
  }
-
-
 
  public class EvidenceFileDto
  {
@@ -54,20 +51,18 @@ namespace AdminAPI.DTOs
  public DateTime SlaDueAt { get; set; }
  public DateTime CreatedAt { get; set; }
 
- /// <summary>Ch? có khi Admin resolve : các quy?t ð?nh block ð? ðý?c g? khi ch?p nh?n kháng ngh?.</summary>
  [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
  public List<int>? LiftedDecisionIds { get; set; }
 
- /// <summary>Only set when a rejected ticket appeal revoked the ticket.</summary>
+ // Only set when a rejected ticket appeal revoked the ticket.
  public bool? TicketRevoked { get; set; }
 
- /// <summary>Refunded | RefundFailed | NotRefundable | None.</summary>
+ // Refunded | RefundFailed | NotRefundable | None.
  public string? RefundStatus { get; set; }
  public long? RefundAmount { get; set; }
  public string? RefundReference { get; set; }
  public string? RefundError { get; set; }
  }
-
 
  public class AppealQuery
  {

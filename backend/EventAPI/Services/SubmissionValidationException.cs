@@ -2,11 +2,7 @@ using EventAPI.DTOs;
 
 namespace EventAPI.Services
 {
-    /// <summary>
-    /// Thrown when Submit/Approve is blocked by incomplete publication data.
-    /// Carries the full error list so the controller can return every problem at
-    /// once instead of making the customer fix them one request at a time.
-    /// </summary>
+    // Thrown when Submit/Approve is blocked; carries all validation errors at once.
     public class SubmissionValidationException : Exception
     {
         public SubmitValidationResultDTO Result { get; }

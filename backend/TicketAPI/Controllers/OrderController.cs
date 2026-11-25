@@ -37,8 +37,9 @@ namespace TicketAPI.Controllers
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
                 return Unauthorized(new { success = false, message = "Invalid token." });
 
-            //var verdict = await _risk.CheckOrderAsync(HttpContext, userId, dto);
-            //if (!verdict.Allowed) return verdict.ToActionResult();
+            // Risk Engine: check blocks and record suspicious rules (fail-open if AdminAPI errors).
+            var verdict = await _risk.CheckOrderAsync(HttpContext, userId, dto);
+            if (!verdict.Allowed) return verdict.ToActionResult();
 
             TimeZoneInfo vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
 

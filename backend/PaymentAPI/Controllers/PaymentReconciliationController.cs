@@ -81,7 +81,6 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        // Lay danh sach hang cho cac giao dich thanh toan hoan tien that bai danh cho Admin
         [HttpGet("/api/admin/failed-transaction-queue")]
         public async Task<IActionResult> GetFailedTransactionQueue(
             [FromQuery] DateTime? from,

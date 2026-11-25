@@ -5,7 +5,6 @@ import { useAuth } from "../../context/AuthContext";
 import "./TicketDisputeListPage.css";
 
 
-// Icon cho từng nhóm (SVG inline, cùng bộ nét 1.8).
 const ICONS = {
   dashboard: (
     <Icon>
@@ -111,8 +110,6 @@ const ICONS = {
   ),
 };
 
-// Mỗi nhóm = 1 mục "… Management" trên sidebar. Các trang con hiện thành tab ở đầu trang.
-// Thêm trang mới: chỉ cần thêm [đường dẫn, nhãn] vào đúng nhóm (hoặc tạo nhóm mới).
 export const ADMIN_GROUPS = [
   {
     key: "users",
@@ -223,7 +220,7 @@ export const ADMIN_GROUPS = [
   },
 ];
 
-// Tương thích ngược: ai import ADMIN_LINKS vẫn nhận danh sách phẳng cũ.
+// Backward-compatible flat link list for legacy callers.
 export const ADMIN_LINKS = [
   ["/admin", "Dashboard", true],
   ...ADMIN_GROUPS.flatMap((g) => g.items),
@@ -231,7 +228,7 @@ export const ADMIN_LINKS = [
 
 const matches = (pathname, path) => pathname === path || pathname.startsWith(`${path}/`);
 
-// Tìm tab khớp nhất (đường dẫn dài nhất) để /admin/events/all không bị tính là /admin/events.
+// Match the longest path so /admin/events/all does not resolve to /admin/events.
 function findGroup(pathname, groups = ADMIN_GROUPS) {
   let best = null;
   for (const group of groups) {
@@ -258,7 +255,6 @@ export default function AdminShell({ children, title = "Admin Panel", activeSubn
           items: group.items.filter(([path]) => path === "/admin/fraud-cases"),
         }))
         .filter((group) => group.items.length > 0);
-  // Badge đỏ để admin biết còn việc chờ duyệt.
   const pending = useAdminPending();
   const tabBadges = {
     "/admin/events": pending.events,

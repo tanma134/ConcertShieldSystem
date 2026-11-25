@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AdminAPI.Controllers
 {
-    /// <summary>Fraud Alert Dashboard, Fraud Alert Details (Admin, Staff, chỉ đọc).</summary>
     [ApiController]
     [Route("api/admin/fraud-alerts")]
     // Admin and Staff may view alert details (read-only). All block/restore actions live in RiskBlockAdminController (Admin only).

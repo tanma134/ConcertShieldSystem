@@ -142,7 +142,7 @@ function EventsListPage() {
                   className={saleStatus === "on_sale" ? "active" : ""}
                   onClick={() => setSaleStatus("on_sale")}
                 >
-                  🔥 On Sale
+                  On Sale
                 </button>
                 <button
                   type="button"

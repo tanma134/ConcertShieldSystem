@@ -25,10 +25,8 @@ namespace EventAPI.Common
 
             string str = RemoveAccent(text).ToLowerInvariant();
 
-            // Replace invalid characters with hyphens
             str = Regex.Replace(str, @"[^a-z0-9\s-]", "");
 
-            // Convert multiple spaces/hyphens into single hyphen
             str = Regex.Replace(str, @"[\s-]+", "-").Trim('-');
 
             // Cut to max 200 chars to allow suffix room
@@ -123,7 +121,6 @@ namespace EventAPI.Common
                 return (true, normalized);
             }
 
-            // Find next available suggestion
             int counter = 2;
             string suggestion = $"{normalized}-{counter}";
             while (await context.Events.AsNoTracking().AnyAsync(e => e.Slug == suggestion && !e.IsDeleted && (!excludeEventId.HasValue || e.EventId != excludeEventId.Value)))

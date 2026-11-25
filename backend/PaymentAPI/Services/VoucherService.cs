@@ -104,7 +104,7 @@ namespace PaymentAPI.Services
                     ? dto.MaxDiscountAmount.Value 
                     : null;
             }
-            else // FIXED
+            else
             {
                 if (!dto.DiscountAmount.HasValue || dto.DiscountAmount.Value <= 0)
                 {
@@ -168,7 +168,7 @@ namespace PaymentAPI.Services
             {
                 var targetUrl = createdEventId.HasValue ? $"/events/{createdEventId}" : "/";
 
-                // 1. Direct persistence to notification_db (100% resilient)
+                // Persist directly to notification_db before HTTP ping
                 try
                 {
                     var notifConnStr = _configuration?.GetConnectionString("NotificationConnection")
@@ -214,10 +214,8 @@ namespace PaymentAPI.Services
                 }
                 catch
                 {
-                    // Fallback to HTTP
                 }
 
-                // 2. HTTP Realtime ping to NotificationAPI
                 try
                 {
                     var handler = new System.Net.Http.HttpClientHandler
@@ -273,7 +271,6 @@ namespace PaymentAPI.Services
             bool isAdmin,
             bool isOrganizer)
         {
-            // Kiem tra gia tri phan trang hop le, tranh so am hoac bang 0
             if (page <= 0)
             {
                 throw new ArgumentException("Page must be greater than 0.", nameof(page));
@@ -395,10 +392,8 @@ namespace PaymentAPI.Services
             return MapToResponseDTO(updated);
         }
 
-        // Cap nhat thong tin voucher he thong hoac voucher cua ban to chuc
         public async Task<VoucherResponseDTO> UpdateVoucherAsync(int id, UpdateVoucherDTO dto, int currentUserId, bool isAdmin, bool isOrganizer)
         {
-            // Luu y: Khoa ma voucher neu da co luot su dung va kiem tra quyen so huu cua Organizer
             var voucher = await _voucherRepository.GetByIdAsync(id);
             if (voucher == null)
             {
@@ -559,10 +554,8 @@ namespace PaymentAPI.Services
             return MapToResponseDTO(updated);
         }
 
-        // Xoa mem voucher khoi he thong bang cach danh dau IsDeleted
         public async Task<bool> SoftDeleteVoucherAsync(int id, int currentUserId, bool isAdmin, bool isOrganizer)
         {
-            // Luu y: Kiem tra quyen so huu cua Organizer va cap nhat IsDeleted=true de bao toan lich su don hang
             var voucher = await _voucherRepository.GetByIdAsync(id);
             if (voucher == null)
             {

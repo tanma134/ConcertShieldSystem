@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IncidentAPI.Data;
 
-// DbContext cho IncidentAPI - quản lý database incident_db (PostgreSQL)
 public class IncidentDbContext : DbContext
 {
     public IncidentDbContext(DbContextOptions<IncidentDbContext> options) : base(options) { }

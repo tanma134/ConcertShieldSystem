@@ -30,13 +30,10 @@ public interface IRiskTicketAdminService
         string reason, CancellationToken ct = default);
 }
 
-/// <summary>
-/// Internal enforcement used by AdminAPI's risk engine:
-///  - block/unblock a ticket while an appeal is pending;
-///  - after a rejected appeal, revoke the ticket and pay the money back (100%).
-/// Ticket status is the single source of truth, so both TicketAPI check-in and
-/// CheckinAPI (which reads the same ticket_db) stop accepting the QR.
-/// </summary>
+// Internal enforcement used by AdminAPI's risk engine:
+//  - block/unblock a ticket while an appeal is pending;
+//  - after a rejected appeal, revoke the ticket and pay a 100% refund.
+// Ticket status is the single source of truth for both TicketAPI and CheckinAPI.
 public sealed class RiskTicketAdminService : IRiskTicketAdminService
 {
     private readonly TicketDbContext _db;

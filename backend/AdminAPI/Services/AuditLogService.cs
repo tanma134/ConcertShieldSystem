@@ -10,7 +10,7 @@ namespace AdminAPI.Services
 {
     public class AuditLogService : IAuditLogService
     {
-        // Giới hạn để tránh export/query quá nặng khi bảng audit_logs phình to theo thời gian
+        // Cap export/query size as audit_logs grows over time.
         private const int MaxPageSize = 100;
         private const int MaxExportDays = 90;
         private const int MaxExportRows = 50_000;
@@ -22,9 +22,6 @@ namespace AdminAPI.Services
             _repository = repository;
         }
 
-        // -----------------------------------------------------------
-        // 19.1 View Activity Log List
-        // -----------------------------------------------------------
         public async Task<PagedResult<AuditLogDto>> SearchAsync(AuditLogQuery query)
         {
             if (query.From is not null && query.To is not null && query.From > query.To)
@@ -44,9 +41,6 @@ namespace AdminAPI.Services
             };
         }
 
-        // -----------------------------------------------------------
-        // 19.2 Export Audit Log
-        // -----------------------------------------------------------
         public async Task<(byte[] Content, string ContentType, string FileName)> ExportAsync(AuditLogQuery query, string format)
         {
             if (query.From is null || query.To is null)
@@ -71,9 +65,6 @@ namespace AdminAPI.Services
             };
         }
 
-        // -----------------------------------------------------------
-        // Ghi log (dùng ở các service/controller khác trong AdminAPI)
-        // -----------------------------------------------------------
         public async Task LogAsync(int? userId, string actorType, string action, string entityType,
             string? entityId = null, object? oldValue = null, object? newValue = null,
             string? ipAddress = null, string? requestId = null, string? userAgent = null)
@@ -138,7 +129,7 @@ namespace AdminAPI.Services
                     Csv(r.UserAgent)));
             }
 
-            // Thêm BOM để Excel mở file UTF-8 không bị lỗi font tiếng Việt
+            // Prepend UTF-8 BOM so Excel opens CSV with proper encoding.
             var preamble = Encoding.UTF8.GetPreamble();
             var body = Encoding.UTF8.GetBytes(sb.ToString());
             var result = new byte[preamble.Length + body.Length];
@@ -147,7 +138,6 @@ namespace AdminAPI.Services
             return result;
         }
 
-        // Escape field theo chuẩn CSV: bọc "..." nếu có dấu phẩy/xuống dòng/dấu ngoặc kép
         private static string Csv(string? field)
         {
             if (string.IsNullOrEmpty(field)) return "";

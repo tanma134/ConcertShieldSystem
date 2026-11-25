@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AdminAPI.Controllers;
 
-// Coordinates customer support case operations operations
 [ApiController]
 [Route("api/support-cases")]
 [Authorize]

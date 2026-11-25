@@ -3,8 +3,7 @@ import "./fraudRisk.css";
 
 export const fmt = (v) => (v ? new Date(v).toLocaleString("en-GB") : "—");
 
-// Lấy giá trị đầu tiên tồn tại trong nhiều tên field (backend DTO có thể đặt tên khác nhau).
-// Chỉ cần sửa tên field ở các trang, không phải sửa logic.
+// Return the first defined field across candidate DTO property names.
 export const g = (o, ...keys) => {
   for (const k of keys) if (o?.[k] != null) return o[k];
   return undefined;
@@ -76,7 +75,6 @@ export function statusPill(status) {
   }
 }
 
-// Mảng / object / chuỗi JSON -> mảng chuỗi để hiển thị thành chip
 export function toList(value) {
   let v = value;
   if (typeof v === "string") {
@@ -105,7 +103,6 @@ export function Chips({ value }) {
   return <div>{items.map((t, i) => <i key={i} className="fr-chip" style={{ fontStyle: "normal" }}>{t}</i>)}</div>;
 }
 
-// Giờ còn lại tới hạn SLA
 export function slaInfo(dueAt) {
   if (!dueAt) return null;
   const hours = Math.round((new Date(dueAt).getTime() - Date.now()) / 36e5);

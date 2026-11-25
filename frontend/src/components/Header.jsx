@@ -132,7 +132,7 @@ export default function Header() {
             const localSaved = JSON.parse(localStorage.getItem(`cs_user_notifs_${currentUid}`) || "[]");
             setNotifications(localSaved);
             setUnreadCount(localSaved.filter((n) => !n.isRead).length);
-          } catch (_) {}
+          } catch (_) { }
         }
       });
   };
@@ -162,7 +162,7 @@ export default function Header() {
       channel.onmessage = () => {
         fetchHeaderNotifications();
       };
-    } catch (e) {}
+    } catch (e) { }
 
     return () => {
       clearInterval(intervalId);
@@ -523,11 +523,11 @@ export default function Header() {
                               }
                               try {
                                 await notificationApi.deleteNotification(targetId);
-                              } catch (err) {}
+                              } catch (err) { }
                               window.dispatchEvent(new Event("notification-updated"));
                             }}
                           >
-                            ✕
+                            Close
                           </button>
                         </div>
                       ))

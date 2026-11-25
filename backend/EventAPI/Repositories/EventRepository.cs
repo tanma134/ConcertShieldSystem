@@ -68,7 +68,6 @@ namespace EventAPI.Repositories
                 .Where(e => !e.IsDeleted)
                 .AsQueryable();
 
-            // Search by title
             if (!string.IsNullOrWhiteSpace(filter.Search))
             {
                 var search = filter.Search.ToLower();
@@ -78,7 +77,6 @@ namespace EventAPI.Repositories
                     (e.LocationName != null && e.LocationName.ToLower().Contains(search)));
             }
 
-            // Filter by city
             if (!string.IsNullOrWhiteSpace(filter.City))
                 query = query.Where(e => e.City != null && e.City.ToLower() == filter.City.ToLower());
 
@@ -109,32 +107,26 @@ namespace EventAPI.Repositories
                     : query.Where(e => e.Status == status);
             }
 
-            // Filter by date range
             if (filter.DateFrom.HasValue)
                 query = query.Where(e => e.StartsAt >= filter.DateFrom.Value);
 
             if (filter.DateTo.HasValue)
                 query = query.Where(e => e.EndsAt <= filter.DateTo.Value);
 
-            // Filter by price range (requires TicketTypes join)
             if (filter.MinPrice.HasValue)
                 query = query.Where(e => e.TicketTypes.Any(t => !t.IsDeleted && t.Price >= filter.MinPrice.Value));
 
             if (filter.MaxPrice.HasValue)
                 query = query.Where(e => e.TicketTypes.Any(t => !t.IsDeleted && t.Price <= filter.MaxPrice.Value));
 
-            // Filter by organizer
             if (filter.OrganizerId.HasValue)
                 query = query.Where(e => e.OrganizerId == filter.OrganizerId.Value);
 
-            // Filter by featured
             if (filter.IsFeatured.HasValue)
                 query = query.Where(e => e.IsFeatured == filter.IsFeatured.Value);
 
-            // Get total count
             int totalCount = await query.CountAsync();
 
-            // Sorting
             query = filter.SortBy?.ToLower() switch
             {
                 "title" => filter.SortOrder == "asc" ? query.OrderBy(e => e.Title) : query.OrderByDescending(e => e.Title),
@@ -144,7 +136,6 @@ namespace EventAPI.Repositories
                 _ => filter.SortOrder == "asc" ? query.OrderBy(e => e.CreatedAt) : query.OrderByDescending(e => e.CreatedAt),
             };
 
-            // Pagination
             var items = await query
                 .Skip((filter.Page - 1) * filter.PageSize)
                 .Take(filter.PageSize)
@@ -278,7 +269,7 @@ namespace EventAPI.Repositories
 
             return await strategy.ExecuteAsync(async () =>
             {
-                // Dọn trạng thái tracking nếu execution strategy chạy lại operation.
+                // Clear change tracker in case the execution strategy retries the operation.
                 _context.ChangeTracker.Clear();
 
                 await using var transaction =
@@ -354,7 +345,7 @@ namespace EventAPI.Repositories
                     await transaction.RollbackAsync();
                     _context.ChangeTracker.Clear();
 
-                    // Một callback đồng thời đã ghi nhận OrderId này.
+                    // A concurrent callback already recorded this OrderId.
                     var duplicate = await _context.EventSaleConfirmations
                         .AsNoTracking()
                         .FirstOrDefaultAsync(x => x.OrderId == orderId);

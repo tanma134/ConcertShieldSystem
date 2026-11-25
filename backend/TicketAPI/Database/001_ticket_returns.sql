@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS public.ticket_return_requests (
     event_id         integer      NOT NULL,
     requester_user_id integer     NOT NULL,
     reason           varchar(500) NOT NULL,
-    status           varchar(20)  NOT NULL DEFAULT 'Pending',
+    status           varchar(40)  NOT NULL DEFAULT 'Pending',
     refund_amount    bigint       NOT NULL DEFAULT 0,
     created_at       timestamp with time zone NOT NULL DEFAULT now(),
     updated_at       timestamp with time zone NOT NULL DEFAULT now(),
@@ -15,8 +15,14 @@ CREATE TABLE IF NOT EXISTS public.ticket_return_requests (
     reviewed_by      integer      NULL,
     reviewed_at      timestamp with time zone NULL,
     review_note      varchar(500) NULL,
+    bank_account_name varchar(150) NULL,
+    bank_account_number varchar(50) NULL,
+    bank_name varchar(150) NULL,
+    manual_refund_reference varchar(100) NULL,
+    manual_refund_processed_by integer NULL,
+    manual_refund_processed_at timestamptz NULL,
     CONSTRAINT fk_ticket_return_requests_ticket FOREIGN KEY (ticket_id) REFERENCES public.tickets (ticket_id),
-    CONSTRAINT ck_ticket_return_requests_status CHECK (status IN ('Pending', 'Approved', 'Rejected', 'Cancelled'))
+    CONSTRAINT ck_ticket_return_requests_status CHECK (status IN ('Pending', 'ApprovedPendingManualRefund', 'Rejected', 'Cancelled', 'Refunded', 'RefundFailed', 'RefundProcessing', 'RefundInfoRequired'))
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ticket_return_requests_open

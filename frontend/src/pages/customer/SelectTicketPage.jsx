@@ -236,7 +236,7 @@ export default function SelectTicketPage() {
             err.message ||
             "Could not load event details.";
 
-          // Ghế không được chọn nếu chưa tải được trạng thái tồn kho.
+          // Block seat selection until inventory availability finishes loading.
           setAvailabilityError(message);
           setError(message);
         }
@@ -339,7 +339,7 @@ export default function SelectTicketPage() {
           const quantity = Number(
             zoneQuantities[zone.seatZoneId] || 0
           );
-          const price = Number(ticket?.price || 0);
+          const price = Number(ticket?.effectivePrice ?? ticket?.price ?? 0);
 
           return {
             id: `zone-${zone.seatZoneId}`,
@@ -400,7 +400,7 @@ export default function SelectTicketPage() {
         const quantity = Number(
           ticketQuantities[ticket.ticketTypeId] || 0
         );
-        const price = Number(ticket.price || 0);
+        const price = Number(ticket.effectivePrice ?? ticket.price ?? 0);
 
         return {
           id: `ticket-${ticket.ticketTypeId}`,
@@ -1028,7 +1028,7 @@ export default function SelectTicketPage() {
                     </div>
 
                     <div className="tb-ticket-price">
-                      {formatPrice(ticket.price)}
+                      {formatPrice(ticket.effectivePrice ?? ticket.price)}
                     </div>
 
                     <div className="tb-qty-control">
@@ -1083,7 +1083,7 @@ export default function SelectTicketPage() {
                 "Location to be announced"}
             </div>
             <div className="tb-meta-item">
-              <span>🎟</span>
+              
               Maximum {maxPerAccount} ticket(s) per order
             </div>
             {event.startsAt && new Date(event.startsAt).getTime() - Date.now() < 24 * 3600 * 1000 && (
@@ -1125,7 +1125,7 @@ export default function SelectTicketPage() {
                     {zone.zoneName}
                   </span>
                   <span className="tb-price-value">
-                    {formatPrice(getTicket(zone.ticketTypeId)?.price)}
+                    {formatPrice(getTicket(zone.ticketTypeId)?.effectivePrice ?? getTicket(zone.ticketTypeId)?.price)}
                   </span>
                 </div>
               ))}
@@ -1226,7 +1226,7 @@ export default function SelectTicketPage() {
             <div className="tb-modal-header">
               <h3>{activeZone.zoneName}</h3>
               <span className="tb-modal-price">
-                {formatPrice(getTicket(activeZone.ticketTypeId)?.price)} / ticket
+                {formatPrice(getTicket(activeZone.ticketTypeId)?.effectivePrice ?? getTicket(activeZone.ticketTypeId)?.price)} / ticket
               </span>
             </div>
 
@@ -1345,6 +1345,7 @@ export default function SelectTicketPage() {
                 <dd>
                   {formatPrice(
                     seatDetails.zone.price ??
+                      getTicket(seatDetails.zone.ticketTypeId)?.effectivePrice ??
                       getTicket(seatDetails.zone.ticketTypeId)?.price
                   )}
                 </dd>

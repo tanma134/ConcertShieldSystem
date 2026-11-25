@@ -8,7 +8,7 @@ import AdminShell from "./AdminShell";
 import { formatPrice } from "../../utils/format";
 import "../../styles/reportPages.css";
 
-// Sidebar của Staff: chỉ có hàng đợi hoàn vé + đường về trang chủ.
+// Staff only see the ticket return queue and home link.
 const STAFF_LINKS = [
   ["/staff/returns", "Return Requests", true],
   ["/", "← Back to site", true],
@@ -16,9 +16,95 @@ const STAFF_LINKS = [
 
 const MIN_REJECT_NOTE = 5;
 
-// Hàng đợi hoàn vé. Staff là người duyệt chính; Admin xem toàn bộ để giám sát và
-// chỉ xử lý thay khi cần (backend cho phép cả hai role, nên ở đây Admin thấy thêm
-// cột "Reviewed by" để biết ai đã quyết định).
+function openEvidenceInNewTab(url) {
+  if (!url) return;
+  if (url.startsWith("data:")) {
+    try {
+      const [header, base64] = url.split(",");
+      const mimeMatch = header.match(/data:([^;]+)/);
+      const mime = mimeMatch ? mimeMatch[1] : "application/octet-stream";
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: mime });
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, "_blank", "noopener,noreferrer");
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    } catch {
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+    return;
+  }
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+function getReturnStatusBadge(status) {
+  const base = {
+    display: "inline-block",
+    padding: "3px 10px",
+    borderRadius: "6px",
+    fontWeight: 700,
+    fontSize: "11.5px",
+    whiteSpace: "nowrap",
+  };
+  switch (status) {
+    case "Approved":
+    case "ApprovedPendingManualRefund":
+      return (
+        <span style={{ ...base, background: "#fef3c7", color: "#b45309", border: "1px solid #fde68a" }}>
+          Awaiting Transfer
+        </span>
+      );
+    case "Refunded":
+      return (
+        <span style={{ ...base, background: "#dcfce7", color: "#15803d", border: "1px solid #bbf7d0" }}>
+          Refunded
+        </span>
+      );
+    case "Pending":
+      return (
+        <span style={{ ...base, background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe" }}>
+          Pending Review
+        </span>
+      );
+    case "RefundProcessing":
+      return (
+        <span style={{ ...base, background: "#f3e8ff", color: "#7e22ce", border: "1px solid #e9d5ff" }}>
+          Processing Transfer
+        </span>
+      );
+    case "RefundFailed":
+      return (
+        <span style={{ ...base, background: "#fee2e2", color: "#b91c1c", border: "1px solid #fecaca" }}>
+          Transfer Failed
+        </span>
+      );
+    case "Rejected":
+      return (
+        <span style={{ ...base, background: "#fee2e2", color: "#991b1b", border: "1px solid #fecaca" }}>
+          Rejected
+        </span>
+      );
+    case "Cancelled":
+      return (
+        <span style={{ ...base, background: "#f1f5f9", color: "#64748b", border: "1px solid #e2e8f0" }}>
+          Cancelled
+        </span>
+      );
+    default:
+      return <span>{status}</span>;
+  }
+}
+
+function formatProcessor(userId) {
+  if (!userId) return "—";
+  if (Number(userId) === 1) return "Admin (#1)";
+  return `Staff (#${userId})`;
+}
+
+// Two-step refund workflow: Staff approve and revoke the ticket first, then Admin confirms the manual bank transfer.
 function ReturnQueue({ isAdmin }) {
   const toast = useToast();
   const [rows, setRows] = useState([]);
@@ -26,7 +112,9 @@ function ReturnQueue({ isAdmin }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [decision, setDecision] = useState(null); // { row, approve, note, error, busy }
+  const [payoutModal, setPayoutModal] = useState(null); // { row, reference, amount, note, error, busy }
   const [inspectItem, setInspectItem] = useState(null);
+  const [activeEvidence, setActiveEvidence] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -43,22 +131,52 @@ function ReturnQueue({ isAdmin }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [status]);
 
-  // Thử hoàn tiền lại cho yêu cầu đã duyệt nhưng hoàn tiền lỗi.
-  const retryRefund = async (row) => {
+  const confirmManualRefund = (row) => {
+    setPayoutModal({
+      row,
+      reference: "",
+      amount: String(row.refundAmount || 0),
+      note: "",
+      error: "",
+      busy: false,
+    });
+  };
+
+  const submitManualRefund = async () => {
+    if (!payoutModal) return;
+    const { row, reference, amount, note } = payoutModal;
+    const trimmedRef = reference.trim();
+    const numAmount = Number(amount);
+
+    if (!trimmedRef) {
+      setPayoutModal((p) => ({ ...p, error: "Please enter the bank transfer reference / FT code." }));
+      return;
+    }
+    if (!Number.isFinite(numAmount) || numAmount !== Number(row.refundAmount || 0)) {
+      setPayoutModal((p) => ({ ...p, error: `Transferred amount must match ${formatPrice(row.refundAmount || 0)}.` }));
+      return;
+    }
+
+    setPayoutModal((p) => ({ ...p, busy: true, error: "" }));
     try {
-      const r = await ticketReturnApi.retryRefund(row.ticketReturnRequestId);
-      const done = r.data?.data?.status === "Refunded";
-      if (done) toast.success(`Return #${row.ticketReturnRequestId} refunded.`);
-      else toast.error(r.data?.data?.refundError || "Refund failed again. Please try later.");
+      await ticketReturnApi.confirmManualRefund(row.ticketReturnRequestId, {
+        reference: trimmedRef,
+        amount: numAmount,
+        note: note.trim() || undefined,
+      });
+      toast.success(`Return #${row.ticketReturnRequestId} marked as refunded.`);
+      setPayoutModal(null);
       await load();
     } catch (e) {
-      toast.error(apiErrorMessage(e, "Could not retry the refund."));
+      const msg = apiErrorMessage(e, "Could not confirm the bank transfer.");
+      setPayoutModal((p) => ({ ...p, busy: false, error: msg }));
+      toast.error(msg);
     }
   };
 
   const openDecision = (row, approve) => setDecision({ row, approve, note: "", error: "", busy: false });
 
-  // Từ chối bắt buộc có lý do để customer biết vì sao; duyệt thì ghi chú tuỳ chọn.
+  // Rejections require a customer-facing reason; approval notes are optional.
   const confirmDecision = async () => {
     const { row, approve, note } = decision;
     if (!approve && note.trim().length < MIN_REJECT_NOTE) {
@@ -70,8 +188,7 @@ function ReturnQueue({ isAdmin }) {
       const saved = await ticketReturnApi.review(row.ticketReturnRequestId, approve, note.trim());
       const finalStatus = saved.data?.data?.status;
       if (!approve) toast.success(`Return #${row.ticketReturnRequestId} rejected.`);
-      else if (finalStatus === "RefundFailed") toast.error(`Return #${row.ticketReturnRequestId} approved and back in inventory, but the refund failed. Use Retry refund.`);
-      else toast.success(`Return #${row.ticketReturnRequestId} approved and refunded. The ticket is back in inventory.`);
+      else toast.success(`Return #${row.ticketReturnRequestId} approved. Transfer the refund manually and confirm it afterward.`);
       setDecision(null);
       await load();
     } catch (e) {
@@ -94,10 +211,10 @@ function ReturnQueue({ isAdmin }) {
           <div>
             <h2>Review queue</h2>
             <p className="ow-hint">
-              Refund amount follows the organizer's refund policy for each event (deadline and percentage).
+              Two-step workflow: (1) Ticketing/Support Staff review eligibility and approve return to release seat inventory; (2) Accounting/Admin execute manual bank payout and log transfer reference.
               {isAdmin
-                ? " Staff handle the day-to-day review; as Admin you can see every decision and step in when needed."
-                : " Only requests of concerts where the organizer assigned you to review returns are listed. Approving releases the seat back to sale and pays the refund; rejecting needs a reason."}
+                ? " As Admin, you can oversee both steps, reassign tasks, or confirm payouts directly."
+                : " Showing requests assigned for your operational events. Reviewing requires reason and audit accountability."}
             </p>
           </div>
           <select
@@ -105,13 +222,11 @@ function ReturnQueue({ isAdmin }) {
             value={status}
             onChange={(e) => setStatus(e.target.value)}
           >
-            <option>Pending</option>
-            <option>Approved</option>
-            <option>Refunded</option>
-            <option>RefundFailed</option>
-            <option>Rejected</option>
-            <option>Cancelled</option>
-            <option value="">All</option>
+            <option value="">All Statuses</option>
+            <option value="Pending">Pending Review</option>
+            <option value="Approved">Awaiting Bank Transfer</option>
+            <option value="Refunded">Refunded</option>
+            <option value="Rejected">Rejected</option>
           </select>
         </div>
         {error && <div className="tb-error">{error}</div>}
@@ -124,66 +239,69 @@ function ReturnQueue({ isAdmin }) {
             <table className="ow-table">
               <thead>
                 <tr>
-                  <th>Request</th><th>Event</th><th>Ticket</th><th>Customer</th><th>Reason</th>
-                  <th>Refund</th><th>Status</th>{isAdmin && <th>Reviewed by</th>}<th>Actions</th>
+                  <th>Request</th>
+                  <th>Event</th>
+                  <th>Ticket</th>
+                  <th>Customer</th>
+                  <th>Reason</th>
+                  <th style={{ whiteSpace: "nowrap" }}>Refund</th>
+                  <th style={{ whiteSpace: "nowrap" }}>Status</th>
+                  <th style={{ whiteSpace: "nowrap" }}>Processed By</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.ticketReturnRequestId}>
-                    <td>#{r.ticketReturnRequestId}</td>
-                    <td><strong>{r.eventName || `Event #${r.eventId}`}</strong><div className="ow-hint">ID #{r.eventId}</div></td>
-                    <td>#{r.ticketId} · {r.ticketTypeName}</td>
-                    <td>User #{r.requesterUserId}</td>
-                    <td>
+                    <td style={{ whiteSpace: "nowrap" }}>#{r.ticketReturnRequestId}</td>
+                    <td style={{ minWidth: "135px" }}>
+                      <strong>{r.eventName || `Event #${r.eventId}`}</strong>
+                      <div className="ow-hint">ID #{r.eventId}</div>
+                    </td>
+                    <td style={{ whiteSpace: "nowrap" }}>#{r.ticketId} · {r.ticketTypeName}</td>
+                    <td style={{ minWidth: "105px" }}>
+                      <strong>{r.customerName || `User #${r.requesterUserId}`}</strong>
+                      {r.customerName && <div className="ow-hint">ID #{r.requesterUserId}</div>}
+                    </td>
+                    <td style={{ minWidth: "150px", maxWidth: "210px" }}>
                       <div>{r.reason}</div>
-                      {r.proofUrl && (
-                        <a
-                          href={r.proofUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "4px",
-                            marginTop: "6px",
-                            fontSize: "12px",
-                            color: "#2563eb",
-                            textDecoration: "underline",
-                            fontWeight: 500,
-                          }}
-                        >
-                          View Evidence Document
-                        </a>
-                      )}
                     </td>
-                    <td>{formatPrice(r.refundAmount || 0)}</td>
-                    <td>
-                      {r.status}
-                      {r.status === "RefundFailed" && r.refundError && <div className="ow-hint">{r.refundError}</div>}
-                      {r.status === "Refunded" && r.refundReference && <div className="ow-hint">Ref {r.refundReference}</div>}
-                    </td>
-                    {isAdmin && <td>{r.reviewedBy ? `User #${r.reviewedBy}` : "-"}</td>}
+                    <td style={{ whiteSpace: "nowrap", fontWeight: 600 }}>{formatPrice(r.refundAmount || 0)}</td>
                     <td style={{ whiteSpace: "nowrap" }}>
-                      <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                      {getReturnStatusBadge(r.status)}
+                      {r.status === "RefundFailed" && r.refundError && <div className="ow-hint" style={{ color: "#b91c1c", marginTop: "4px", whiteSpace: "normal", maxWidth: "170px" }}>{r.refundError}</div>}
+                      {r.status === "Refunded" && (r.refundReference || r.manualRefundReference) && <div className="ow-hint" style={{ marginTop: "4px" }}>Ref {r.refundReference || r.manualRefundReference}</div>}
+                    </td>
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      <div style={{ fontSize: "12px", lineHeight: 1.45 }}>
+                        {r.reviewedBy ? (
+                          <div><span style={{ color: "#64748b" }}>Review:</span> <strong>{formatProcessor(r.reviewedBy)}</strong></div>
+                        ) : null}
+                        {r.manualRefundProcessedBy ? (
+                          <div style={{ color: "#166534" }}><span style={{ color: "#64748b" }}>Payout:</span> <strong>{formatProcessor(r.manualRefundProcessedBy)}</strong></div>
+                        ) : null}
+                        {!r.reviewedBy && !r.manualRefundProcessedBy && <span className="ow-hint">—</span>}
+                      </div>
+                    </td>
+                    <td style={{ whiteSpace: "nowrap", paddingRight: "14px" }}>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "5px" }}>
+                        {r.status === "Pending" ? (
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                            <button className="tb-btn tb-btn-primary" style={{ padding: "5px 10px", fontSize: "12px" }} onClick={() => openDecision(r, true)}>Approve</button>
+                            <button className="tb-btn tb-btn-outline" style={{ padding: "5px 10px", fontSize: "12px" }} onClick={() => openDecision(r, false)}>Reject</button>
+                          </div>
+                        ) : r.status === "Approved" || r.status === "ApprovedPendingManualRefund" || r.status === "RefundProcessing" || r.status === "RefundFailed" ? (
+                          <button className="tb-btn tb-btn-primary" style={{ padding: "5px 10px", fontSize: "12px" }} onClick={() => confirmManualRefund(r)}>Confirm Transfer</button>
+                        ) : null}
                         <button
                           type="button"
                           className="tb-btn tb-btn-outline"
+                          style={{ padding: "4px 10px", fontSize: "11.5px" }}
                           onClick={() => setInspectItem(r)}
                           title="View complete return request details"
                         >
                           Details
                         </button>
-                        {r.status === "Pending" ? (
-                          <>
-                            <button className="tb-btn tb-btn-primary" onClick={() => openDecision(r, true)}>Approve & refund</button>
-                            <button className="tb-btn tb-btn-outline" onClick={() => openDecision(r, false)}>Reject</button>
-                          </>
-                        ) : r.canRetryRefund ? (
-                          <button className="tb-btn tb-btn-primary" onClick={() => retryRefund(r)}>Retry refund</button>
-                        ) : (
-                          <span className="ow-hint">{r.reviewNote || "-"}</span>
-                        )}
                       </div>
                     </td>
                   </tr>
@@ -202,16 +320,7 @@ function ReturnQueue({ isAdmin }) {
               <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 700 }}>
                 Return Request #{inspectItem.ticketReturnRequestId}
               </h3>
-              <span className="rp-badge" style={{
-                background: inspectItem.status === "Approved" || inspectItem.status === "Refunded" ? "#dcfce7" : inspectItem.status === "Pending" ? "#fef3c7" : "#fee2e2",
-                color: inspectItem.status === "Approved" || inspectItem.status === "Refunded" ? "#15803d" : inspectItem.status === "Pending" ? "#b45309" : "#b91c1c",
-                padding: "4px 10px",
-                borderRadius: "999px",
-                fontWeight: 700,
-                fontSize: "12px"
-              }}>
-                {inspectItem.status}
-              </span>
+              <div>{getReturnStatusBadge(inspectItem.status)}</div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "14px", fontSize: "13px" }}>
@@ -229,14 +338,66 @@ function ReturnQueue({ isAdmin }) {
 
               <div style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
                 <span style={{ color: "#64748b", display: "block", fontSize: "11px", fontWeight: 700 }}>ORDER & CUSTOMER</span>
-                <strong>Order #{inspectItem.orderId}</strong>
-                <div style={{ color: "#64748b", fontSize: "12px" }}>Requester: User #{inspectItem.requesterUserId}</div>
+                <strong>{inspectItem.customerName || `Order #${inspectItem.orderId}`}</strong>
+                <div style={{ color: "#64748b", fontSize: "12px" }}>Order #{inspectItem.orderId} · User #{inspectItem.requesterUserId}</div>
               </div>
 
               <div style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
                 <span style={{ color: "#64748b", display: "block", fontSize: "11px", fontWeight: 700 }}>REFUND AMOUNT</span>
                 <strong style={{ color: "#7e22ce", fontSize: "15px" }}>{formatPrice(inspectItem.refundAmount || 0)}</strong>
                 <div style={{ color: "#64748b", fontSize: "12px" }}>Calculated per pro-rata policy</div>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: "14px", background: "#f8fafc", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
+              <div>
+                <span style={{ color: "#64748b", display: "block", fontSize: "10.5px", fontWeight: 700 }}>STEP 1: STAFF REVIEW</span>
+                <span>{inspectItem.reviewedBy ? <strong>Approved by {formatProcessor(inspectItem.reviewedBy)}</strong> : <span style={{ color: "#b45309" }}>Pending Staff Review</span>}</span>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <span style={{ color: "#64748b", display: "block", fontSize: "10.5px", fontWeight: 700 }}>STEP 2: BANK PAYOUT (ACCOUNTING)</span>
+                <span>{inspectItem.manualRefundProcessedBy ? <strong style={{ color: "#166534" }}>Paid by {formatProcessor(inspectItem.manualRefundProcessedBy)}</strong> : <span style={{ color: "#64748b" }}>Awaiting Bank Payout</span>}</span>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: "14px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "8px", padding: "10px 14px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                <span style={{ fontSize: "11px", fontWeight: 700, color: "#166534" }}>CUSTOMER BANK ACCOUNT FOR MANUAL TRANSFER</span>
+                {inspectItem.bankAccountNumber && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(inspectItem.bankAccountNumber);
+                      toast.success(`Copied account ${inspectItem.bankAccountNumber} to clipboard!`);
+                    }}
+                    style={{
+                      fontSize: "11.5px",
+                      padding: "3px 10px",
+                      background: "#ffffff",
+                      border: "1px solid #86efac",
+                      borderRadius: "6px",
+                      color: "#166534",
+                      cursor: "pointer",
+                      fontWeight: 600
+                    }}
+                  >
+                    Copy Account No.
+                  </button>
+                )}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: "10px", fontSize: "12.5px" }}>
+                <div>
+                  <span style={{ color: "#15803d", fontSize: "11px", display: "block" }}>Bank Name</span>
+                  <strong style={{ color: "#0f172a" }}>{inspectItem.bankName || "—"}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "#15803d", fontSize: "11px", display: "block" }}>Account Number</span>
+                  <strong style={{ fontFamily: "monospace", letterSpacing: "0.5px", color: "#0f172a" }}>{inspectItem.bankAccountNumber || "—"}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "#15803d", fontSize: "11px", display: "block" }}>Account Holder</span>
+                  <strong style={{ color: "#0f172a" }}>{inspectItem.bankAccountName || "—"}</strong>
+                </div>
               </div>
             </div>
 
@@ -248,25 +409,79 @@ function ReturnQueue({ isAdmin }) {
             </div>
 
             <div style={{ marginBottom: "14px" }}>
-              <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "#475569", marginBottom: "4px" }}>SUPPORTING EVIDENCE</label>
-              {inspectItem.proofUrl ? (
-                <div>
-                  <a
-                    href={inspectItem.proofUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: "#2563eb", fontSize: "13px", fontWeight: 600, textDecoration: "underline", display: "inline-flex", alignItems: "center", gap: "4px", marginBottom: "8px" }}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                <label style={{ fontSize: "11px", fontWeight: 700, color: "#475569", margin: 0 }}>SUPPORTING EVIDENCE</label>
+                {inspectItem.proofUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveEvidence(inspectItem.proofUrl)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#2563eb",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      padding: 0
+                    }}
                   >
-                    Open attachment in new tab
-                  </a>
-                  {/\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(inspectItem.proofUrl) || inspectItem.proofUrl.includes("cloudinary") ? (
-                    <div style={{ border: "1px solid #cbd5e1", borderRadius: "8px", overflow: "hidden", maxHeight: "200px", display: "flex", justifyContent: "center", background: "#f8fafc" }}>
-                      <img src={inspectItem.proofUrl} alt="Evidence preview" style={{ maxWidth: "100%", maxHeight: "200px", objectFit: "contain" }} />
+                    View in Full Lightbox
+                  </button>
+                )}
+              </div>
+
+              {inspectItem.proofUrl ? (
+                <div style={{ background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "10px" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                    <span style={{ fontSize: "12px", color: "#475569", fontWeight: 500 }}>
+                      Attached Document
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => openEvidenceInNewTab(inspectItem.proofUrl)}
+                      style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "#2563eb", fontSize: "12px", fontWeight: 600, textDecoration: "underline" }}
+                    >
+                      Open in new tab
+                    </button>
+                  </div>
+
+                  {inspectItem.proofUrl.startsWith("data:image") || /\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(inspectItem.proofUrl) ? (
+                    <div
+                      onClick={() => setActiveEvidence(inspectItem.proofUrl)}
+                      style={{
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "6px",
+                        overflow: "hidden",
+                        maxHeight: "180px",
+                        display: "flex",
+                        justifyContent: "center",
+                        background: "#ffffff",
+                        cursor: "zoom-in"
+                      }}
+                      title="Click to view full image in Lightbox"
+                    >
+                      <img src={inspectItem.proofUrl} alt="Evidence preview" style={{ maxWidth: "100%", maxHeight: "180px", objectFit: "contain" }} />
                     </div>
-                  ) : null}
+                  ) : inspectItem.proofUrl.startsWith("data:application/pdf") || inspectItem.proofUrl.endsWith(".pdf") ? (
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#ffffff", padding: "10px 12px", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
+                      <span style={{ fontSize: "12px", fontWeight: 600, color: "#334155" }}>[PDF DOCUMENT ATTACHED]</span>
+                      <button
+                        type="button"
+                        className="tb-btn tb-btn-outline"
+                        style={{ padding: "4px 10px", fontSize: "12px" }}
+                        onClick={() => setActiveEvidence(inspectItem.proofUrl)}
+                      >
+                        Preview PDF
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: "12.5px", color: "#3b82f6", wordBreak: "break-all" }}>
+                      {inspectItem.proofUrl}
+                    </div>
+                  )}
                 </div>
               ) : (
-                <div style={{ color: "#94a3b8", fontSize: "13px", fontStyle: "italic" }}>
+                <div style={{ color: "#94a3b8", fontSize: "13px", fontStyle: "italic", background: "#f8fafc", padding: "10px 12px", borderRadius: "8px", border: "1px dashed #cbd5e1" }}>
                   No supporting documents were attached with this request (Optional submission).
                 </div>
               )}
@@ -306,7 +521,7 @@ function ReturnQueue({ isAdmin }) {
                       openDecision(item, true);
                     }}
                   >
-                    Approve & refund
+                    Approve Request
                   </button>
                 </div>
               )}
@@ -344,6 +559,146 @@ function ReturnQueue({ isAdmin }) {
           </div>
         </div>
       )}
+
+      {payoutModal && (
+        <div className="rp-modal-backdrop" onClick={() => !payoutModal.busy && setPayoutModal(null)}>
+          <div className="rp-modal" style={{ maxWidth: "480px" }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: "0 0 8px", fontSize: "18px", fontWeight: 700 }}>
+              Confirm Bank Transfer — #{payoutModal.row.ticketReturnRequestId}
+            </h3>
+            <p className="rp-muted" style={{ marginBottom: "12px" }}>
+              {payoutModal.row.eventName || `Event #${payoutModal.row.eventId}`} · {payoutModal.row.ticketTypeName}
+              <br />
+              Customer: <strong>{payoutModal.row.customerName || `User #${payoutModal.row.requesterUserId}`}</strong>
+            </p>
+
+            <div style={{ marginBottom: "14px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "8px", padding: "10px 12px", fontSize: "12.5px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                <span style={{ fontSize: "11px", fontWeight: 700, color: "#166534" }}>DESTINATION BANK ACCOUNT</span>
+                {payoutModal.row.bankAccountNumber && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(payoutModal.row.bankAccountNumber);
+                      toast.success(`Copied ${payoutModal.row.bankAccountNumber}`);
+                    }}
+                    style={{ fontSize: "11px", padding: "2px 8px", background: "#fff", border: "1px solid #86efac", borderRadius: "5px", color: "#166534", cursor: "pointer", fontWeight: 600 }}
+                  >
+                    Copy No.
+                  </button>
+                )}
+              </div>
+              <div><strong>{payoutModal.row.bankName || "—"}</strong> · <span style={{ fontFamily: "monospace", fontWeight: 700 }}>{payoutModal.row.bankAccountNumber || "—"}</span></div>
+              <div style={{ color: "#15803d", fontSize: "12px" }}>{payoutModal.row.bankAccountName || "—"}</div>
+            </div>
+
+            <label className="ow-field" style={{ marginBottom: "10px" }}>
+              <span>Bank Transfer Reference (FT Code) *</span>
+              <input
+                type="text"
+                placeholder="e.g. FT2411258899"
+                value={payoutModal.reference}
+                maxLength={100}
+                onChange={(e) => setPayoutModal((p) => ({ ...p, reference: e.target.value, error: "" }))}
+              />
+            </label>
+
+            <label className="ow-field" style={{ marginBottom: "10px" }}>
+              <span>Transferred Amount (VND) *</span>
+              <input
+                type="number"
+                value={payoutModal.amount}
+                onChange={(e) => setPayoutModal((p) => ({ ...p, amount: e.target.value, error: "" }))}
+              />
+              <span className="ow-hint">Must match approved refund: <strong>{formatPrice(payoutModal.row.refundAmount || 0)}</strong></span>
+            </label>
+
+            <label className="ow-field">
+              <span>Transfer Note (optional)</span>
+              <input
+                type="text"
+                placeholder="e.g. Transferred via Vietcombank"
+                value={payoutModal.note}
+                maxLength={300}
+                onChange={(e) => setPayoutModal((p) => ({ ...p, note: e.target.value }))}
+              />
+            </label>
+
+            {payoutModal.error && <div className="ow-field-error" style={{ marginTop: "8px" }}>{payoutModal.error}</div>}
+
+            <div className="rp-modal-actions" style={{ marginTop: "16px" }}>
+              <button type="button" className="tb-btn tb-btn-outline" disabled={payoutModal.busy} onClick={() => setPayoutModal(null)}>
+                Cancel
+              </button>
+              <button type="button" className="tb-btn tb-btn-primary" disabled={payoutModal.busy} onClick={submitManualRefund}>
+                {payoutModal.busy ? "Confirming..." : "Confirm Transfer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeEvidence && (
+        <div
+          className="rp-modal-backdrop"
+          style={{ zIndex: 9999, background: "rgba(15, 23, 42, 0.75)" }}
+          onClick={() => setActiveEvidence(null)}
+        >
+          <div
+            className="rp-modal"
+            style={{
+              maxWidth: "920px",
+              width: "95vw",
+              maxHeight: "92vh",
+              display: "flex",
+              flexDirection: "column",
+              padding: 0,
+              overflow: "hidden"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}>
+              <strong style={{ fontSize: "15px", color: "#0f172a" }}>
+                Evidence Document Viewer
+              </strong>
+              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                <button
+                  type="button"
+                  onClick={() => openEvidenceInNewTab(activeEvidence)}
+                  className="tb-btn tb-btn-outline"
+                  style={{ padding: "4px 12px", fontSize: "12px" }}
+                >
+                  Open in New Window
+                </button>
+                <button
+                  type="button"
+                  className="tb-btn tb-btn-outline"
+                  style={{ padding: "4px 12px", fontSize: "12px" }}
+                  onClick={() => setActiveEvidence(null)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            <div style={{ flex: 1, overflowY: "auto", padding: "16px", display: "flex", justifyContent: "center", alignItems: "center", background: "#f1f5f9", minHeight: "400px" }}>
+              {activeEvidence.startsWith("data:application/pdf") || activeEvidence.endsWith(".pdf") ? (
+                <iframe
+                  src={activeEvidence}
+                  title="PDF Evidence Document"
+                  style={{ width: "100%", height: "70vh", border: "none", borderRadius: "8px", background: "#ffffff" }}
+                />
+              ) : (
+                <img
+                  src={activeEvidence}
+                  alt="Full evidence document"
+                  style={{ maxWidth: "100%", maxHeight: "72vh", objectFit: "contain", borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,0.15)", background: "#ffffff" }}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -363,3 +718,4 @@ export default function TicketReturnReviewPage() {
   }
   return <div className="tb-empty" style={{ margin: 40 }}>Only Staff or Admin can review ticket returns.</div>;
 }
+

@@ -301,7 +301,7 @@ export default function AdminSeatingTemplatesPage() {
                   onClick={() => setViewingTemplate(null)}
                   aria-label="Close"
                 >
-                  ✕
+                  Close
                 </button>
               </div>
 

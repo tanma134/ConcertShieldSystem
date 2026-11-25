@@ -137,14 +137,13 @@ public static class TicketReturnPolicy
         return ReturnRequestStatuses.IsOpen(requestStatus);
     }
 
-    // Small helper so every rejection is built the same way.
     private static ReturnEligibility Reject(string code, string message)
     {
         return new ReturnEligibility(false, code, message);
     }
 }
 
-// Chính sách nền tảng cho khách bị ảnh hưởng bởi đổi lịch; không dùng ngày giả khi chưa có lịch mới.
+// Platform policy for customers affected by schedule changes; avoid placeholder dates when no new schedule is set.
 public static class EventChangeReturnPolicy
 {
     public static ReturnEligibility Evaluate(string? ticketStatus, string? orderStatus, DateTime? checkedInAt, bool hasOpenRequest, DateTime now, DateTime appliedAt, int windowHours, decimal percent)

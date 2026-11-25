@@ -109,62 +109,6 @@ namespace TicketAPI.API
             }
         }
 
-        //public async Task<TicketTypeApiResponseDto?> GetTicketTypeByIdAsync(int eventId, int ticketTypeId)
-        //{
-        //    try
-        //    {
-        //        // 1. Gọi API lấy sự kiện
-        //        var response = await GetEventByIdAsync(eventId);
-        //        if (response == null) return null;
-
-        //        // 2. Dùng dynamic để lấy phần Data (bất kể response là DTO hay JsonElement)
-        //        dynamic eventData = response;
-
-        //        // Nếu response có property "Data" (là Wrapper), lấy Data. Nếu không, lấy chính response.
-        //        if (response.GetType().GetProperty("Data") != null)
-        //        {
-        //            eventData = response.Data;
-        //        }
-        //        else if (response is System.Text.Json.JsonElement jsonElement)
-        //        {
-        //            // Trường hợp API trả về raw JSON
-        //            if (jsonElement.TryGetProperty("data", out var dataProp))
-        //                eventData = dataProp;
-        //        }
-
-        //        if (eventData == null || eventData.TicketTypes == null)
-        //        {
-        //            _logger.LogWarning("Không tìm thấy TicketTypes trong response của EventId {EventId}", eventId);
-        //            return null;
-        //        }
-
-        //        // 3. Duyệt qua danh sách TicketTypes (dynamic duyệt rất mượt)
-        //        foreach (var t in eventData.TicketTypes)
-        //        {
-        //            // Ép kiểu động để so sánh ID
-        //            if ((int)t.TicketTypeId == ticketTypeId)
-        //            {
-        //                // 4. Map sang DTO chuẩn để trả về
-        //                return new TicketTypeApiResponseDto
-        //                {
-        //                    TicketTypeId = t.TicketTypeId,
-        //                    TypeName = t.TypeName,
-        //                    Price = t.Price,
-        //                    Quantity = t.Quantity,
-        //                    Status = t.Status
-        //                };
-        //            }
-        //        }
-
-        //        _logger.LogWarning("Không tìm thấy TicketTypeId {TicketTypeId} trong EventId {EventId}", ticketTypeId, eventId);
-        //        return null;
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Lỗi trong GetTicketTypeByIdAsync");
-        //        return null;
-        //    }
-        //}
         public async Task<bool> ReleaseReturnedTicketAsync(int eventId, int ticketTypeId, int quantity)
             => (await TryReleaseReturnedTicketAsync(eventId, ticketTypeId, quantity)).Success;
 

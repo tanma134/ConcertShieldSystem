@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AdminAPI.Controllers
 {
-    /// <summary>UC_18.8 View Fraud Case List, UC_18.9 Assign Fraud Case to Staff, UC_18.10 Resolve Fraud Case.</summary>
     [ApiController]
     [Route("api/admin/fraud-cases")]
     [Authorize(Policy = "CanReviewFraudCases")]
@@ -23,7 +22,6 @@ namespace AdminAPI.Controllers
             _service = service; _audit = audit; _logger = logger;
         }
 
-        // GET api/admin/fraud-cases?status=Open&unassigned=true&page=1
         [HttpGet]
         public Task<IActionResult> List([FromQuery] FraudCaseQuery query) =>
             Run(async () =>
@@ -39,7 +37,6 @@ namespace AdminAPI.Controllers
                 return Ok(await _service.SearchAsync(query));
             });
 
-        // POST api/admin/fraud-cases/5/assign  (Admin only: assigns the case to a Staff member)
         [HttpPost("{id:int}/assign")]
         [Authorize(Roles = "Admin")]
         public Task<IActionResult> Assign(int id, [FromBody] AssignFraudCaseRequest req) =>
@@ -52,7 +49,6 @@ namespace AdminAPI.Controllers
                 return Ok(r);
             });
 
-        // POST api/admin/fraud-cases/5/recommend  (assigned Staff submits a proposal)
         [HttpPost("{id:int}/recommend")]
         public Task<IActionResult> Recommend(int id, [FromBody] RecommendFraudCaseRequest req) =>
             Run(async () =>
@@ -64,7 +60,6 @@ namespace AdminAPI.Controllers
                 return Ok(r);
             });
 
-        // POST api/admin/fraud-cases/5/resolve  (Admin only: final decision)
         [HttpPost("{id:int}/resolve")]
         [Authorize(Roles = "Admin")]
         public Task<IActionResult> Resolve(int id, [FromBody] ResolveFraudCaseRequest req) =>

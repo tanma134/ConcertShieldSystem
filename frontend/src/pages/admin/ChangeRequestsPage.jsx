@@ -195,7 +195,7 @@ export default function ChangeRequestsPage() {
               }}
               title="Close modal"
             >
-              ✕
+              Close
             </button>
           </div>
 

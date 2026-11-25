@@ -146,7 +146,7 @@ export default function CreateEventWizard() {
                 if (s.n === 1 || canLeaveStep1) goToStep(s.n);
               }}
             >
-              <span className="ow-step-num">{s.n < step ? "✓" : s.n}</span>
+              <span className="ow-step-num">{s.n}</span>
               <span className="ow-step-label">{s.label}</span>
             </li>
           ))}

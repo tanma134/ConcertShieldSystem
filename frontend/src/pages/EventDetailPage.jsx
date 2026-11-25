@@ -44,7 +44,6 @@ export default function EventDetailPage() {
     }
   };
 
-  // Event data is synchronized with the current route.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     setLoading(true);
@@ -57,7 +56,6 @@ export default function EventDetailPage() {
       .finally(() => setLoading(false));
   }, [slug]);
 
-  // Wishlist status is synchronized with the current event and session.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (!event?.eventId || !isAuthenticated) {
@@ -87,7 +85,6 @@ export default function EventDetailPage() {
     }
   };
 
-  // Một vài sự kiện khác đang mở bán, hiển thị bên dưới trang chi tiết
   useEffect(() => {
     setRelatedLoading(true);
     eventApi
@@ -118,8 +115,7 @@ export default function EventDetailPage() {
   const availableTickets =
     typeof event?.availableTickets === "number" ? event.availableTickets : null;
 
-  // Chỉ hiện nút "Mua vé" khi sự kiện đang thực sự diễn ra (giữa startsAt và
-  // endsAt). Đã kết thúc hoặc chưa bắt đầu thì ẩn nút, hiện thông báo tương ứng.
+  // Show "Buy Ticket" only while the event is actively running between startsAt and endsAt.
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     setNow(Date.now());
@@ -291,8 +287,8 @@ export default function EventDetailPage() {
                       {event.reEntryPolicy === 'TimeLimited'
                         ? `Time-limited: Attendees can exit and re-enter within ${event.reEntryDurationMinutes || 30} minutes.`
                         : event.reEntryPolicy === 'Unlimited'
-                        ? 'Unlimited: Attendees may exit and re-enter freely during the event.'
-                        : 'No Re-entry: Once scanned in, leaving the venue terminates admission.'}
+                          ? 'Unlimited: Attendees may exit and re-enter freely during the event.'
+                          : 'No Re-entry: Once scanned in, leaving the venue terminates admission.'}
                     </div>
                   </div>
                 </div>

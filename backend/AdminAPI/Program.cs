@@ -52,7 +52,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
  };
  });
 
-
 builder.Services.AddAuthorization(options =>
 {
  options.AddPolicy("CanManageUsers", policy =>
@@ -126,7 +125,6 @@ builder.Services.AddHttpClient("RiskNotificationDelivery", c =>
 builder.Services.AddHostedService<RiskMaintenanceWorker>();
 var app = builder.Build();
 
-// Tự động khởi tạo schema Support Cases nếu chưa có trong admin_db
 using (var scope = app.Services.CreateScope())
 {
  var adminDb = scope.ServiceProvider.GetRequiredService<AdminDbContext>();

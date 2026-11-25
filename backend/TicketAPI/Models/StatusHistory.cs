@@ -26,7 +26,6 @@
 
         public DateTime CreatedAt { get; set; }
 
-        // Dữ liệu JSON bổ sung, ví dụ: {"source":"VNPay"}
         public string Metadata { get; set; } = "{}";
     }
 }

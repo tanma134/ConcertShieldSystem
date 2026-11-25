@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace EventAPI.Services;
 public class GovernanceOutboxWorker(IServiceScopeFactory scopes, ILogger<GovernanceOutboxWorker> logger) : BackgroundService
 {
-    // SKIP LOCKED cho nhiều instance; giữ job trong transaction đến khi có phản hồi từ service đích.
+    // Use SKIP LOCKED across instances and hold the transaction until the target service responds.
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -38,9 +38,12 @@ public class GovernanceOutboxWorker(IServiceScopeFactory scopes, ILogger<Governa
                             if (job.Kind == "ApplyChange")
                             {
                                 var change = JsonSerializer.Deserialize<ApplyChangeMessage>(job.Payload)!;
-                                var request = await db.Set<EventChangeRequest>().SingleAsync(x => x.Id == change.ChangeId, stoppingToken);
-                                request.ProcessingStatus = "Completed";
-                                // Cùng thứ tự khóa với API: job -> event; API không khóa các job hiện có.
+                                if (change.ChangeId > 0)
+                                {
+                                    var request = await db.Set<EventChangeRequest>().FirstOrDefaultAsync(x => x.Id == change.ChangeId, stoppingToken);
+                                    if (request != null) request.ProcessingStatus = "Completed";
+                                }
+                                // Match the API lock order (job -> event) to avoid deadlocks; API requests do not lock existing jobs.
                                 var ev = await db.Events.FromSqlInterpolated($"SELECT *, xmin FROM events WHERE event_id = {change.EventId} FOR UPDATE").SingleAsync(stoppingToken);
                                 if (ev.ScheduleVersion == change.ScheduleVersion && ev.Status == "Published") ev.SalesFrozen = false;
                             }

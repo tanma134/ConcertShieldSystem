@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AdminAPI.Controllers
 {
-    /// <summary>Configure Risk Policy Parameters (Admin). Risk Engine đọc lại cấu hình sau tối đa 60 giây.</summary>
+    // Risk Engine reloads policy changes within 60 seconds.
     [ApiController]
     [Route("api/admin/risk/policy")]
     [Authorize(Policy = "CanReviewFraud")]
@@ -23,12 +23,10 @@ namespace AdminAPI.Controllers
             _service = service; _audit = audit; _logger = logger;
         }
 
-        // GET api/admin/risk/policy?category=risk_config
         [HttpGet]
         public Task<IActionResult> Get([FromQuery] string? category) =>
             Run(async () => Ok(await _service.GetAsync(category)));
 
-        // PUT api/admin/risk/policy
         [HttpPut]
         public Task<IActionResult> Update([FromBody] UpdateRiskPolicyRequest req) =>
             Run(async () =>

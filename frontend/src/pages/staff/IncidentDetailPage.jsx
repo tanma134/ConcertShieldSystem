@@ -785,7 +785,7 @@ export default function IncidentDetailPage() {
                         </div>
                         <div style={{ fontSize: "11px", fontWeight: 700, color: "#4f46e5", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "4px" }}>
                           {item.actionType}
-                          {item.newStatus && ` ➔ ${item.newStatus}`}
+                          {item.newStatus && ` -> ${item.newStatus}`}
                         </div>
                         <div className="inc-timeline-note">{item.note}</div>
                       </div>
@@ -808,7 +808,7 @@ export default function IncidentDetailPage() {
                   className="inc-modal-close"
                   onClick={() => setShowUploadModal(false)}
                 >
-                  ✕
+                  Close
                 </button>
               </div>
               <form onSubmit={handleUploadEvidence}>
@@ -873,7 +873,7 @@ export default function IncidentDetailPage() {
                   className="inc-modal-close"
                   onClick={() => setShowEditModal(false)}
                 >
-                  ✕
+                  Close
                 </button>
               </div>
               <form onSubmit={handleUpdateIncident}>
@@ -1022,7 +1022,7 @@ export default function IncidentDetailPage() {
                   className="inc-modal-close"
                   onClick={() => setShowEscalateModal(false)}
                 >
-                  ✕
+                  Close
                 </button>
               </div>
               <form onSubmit={handleEscalate}>
@@ -1090,7 +1090,7 @@ export default function IncidentDetailPage() {
                   className="inc-modal-close"
                   onClick={() => setShowResolveModal(false)}
                 >
-                  ✕
+                  Close
                 </button>
               </div>
               <form onSubmit={handleResolve}>
@@ -1191,7 +1191,7 @@ export default function IncidentDetailPage() {
                 }}
                 onClick={() => setLightboxMedia(null)}
               >
-                ✕ Close Preview
+                Close Preview
               </button>
               {lightboxMedia.type === "image" ? (
                 <img src={lightboxMedia.url} alt="Lightbox preview" />

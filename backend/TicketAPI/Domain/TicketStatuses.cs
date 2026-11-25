@@ -28,6 +28,8 @@ public static class ReturnRequestStatuses
     // RefundFailed -> approved, but paying the money back failed; staff can retry.
     public const string Refunded = "Refunded";
     public const string RefundFailed = "RefundFailed";
+    public const string RefundProcessing = "RefundProcessing";
+    public const string RefundInfoRequired = "RefundInfoRequired";
 
     // Approved, Refunded and RefundFailed all count as a refund in revenue reports.
     public static bool IsApprovedFamily(string? status)

@@ -12,8 +12,8 @@
         public int TicketTypeId { get; set; }
         public int Quantity { get; set; }
 
-        // Chỉ điền khi trả về cho frontend (lấy từ EventAPI), không lưu trong Redis.
-        // Giúp trang giữ vé / thanh toán luôn hiện được tên vé + giá dù tra cứu ở client bị hụt.
+        // Populated only in responses to the frontend (from EventAPI), not stored in Redis,
+        // so the hold/checkout pages still display ticket name and price if client lookup fails.
         public string? TypeName { get; set; }
         public long? UnitPrice { get; set; }
     }

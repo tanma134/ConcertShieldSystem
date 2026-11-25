@@ -564,12 +564,16 @@
 
 .ticket-modal-card {
   width: 100%;
-  max-width: 540px;
+  max-width: 560px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   background: #ffffff;
   border-radius: 16px;
-  padding: 26px 28px;
+  padding: 0;
   box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(15, 23, 42, 0.05);
   animation: ticketModalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
 }
 
 @keyframes ticketModalSlideUp {
@@ -586,8 +590,60 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding-bottom: 14px;
+  padding: 16px 22px 14px;
   border-bottom: 1px solid #f1f5f9;
+  flex-shrink: 0;
+  background: #ffffff;
+}
+
+.ticket-modal-close-btn {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  padding: 5px 12px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.ticket-modal-close-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.ticket-doc-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.ticket-modal-body {
+  padding: 14px 22px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.ticket-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ticket-modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ticket-modal-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
 }
 
 .ticket-modal-icon {
@@ -696,9 +752,211 @@
   justify-content: flex-end;
   align-items: center;
   gap: 12px;
-  margin-top: 22px;
-  padding-top: 16px;
+  margin-top: 0;
+  padding: 14px 22px 16px;
   border-top: 1px solid #f1f5f9;
+  background: #ffffff;
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   Modern Bank Account Card & Evidence Upload
+   ========================================================================== */
+.ticket-bank-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 12px 0 6px;
+}
+
+.ticket-bank-box-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ticket-bank-icon {
+  font-size: 22px;
+}
+
+.ticket-bank-box-title strong {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ticket-bank-box-title p {
+  margin: 1px 0 0;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.ticket-bank-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.ticket-bank-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ticket-bank-field--full {
+  grid-column: 1 / -1;
+}
+
+.ticket-bank-field label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.ticket-form-input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  font-size: 13px;
+  color: #0f172a;
+  outline: none;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.ticket-form-input:focus {
+  border-color: #f43f5e;
+  box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.12);
+}
+
+/* Evidence Upload Box */
+.ticket-evidence-box {
+  margin: 12px 0;
+}
+
+.ticket-toggle-link-btn {
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s;
+}
+
+.ticket-toggle-link-btn:hover {
+  text-decoration: underline;
+  color: #1d4ed8;
+}
+
+.ticket-upload-dropzone {
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 10px 14px;
+  text-align: center;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.ticket-upload-dropzone:hover {
+  border-color: #f43f5e;
+  background: #fff1f2;
+}
+
+.ticket-upload-btn-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  gap: 3px;
+  color: #334155;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.ticket-upload-icon {
+  font-size: 22px;
+}
+
+.ticket-upload-btn-label small {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.ticket-upload-preview-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffffff;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.ticket-upload-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid #cbd5e1;
+}
+
+.ticket-upload-doc-icon {
+  font-size: 26px;
+}
+
+.ticket-upload-file-info {
+  flex: 1;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ticket-upload-file-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ticket-upload-file-size {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.ticket-upload-remove-btn {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #fecdd3;
+  background: #ffe4e6;
+  color: #e11d48;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ticket-upload-remove-btn:hover {
+  background: #fecdd3;
+}
+
+.ticket-hint-text {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.4;
 }
 
 .ticket-modal-cancel-btn {

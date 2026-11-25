@@ -4,10 +4,9 @@ namespace TicketAPI.Risk;
 
 public interface IRiskClient
 {
-    /// <summary>Gửi rule đã khớp sang AdminAPI. Trả null nếu AdminAPI lỗi/chậm (fail-open).</summary>
+    // Sends matched rules to AdminAPI; returns null on failure or timeout (fail-open).
     Task<RiskResult?> IngestAsync(RiskEvent evt, CancellationToken ct = default);
 
-    /// <summary>Hỏi AdminAPI xem user/IP/device/session có đang bị block thật không.</summary>
     Task<BlockCheckResult?> CheckBlockAsync(int? userId, string? ip, string? deviceFp, string? sessionId, CancellationToken ct = default);
 }
 
@@ -36,7 +35,7 @@ public class RiskClient : IRiskClient
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
-            // AdminAPI chết/chậm thì KHÔNG được làm hỏng luồng đặt vé/đăng nhập.
+            // Fail-open: AdminAPI downtime or latency must not break booking or login flows.
             _logger.LogWarning(ex, "Risk ingest failed (fail-open)");
             return null;
         }

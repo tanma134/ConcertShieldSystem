@@ -9,7 +9,6 @@ using Microsoft.Extensions.Configuration;
 
 namespace IncidentAPI.Services;
 
-// Triển khai toàn bộ nghiệp vụ Incident Management cho 5 Use Case ()
 public class IncidentService : IIncidentService
 {
     private readonly IIncidentRepository _incidentRepository;
@@ -40,7 +39,6 @@ public class IncidentService : IIncidentService
     {
     }
 
-    // Staff báo cáo sự cố mới tại hiện trường
     public async Task<IncidentDetailDto> CreateIncidentAsync(
         CreateIncidentRequest req, int reporterId, string reporterName, CancellationToken ct = default)
     {
@@ -77,7 +75,6 @@ public class IncidentService : IIncidentService
 
         await _incidentRepository.AddIncidentAsync(incident, ct);
 
-        // Ghi nhật ký ban đầu
         var initialUpdate = new IncidentUpdate
         {
             IncidentId = incident.Id,
@@ -95,7 +92,6 @@ public class IncidentService : IIncidentService
         return await GetDetailAsync(incident.Id, reporterId, true, ct);
     }
 
-    // Lấy chi tiết sự cố kèm bằng chứng và nhật ký
     public async Task<IncidentDetailDto> GetDetailAsync(
         int id, int requestingUserId, bool isAdmin, CancellationToken ct = default)
     {
@@ -107,14 +103,12 @@ public class IncidentService : IIncidentService
         return MapToDetailDto(incident);
     }
 
-    // Lấy danh sách sự cố có bộ lọc tìm kiếm
     public async Task<List<IncidentListItemDto>> SearchAsync(
         IncidentQuery query, int requestingUserId, bool isAdmin, CancellationToken ct = default)
     {
         return await _incidentRepository.SearchIncidentsAsync(query, requestingUserId, isAdmin, ct);
     }
 
-    // Cập nhật thông tin chi tiết sự cố và tiến độ
     public async Task<IncidentDetailDto> UpdateIncidentAsync(
         int id, UpdateIncidentRequest req, int updatedBy, string updaterName, bool isAdmin, CancellationToken ct = default)
     {
@@ -167,7 +161,6 @@ public class IncidentService : IIncidentService
         return await GetDetailAsync(id, updatedBy, true, ct);
     }
 
-    // Cập nhật nhanh trạng thái
     public async Task<IncidentDetailDto> UpdateStatusAsync(
         int id, UpdateStatusRequest req, int updatedBy, string updaterName, bool isAdmin, CancellationToken ct = default)
     {
@@ -197,7 +190,6 @@ public class IncidentService : IIncidentService
         return await GetDetailAsync(id, updatedBy, true, ct);
     }
 
-    // Chuyển cấp / Leo thang sự cố lên Admin
     public async Task<IncidentDetailDto> EscalateIncidentAsync(
         int id, EscalateIncidentRequest req, int staffId, string staffName, CancellationToken ct = default)
     {
@@ -236,7 +228,7 @@ public class IncidentService : IIncidentService
 
         _logger.LogInformation("Incident #{IncidentId} escalated to Admin {AdminId} by staff {StaffId}", id, incident.EscalatedToAdminId ?? 1, staffId);
 
-        // Gui thong bao den Admin qua NotificationAPI (ho tro retry va idempotency key)
+        // Fire-and-forget escalation notification with idempotency key
         var targetAdminId = incident.EscalatedToAdminId ?? 1;
         _ = Task.Run(async () =>
         {
@@ -274,7 +266,6 @@ public class IncidentService : IIncidentService
         return await GetDetailAsync(id, staffId, true, ct);
     }
 
-    // Admin giải quyết sự cố
     public async Task<IncidentDetailDto> ResolveIncidentAsync(
         int id, ResolveIncidentRequest req, int adminId, string adminName, CancellationToken ct = default)
     {
@@ -311,7 +302,6 @@ public class IncidentService : IIncidentService
         return await GetDetailAsync(id, adminId, true, ct);
     }
 
-    // Xem thông tin giải quyết sự cố
     public async Task<ResolutionDto> GetResolutionAsync(int id, CancellationToken ct = default)
     {
         var incident = await _incidentRepository.GetIncidentDetailAsync(id, ct);
@@ -334,7 +324,6 @@ public class IncidentService : IIncidentService
         };
     }
 
-    // Lấy dòng thời gian cập nhật của sự cố
     public async Task<List<IncidentUpdateDto>> GetHistoryAsync(int id, CancellationToken ct = default)
     {
         var updates = await _incidentRepository.GetIncidentHistoryAsync(id, ct);

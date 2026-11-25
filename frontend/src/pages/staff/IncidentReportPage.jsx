@@ -516,7 +516,7 @@ export default function IncidentReportPage() {
                             color: "var(--inc-text-muted)",
                           }}
                         >
-                          <PaperclipIcon />
+                          <span style={{ fontSize: "11px", fontWeight: 700 }}>FILE</span>
                         </div>
                       )}
 

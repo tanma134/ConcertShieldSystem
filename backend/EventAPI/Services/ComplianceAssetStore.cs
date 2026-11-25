@@ -23,7 +23,7 @@ public class ComplianceAssetStore(HttpClient http, IConfiguration config, ILogge
         return value;
     }
 
-    // Chỉ log error.message đã làm sạch; không log response/request đầy đủ hay chữ ký.
+    // Log only sanitized error messages; never log full requests, responses, or signatures.
     private string ProviderReason(string body)
     {
         string reason;
@@ -45,7 +45,7 @@ public class ComplianceAssetStore(HttpClient http, IConfiguration config, ILogge
         reason = Regex.Replace(reason, @"[\r\n\t]+", " ");
         return reason.Length > 400 ? reason[..400] : reason;
     }
-    // Ký tham số REST theo Cloudinary; secret không xuất hiện trong URL hoặc response của API.
+    // Sign REST parameters for Cloudinary without exposing the secret in URLs or API responses.
     private Dictionary<string, string> Sign(Dictionary<string, string> values)
     {
         var plain = string.Join("&", values.OrderBy(x => x.Key, StringComparer.Ordinal).Select(x => $"{x.Key}={x.Value}"));
@@ -90,7 +90,7 @@ public class ComplianceAssetStore(HttpClient http, IConfiguration config, ILogge
                 || id.GetString() != publicId || !Uri.TryCreate(url.GetString(), UriKind.Absolute, out var assetUrl)
                 || assetUrl.Scheme != "https")
                 throw new AssetUploadException(publicId, "StorageInvalidResponse");
-            // Không ghi metadata thành công nếu provider trả asset public hoặc sai resource type.
+            // Reject metadata persistence if the provider returns a public asset or wrong resource type.
             if (!root.TryGetProperty("type", out var type) || type.ValueKind != JsonValueKind.String || type.GetString() != "authenticated"
                 || !root.TryGetProperty("resource_type", out var resource) || resource.ValueKind != JsonValueKind.String || resource.GetString() != "raw")
                 throw new AssetUploadException(publicId, "StorageInvalidResponse");
@@ -137,7 +137,7 @@ public class AssetUploadException : Exception
         : base(UserMessage(errorCode), inner)
     { PublicId = publicId; ErrorCode = errorCode; ProviderStatus = providerStatus; }
 
-    // Chỉ trả lời hướng xử lý; chi tiết provider đã redacted nằm trong log server.
+    // Return actionable guidance only; redacted provider details stay in server logs.
     private static string UserMessage(string code) => code switch
     {
         "StorageConfiguration" => "Document storage is not configured. Ask the administrator to check its settings.",

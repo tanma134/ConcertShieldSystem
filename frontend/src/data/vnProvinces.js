@@ -1,5 +1,4 @@
-// 63 tỉnh/thành Việt Nam (trước sáp nhập 2025) — dùng cho dropdown chọn Thành phố.
-// Tham khảo: https://vnsdi.mae.gov.vn/bandohanhchinh/
+// 63 Vietnam provinces/cities (pre-2025 administrative merger) for city dropdowns.
 const VN_PROVINCES = [
   "An Giang", "Bà Rịa - Vũng Tàu", "Bạc Liêu", "Bắc Giang", "Bắc Kạn",
   "Bắc Ninh", "Bến Tre", "Bình Dương", "Bình Định", "Bình Phước",

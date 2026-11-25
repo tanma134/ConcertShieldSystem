@@ -1,11 +1,10 @@
-// So sánh timestamp đầy đủ, kể cả giờ/phút; gọi lại ngay trước khi gửi API.
+// Full timestamp comparison (including hours/minutes); re-run right before submitting.
 export function startTimeError(value, now = Date.now()) {
   const time = Date.parse(value);
   if (!value || !Number.isFinite(time)) return 'Choose a valid start date and time.';
   return time <= now ? 'Start date and time must be later than now (including hours and minutes).' : '';
 }
 
-// Rule theo thời gian phải nằm trong khoảng bán vé và trước lúc concert bắt đầu.
 export function pricingTimeError(rule, ticket, event, now = Date.now()) {
   if (rule.ruleType === 'QuantityBased') return '';
   const from = Date.parse(rule.triggerFrom), to = Date.parse(rule.triggerTo);
@@ -28,7 +27,7 @@ export function pricingTimeError(rule, ticket, event, now = Date.now()) {
   return '';
 }
 
-// Làm tròn lên phút tiếp theo để datetime-local không chọn phút hiện tại đã trôi qua.
+// Round up to the next minute so datetime-local rejects the already-elapsed current minute.
 export function nextLocalMinute(now = Date.now()) {
   const d = new Date(Math.floor(now / 60000) * 60000 + 60000);
   const pad = n => String(n).padStart(2, '0');

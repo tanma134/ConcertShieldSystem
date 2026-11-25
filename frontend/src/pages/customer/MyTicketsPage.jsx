@@ -6,6 +6,8 @@ import ticketApi from "../../api/ticketApi";
 import ticketReturnApi from "../../api/ticketReturnApi";
 import { useToast } from "../../components/ToastProvider";
 import appealApi from "../../api/appealApi";
+import EvidenceUploader from "../../components/EvidenceUploader";
+import { VIETNAM_BANKS } from "../../constants/vietnamBanks";
 
 import "./MyTicketsPage.css";
 
@@ -175,7 +177,11 @@ export default function MyTicketsPage() {
   const [batchCategory, setBatchCategory] = useState("PersonalSchedule");
   const [batchReason, setBatchReason] = useState("");
   const [batchProofUrl, setBatchProofUrl] = useState("");
+  const [bankAccountName, setBankAccountName] = useState("");
+  const [bankAccountNumber, setBankAccountNumber] = useState("");
+  const [bankName, setBankName] = useState("");
   const [submittingBatch, setSubmittingBatch] = useState(false);
+  const [batchTouched, setBatchTouched] = useState({});
 
   const handleOpenBatchModal = (order) => {
     // Check if event cutoff window passed (< 24h)
@@ -203,6 +209,9 @@ export default function MyTicketsPage() {
     setBatchCategory("PersonalSchedule");
     setBatchReason("");
     setBatchProofUrl("");
+    setBankAccountName("");
+    setBankAccountNumber("");
+    setBankName("");
     setBatchModalOpen(true);
   };
 
@@ -214,13 +223,55 @@ export default function MyTicketsPage() {
     );
   };
 
+  const getBatchFieldError = (field) => {
+    if (!batchTouched[field]) return null;
+    if (field === "batchReason") {
+      if (!batchReason.trim()) return "Detailed explanation is required and cannot be empty.";
+      if (batchReason.trim().length < 10) {
+        return `Explanation must be at least 10 characters (currently ${batchReason.trim().length}/10).`;
+      }
+    }
+    if (field === "bankName") {
+      if (!bankName.trim()) return "Bank name is required and cannot be empty.";
+    }
+    if (field === "bankAccountNumber") {
+      if (!bankAccountNumber.trim()) return "Bank account number is required and cannot be empty.";
+      if (bankAccountNumber.trim().length < 6 || bankAccountNumber.trim().length > 20) {
+        return `Account number must be between 6 and 20 digits (currently ${bankAccountNumber.trim().length} digits).`;
+      }
+    }
+    if (field === "bankAccountName") {
+      if (!bankAccountName.trim()) return "Account holder name is required and cannot be empty.";
+      if (bankAccountName.trim().length < 2) return "Account holder name is too short.";
+    }
+    return null;
+  };
+
   const handleSubmitBatchReturn = async () => {
     if (selectedTicketIds.length === 0) {
       toast.error("Please select at least one ticket to request a refund.");
       return;
     }
-    if (batchReason.trim().length < 10) {
-      toast.error("Please enter a detailed explanation of at least 10 characters.");
+
+    setBatchTouched({
+      batchReason: true,
+      bankName: true,
+      bankAccountNumber: true,
+      bankAccountName: true,
+    });
+
+    const hasErrors =
+      !batchReason.trim() ||
+      batchReason.trim().length < 10 ||
+      !bankName.trim() ||
+      !bankAccountNumber.trim() ||
+      bankAccountNumber.trim().length < 6 ||
+      bankAccountNumber.trim().length > 20 ||
+      !bankAccountName.trim() ||
+      bankAccountName.trim().length < 2;
+
+    if (hasErrors) {
+      toast.error("Please fill in all required fields correctly.");
       return;
     }
 
@@ -229,10 +280,18 @@ export default function MyTicketsPage() {
       const categoryLabel = REFUND_CATEGORIES[batchCategory] || batchCategory;
       const fullReason = `[${categoryLabel}] ${batchReason.trim()}`;
       const proofUrl = batchProofUrl.trim() || null;
+      const holderName = bankAccountName.trim().toUpperCase();
+      const accNum = bankAccountNumber.trim();
+      const bName = bankName.trim();
 
-      await ticketReturnApi.submitBatch(selectedTicketIds, fullReason, proofUrl);
+      await Promise.all(
+        selectedTicketIds.map((ticketId) =>
+          ticketReturnApi.submit(ticketId, fullReason, holderName, accNum, bName, proofUrl)
+        )
+      );
+
       toast.success(
-        `Refund request submitted successfully for ${selectedTicketIds.length} ticket(s)! The ticket QR codes have been deactivated.`
+        `Refund request submitted successfully for ${selectedTicketIds.length} ticket(s)! Staff will review and process the transfer.`
       );
       setBatchModalOpen(false);
       window.location.reload();
@@ -240,7 +299,7 @@ export default function MyTicketsPage() {
       const errMsg =
         err.response?.data?.message ||
         err.message ||
-        "Could not submit batch refund request.";
+        "Could not submit refund request.";
       toast.error(errMsg);
     } finally {
       setSubmittingBatch(false);
@@ -542,15 +601,14 @@ export default function MyTicketsPage() {
         </div>
       </main>
 
-      {/* Modal Hoàn Vé Theo Lô (Batch Return Modal) */}
+      {/* Batch Return Modal */}
       {batchModalOpen && selectedOrder && (
         <div
           className="bm-overlay"
           onClick={() => !submittingBatch && setBatchModalOpen(false)}
         >
-          <div className="bm-card" onClick={(e) => e.stopPropagation()}>
-            <div className="bm-header">
-              <div className="bm-icon">↺</div>
+          <div className="bm-card" style={{ maxWidth: "600px", maxHeight: "90vh", display: "flex", flexDirection: "column", overflow: "hidden", padding: 0 }} onClick={(e) => e.stopPropagation()}>
+            <div className="bm-header" style={{ padding: "16px 22px 14px", borderBottom: "1px solid #f1f5f9", flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 700, color: "#1e1b2e" }}>
                   Batch Ticket Refund - Order #{selectedOrder.orderId}
@@ -559,135 +617,258 @@ export default function MyTicketsPage() {
                   {selectedOrder.eventName}
                 </p>
               </div>
-            </div>
-
-            <div style={{ marginTop: "14px" }}>
-              <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", fontWeight: 600, color: "#374151" }}>
-                1. Select tickets to refund in this order:
-              </label>
-
-              <div className="bm-ticket-list">
-                {selectedOrder.tickets.map((t) => {
-                  const isEligible =
-                    normalize(t.orderStatus) === "paid" &&
-                    normalize(t.status) === "active" &&
-                    !t.checkedInAt;
-                  const isSelected = selectedTicketIds.includes(t.ticketId);
-
-                  return (
-                    <div
-                      key={t.ticketId}
-                      className={`bm-ticket-row ${isSelected ? "is-selected" : ""} ${
-                        !isEligible ? "is-disabled" : ""
-                      }`}
-                      onClick={() => isEligible && toggleTicketSelection(t.ticketId)}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          disabled={!isEligible}
-                          onChange={() => isEligible && toggleTicketSelection(t.ticketId)}
-                          style={{ cursor: isEligible ? "pointer" : "not-allowed", width: "16px", height: "16px" }}
-                        />
-                        <div>
-                          <div style={{ fontSize: "13px", fontWeight: 600, color: "#1f2937" }}>
-                            Ticket #{t.ticketId} · {t.ticketTypeName || "Ticket"}
-                          </div>
-                          <div style={{ fontSize: "12px", color: "#6b7280" }}>
-                            {t.seatId ? `Seat ${t.seatId}` : "General Admission"} · {formatPrice(t.unitPrice)}
-                          </div>
-                        </div>
-                      </div>
-
-                      {!isEligible && (
-                        <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "4px", background: "#fee2e2", color: "#991b1b" }}>
-                          {t.checkedInAt ? "Checked-in" : t.status}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div style={{ fontSize: "12px", color: "#7e22ce", fontWeight: 600, marginBottom: "12px" }}>
-                ✓ {selectedTicketIds.length} ticket(s) selected for refund
-              </div>
-            </div>
-
-            <div style={{ marginBottom: "12px" }}>
-              <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", fontWeight: 600, color: "#374151" }}>
-                2. Refund Reason Category:
-              </label>
-              <select
-                value={batchCategory}
-                onChange={(e) => setBatchCategory(e.target.value)}
+              <button
+                type="button"
+                onClick={() => setBatchModalOpen(false)}
+                disabled={submittingBatch}
                 style={{
-                  width: "100%",
-                  padding: "9px 12px",
-                  borderRadius: "8px",
-                  border: "1px solid #d1d5db",
-                  background: "#ffffff",
-                  fontSize: "13px",
-                  color: "#1f2937",
-                  outline: "none",
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  color: "#64748b",
+                  cursor: "pointer",
+                  padding: "5px 12px",
+                  borderRadius: "8px"
                 }}
               >
-                {Object.entries(REFUND_CATEGORIES).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
+                Close
+              </button>
             </div>
 
-            <div style={{ marginBottom: "12px" }}>
-              <label style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "13px", fontWeight: 600, color: "#374151" }}>
-                <span>3. Detailed Explanation / Notes *</span>
-                <span style={{ fontSize: "12px", color: "#9ca3af", fontWeight: "normal" }}>
-                  {batchReason.trim().length}/10 min characters
-                </span>
-              </label>
-              <textarea
-                rows={2}
-                placeholder="Please describe your reason clearly to help staff verify..."
-                value={batchReason}
-                onChange={(e) => setBatchReason(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "9px 12px",
-                  borderRadius: "8px",
-                  border: "1px solid #d1d5db",
-                  fontSize: "13px",
-                  outline: "none",
-                  resize: "vertical",
-                }}
-              />
-            </div>
+            <div style={{ padding: "16px 22px", overflowY: "auto", flex: 1 }}>
+              <div style={{ marginBottom: "14px" }}>
+                <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", fontWeight: 600, color: "#374151" }}>
+                  1. Select tickets to refund in this order:
+                </label>
 
-            <div style={{ marginBottom: "16px" }}>
-              <label style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "13px", fontWeight: 600, color: "#374151" }}>
-                <span>4. Supporting Document / Evidence Link</span>
-                <span style={{ fontSize: "12px", color: "#6b7280", fontWeight: "normal" }}>(Optional)</span>
-              </label>
-              <input
-                type="url"
-                placeholder="https://... (Link to doctor's note, travel disruption notice...)"
+                <div className="bm-ticket-list" style={{ maxHeight: "160px", overflowY: "auto" }}>
+                  {selectedOrder.tickets.map((t) => {
+                    const isEligible =
+                      normalize(t.orderStatus) === "paid" &&
+                      normalize(t.status) === "active" &&
+                      !t.checkedInAt;
+                    const isSelected = selectedTicketIds.includes(t.ticketId);
+
+                    return (
+                      <div
+                        key={t.ticketId}
+                        className={`bm-ticket-row ${isSelected ? "is-selected" : ""} ${
+                          !isEligible ? "is-disabled" : ""
+                        }`}
+                        onClick={() => isEligible && toggleTicketSelection(t.ticketId)}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            disabled={!isEligible}
+                            onChange={() => isEligible && toggleTicketSelection(t.ticketId)}
+                            style={{ cursor: isEligible ? "pointer" : "not-allowed", width: "16px", height: "16px" }}
+                          />
+                          <div>
+                            <div style={{ fontSize: "13px", fontWeight: 600, color: "#1f2937" }}>
+                              Ticket #{t.ticketId} · {t.ticketTypeName || "Ticket"}
+                            </div>
+                            <div style={{ fontSize: "12px", color: "#6b7280" }}>
+                              {t.seatId ? `Seat ${t.seatId}` : "General Admission"} · {formatPrice(t.unitPrice)}
+                            </div>
+                          </div>
+                        </div>
+
+                        {!isEligible && (
+                          <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "4px", background: "#fee2e2", color: "#991b1b" }}>
+                            {t.checkedInAt ? "Checked-in" : t.status}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div style={{ fontSize: "12px", color: "#7e22ce", fontWeight: 600, marginTop: "6px" }}>
+                  Selected: {selectedTicketIds.length} ticket(s) for refund
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", fontWeight: 600, color: "#374151" }}>
+                  2. Refund Reason Category:
+                </label>
+                <select
+                  value={batchCategory}
+                  onChange={(e) => setBatchCategory(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid #d1d5db",
+                    background: "#ffffff",
+                    fontSize: "13px",
+                    color: "#1f2937",
+                    outline: "none",
+                  }}
+                >
+                  {Object.entries(REFUND_CATEGORIES).map(([key, label]) => (
+                    <option key={key} value={key}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "13px", fontWeight: 600, color: "#374151" }}>
+                  <span>3. Detailed Explanation / Notes *</span>
+                  <span style={{ fontSize: "12px", color: "#9ca3af", fontWeight: "normal" }}>
+                    {batchReason.trim().length}/10 min characters
+                  </span>
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Please describe your reason clearly to help staff verify..."
+                  value={batchReason}
+                  onBlur={() => setBatchTouched((prev) => ({ ...prev, batchReason: true }))}
+                  onChange={(e) => {
+                    setBatchReason(e.target.value);
+                    setBatchTouched((prev) => ({ ...prev, batchReason: true }));
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: "8px",
+                    border: getBatchFieldError("batchReason") ? "1px solid #e11d48" : "1px solid #d1d5db",
+                    boxShadow: getBatchFieldError("batchReason") ? "0 0 0 2px rgba(225, 29, 72, 0.15)" : "none",
+                    fontSize: "13px",
+                    outline: "none",
+                    resize: "vertical",
+                    boxSizing: "border-box",
+                  }}
+                />
+                {getBatchFieldError("batchReason") && (
+                  <span style={{ display: "block", color: "#e11d48", fontSize: "11.5px", marginTop: "4px", fontWeight: 500 }}>
+                    {getBatchFieldError("batchReason")}
+                  </span>
+                )}
+              </div>
+
+              {/* Shared Evidence Uploader */}
+              <EvidenceUploader
                 value={batchProofUrl}
-                onChange={(e) => setBatchProofUrl(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  borderRadius: "8px",
-                  border: "1px solid #d1d5db",
-                  background: "#ffffff",
-                  fontSize: "13px",
-                  outline: "none",
-                }}
+                onChange={setBatchProofUrl}
+                maxSizeMb={8}
+                label="4. Supporting Document / Evidence"
               />
+
+              {/* Bank Account Destination */}
+              <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "12px", marginTop: "12px" }}>
+                <strong style={{ display: "block", fontSize: "13px", color: "#0f172a", marginBottom: "2px" }}>
+                  Bank Account for Refund
+                </strong>
+                <p style={{ margin: "0 0 10px", fontSize: "11.5px", color: "#64748b" }}>
+                  Approved refunds will be transferred manually to this account
+                </p>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "11.5px", fontWeight: 600, color: "#475569", marginBottom: "4px" }}>
+                      Bank Name *
+                    </label>
+                    <input
+                      list="batch-bank-list"
+                      style={{
+                        width: "100%",
+                        padding: "8px 10px",
+                        borderRadius: "6px",
+                        border: getBatchFieldError("bankName") ? "1px solid #e11d48" : "1px solid #cbd5e1",
+                        boxShadow: getBatchFieldError("bankName") ? "0 0 0 2px rgba(225, 29, 72, 0.15)" : "none",
+                        fontSize: "13px",
+                        boxSizing: "border-box"
+                      }}
+                      placeholder="Select bank..."
+                      value={bankName}
+                      onBlur={() => setBatchTouched((prev) => ({ ...prev, bankName: true }))}
+                      onChange={(e) => {
+                        setBankName(e.target.value);
+                        setBatchTouched((prev) => ({ ...prev, bankName: true }));
+                      }}
+                    />
+                    <datalist id="batch-bank-list">
+                      {VIETNAM_BANKS.map((b) => (
+                        <option key={b} value={b} />
+                      ))}
+                    </datalist>
+                    {getBatchFieldError("bankName") && (
+                      <span style={{ color: "#e11d48", fontSize: "11px", fontWeight: 500, marginTop: "2px", display: "block" }}>
+                        {getBatchFieldError("bankName")}
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "11.5px", fontWeight: 600, color: "#475569", marginBottom: "4px" }}>
+                      Account Number *
+                    </label>
+                    <input
+                      style={{
+                        width: "100%",
+                        padding: "8px 10px",
+                        borderRadius: "6px",
+                        border: getBatchFieldError("bankAccountNumber") ? "1px solid #e11d48" : "1px solid #cbd5e1",
+                        boxShadow: getBatchFieldError("bankAccountNumber") ? "0 0 0 2px rgba(225, 29, 72, 0.15)" : "none",
+                        fontSize: "13px",
+                        boxSizing: "border-box"
+                      }}
+                      placeholder="e.g. 1029384756..."
+                      value={bankAccountNumber}
+                      onBlur={() => setBatchTouched((prev) => ({ ...prev, bankAccountNumber: true }))}
+                      onChange={(e) => {
+                        setBankAccountNumber(e.target.value.replace(/[^0-9A-Za-z]/g, ""));
+                        setBatchTouched((prev) => ({ ...prev, bankAccountNumber: true }));
+                      }}
+                      maxLength={20}
+                    />
+                    {getBatchFieldError("bankAccountNumber") && (
+                      <span style={{ color: "#e11d48", fontSize: "11px", fontWeight: 500, marginTop: "2px", display: "block" }}>
+                        {getBatchFieldError("bankAccountNumber")}
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label style={{ display: "block", fontSize: "11.5px", fontWeight: 600, color: "#475569", marginBottom: "4px" }}>
+                      Account Holder Name (Uppercase) *
+                    </label>
+                    <input
+                      style={{
+                        width: "100%",
+                        padding: "8px 10px",
+                        borderRadius: "6px",
+                        border: getBatchFieldError("bankAccountName") ? "1px solid #e11d48" : "1px solid #cbd5e1",
+                        boxShadow: getBatchFieldError("bankAccountName") ? "0 0 0 2px rgba(225, 29, 72, 0.15)" : "none",
+                        fontSize: "13px",
+                        boxSizing: "border-box"
+                      }}
+                      placeholder="e.g. NGUYEN VAN A"
+                      value={bankAccountName}
+                      onBlur={() => setBatchTouched((prev) => ({ ...prev, bankAccountName: true }))}
+                      onChange={(e) => {
+                        setBankAccountName(e.target.value.toUpperCase());
+                        setBatchTouched((prev) => ({ ...prev, bankAccountName: true }));
+                      }}
+                      maxLength={100}
+                    />
+                    {getBatchFieldError("bankAccountName") && (
+                      <span style={{ color: "#e11d48", fontSize: "11px", fontWeight: 500, marginTop: "2px", display: "block" }}>
+                        {getBatchFieldError("bankAccountName")}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", padding: "14px 22px", borderTop: "1px solid #f1f5f9", background: "#ffffff", flexShrink: 0 }}>
               <button
                 type="button"
                 onClick={() => setBatchModalOpen(false)}
@@ -708,25 +889,16 @@ export default function MyTicketsPage() {
               <button
                 type="button"
                 onClick={handleSubmitBatchReturn}
-                disabled={submittingBatch || selectedTicketIds.length === 0 || batchReason.trim().length < 10}
+                disabled={submittingBatch || selectedTicketIds.length === 0}
                 style={{
                   padding: "9px 20px",
                   borderRadius: "8px",
                   border: "none",
-                  background:
-                    submittingBatch || selectedTicketIds.length === 0 || batchReason.trim().length < 10
-                      ? "#e2e8f0"
-                      : "#7e22ce",
-                  color:
-                    submittingBatch || selectedTicketIds.length === 0 || batchReason.trim().length < 10
-                      ? "#94a3b8"
-                      : "#ffffff",
+                  background: submittingBatch || selectedTicketIds.length === 0 ? "#e2e8f0" : "#7e22ce",
+                  color: submittingBatch || selectedTicketIds.length === 0 ? "#94a3b8" : "#ffffff",
                   fontSize: "13px",
                   fontWeight: 600,
-                  cursor:
-                    submittingBatch || selectedTicketIds.length === 0 || batchReason.trim().length < 10
-                      ? "not-allowed"
-                      : "pointer",
+                  cursor: submittingBatch || selectedTicketIds.length === 0 ? "not-allowed" : "pointer",
                 }}
               >
                 {submittingBatch ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : `Confirm Refund (${selectedTicketIds.length} tickets)`}

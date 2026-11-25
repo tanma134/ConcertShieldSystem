@@ -1,8 +1,6 @@
 import axiosClient from "./axiosClient";
 
-// Các endpoint này đi qua API Gateway: /api/kyc/* -> AuthenticationAPI /api/kyc/*
 const kycApi = {
-  // Nội dung thông báo + đồng ý xử lý dữ liệu (kèm version)
   getConsent: () => axiosClient.get("/kyc/consent"),
 
 

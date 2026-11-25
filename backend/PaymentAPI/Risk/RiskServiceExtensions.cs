@@ -2,11 +2,6 @@ namespace PaymentAPI.Risk;
 
 public static class RiskServiceExtensions
 {
-    /// <summary>
-    /// Cấu hình cần có trong appsettings:
-    ///   "AdminApi": { "BaseUrl": "https://localhost:7076", "InternalKey": "..." }   // InternalKey = AdminAPI "InternalApi:Key"
-    ///   "Risk": { "Enabled": true, "AllowedOrigins": [ "http://localhost:5173" ] }
-    /// </summary>
     public static IServiceCollection AddRiskClient(this IServiceCollection services, IConfiguration config)
     {
         services.AddSingleton<SlidingCounter>();

@@ -2,8 +2,7 @@ namespace EventAPI.Common;
 
 public static class PricingScheduleRules
 {
-    // Kiểm tra toàn bộ timestamp; khoảng giảm giá phải nằm trong lịch bán và trước concert.
-    // Khi chỉ sửa tên/tắt rule cũ, không bắt ngày bắt đầu cũ phải trở lại tương lai.
+    // Skip the future-start check when only updating metadata or disabling an existing rule.
     public static void Validate(string type, DateTime? from, DateTime? to,
         DateTime? salesFrom, DateTime? salesTo, DateTime concertStart, DateTime now, bool requireFutureStart)
     {

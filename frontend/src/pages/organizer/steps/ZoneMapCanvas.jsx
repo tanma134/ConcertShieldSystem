@@ -11,8 +11,7 @@ function colorForTicketType(ticketTypeId) {
   return PALETTE[(Number(ticketTypeId) || 0) % PALETTE.length];
 }
 
-// Pha màu ticket-type thành nền trong suốt kiểu "card kính" thay vì tô đặc cả khối —
-// giống card xám mờ của trang tham khảo, đỡ chói và làm ghế bên trong dễ đọc hơn.
+// Tint ticket-type colors into translucent glass cards so seat markers stay legible.
 function hexToRgba(hex, alpha) {
   const h = hex.replace("#", "");
   const r = parseInt(h.substring(0, 2), 16);
@@ -21,7 +20,7 @@ function hexToRgba(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-// Chọn màu chữ đen/trắng theo độ sáng của màu nền zone để label luôn đọc được rõ.
+// Pick black or white text based on background luminance for contrast.
 function readableTextColor(hex) {
   const h = hex.replace("#", "");
   const r = parseInt(h.substring(0, 2), 16);
@@ -31,7 +30,80 @@ function readableTextColor(hex) {
   return luminance > 0.6 ? "#14151a" : "#ffffff";
 }
 
-// Vẽ nền "sàn sân khấu" mờ + lưới nhẹ phía sau các zone, để canvas không bị trống trải.
+function getStageHitboxes(stage) {
+  if (!stage) return [];
+  const x = Number(stage.x) || 0;
+  const y = Number(stage.y) || 0;
+  const w = Number(stage.w) || 0;
+  const h = Number(stage.h) || 0;
+  const type = stage.stageType || "standard";
+
+  if (type === "t-stage") {
+    return [
+      { x, y, w, h: h * 0.44 }, // Main Stage
+      { x: x + w * 0.41, y: y + h * 0.44, w: w * 0.18, h: h * 0.36 }, // Runway
+      { x: x + w * 0.28, y: y + h * 0.80, w: w * 0.44, h: h * 0.20 }, // Stage B
+    ];
+  }
+  if (type === "wings") {
+    return [
+      { x: x + w * 0.2, y, w: w * 0.6, h: h * 0.55 }, // Main center
+      { x, y, w: w * 0.18, h: h * 0.85 }, // Left wing
+      { x: x + w * 0.82, y, w: w * 0.18, h: h * 0.85 }, // Right wing
+    ];
+  }
+  return [{ x, y, w, h }];
+}
+
+function rectsOverlap(a, b) {
+  const pad = 0.2; // tiny tolerance in %
+  return (
+    a.x < b.x + b.w - pad &&
+    a.x + a.w > b.x + pad &&
+    a.y < b.y + b.h - pad &&
+    a.y + a.h > b.y + pad
+  );
+}
+
+function zoneShapeBounds(shape) {
+  if (!shape) return { x: 0, y: 0, w: 0, h: 0 };
+  if (shape.type === "polygon" && Array.isArray(shape.points) && shape.points.length) {
+    const xs = shape.points.map((p) => p.x);
+    const ys = shape.points.map((p) => p.y);
+    const minX = Math.min(...xs);
+    const minY = Math.min(...ys);
+    return { x: minX, y: minY, w: Math.max(...xs) - minX, h: Math.max(...ys) - minY };
+  }
+  return { x: Number(shape.x) || 0, y: Number(shape.y) || 0, w: Number(shape.w) || 0, h: Number(shape.h) || 0 };
+}
+
+function doesZoneOverlapStage(zoneShape, stage) {
+  const zb = zoneShapeBounds(zoneShape);
+  return getStageHitboxes(stage).some((sb) => rectsOverlap(zb, sb));
+}
+
+function clampZoneInsideCanvas(shape) {
+  if (!shape) return shape;
+  if (shape.type === "polygon" && Array.isArray(shape.points)) {
+    return {
+      ...shape,
+      points: shape.points.map((p) => ({
+        x: clamp(p.x, 0, 100),
+        y: clamp(p.y, 0, 100),
+      })),
+    };
+  }
+  const w = clamp(Number(shape.w) || MIN_W_PCT, MIN_W_PCT, 100);
+  const h = clamp(Number(shape.h) || MIN_H_PCT, MIN_H_PCT, 100);
+  return {
+    ...shape,
+    w,
+    h,
+    x: clamp(Number(shape.x) || 0, 0, Math.max(0, 100 - w)),
+    y: clamp(Number(shape.y) || 0, 0, Math.max(0, 100 - h)),
+  };
+}
+
 function StageFloor({ width, height }) {
   const cols = 12;
   const rows = 8;
@@ -55,8 +127,7 @@ function renderStageVisual(stageType, pw, ph, stageWidthM, stageHeightM, stageNa
   const title = stageName || "S T A G E";
 
   if (stageType === "t-stage") {
-    // Sân khấu chữ T chuẩn concert: Main stage ở trên, Catwalk dài ở giữa, Sub-stage ở mũi
-    // KHÔNG CÓ KHUNG HỘP RỖNG Ở 2 BÊN -> 2 bên là sân trống để đặt Zone khán giả sát mép sàn
+    // T-stage geometry: main stage, center catwalk, and sub-stage with open side flanks for audience zones.
     const mainH = ph * 0.44;
     const runwayW = pw * 0.18;
     const runwayH = ph * 0.36;
@@ -66,7 +137,6 @@ function renderStageVisual(stageType, pw, ph, stageWidthM, stageHeightM, stageNa
     const subX = (pw - subW) / 2;
     const subY = mainH + runwayH;
 
-    // Đường viền đa giác ôm sát khít 100% hình chữ T
     const tPoints = [
       0, 0,                      // Top-Left Main Stage
       pw, 0,                     // Top-Right Main Stage
@@ -84,7 +154,6 @@ function renderStageVisual(stageType, pw, ph, stageWidthM, stageHeightM, stageNa
 
     return (
       <>
-        {/* Khối nền chữ T khép kín ôm khít sàn diễn */}
         <Line
           points={tPoints}
           closed
@@ -99,7 +168,6 @@ function renderStageVisual(stageType, pw, ph, stageWidthM, stageHeightM, stageNa
           shadowOffset={{ x: 0, y: 3 }}
         />
 
-        {/* Vạch kẻ sàn phân chia Runway */}
         <Line
           points={[runwayX, mainH, runwayX + runwayW, mainH]}
           stroke="rgba(126, 34, 206, 0.35)"
@@ -113,7 +181,6 @@ function renderStageVisual(stageType, pw, ph, stageWidthM, stageHeightM, stageNa
           dash={[3, 3]}
         />
 
-        {/* Nhãn Main Stage */}
         <Text
           text={`${title}\n(MAIN STAGE)`}
           x={0}
@@ -128,7 +195,6 @@ function renderStageVisual(stageType, pw, ph, stageWidthM, stageHeightM, stageNa
           listening={false}
         />
 
-        {/* Nhãn Runway Catwalk */}
         <Text
           text={"R\nU\nN\nW\nA\nY"}
           x={runwayX}
@@ -144,7 +210,6 @@ function renderStageVisual(stageType, pw, ph, stageWidthM, stageHeightM, stageNa
           lineHeight={1.15}
         />
 
-        {/* Nhãn B-Stage */}
         <Text
           text={`STAGE B\n(${stageWidthM}m × ${stageHeightM}m)`}
           x={subX}
@@ -163,7 +228,6 @@ function renderStageVisual(stageType, pw, ph, stageWidthM, stageHeightM, stageNa
   }
 
   if (stageType === "wings") {
-    // Sân khấu chữ U / Wings mở rộng 2 bên
     const mainW = pw * 0.6;
     const mainX = (pw - mainW) / 2;
     const wingW = pw * 0.18;
@@ -171,7 +235,6 @@ function renderStageVisual(stageType, pw, ph, stageWidthM, stageHeightM, stageNa
 
     return (
       <>
-        {/* Main Center */}
         <Rect
           x={mainX}
           y={0}
@@ -184,7 +247,6 @@ function renderStageVisual(stageType, pw, ph, stageWidthM, stageHeightM, stageNa
           stroke={selected ? "#7e22ce" : "#9333ea"}
           strokeWidth={selected ? 2.5 : 1.5}
         />
-        {/* Left Wing */}
         <Rect
           x={0}
           y={0}
@@ -195,7 +257,6 @@ function renderStageVisual(stageType, pw, ph, stageWidthM, stageHeightM, stageNa
           stroke={selected ? "#7e22ce" : "#9333ea"}
           strokeWidth={1.5}
         />
-        {/* Right Wing */}
         <Rect
           x={pw - wingW}
           y={0}
@@ -226,7 +287,6 @@ function renderStageVisual(stageType, pw, ph, stageWidthM, stageHeightM, stageNa
   }
 
   if (stageType === "center") {
-    // Sân khấu 360 Trung tâm (Arena Center / Diamond Stage)
     return (
       <>
         <Rect
@@ -255,7 +315,6 @@ function renderStageVisual(stageType, pw, ph, stageWidthM, stageHeightM, stageNa
     );
   }
 
-  // Standard rectangle
   return (
     <>
       <Rect
@@ -315,6 +374,10 @@ function StageItem({ shape, stageWidth, stageHeight, readOnly, selected, onSelec
         y={py}
         rotation={shape.rot || 0}
         draggable={!readOnly}
+        dragBoundFunc={(pos) => ({
+          x: clamp(pos.x, 0, Math.max(0, stageWidth - pw)),
+          y: clamp(pos.y, 0, Math.max(0, stageHeight - ph)),
+        })}
         onClick={onSelect}
         onTap={onSelect}
         onMouseEnter={(e) => {
@@ -330,11 +393,15 @@ function StageItem({ shape, stageWidth, stageHeight, readOnly, selected, onSelec
         }}
         onDragEnd={(e) => {
           e.target.getStage().container().style.cursor = "grab";
-          onChange({
+          const next = {
             ...shape,
-            x: clamp((e.target.x() / stageWidth) * 100, 0, 95),
-            y: clamp((e.target.y() / stageHeight) * 100, 0, 95),
-          });
+            x: clamp((e.target.x() / stageWidth) * 100, 0, Math.max(0, 100 - shape.w)),
+            y: clamp((e.target.y() / stageHeight) * 100, 0, Math.max(0, 100 - shape.h)),
+          };
+          const ok = onChange(next);
+          if (ok === false) {
+            e.target.position({ x: px, y: py });
+          }
         }}
         onTransformEnd={() => {
           const node = groupRef.current;
@@ -343,14 +410,20 @@ function StageItem({ shape, stageWidth, stageHeight, readOnly, selected, onSelec
           const nextH = Math.max(20, ph * node.scaleY());
           node.scaleX(1);
           node.scaleY(1);
-          onChange({
+          const wPct = clamp((nextW / stageWidth) * 100, 5, 95);
+          const hPct = clamp((nextH / stageHeight) * 100, 3, 60);
+          const next = {
             ...shape,
-            x: clamp((node.x() / stageWidth) * 100, 0, 100),
-            y: clamp((node.y() / stageHeight) * 100, 0, 100),
-            w: clamp((nextW / stageWidth) * 100, 5, 95),
-            h: clamp((nextH / stageHeight) * 100, 3, 60),
+            x: clamp((node.x() / stageWidth) * 100, 0, Math.max(0, 100 - wPct)),
+            y: clamp((node.y() / stageHeight) * 100, 0, Math.max(0, 100 - hPct)),
+            w: wPct,
+            h: hPct,
             rot: node.rotation(),
-          });
+          };
+          const ok = onChange(next);
+          if (ok === false) {
+            node.position({ x: px, y: py });
+          }
         }}
       >
         {renderStageVisual(shape.stageType || "standard", pw, ph, stageWidthM, stageHeightM, shape.name, selected, hovered)}
@@ -375,117 +448,7 @@ function StageItem({ shape, stageWidth, stageHeight, readOnly, selected, onSelec
   );
 }
 
-function FohItem({ shape, stageWidth, stageHeight, readOnly, selected, onSelect, onChange }) {
-  const groupRef = useRef(null);
-  const trRef = useRef(null);
-  const [hovered, setHovered] = useState(false);
-
-  useEffect(() => {
-    if (selected && !readOnly && trRef.current && groupRef.current) {
-      trRef.current.nodes([groupRef.current]);
-      trRef.current.getLayer()?.batchDraw();
-    }
-  }, [selected, readOnly]);
-
-  const px = (shape.x / 100) * stageWidth;
-  const py = (shape.y / 100) * stageHeight;
-  const pw = (shape.w / 100) * stageWidth;
-  const ph = (shape.h / 100) * stageHeight;
-  const fohWidthM = ((shape.w / 100) * 160).toFixed(0);
-  const fohHeightM = ((shape.h / 100) * 100).toFixed(0);
-
-  return (
-    <>
-      <Group
-        ref={groupRef}
-        x={px}
-        y={py}
-        rotation={shape.rot || 0}
-        draggable={!readOnly}
-        onClick={onSelect}
-        onTap={onSelect}
-        onMouseEnter={(e) => {
-          setHovered(true);
-          if (!readOnly) e.target.getStage().container().style.cursor = "grab";
-        }}
-        onMouseLeave={(e) => {
-          setHovered(false);
-          e.target.getStage().container().style.cursor = "default";
-        }}
-        onDragStart={(e) => {
-          e.target.getStage().container().style.cursor = "grabbing";
-        }}
-        onDragEnd={(e) => {
-          e.target.getStage().container().style.cursor = "grab";
-          onChange({
-            ...shape,
-            x: clamp((e.target.x() / stageWidth) * 100, 0, 95),
-            y: clamp((e.target.y() / stageHeight) * 100, 0, 95),
-          });
-        }}
-        onTransformEnd={() => {
-          const node = groupRef.current;
-          if (!node) return;
-          const nextW = Math.max(30, pw * node.scaleX());
-          const nextH = Math.max(16, ph * node.scaleY());
-          node.scaleX(1);
-          node.scaleY(1);
-          onChange({
-            x: clamp((node.x() / stageWidth) * 100, 0, 100),
-            y: clamp((node.y() / stageHeight) * 100, 0, 100),
-            w: clamp((nextW / stageWidth) * 100, 4, 60),
-            h: clamp((nextH / stageHeight) * 100, 2, 40),
-            rot: node.rotation(),
-          });
-        }}
-      >
-        <Rect
-          width={pw}
-          height={ph}
-          cornerRadius={6}
-          fill="#f8fafc"
-          stroke={selected ? "#2563eb" : hovered ? "#3b82f6" : "#475569"}
-          strokeWidth={selected ? 2.5 : 1.5}
-          dash={[5, 4]}
-          shadowColor="#000"
-          shadowBlur={selected ? 12 : 6}
-          shadowOpacity={selected ? 0.35 : 0.18}
-          shadowOffset={{ x: 0, y: 2 }}
-        />
-        <Text
-          text={`F O H\n(Sound & Light)\n${fohWidthM} m × ${fohHeightM} m`}
-          width={pw}
-          height={ph}
-          align="center"
-          verticalAlign="middle"
-          fontSize={clamp(Math.min(pw, ph) * 0.22, 9, 12)}
-          fontStyle="bold"
-          fill="#1e293b"
-          listening={false}
-          lineHeight={1.25}
-        />
-      </Group>
-      {selected && !readOnly && (
-        <Transformer
-          ref={trRef}
-          rotateEnabled
-          keepRatio={false}
-          borderStroke="#2563eb"
-          borderStrokeWidth={1.5}
-          anchorStroke="#2563eb"
-          anchorFill="#ffffff"
-          anchorCornerRadius={4}
-          anchorSize={9}
-          boundBoxFunc={(oldBox, newBox) =>
-            newBox.width < 30 || newBox.height < 16 ? oldBox : newBox
-          }
-        />
-      )}
-    </>
-  );
-}
-
-// Đọc cả JSON rectangle cũ và polygon mới để các sơ đồ đã lưu trước đây vẫn dùng được.
+// Support both legacy rectangle JSON and polygon shapes for backward compatibility.
 function parseZoneShape(shapeJson) {
   if (!shapeJson) return null;
   try {
@@ -523,7 +486,7 @@ function polygonBounds(points) {
   return { x: minX, y: minY, w: Math.max(maxX - minX, 1), h: Math.max(maxY - minY, 1) };
 }
 
-// Tạo polygon chữ L từ rectangle hiện tại; organizer có thể kéo từng đỉnh để thành hình bất kỳ.
+// Seed an L-shaped polygon from a rectangle so vertices can be reshaped freely.
 function rectangleToPolygon(rect) {
   const cutX = rect.x + rect.w * 0.55;
   const cutY = rect.y + rect.h * 0.5;
@@ -545,7 +508,6 @@ function polygonToRectangle(shape) {
   return { type: "rectangle", ...b, rot: 0 };
 }
 
-// Khoảng cách từ 1 điểm tới đoạn thẳng a-b (dùng % toạ độ) — để tìm cạnh gần nhất khi double-click thêm đỉnh.
 function pointToSegmentDistance(p, a, b) {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
@@ -556,7 +518,6 @@ function pointToSegmentDistance(p, a, b) {
   return Math.hypot(p.x - projX, p.y - projY);
 }
 
-// Trả về index cạnh (điểm[i] -> điểm[i+1]) gần điểm p nhất; đỉnh mới sẽ được chèn ngay sau i.
 function nearestEdgeIndex(points, p) {
   let bestIdx = 0;
   let bestDist = Infinity;
@@ -569,7 +530,6 @@ function nearestEdgeIndex(points, p) {
   return bestIdx;
 }
 
-// Trả về các đoạn nằm bên trong polygon tại một cao độ Y; dùng để đặt đủ ghế vào vùng chữ L/đa giác.
 function horizontalSpansAtY(points, y) {
   const intersections = [];
   for (let i = 0; i < points.length; i += 1) {
@@ -599,18 +559,7 @@ function pointAcrossSpans(spans, fraction) {
   return spans[spans.length - 1][1];
 }
 
-// Với polygon, vị trí hiển thị được tính theo từng hàng và luôn nằm trong biên zone.
-// Nhận thẳng mảng points (không phải shape) để dùng lại được cả lúc vẽ tự do
-// (điểm chưa đóng hình / chưa lưu) lẫn lúc hiển thị zone đã lưu.
-//
-// QUAN TRỌNG: cách cũ tính span (khoảng trống) riêng cho từng hàng tại độ cao y
-// của hàng đó, rồi trải/căn giữa ghế trong đúng span ấy — mỗi hàng "trôi nổi"
-// độc lập, không hàng nào neo vào cùng 1 mốc toạ độ, nên với zone lệch/chữ L,
-// 2 hàng nhìn như 2 khối tách rời (giống bản đối chiếu người dùng gửi).
-// Nền tảng vé chuyên nghiệp (ảnh mẫu) làm khác: dựng 1 LƯỚI CỘT CỐ ĐỊNH cho cả
-// zone (dựa theo hàng rộng nhất), mọi hàng dùng chung các mốc cột x đó — hàng
-// hẹp hơn thì chỉ chiếm 1 phần lưới và ép sát về phía cạnh mà nó thực sự chạm
-// tới, chứ không giãn/co riêng. Nhờ vậy ghế các hàng luôn thẳng cột với nhau.
+// Use a shared column grid across the polygon bounding box so narrower rows align vertically with wider rows.
 function seatPositionsForPoints(seats, points) {
   if (!seats.length || points.length < 3) return [];
   const rows = [...new Set(seats.map((s) => s.rowLabel))];
@@ -620,13 +569,12 @@ function seatPositionsForPoints(seats, points) {
   const usableTop = bounds.y + topPadding;
   const usableHeight = Math.max(bounds.h - topPadding - bottomPadding, bounds.h * 0.5);
 
-  // Bước 1: với mỗi hàng, xác định y và (các) đoạn nằm trong polygon tại y đó.
   const rowInfos = rows.map((rowLabel, rowIndex) => {
     const rowSeats = seats.filter((s) => s.rowLabel === rowLabel);
     const y = usableTop + ((rowIndex + 0.5) / rows.length) * usableHeight;
     let spans = horizontalSpansAtY(points, y);
     if (!spans.length) spans = [[bounds.x, bounds.x + bounds.w]];
-    // Thu nhẹ 2 đầu mỗi đoạn vào trong, để ghế ngoài cùng không dính sát viền hình.
+    // Inset segment ends slightly so outer seats do not touch the polygon edge.
     spans = spans.map(([a, b]) => {
       const inset = Math.min(bounds.w * 0.025, 1.6, (b - a) / 2 - 0.05);
       return inset > 0 ? [a + inset, b - inset] : [a, b];
@@ -634,9 +582,6 @@ function seatPositionsForPoints(seats, points) {
     return { rowSeats, y, spans };
   });
 
-  // Bước 2: lưới cột chung — số cột = số ghế của hàng đông nhất, trải đều trên
-  // TOÀN BỘ bề rộng bounding box. Hàng rộng nhất sẽ dùng hết mọi cột (khớp mép
-  // trái/phải), các hàng khác chỉ dùng một tập con của đúng các cột này.
   const maxCols = Math.max(...rowInfos.map((r) => r.rowSeats.length), 1);
   const pitch = bounds.w / maxCols;
   const colX = Array.from({ length: maxCols }, (_, c) => bounds.x + (c + 0.5) * pitch);
@@ -646,8 +591,6 @@ function seatPositionsForPoints(seats, points) {
   rowInfos.forEach(({ rowSeats, y, spans }) => {
     const n = rowSeats.length;
     if (!n) return;
-    // Lấy đoạn rộng nhất tại hàng này để chọn cột (trường hợp nhiều đoạn rời
-    // tại cùng độ cao là hiếm, ví dụ polygon có eo thắt).
     const [a, b] = spans.reduce((best, s) => (s[1] - s[0] > best[1] - best[0] ? s : best), spans[0]);
     const candidateCols = [];
     colX.forEach((x, c) => { if (x >= a - 1e-6 && x <= b + 1e-6) candidateCols.push(c); });
@@ -656,10 +599,10 @@ function seatPositionsForPoints(seats, points) {
       const touchesLeft = a <= bounds.x + edgeTol;
       const touchesRight = b >= bounds.x + bounds.w - edgeTol;
       let chosen;
-      if (touchesLeft && !touchesRight) chosen = candidateCols.slice(0, n); // ép sát trái
-      else if (touchesRight && !touchesLeft) chosen = candidateCols.slice(candidateCols.length - n); // ép sát phải
+      if (touchesLeft && !touchesRight) chosen = candidateCols.slice(0, n);
+      else if (touchesRight && !touchesLeft) chosen = candidateCols.slice(candidateCols.length - n);
       else {
-        const start = Math.floor((candidateCols.length - n) / 2); // chạm cả 2 cạnh (hoặc không chạm cạnh nào) → căn giữa
+        const start = Math.floor((candidateCols.length - n) / 2);
         chosen = candidateCols.slice(start, start + n);
       }
       rowSeats.forEach((seat, i) => result.push({ seat, x: colX[chosen[i]], y }));
@@ -682,10 +625,7 @@ function seatPositionsForPolygon(zone, shape) {
   return seatPositionsForPoints(zone.seats || [], shape.points);
 }
 
-// Overlay hiển thị khi organizer đang vẽ tự do: các điểm đã đặt, đoạn nối,
-// đường "rubber band" chạy theo con trỏ, và bây giờ thêm cả ghế xem trước —
-// ghế của chính zone đang vẽ được xếp lại ngay theo hình đang vẽ dở, để tự
-// canh hình cho vừa mắt trước khi bấm "Done" thay vì phải lưu xong mới thấy.
+// Live freehand drawing overlay with rubber-band edge and real-time seat placement preview.
 function DrawingOverlay({ points, cursor, stageWidth, stageHeight, color, seatPositions }) {
   const toPx = (p) => [(p.x / 100) * stageWidth, (p.y / 100) * stageHeight];
   const placedPx = points.flatMap(toPx);
@@ -721,10 +661,9 @@ export default function ZoneMapCanvas({
   const wrapperRef = useRef(null);
   const [stageSize, setStageSize] = useState({ width: 800, height: 500 });
   const [selectedId, setSelectedId] = useState(null);
-  const [selectedSpecial, setSelectedSpecial] = useState(null); // 'stage' | 'foh' | null
+  const [selectedSpecial, setSelectedSpecial] = useState(null); // 'stage' | null
 
   const defaultStage = { x: 30, y: 4, w: 40, h: 14, rot: 0 };
-  const defaultFoh = { x: 42, y: 82, w: 16, h: 8, rot: 0 };
 
   const parsedLayout = useMemo(() => {
     if (!layoutJson) return null;
@@ -746,27 +685,29 @@ export default function ZoneMapCanvas({
     }
   });
 
-  const [fohShape, setFohShape] = useState(() => {
-    if (parsedLayout?.fohShape) return parsedLayout.fohShape;
-    try {
-      const saved = localStorage.getItem("concertshield_venue_foh");
-      return saved ? JSON.parse(saved) : defaultFoh;
-    } catch {
-      return defaultFoh;
-    }
-  });
-
   // Sync state whenever parsedLayout updates (e.g. API fetch / template switch)
   useEffect(() => {
     if (parsedLayout?.stageShape) {
       setStageShape(parsedLayout.stageShape);
     }
-    if (parsedLayout?.fohShape) {
-      setFohShape(parsedLayout.fohShape);
-    }
   }, [parsedLayout]);
 
+  const [liveShapes, setLiveShapes] = useState({});
+  const [stageWarning, setStageWarning] = useState("");
+  const warningTimerRef = useRef(null);
+
+  const showWarning = (msg) => {
+    setStageWarning(msg);
+    if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+    warningTimerRef.current = setTimeout(() => setStageWarning(""), 3500);
+  };
+
   const handleStageChange = (next) => {
+    const overlapsAnyZone = shapes.some(({ shape }) => doesZoneOverlapStage(shape, next));
+    if (overlapsAnyZone) {
+      showWarning("STAGE cannot overlap existing ticket zones.");
+      return false;
+    }
     setStageShape(next);
     try {
       localStorage.setItem("concertshield_venue_stage", JSON.stringify(next));
@@ -776,29 +717,10 @@ export default function ZoneMapCanvas({
       onLayoutChange({
         ...curr,
         stageShape: next,
-        fohShape,
       });
     }
+    return true;
   };
-
-  const handleFohChange = (next) => {
-    setFohShape(next);
-    try {
-      localStorage.setItem("concertshield_venue_foh", JSON.stringify(next));
-    } catch { }
-    if (onLayoutChange) {
-      const curr = parsedLayout || {};
-      onLayoutChange({
-        ...curr,
-        stageShape,
-        fohShape: next,
-      });
-    }
-  };
-
-  const [liveShapes, setLiveShapes] = useState({});
-  // Chế độ vẽ tự do: draw = { seatZoneId, points: [{x,y}] } theo %; cursorPos = vị trí
-  // chuột hiện tại (theo %) để vẽ đường "rubber band" xem trước cạnh sắp thêm.
   const [draw, setDraw] = useState(null);
   const [cursorPos, setCursorPos] = useState(null);
 
@@ -827,17 +749,21 @@ export default function ZoneMapCanvas({
   const shapes = useMemo(() => zones.map((zone, index) => ({ zone, shape: shapeFor(zone, index) })), [zones, liveShapes]);
   const selected = shapes.find(({ zone }) => zone.seatZoneId === selectedId);
 
-  // Lưu geometry mới theo một contract duy nhất; parent quyết định gọi API update zone.
-  const commitShape = (seatZoneId, shape) => {
+  const commitShape = (seatZoneId, rawShape) => {
+    const shape = clampZoneInsideCanvas(rawShape);
+    if (doesZoneOverlapStage(shape, stageShape)) {
+      showWarning("Ticket zones cannot overlap with STAGE.");
+      return false;
+    }
     setLiveShapes((prev) => ({ ...prev, [seatZoneId]: shape }));
     if (onZoneShapeChange) onZoneShapeChange(seatZoneId, shape);
     else if (onZoneMove) onZoneMove(seatZoneId, shape);
+    return true;
   };
 
   const convertSelected = (targetType) => {
     if (!selected || readOnly || selected.zone.zoneType === "Seated") return;
-    // Chuyển polygon -> rectangle chỉ lấy bounding box, các đỉnh đã kéo chỉnh sẽ mất;
-    // nếu đổi lại thành polygon sau đó, hình L sẽ được sinh lại từ đầu chứ không phục hồi được.
+    // Converting polygon -> rectangle discards custom vertices and cannot be undone.
     if (targetType === "rectangle" && selected.shape.type === "polygon") {
       if (!window.confirm("Converting back to a rectangle will discard the custom polygon points you've dragged. Continue?")) return;
     }
@@ -847,7 +773,6 @@ export default function ZoneMapCanvas({
     commitShape(selected.zone.seatZoneId, next);
   };
 
-  // Bắt đầu vẽ tự do cho zone đang chọn (chỉ áp dụng cho Standing zone)
   const startDrawing = () => {
     if (!selected || readOnly || selected.zone.zoneType === "Seated") return;
     if (selected.shape.type === "polygon" && !window.confirm("Drawing a new shape will replace this zone's current custom polygon. Continue?")) return;
@@ -857,7 +782,8 @@ export default function ZoneMapCanvas({
 
   const finishDrawing = () => {
     if (!draw || draw.points.length < 3) return;
-    commitShape(draw.seatZoneId, { type: "polygon", points: draw.points });
+    const ok = commitShape(draw.seatZoneId, { type: "polygon", points: draw.points });
+    if (ok === false) return;
     setDraw(null);
     setCursorPos(null);
   };
@@ -944,23 +870,11 @@ export default function ZoneMapCanvas({
             </button>
             <button
               type="button"
-              className={"ow-shape-pill" + (selectedSpecial === "foh" ? " active" : "")}
-              onClick={() => {
-                setSelectedId(null);
-                setSelectedSpecial((curr) => (curr === "foh" ? null : "foh"));
-              }}
-              title="Select FOH (Front of House) console booth to drag or resize"
-            >
-              FOH
-            </button>
-            <button
-              type="button"
               className="ow-shape-pill"
               onClick={() => {
                 handleStageChange(defaultStage);
-                handleFohChange(defaultFoh);
               }}
-              title="Reset STAGE and FOH to default positions"
+              title="Reset STAGE to default position"
             >
               Reset
             </button>
@@ -1017,23 +931,6 @@ export default function ZoneMapCanvas({
         </div>
       )}
 
-      {!readOnly && selectedSpecial === "foh" && (
-        <div className="ow-zonemap-shape-tools" style={{ background: "#f8fafc", borderColor: "#94a3b8" }}>
-          <span className="ow-shape-label" style={{ color: "#0f172a" }}>FOH (Front of House):</span>
-          <span className="ow-hint" style={{ color: "#334155" }}>
-            Sound & lighting technical booth. Click & drag to place between audience zones, or resize.
-          </span>
-          <button
-            type="button"
-            className="ow-shape-pill"
-            style={{ marginLeft: "auto" }}
-            onClick={() => handleFohChange(defaultFoh)}
-          >
-            Center FOH
-          </button>
-        </div>
-      )}
-
       {!readOnly && selected && !draw && (
         <div className="ow-zonemap-shape-tools">
           <span className="ow-shape-label">Zone shape:</span>
@@ -1073,6 +970,12 @@ export default function ZoneMapCanvas({
         </div>
       )}
 
+      {stageWarning && (
+        <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#b91c1c", borderRadius: "8px", padding: "8px 12px", fontSize: "12.5px", fontWeight: 600, marginBottom: "8px" }}>
+          {stageWarning}
+        </div>
+      )}
+
       <div className="ow-zonemap">
         <div className="ow-zonemap-canvas" ref={wrapperRef}>
           {stageWidth > 0 && stageHeight > 0 && (
@@ -1086,7 +989,6 @@ export default function ZoneMapCanvas({
               <Layer>
                 <StageFloor width={stageWidth} height={stageHeight} />
 
-                {/* Movable & Resizable STAGE */}
                 <StageItem
                   shape={stageShape}
                   stageWidth={stageWidth}
@@ -1098,20 +1000,6 @@ export default function ZoneMapCanvas({
                     setSelectedSpecial("stage");
                   }}
                   onChange={handleStageChange}
-                />
-
-                {/* Movable & Resizable FOH Technical Booth */}
-                <FohItem
-                  shape={fohShape}
-                  stageWidth={stageWidth}
-                  stageHeight={stageHeight}
-                  readOnly={readOnly || !!draw}
-                  selected={selectedSpecial === "foh"}
-                  onSelect={() => {
-                    setSelectedId(null);
-                    setSelectedSpecial("foh");
-                  }}
-                  onChange={handleFohChange}
                 />
 
                 {shapes.filter(({ zone }) => !(draw && draw.seatZoneId === zone.seatZoneId)).map(({ zone, shape }) => shape.type === "polygon" ? (
@@ -1179,7 +1067,6 @@ function renderPhysicalSeats(zone, width, height, color) {
   const padBottom = Math.min(10, Math.max(5, height * 0.05));
   const stepX = Math.max(1, width - padX * 2) / maxX;
   const stepY = Math.max(1, height - headerHeight - padBottom) / maxY;
-  // Chấm sáng + viền trắng dày, nổi rõ trên nền card mờ, thay vì chấm tối chìm vào màu zone.
   const radius = clamp(Math.min(stepX, stepY) * 0.3, 2.4, 7);
   return zone.seats.map((seat) => {
     const x = padX + ((Number(seat.xCoordinate) || 1) - 0.5) * stepX;
@@ -1216,8 +1103,7 @@ function RectangleZoneShape({ zone, shape, stageWidth, stageHeight, color, ticke
   const py = (shape.y / 100) * stageHeight;
   const pw = (shape.w / 100) * stageWidth;
   const ph = (shape.h / 100) * stageHeight;
-  // Chỉ hiện tên zone trong khối — loại vé/giá đã có ở bảng "Ticket prices" bên
-  // cạnh rồi, nhét thêm vào đây chỉ làm label 2 dòng đè lên nhau, rối mắt.
+  // Show only zone name and metrics here; ticket tier and price live in the adjacent Ticket prices table.
   const label = `${zone.zoneName}\n${zoneCapacityText(zone)}\n${zoneDimensionsText(shape, stageWidth, stageHeight)}`;
   const labelH = Math.min(ph, Math.max(42, ph * .58));
   const labelFontSize = clamp(Math.min(pw, ph) * .12, 9, 13);
@@ -1225,17 +1111,41 @@ function RectangleZoneShape({ zone, shape, stageWidth, stageHeight, color, ticke
 
   return <>
     <Group ref={groupRef} x={px} y={py} rotation={shape.rot || 0} draggable={!readOnly} opacity={hovered && !selected ? 0.92 : 1}
+      dragBoundFunc={(pos) => ({
+        x: clamp(pos.x, 0, Math.max(0, stageWidth - pw)),
+        y: clamp(pos.y, 0, Math.max(0, stageHeight - ph)),
+      })}
       onClick={onSelect} onTap={onSelect}
       onMouseEnter={(e) => { setHovered(true); if (!readOnly) e.target.getStage().container().style.cursor = "grab"; }}
       onMouseLeave={(e) => { setHovered(false); e.target.getStage().container().style.cursor = "default"; }}
       onDragStart={(e) => { e.target.getStage().container().style.cursor = "grabbing"; }}
-      onDragEnd={(e) => { e.target.getStage().container().style.cursor = "grab"; onChange({ ...shape, x: (e.target.x() / stageWidth) * 100, y: (e.target.y() / stageHeight) * 100 }); }}
+      onDragEnd={(e) => {
+        e.target.getStage().container().style.cursor = "grab";
+        const next = {
+          ...shape,
+          x: clamp((e.target.x() / stageWidth) * 100, 0, Math.max(0, 100 - shape.w)),
+          y: clamp((e.target.y() / stageHeight) * 100, 0, Math.max(0, 100 - shape.h)),
+        };
+        const ok = onChange(next);
+        if (ok === false) e.target.position({ x: px, y: py });
+      }}
       onTransformEnd={() => {
         const node = groupRef.current;
         const nextW = Math.max(20, pw * node.scaleX());
         const nextH = Math.max(20, ph * node.scaleY());
         node.scaleX(1); node.scaleY(1);
-        onChange({ type: "rectangle", x: clamp((node.x() / stageWidth) * 100, 0, 100), y: clamp((node.y() / stageHeight) * 100, 0, 100), w: clamp((nextW / stageWidth) * 100, MIN_W_PCT, 100), h: clamp((nextH / stageHeight) * 100, MIN_H_PCT, 100), rot: node.rotation() });
+        const wPct = clamp((nextW / stageWidth) * 100, MIN_W_PCT, 100);
+        const hPct = clamp((nextH / stageHeight) * 100, MIN_H_PCT, 100);
+        const next = {
+          type: "rectangle",
+          x: clamp((node.x() / stageWidth) * 100, 0, Math.max(0, 100 - wPct)),
+          y: clamp((node.y() / stageHeight) * 100, 0, Math.max(0, 100 - hPct)),
+          w: wPct,
+          h: hPct,
+          rot: node.rotation(),
+        };
+        const ok = onChange(next);
+        if (ok === false) node.position({ x: px, y: py });
       }}>
       <Rect
         width={pw} height={ph} fill={cardFill}
@@ -1257,7 +1167,6 @@ function PolygonZoneShape({ zone, shape, stageWidth, stageHeight, color, ticketT
   const [hoverVertex, setHoverVertex] = useState(null);
   const pointsPx = shape.points.flatMap((p) => [(p.x / 100) * stageWidth, (p.y / 100) * stageHeight]);
   const bounds = polygonBounds(shape.points);
-  // Chỉ tên zone trong nhãn — loại vé/giá đã có ở bảng "Ticket prices" bên cạnh.
   const label = `${zone.zoneName}\n${zoneCapacityText(zone)}\n${zoneDimensionsText(bounds, stageWidth, stageHeight)}`;
   const seatPositions = seatPositionsForPolygon(zone, shape);
   const textColor = readableTextColor(color);
@@ -1268,19 +1177,34 @@ function PolygonZoneShape({ zone, shape, stageWidth, stageHeight, color, ticketT
 
   const onVertexDragEnd = (index, e) => {
     const nextPoints = shape.points.map((p, i) => i === index ? { x: clamp((e.target.x() / stageWidth) * 100, 0, 100), y: clamp((e.target.y() / stageHeight) * 100, 0, 100) } : p);
-    onChange({ type: "polygon", points: nextPoints });
+    const ok = onChange({ type: "polygon", points: nextPoints });
+    if (ok === false) {
+      const orig = shape.points[index];
+      e.target.position({ x: (orig.x / 100) * stageWidth, y: (orig.y / 100) * stageHeight });
+    }
   };
 
   const movePolygon = (e) => {
-    const dx = (e.target.x() / stageWidth) * 100;
-    const dy = (e.target.y() / stageHeight) * 100;
+    const rawDx = (e.target.x() / stageWidth) * 100;
+    const rawDy = (e.target.y() / stageHeight) * 100;
     e.target.position({ x: 0, y: 0 });
+    const dx = clamp(rawDx, -bounds.x, 100 - (bounds.x + bounds.w));
+    const dy = clamp(rawDy, -bounds.y, 100 - (bounds.y + bounds.h));
     const moved = shape.points.map((p) => ({ x: clamp(p.x + dx, 0, 100), y: clamp(p.y + dy, 0, 100) }));
     onChange({ type: "polygon", points: moved });
   };
 
+  const minPxX = (bounds.x / 100) * stageWidth;
+  const maxPxX = ((bounds.x + bounds.w) / 100) * stageWidth;
+  const minPxY = (bounds.y / 100) * stageHeight;
+  const maxPxY = ((bounds.y + bounds.h) / 100) * stageHeight;
+
   return <>
     <Group draggable={!readOnly} opacity={hovered && !selected ? 0.92 : 1}
+      dragBoundFunc={(pos) => ({
+        x: clamp(pos.x, -minPxX, Math.max(-minPxX, stageWidth - maxPxX)),
+        y: clamp(pos.y, -minPxY, Math.max(-minPxY, stageHeight - maxPxY)),
+      })}
       onDragStart={(e) => { e.target.getStage().container().style.cursor = "grabbing"; }}
       onDragEnd={(e) => { e.target.getStage().container().style.cursor = "grab"; movePolygon(e); }}
       onClick={onSelect} onTap={onSelect}

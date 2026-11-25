@@ -6,16 +6,7 @@ using EventAPI.Repositories;
 
 namespace EventAPI.Services
 {
-    /// <summary>
-    /// Reusable venue layouts (Apply Seating Template / Save Seating
-    /// Chart as Template), so an organizer running several similar concerts doesn't
-    /// have to redraw the same zones every time.
-    ///
-    /// Applying a template never generates seats itself — it turns the template's
-    /// zones into a BuildSeatingChartDTO and delegates to ISeatingService.BuildAsync,
-    /// so seat generation, capacity sync and the "can't rebuild once sold" guard all
-    /// stay owned by SeatingService in exactly one place.
-    /// </summary>
+    // Reusable venue layouts; applying a template delegates to ISeatingService.BuildAsync so seat generation and guards stay in one place.
     public class SeatingTemplateService : ISeatingTemplateService
     {
         private readonly ISeatingTemplateRepository _templateRepository;
@@ -196,13 +187,7 @@ namespace EventAPI.Services
             return await _seatingService.BuildAsync(eventId, buildDto, callerId, isAdmin);
         }
 
-        // --- mapping helpers ----
-
-        /// <summary>
-        /// Seats are always generated as a rectangular grid (see
-        /// SeatingService.GenerateSeats), so Rows / SeatsPerRow / the first row label
-        /// can be derived straight back from the seats that already exist.
-        /// </summary>
+        // Seats are generated as a rectangular grid, so Rows, SeatsPerRow, and the starting row label can be derived from existing seats.
         private static SeatingTemplateZoneDTO ToTemplateZone(SeatZone z)
         {
             if (!SeatZoneType.IsSeated(z.ZoneType))
@@ -248,8 +233,6 @@ namespace EventAPI.Services
                 throw new ArgumentException($"Seated zone '{z.ZoneName}' needs Rows and SeatsPerRow greater than 0.");
         }
 
-        // --- ownership / visibility ----
-
         private async Task<SeatingTemplate> GetOwnedEntityAsync(int id, int callerId, bool isAdmin)
         {
             var entity = await _templateRepository.GetByIdAsync(id)
@@ -261,7 +244,6 @@ namespace EventAPI.Services
             return entity;
         }
 
-        /// <summary>Readable by its owner, an Admin, or anyone when it is public.</summary>
         private async Task<SeatingTemplate> GetVisibleEntityAsync(int id, int callerId, bool isAdmin)
         {
             var entity = await _templateRepository.GetByIdAsync(id)
@@ -272,8 +254,6 @@ namespace EventAPI.Services
 
             return entity;
         }
-
-        // --- mapping / (de)serialization ----
 
         private static List<SeatingTemplateZoneDTO> DeserializeZones(string zonesJson) =>
             JsonSerializer.Deserialize<List<SeatingTemplateZoneDTO>>(zonesJson) ?? new List<SeatingTemplateZoneDTO>();

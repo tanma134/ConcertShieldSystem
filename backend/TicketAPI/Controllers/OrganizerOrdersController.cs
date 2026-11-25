@@ -6,7 +6,6 @@ using TicketAPI.Services;
 
 namespace TicketAPI.Controllers
 {
-    // Quan ly va tra cuu danh sach don hang cua concert danh cho Organizer va Admin
     [Route("api/organizer/events/{eventId:int}/orders")]
     public class OrganizerOrdersController : TicketApiControllerBase
     {
@@ -17,7 +16,6 @@ namespace TicketAPI.Controllers
             _orderService = orderService;
         }
 
-        // Lay danh sach don hang cua concert kem bo loc trang thai va tim kiem danh cho Organizer
         [HttpGet]
         public async Task<IActionResult> GetEventOrders(
             int eventId,

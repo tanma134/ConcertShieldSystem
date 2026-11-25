@@ -6,11 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AdminAPI.Controllers
 {
-    // ==========================================
-    // NHÓM 2: GOVERNANCE, POLICY VERSIONING & COMPLIANCE
-    // View Policy Version History (Actor: Admin)
-    // Create New Policy Version (Actor: Admin)
-    // ==========================================
 
     [ApiController]
     [Route("api/admin/policies")]
@@ -69,7 +64,6 @@ namespace AdminAPI.Controllers
             }
         }
 
-        // Lay danh sach cac ban ghi chinh sach dang co hieu luc theo tung danh muc danh cho moi nguoi dung
         [AllowAnonymous]
         [HttpGet("active")]
         public async Task<IActionResult> GetActivePolicies()
@@ -178,7 +172,6 @@ namespace AdminAPI.Controllers
             {
                 newPolicy = await _service.CreateAsync(request, adminId, adminName);
 
-                // Audit Log to AuditLogs table in database
                 await _auditLog.LogAsync(
                     userId: adminId,
                     actorType: "ADMIN",

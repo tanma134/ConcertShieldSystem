@@ -8,7 +8,6 @@ using static EventAPI.DTOs.ConfirmEventSaleDTO;
 
 namespace EventAPI.Controllers
 {
-    // Quan ly vong doi concert: Draft, Pending, Published, Rejected va Cancelled
     [Route("api/events")]
     public class EventsController : BaseApiController
     {
@@ -32,7 +31,6 @@ namespace EventAPI.Controllers
             _logger = logger;
         }
 
-        // Lay danh sach su kien va cong soat ve duoc phan cong cho nhan vien
         [HttpGet("staff/{staffId:int}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetEventsByStaff(int staffId)
@@ -48,10 +46,6 @@ namespace EventAPI.Controllers
                 return HandleException(ex);
             }
         }
-
-        // =====================================================================
-        // PUBLIC READS — Published concerts only
-        // =====================================================================
 
         [HttpGet]
         [AllowAnonymous]
@@ -75,7 +69,6 @@ namespace EventAPI.Controllers
             return Ok(ApiResponseDTO<List<EventListDTO>>.SuccessResponse(result));
         }
 
-        // Chuan hoa slug va kiem tra tinh duy nhat trong luc nhap lieu
         [HttpGet("slug-availability")]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> CheckSlugAvailability(
@@ -99,7 +92,6 @@ namespace EventAPI.Controllers
             return await GetList(filter);
         }
 
-        // Lay thong tin chi tiet concert theo slug danh cho cong chung
         [HttpGet("slug/{slug}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetBySlug(string slug)
@@ -112,7 +104,6 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        // Lay thong tin chi tiet concert theo id danh cho cong chung
         [HttpGet("{id:int}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetById(int id)
@@ -125,11 +116,6 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        // =====================================================================
-        // ORGANIZER — my concerts
-        // =====================================================================
-
-        // Lay danh sach toan bo concert thuoc so huu cua Organizer hien tai
         [HttpGet("mine")]
         [Authorize(Policy = "RequireCustomer")]
         public async Task<IActionResult> GetMine()
@@ -138,7 +124,6 @@ namespace EventAPI.Controllers
             return Ok(ApiResponseDTO<List<EventListDTO>>.SuccessResponse(result));
         }
 
-        // Lay so lieu tong quan dashboard gom so luong concert, ve ban va doanh thu
         [HttpGet("mine/dashboard")]
         [Authorize(Policy = "RequireCustomer")]
         public async Task<IActionResult> GetMyDashboard()
@@ -147,7 +132,6 @@ namespace EventAPI.Controllers
             return Ok(ApiResponseDTO<OrganizerDashboardSummaryDTO>.SuccessResponse(result));
         }
 
-        // Lay chi tiet day du concert cua Organizer bao gom ca so do ghe o moi trang thai
         [HttpGet("mine/{id:int}")]
         [Authorize(Policy = "RequireCustomer")]
         public async Task<IActionResult> GetMineById(int id)
@@ -160,23 +144,16 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        // =====================================================================
-        // ORGANIZER — create / update / delete draft
-        // =====================================================================
-
-        // Tao moi concert o trang thai Draft danh cho Organizer
         [HttpPost]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Create([FromBody] CreateEventDTO dto)
         {
-            // Luu y: Validate cu phap du lieu dau vao va kiem tra quyen Organizer
             var validation = await _createValidator.ValidateAsync(dto);
             if (!validation.IsValid)
                 return BadRequest(ApiResponseDTO<object>.FailResponse("Validation failed", validation.Errors.Select(e => e.ErrorMessage).ToList()));
 
             try
             {
-                // Luu y: Tu dong sinh slug duy nhat va khoi tao trang thai Draft
                 var result = await _eventService.CreateAsync(dto, CurrentUserId);
                 return CreatedAtAction(nameof(GetMineById), new { id = result.EventId },
                     ApiResponseDTO<EventResponseDTO>.SuccessResponse(result, "Concert created as Draft"));
@@ -184,33 +161,28 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        // Chinh sua thong tin concert o trang thai Draft hoac Rejected
         [HttpPut("{id:int}")]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateEventDTO dto)
         {
-            // Luu y: Validate cac truong thay doi va kiem tra quyen so huu cua Organizer
             var validation = await _updateValidator.ValidateAsync(dto);
             if (!validation.IsValid)
                 return BadRequest(ApiResponseDTO<object>.FailResponse("Validation failed", validation.Errors.Select(e => e.ErrorMessage).ToList()));
 
             try
             {
-                // Luu y: Chi cho phep cap nhat khi concert dang o trang thai Draft hoac Rejected
                 var result = await _eventService.UpdateAsync(id, dto, CurrentUserId, IsAdmin);
                 return Ok(ApiResponseDTO<EventResponseDTO>.SuccessResponse(result, "Concert updated"));
             }
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        // Xoa mem concert o trang thai Draft hoac Rejected
         [HttpDelete("{id:int}")]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Delete(int id)
         {
             try
             {
-                // Luu y: Chi Organizer chu so huu hoac Admin moi duoc xoa mem concert
                 await _eventService.SoftDeleteAsync(id, CurrentUserId, IsAdmin);
                 return Ok(ApiResponseDTO<object>.SuccessResponse(null!, "Concert deleted"));
             }
@@ -225,11 +197,6 @@ namespace EventAPI.Controllers
             return Ok(ApiResponseDTO<object>.SuccessResponse(null!, "Concert restored"));
         }
 
-        // =====================================================================
-        // SUBMIT FOR APPROVAL
-        // =====================================================================
-
-        // Kiem tra thu cac dieu kien cong bo concert truoc khi thuc su submit
         [HttpGet("{id:int}/validate")]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> ValidateForSubmission(int id)
@@ -244,39 +211,30 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        // Gui yeu cau xet duyet concert de chuyen trang thai sang Pending
         [HttpPost("{id:int}/submit")]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Submit(int id)
         {
             try
             {
-                // Luu y: Kiem tra tat ca thong tin bat buoc truoc khi doi sang Pending
                 var result = await _eventService.SubmitAsync(id, CurrentUserId);
                 return Ok(ApiResponseDTO<EventResponseDTO>.SuccessResponse(result, "Concert submitted for approval (now Pending)"));
             }
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        // Huy concert dang o trang thai Pending hoac da Published
         [HttpPost("{id:int}/cancel")]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Cancel(int id)
         {
             try
             {
-                // Luu y: Chi chap nhan huy khi Pending hoac Published va se dong bang ban ve
                 var result = await _eventService.CancelAsync(id, CurrentUserId, IsAdmin);
                 return Ok(ApiResponseDTO<EventResponseDTO>.SuccessResponse(result, "Concert cancelled"));
             }
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        // =====================================================================
-        // ADMIN — moderation
-        // =====================================================================
-
-        // Lay danh sach concert cho duyet theo thu tu cu nhat truoc
         [HttpGet("pending")]
         [Authorize(Policy = "RequireAdmin")]
         public async Task<IActionResult> GetPending([FromQuery] int page = 1, [FromQuery] int pageSize = 12)
@@ -285,7 +243,6 @@ namespace EventAPI.Controllers
             return Ok(ApiResponseDTO<PagedResultDTO<PendingEventDTO>>.SuccessResponse(result));
         }
 
-        // Lay danh sach tat ca concert o moi trang thai phuc vu trang quan tri Admin
         [HttpGet("admin")]
         [Authorize(Policy = "RequireAdmin")]
         public async Task<IActionResult> AdminGetAll([FromQuery] EventFilterDTO filter)
@@ -296,13 +253,11 @@ namespace EventAPI.Controllers
             return Ok(ApiResponseDTO<PagedResultDTO<EventListDTO>>.SuccessResponse(result));
         }
 
-        // Endpoint phu ho tro giao dien quan tri Admin cu
         [HttpGet("moderation/queue")]
         [Authorize(Policy = "RequireAdmin")]
         public async Task<IActionResult> ModerationQueue([FromQuery] int page = 1, [FromQuery] int pageSize = 12)
             => await GetPending(page, pageSize);
 
-        // Lay chi tiet concert da submit de Admin xem xet phe duyet
         [HttpGet("admin/{id:int}")]
         [Authorize(Policy = "RequireAdmin")]
         public async Task<IActionResult> AdminGetById(int id)
@@ -319,7 +274,6 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        // Admin phe duyet concert tu Pending sang Published de bat dau ban ve
         [HttpPost("{id:int}/approve")]
         [Authorize(Policy = "RequireAdmin")]
         public async Task<IActionResult> Approve(int id)
@@ -344,7 +298,6 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        // Admin tu choi duyet concert kem ly do bat buoc de Organizer sua lai
         [HttpPost("{id:int}/reject")]
         [Authorize(Policy = "RequireAdmin")]
         public async Task<IActionResult> Reject(int id, [FromBody] RejectEventDTO dto)
@@ -360,11 +313,6 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        // =====================================================================
-        // POSTER / BANNER (Cloudinary)
-        // =====================================================================
-
-        // Tai len hoac thay the poster concert tren Cloudinary
         [HttpPost("{id:int}/poster")]
         [Authorize(Policy = "RequireOrganizer")]
         [RequestSizeLimit(10_000_000)]
@@ -397,7 +345,6 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        // Tai len hoac thay the banner concert tren Cloudinary
         [HttpPost("{id:int}/banner")]
         [Authorize(Policy = "RequireOrganizer")]
         [RequestSizeLimit(10_000_000)]

@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace EventAPI.DTOs
 {
-// Du lieu ly do tu choi concert danh cho Admin
     public class RejectEventDTO
     {
         [Required(ErrorMessage = "A rejection reason is required so the organizer knows what to fix.")]
@@ -10,7 +9,6 @@ namespace EventAPI.DTOs
         public string Reason { get; set; } = null!;
     }
 
-    // Ket qua kiem tra tinh day du cua du lieu concert truoc khi submit
     public class SubmitValidationResultDTO
     {
         public bool IsValid => Errors.Count == 0;
@@ -18,7 +16,6 @@ namespace EventAPI.DTOs
         public List<string> Warnings { get; set; } = new();
     }
 
-    // Danh sach concert dang cho xet duyet danh cho Admin
     public class PendingEventDTO
     {
         public int EventId { get; set; }

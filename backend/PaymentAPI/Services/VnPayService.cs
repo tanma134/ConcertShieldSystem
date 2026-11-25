@@ -73,17 +73,6 @@ namespace PaymentAPI.Services
                     .OrderBy(x => x)
             );
 
-            //var sortedParams = queryString.Split('&')
-            //.Where(x => !x.StartsWith("vnp_SecureHash"))
-            //.Select(x => {
-            //    var parts = x.Split('=', 2);
-            //    return new { Key = parts[0], Value = parts.Length > 1 ? parts[1] : "" };
-            //})
-            //.OrderBy(x => x.Key, StringComparer.Ordinal)  
-            //.Select(x => $"{x.Key}={x.Value}");
-
-            //var filtered = string.Join("&", sortedParams);
-
             var computedHash = HmacSHA512(hashSecret, filtered);
 
             return computedHash.Equals(vnp_SecureHash, StringComparison.OrdinalIgnoreCase);

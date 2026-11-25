@@ -3,7 +3,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace IncidentAPI.Models;
 
-// Entity map chính xác với bảng public.incidents trong incident_db
 [Table("incidents")]
 public class Incident
 {

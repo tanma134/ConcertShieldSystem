@@ -20,6 +20,6 @@ namespace TicketAPI.Services
         Task<TicketReturnDto> ReviewAsync(int reviewerUserId, int requestId, ReviewTicketReturnDto dto, IReadOnlyCollection<int>? eventScope = null);
 
         // Retries paying the money back for an approved return whose refund failed.
-        Task<TicketReturnDto> RetryRefundAsync(int reviewerUserId, int requestId, IReadOnlyCollection<int>? eventScope = null);
+        Task<TicketReturnDto> ConfirmManualRefundAsync(int reviewerUserId, int requestId, ConfirmManualRefundDto dto, IReadOnlyCollection<int>? eventScope = null);
     }
 }

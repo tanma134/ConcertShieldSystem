@@ -7,7 +7,7 @@ public record ApplyChangeInput(long ChangeId, int EventId, string Type, DateTime
 public record AffectedRow(int OrderId, int TicketId, int CustomerId, string TicketCode, string TicketStatus, long PaidAmount, bool Notified, string? ReturnStatus, long RefundedAmount);
 public class EventChangeService(TicketDbContext db)
 {
-    // Payment callback và apply dùng cùng advisory lock trong TicketDB, kể cả khi chạy nhiều instance.
+    // Payment callback and apply share the same TicketDB advisory lock across instances.
     public async Task LockEventAsync(int eventId, CancellationToken ct) { await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(7421, {eventId})", ct); }
     public async Task ApplyAsync(ApplyChangeInput input, CancellationToken ct)
     {
@@ -45,7 +45,7 @@ public class EventChangeService(TicketDbContext db)
         {
             foreach (var order in orders)
             {
-                // Null biểu thị chưa có lịch mới, không giữ lịch cũ trên My Tickets như lịch hiệu lực.
+                // Null indicates no new schedule yet, avoiding showing old schedule as active on My Tickets.
                 order.StartsAt = input.Type == "Postpone" ? null : input.StartsAt;
                 order.EndsAt = input.Type == "Postpone" ? null : input.EndsAt;
             }
@@ -55,7 +55,7 @@ public class EventChangeService(TicketDbContext db)
         await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
     }
     private void AddAffected(AppliedEventChange change, Ticket ticket) => db.Set<AffectedTicket>().Add(new() { ChangeId = change.ChangeId, TicketId = ticket.TicketId, OrderId = ticket.OrderId, CustomerId = ticket.Order.CustomerId, PaidAmount = ticket.Order.FinalAmount });
-    // Callback đến sau snapshot vẫn giữ Paid và bổ sung vé của đơn đó vào change liên quan.
+    // Late payment callbacks after snapshot still stay Paid and attach their tickets to the change.
     public async Task AttachLatePaymentAsync(Order order, List<Ticket> tickets, CancellationToken ct)
     {
         var change = await db.Set<AppliedEventChange>().Where(x => x.EventId == order.EventId).OrderByDescending(x => x.ScheduleVersion).FirstOrDefaultAsync(ct);

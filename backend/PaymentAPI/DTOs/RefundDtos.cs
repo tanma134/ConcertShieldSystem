@@ -14,6 +14,20 @@ namespace PaymentAPI.DTOs
         public string? EventName { get; set; }
     }
 
+    // Body of POST api/internal/refunds/manual (records a completed manual bank transfer from TicketAPI).
+    public class RecordManualRefundDto
+    {
+        public int ReturnRequestId { get; set; }
+        public int OrderId { get; set; }
+        public long Amount { get; set; }
+        public string Reference { get; set; } = null!;
+        public int ProcessedByUserId { get; set; }
+        public string? CustomerName { get; set; }
+        public int? EventId { get; set; }
+        public string? EventName { get; set; }
+        public string? Reason { get; set; }
+    }
+
     public class RefundResultDto
     {
         public int? RefundId { get; set; }

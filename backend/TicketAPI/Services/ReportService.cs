@@ -10,7 +10,6 @@ using TicketAPI.Repositories;
 
 namespace TicketAPI.Services
 {
-    // Dịch vu tao bao cao doanh thu, loc so lieu va xuat file CSV check-in
     public class ReportService : IReportService
     {
         // Vietnam has no daylight saving, so a fixed offset is enough for cutting days.
@@ -32,7 +31,6 @@ namespace TicketAPI.Services
         {
         }
 
-        // Xem tong quan bao cao doanh thu va loc theo thoi gian, hang ve
         public async Task<RevenueReportDto> GetRevenueAsync(
             int eventId, int callerId, bool isAdmin, string? bearer,
             DateOnly? from, DateOnly? to, int? ticketTypeId)
@@ -64,12 +62,10 @@ namespace TicketAPI.Services
             };
         }
 
-        // Xuat bao cao doanh thu chi tiet cua concert ra file CSV
         public async Task<ExportFileDto> ExportRevenueAsync(
             int eventId, int callerId, bool isAdmin, string? bearer,
             DateOnly? from, DateOnly? to, int? ticketTypeId)
         {
-            // Luu y: Xuat bao cao dinh dang CSV gom tong hop, doanh thu theo ngay va theo hang ve
             var report = await GetRevenueAsync(eventId, callerId, isAdmin, bearer, from, to, ticketTypeId);
             var summary = report.Summary;
 
@@ -92,7 +88,6 @@ namespace TicketAPI.Services
             return ToFile($"revenue-event-{eventId}-{DateTime.UtcNow:yyyyMMdd}.csv", csv);
         }
 
-        // Xem thong ke tong quan so lieu check-in cua concert tren man hinh
         public async Task<CheckinReportDto> GetCheckinAsync(int eventId, int callerId, bool isAdmin, string? bearer)
         {
             var ev = await EnsureOwnerAsync(eventId, callerId, isAdmin, bearer);
@@ -105,7 +100,6 @@ namespace TicketAPI.Services
             return new CheckinReportDto { EventId = eventId, EventTitle = ev.Title, Summary = summary };
         }
 
-        // Xuat danh sach lich su check-in cua concert ra file CSV
         public async Task<ExportFileDto> ExportCheckinAsync(int eventId, int callerId, bool isAdmin, string? bearer)
         {
             await EnsureOwnerAsync(eventId, callerId, isAdmin, bearer);
@@ -166,7 +160,6 @@ namespace TicketAPI.Services
                 .ToList();
         }
 
-        // Builds one CSV row for the revenue export.
         private static IReadOnlyList<string?> Row(
             string section, string name, int? orders, int tickets,
             long gross, long discounts, long refunded, long net)
