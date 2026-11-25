@@ -127,6 +127,14 @@ namespace AuthenticationAPI.Repositories
                 .FirstOrDefaultAsync(u => u.PhoneNumber == phone);
         }
 
+        public async Task<string?> GetEmailByIdAsync(int userId)
+        {
+            return await _context.Users.AsNoTracking()
+                .Where(u => u.UserId == userId)
+                .Select(u => u.Email)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();

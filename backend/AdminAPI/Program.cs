@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using AdminAPI.Data;
+using AdminAPI.Repositories;
 using AdminAPI.Services;
 using AdminAPI.Services.Risks;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -15,6 +16,8 @@ builder.Services.AddDbContext<AdminDbContext>(options =>
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<ISupportEmailService, SupportEmailService>();
 builder.Services.AddScoped<ISupportCaseService, SupportCaseService>();
+builder.Services.AddScoped<ISystemPolicyService, SystemPolicyService>();
+builder.Services.AddAdminRepositories();
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtSection["Key"]

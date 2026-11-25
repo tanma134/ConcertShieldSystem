@@ -1,7 +1,6 @@
 ﻿using System.Net;
-using AdminAPI.Data;
+using AdminAPI.Repositories;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace AdminAPI.Controllers
 {
@@ -14,12 +13,14 @@ namespace AdminAPI.Controllers
     [Route("api/internal/risk")]
     public class InternalRiskCheckController : ControllerBase
     {
-        private readonly AdminDbContext _db;
+        private readonly IRiskDecisionRepository _decisions;
+        private readonly IRiskListRepository _lists;
         private readonly IConfiguration _config;
         private readonly ILogger<InternalRiskCheckController> _logger;
 
-        public InternalRiskCheckController(AdminDbContext db, IConfiguration config, ILogger<InternalRiskCheckController> logger)
-        { _db = db; _config = config; _logger = logger; }
+        public InternalRiskCheckController(IRiskDecisionRepository decisions, IRiskListRepository lists,
+            IConfiguration config, ILogger<InternalRiskCheckController> logger)
+        { _decisions = decisions; _lists = lists; _config = config; _logger = logger; }
 
         // GET api/internal/risk/check?userId=1&ip=1.2.3.4&deviceFp=abc&sessionId=xyz
         [HttpGet("check")]
@@ -43,20 +44,10 @@ namespace AdminAPI.Controllers
                     return BadRequest(new { message = "ip is invalid." });
 
                 var hasDevice = !string.IsNullOrWhiteSpace(deviceFp);
-                var hasSession = !string.IsNullOrWhiteSpace(sessionId);
                 var now = DateTime.UtcNow;
 
                 // 1) Block do engine hoặc Admin tạo, còn hiệu lực, chưa Restore, không phải Shadow
-                var block = await _db.RiskDecisions.AsNoTracking()
-                    .Where(d => d.Action == "BLOCK" && d.Status == "Active" && !d.IsShadow
-                                && (d.ExpiresAt == null || d.ExpiresAt > now)
-                                && ((userId != null && d.Scope == "ACCOUNT" && d.UserId == userId)
-                                    || (hasDevice && d.Scope == "DEVICE" && d.DeviceFp == deviceFp)
-                                    || (ipAddr != null && d.Scope == "IP" && d.IpAddress == ipAddr)
-                                    || (hasSession && d.Scope == "SESSION" && d.SessionId == sessionId)))
-                    .OrderByDescending(d => d.CreatedAt)
-                    .Select(d => new { d.Scope, d.ExpiresAt, d.ReasonPublic })
-                    .FirstOrDefaultAsync(ct);
+                var block = await _decisions.FindActiveBlockAsync(userId, ipAddr, deviceFp, sessionId, now, ct);
 
                 if (block != null)
                     return Ok(new
@@ -73,21 +64,14 @@ namespace AdminAPI.Controllers
                 if (hasDevice) values.Add(deviceFp!);
                 if (ipAddr != null) values.Add(ipAddr.ToString());
 
-                if (values.Count > 0)
-                {
-                    var black = await _db.RiskLists.AsNoTracking().AnyAsync(l =>
-                        l.ListType == "BLACKLIST" && (l.ExpiresAt == null || l.ExpiresAt > now)
-                        && values.Contains(l.ValueHash)
-                        && (l.ValueType == "USER" || l.ValueType == "DEVICE" || l.ValueType == "IP"), ct);
-                    if (black)
-                        return Ok(new
-                        {
-                            blocked = true,
-                            scope = "BLACKLIST",
-                            expiresAt = (DateTime?)null,
-                            message = "Your account or device is restricted. Please contact support."
-                        });
-                }
+                if (await _lists.HasActiveBlacklistEntryAsync(values, now, ct))
+                    return Ok(new
+                    {
+                        blocked = true,
+                        scope = "BLACKLIST",
+                        expiresAt = (DateTime?)null,
+                        message = "Your account or device is restricted. Please contact support."
+                    });
 
                 return Ok(new { blocked = false });
             }

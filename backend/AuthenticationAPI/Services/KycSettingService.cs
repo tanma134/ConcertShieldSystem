@@ -1,26 +1,24 @@
-
 using AuthenticationAPI.DTOs;
 using AuthenticationAPI.Models;
-using Microsoft.EntityFrameworkCore;
+using AuthenticationAPI.Repositories;
 
 namespace AuthenticationAPI.Services
 {
-
     public class KycSettingService : IKycSettingService
     {
-        // retention must not be shorter than the legal minimum nor longer than necessary.
+        // Retention must not be shorter than the legal minimum nor longer than necessary.
         // Set the real legal minimum in appsettings (Kyc:LegalMinRetentionDays); these are only the defaults.
         private const int DefaultLegalMinRetentionDays = 30;
         private const int DefaultMaxRetentionDays = 365;
 
-        private readonly AuthenticationDbContext _db;
+        private readonly IKycSettingRepository _repository;
         private readonly ILogger<KycSettingService> _logger;
         private readonly int _minDays;
         private readonly int _maxDays;
 
-        public KycSettingService(AuthenticationDbContext db, ILogger<KycSettingService> logger, IConfiguration config)
+        public KycSettingService(IKycSettingRepository repository, ILogger<KycSettingService> logger, IConfiguration config)
         {
-            _db = db;
+            _repository = repository;
             _logger = logger;
             _minDays = Math.Max(1, config.GetValue("Kyc:LegalMinRetentionDays", DefaultLegalMinRetentionDays));
             _maxDays = Math.Max(_minDays, config.GetValue("Kyc:MaxRetentionDays", DefaultMaxRetentionDays));
@@ -28,8 +26,8 @@ namespace AuthenticationAPI.Services
 
         public async Task<KycSettingDto> GetAsync()
         {
-            var s = await _db.KycSettings.AsNoTracking().FirstOrDefaultAsync(x => x.Id == 1);
-            // Chýa có d?ng c?u h?nh: dùng m?c ð?nh (30 ngày, gi? hash CCCD)
+            var s = await _repository.GetAsync();
+            // No settings row yet: use the defaults (30 days, keep the CCCD hash)
             return s is null
                 ? new KycSettingDto
                 {
@@ -47,11 +45,11 @@ namespace AuthenticationAPI.Services
             if (dto.RetentionDays < _minDays || dto.RetentionDays > _maxDays)
                 throw new InvalidOperationException($"Retention days must be between {_minDays} (legal minimum) and {_maxDays}");
 
-            var s = await _db.KycSettings.FirstOrDefaultAsync(x => x.Id == 1);
+            var s = await _repository.GetForUpdateAsync();
             if (s is null)
             {
                 s = new KycSetting { Id = 1 };
-                _db.KycSettings.Add(s);
+                _repository.Add(s);
             }
 
             var oldDays = s.RetentionDays;
@@ -61,7 +59,7 @@ namespace AuthenticationAPI.Services
             s.KeepDocumentHashAfterDeletion = dto.KeepDocumentHashAfterDeletion;
             s.UpdatedAt = DateTime.UtcNow;
             s.UpdatedBy = adminId;
-            await _db.SaveChangesAsync();
+            await _repository.SaveChangesAsync();
 
             _logger.LogWarning("KYC settings changed by admin {AdminId}: retentionDays {OldDays}->{NewDays}, keepHash {OldKeep}->{NewKeep}",
                 adminId, oldDays, s.RetentionDays, oldKeep, s.KeepDocumentHashAfterDeletion);
