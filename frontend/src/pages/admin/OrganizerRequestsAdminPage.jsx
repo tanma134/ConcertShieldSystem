@@ -518,7 +518,7 @@ function ReviewModal({ request, onClose, onDone }) {
                   Cancel
                 </button>
                 <button className="org-button" onClick={handleSubmit} disabled={submitting}>
-                  {submitting ? "Saving..." : "Confirm"}
+                  {submitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm"}
                 </button>
               </>
             )}
@@ -694,7 +694,7 @@ export default function OrganizerRequestsAdminPage() {
             {error && <div className="org-alert org-alert--error">{error}</div>}
 
             {loading ? (
-              <p className="org-empty">Loading...</p>
+              <p className="org-empty"><span className="app-loading-spinner" role="status" aria-label="Loading" /></p>
             ) : requests.length === 0 ? (
               <p className="org-empty">No requests found.</p>
             ) : (

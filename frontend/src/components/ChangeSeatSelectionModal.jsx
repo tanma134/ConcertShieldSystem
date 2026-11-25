@@ -5,6 +5,75 @@ import { useToast } from "./ToastProvider";
 
 const readData = (response) => response?.data?.data ?? response?.data;
 
+const ZONE_PALETTE = [
+  "#d98f14", "#14a89a", "#a855f7", "#3b82f6", "#d63a3a",
+  "#1eaa55", "#e8439c", "#78b014", "#1da8c8", "#e06a1a",
+];
+
+function parseShape(shapeJson) {
+  try {
+    return JSON.parse(shapeJson || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function getZonePosition(shapeJson, index, total) {
+  let shape = parseShape(shapeJson);
+  const hasPolygon = shape?.type === "polygon" && Array.isArray(shape.points) && shape.points.length > 2;
+  const hasRectangle = typeof shape.x === "number" && typeof shape.y === "number" && typeof shape.w === "number" && typeof shape.h === "number";
+  if (!hasPolygon && !hasRectangle) {
+    const columns = Math.min(4, Math.max(total, 1));
+    const column = index % columns;
+    const row = Math.floor(index / columns);
+    const width = 90 / columns - 3;
+    shape = { x: 5 + column * (90 / columns), y: 28 + row * 22, w: width, h: 16 };
+  }
+
+  if (shape.type === "polygon" && Array.isArray(shape.points) && shape.points.length > 2) {
+    const xs = shape.points.map((point) => Number(point.x));
+    const ys = shape.points.map((point) => Number(point.y));
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+    const width = Math.max(maxX - minX, 1);
+    const height = Math.max(maxY - minY, 1);
+    const points = shape.points.map((point) => `${((Number(point.x) - minX) / width) * 100}% ${((Number(point.y) - minY) / height) * 100}%`).join(", ");
+    const expandedLeft = Math.max(0, minX - 5);
+    const expandedTop = Math.max(0, minY - 2);
+    const expandedWidth = Math.min(width + 10, 100 - expandedLeft);
+    const expandedHeight = Math.min(height + 12, 100 - expandedTop);
+    return { left: `${expandedLeft}%`, top: `${expandedTop}%`, width: `${expandedWidth}%`, height: `${expandedHeight}%`, clipPath: `polygon(${points})` };
+  }
+
+  const originalLeft = Math.max(0, Math.min(Number(shape.x) || 0, 99));
+  const originalTop = Math.max(0, Math.min(Number(shape.y) || 0, 99));
+  const left = Math.max(0, originalLeft - 5);
+  const top = Math.max(0, originalTop - 2);
+  const width = Math.max(1, Math.min((Number(shape.w) || 20) + 10, 100 - left));
+  const height = Math.max(1, Math.min((Number(shape.h) || 16) + 12, 100 - top));
+  return {
+    left: `${left}%`,
+    top: `${top}%`,
+    width: `${width}%`,
+    height: `${height}%`,
+    transform: `rotate(${Number(shape.rot) || 0}deg)`,
+  };
+}
+
+function getSeatCanvasMinimumHeight(zones) {
+  const minimumSeatPitch = 14;
+  let minHeight = 440;
+  zones.forEach((zone, index) => {
+    const position = getZonePosition(zone.shapeJson, index, zones.length);
+    const heightPercent = Number.parseFloat(position.height) || 16;
+    const rows = Math.max(1, ...(zone.seats ?? []).map((seat) => Number(seat.yCoordinate) || 1));
+    minHeight = Math.max(minHeight, (rows * minimumSeatPitch) / ((78 * heightPercent) / 10000));
+  });
+  return Math.ceil(minHeight);
+}
+
 export default function ChangeSeatSelectionModal({
   open,
   holdId,
@@ -23,6 +92,7 @@ export default function ChangeSeatSelectionModal({
   const [saving, setSaving] = useState(false);
   const [availabilityError, setAvailabilityError] = useState("");
   const [saveError, setSaveError] = useState("");
+  const [seatMapZoom, setSeatMapZoom] = useState(1);
   const toast = useToast();
 
   const zones = useMemo(
@@ -66,6 +136,10 @@ export default function ChangeSeatSelectionModal({
     () => new Set((currentSeatIds ?? []).map(Number)),
     [currentSeatIds]
   );
+  const seatCanvasMinHeight = useMemo(
+    () => getSeatCanvasMinimumHeight(zones),
+    [zones]
+  );
 
   useEffect(() => {
     if (!open) return undefined;
@@ -77,6 +151,7 @@ export default function ChangeSeatSelectionModal({
       setAvailabilityError("");
       setSaveError("");
       setSelectedSeatIds((currentSeatIds ?? []).map(Number));
+      setSeatMapZoom(1);
       setAttendeeSeatIds(
         (attendees ?? []).map((attendee) =>
           attendee.seatId == null ? "" : String(attendee.seatId)
@@ -217,21 +292,28 @@ export default function ChangeSeatSelectionModal({
     const seatId = Number(seat.seatId);
     const ticketTypeId = Number(seat.ticketTypeId);
 
-    setSelectedSeatIds((current) => {
-      if (current.includes(seatId)) {
-        return current.filter((id) => id !== seatId);
-      }
+    if (selectedSeatIds.includes(seatId)) {
+      setSelectedSeatIds((current) => current.filter((id) => id !== seatId));
+      setAttendeeSeatIds((attendees ?? []).map(() => ""));
+      return;
+    }
 
-      const required = requiredCounts.get(ticketTypeId) ?? 0;
-      const selectedForType = current.filter(
-        (id) =>
-          seatById.get(Number(id))?.ticketTypeId === ticketTypeId
-      ).length;
+    const required = requiredCounts.get(ticketTypeId) ?? 0;
+    const selectedForType = selectedSeatIds.filter(
+      (id) => seatById.get(Number(id))?.ticketTypeId === ticketTypeId
+    ).length;
 
-      if (selectedForType >= required) return current;
+    if (selectedForType >= required) return;
 
-      return [...current, seatId];
-    });
+    setSelectedSeatIds((current) => [...current, seatId]);
+    setAttendeeSeatIds((attendees ?? []).map(() => ""));
+  };
+
+  const getTicketColor = (ticketTypeId) => {
+    const ticketType = (eventData?.ticketTypes ?? []).find(
+      (item) => Number(item.ticketTypeId) === Number(ticketTypeId)
+    );
+    return ticketType?.colorCode || ZONE_PALETTE[(Number(ticketTypeId) || 0) % ZONE_PALETTE.length];
   };
 
   const saveSelection = async () => {
@@ -311,57 +393,55 @@ export default function ChangeSeatSelectionModal({
           </button>
         </header>
 
-        <div className="cssm-legend" aria-label="Seat status legend">
-          <span>
-            <i className="is-available" /> Available
-          </span>
-          <span>
-            <i className="is-selected" /> Selected
-          </span>
-          <span>
-            <i className="is-held" /> Held
-          </span>
-          <span>
-            <i className="is-sold" /> Sold
-          </span>
-        </div>
+        <div className="cssm-content">
+          <section className="cssm-seat-panel" aria-label="Choose replacement seats">
+            <div className="cssm-legend" aria-label="Seat status legend">
+              <span><i className="is-available" /> Available</span>
+              <span><i className="is-selected" /> Selected</span>
+              <span><i className="is-held" /> Held</span>
+              <span><i className="is-sold" /> Sold</span>
+            </div>
 
-        <div className="cssm-stage">STAGE</div>
+          <div className={`cssm-map${seatMapZoom > 1 ? " is-zoomed" : ""}`}>
+            <div className="cssm-map-controls" aria-label="Seat map zoom controls">
+              <button type="button" aria-label="Zoom out" disabled={seatMapZoom <= 1} onClick={() => setSeatMapZoom((zoom) => Math.max(1, Number((zoom - 0.25).toFixed(2))))}>-</button>
+              <button type="button" className="cssm-map-zoom-level" aria-label="Reset seat map zoom" onClick={() => setSeatMapZoom(1)}>{Math.round(seatMapZoom * 100)}%</button>
+              <button type="button" aria-label="Zoom in" disabled={seatMapZoom >= 2.5} onClick={() => setSeatMapZoom((zoom) => Math.min(2.5, Number((zoom + 0.25).toFixed(2))))}>+</button>
+            </div>
+            <div className="cssm-map-viewport">
+              <div className="cssm-seat-canvas" style={{ width: `${seatMapZoom * 100}%`, minHeight: `${Math.min(seatCanvasMinHeight, 320) * seatMapZoom}px` }}>
+                <div className="cssm-stage">STAGE</div>
+                {zones.map((zone, zoneIndex) => {
+                  const ticketTypeId = Number(zone.ticketTypeId);
+                  const columns = Math.max(1, ...(zone.seats ?? []).map((seat) => Number(seat.xCoordinate) || 1));
+                  const rows = Math.max(1, ...(zone.seats ?? []).map((seat) => Number(seat.yCoordinate) || 1));
+                  const columnCoordinates = [...new Set((zone.seats ?? []).map((seat) => Number(seat.xCoordinate) || 1))].sort((a, b) => a - b);
+                  const rowLabels = [...new Map((zone.seats ?? []).map((seat) => [Number(seat.yCoordinate) || 1, seat.rowLabel || String(Number(seat.yCoordinate) || 1)])).entries()].sort(([a], [b]) => a - b);
+                  const color = getTicketColor(ticketTypeId);
 
-        <div className="cssm-zones">
-          {zones.map((zone) => {
-            const ticketTypeId = Number(zone.ticketTypeId);
-            const columns = Math.max(
-              1,
-              ...zone.seats.map(
-                (seat) => Number(seat.xCoordinate) || 1
-              )
-            );
-            const rows = Math.max(
-              1,
-              ...zone.seats.map(
-                (seat) => Number(seat.yCoordinate) || 1
-              )
-            );
-
-            return (
-              <section className="cssm-zone" key={zone.seatZoneId}>
-                <div className="cssm-zone-heading">
-                  <strong>{zone.zoneName}</strong>
-                  <span>
-                    {selectedCounts.get(ticketTypeId) ?? 0}/
-                    {requiredCounts.get(ticketTypeId) ?? 0} selected
-                  </span>
-                </div>
-
-                <div
-                  className="cssm-seat-grid"
-                  style={{
-                    gridTemplateColumns: `repeat(${columns}, minmax(22px, 1fr))`,
-                    gridTemplateRows: `repeat(${rows}, 30px)`,
-                  }}
-                >
-                  {zone.seats.map((seat) => {
+                  return (
+                    <section
+                      className="cssm-zone"
+                      key={zone.seatZoneId}
+                      style={{
+                        ...getZonePosition(zone.shapeJson, zoneIndex, zones.length),
+                        "--zone-color": color,
+                        "--seat-columns": columns,
+                        "--seat-rows": rows,
+                      }}
+                    >
+                      <div className="cssm-zone-heading">
+                        <strong>{zone.zoneName || "Seating zone"}</strong>
+                        <span>{selectedCounts.get(ticketTypeId) ?? 0}/{requiredCounts.get(ticketTypeId) ?? 0} selected</span>
+                      </div>
+                      <div className="cssm-seat-grid">
+                        {columnCoordinates.map((column) => (
+                          <span key={`${zone.seatZoneId}-column-${column}`} className="cssm-coordinate is-column" style={{ left: `${1.5 + ((column - 0.5) * 97) / columns}%` }} aria-hidden="true">{column}</span>
+                        ))}
+                        {rowLabels.map(([row, label]) => (
+                          <span key={`${zone.seatZoneId}-row-${row}`} className="cssm-coordinate is-row" style={{ top: `${30 + ((row - 0.5) * 65) / rows}%` }} aria-hidden="true">{label}</span>
+                        ))}
+                        {(zone.seats ?? []).map((seat) => {
                     const seatId = Number(seat.seatId);
                     const isSelected =
                       selectedSeatIds.includes(seatId);
@@ -395,7 +475,7 @@ export default function ChangeSeatSelectionModal({
                       <button
                         key={seatId}
                         type="button"
-                        className={`cssm-seat ${
+                        className={`cssm-seat-dot ${
                           isSelected
                             ? "is-selected"
                             : isSold
@@ -405,10 +485,8 @@ export default function ChangeSeatSelectionModal({
                                 : "is-available"
                         }`}
                         style={{
-                          gridColumn:
-                            Number(seat.xCoordinate) || 1,
-                          gridRow:
-                            Number(seat.yCoordinate) || 1,
+                          left: `${1.5 + (((Number(seat.xCoordinate) || 1) - 0.5) * 97) / columns}%`,
+                          top: `${30 + (((Number(seat.yCoordinate) || 1) - 0.5) * 65) / rows}%`,
                         }}
                         title={`Row ${seat.rowLabel}, Seat ${seat.seatNumber}`}
                         aria-label={`Row ${seat.rowLabel}, Seat ${seat.seatNumber}${
@@ -423,23 +501,20 @@ export default function ChangeSeatSelectionModal({
                             ticketTypeId,
                           });
                         }}
-                      >
-                        {seat.seatNumber}
-                      </button>
+                      />
                     );
                   })}
-                </div>
-              </section>
-            );
-          })}
+                      </div>
+                    </section>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          </section>
 
-          <div
-            style={{
-              padding: "16px",
-              borderTop: "1px solid #ece0f8",
-            }}
-          >
-            <h3 style={{ margin: "0 0 12px" }}>
+          <aside className="cssm-attendees">
+            <h3 className="cssm-attendees-title">
               Assign attendees to seats
             </h3>
 
@@ -486,14 +561,9 @@ export default function ChangeSeatSelectionModal({
               return (
                 <label
                   key={`${attendee.ticketTypeId}-${index}`}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    margin: "10px 0",
-                  }}
+                  className="cssm-attendee-row"
                 >
-                  <span style={{ minWidth: "180px" }}>
+                  <span>
                     {attendeeName}
                     {attendee.isPrimaryBuyer
                       ? " (Account holder)"
@@ -531,7 +601,7 @@ export default function ChangeSeatSelectionModal({
                 matching ticket type.
               </p>
             )}
-          </div>
+          </aside>
         </div>
 
         <div className="cssm-footer">
@@ -569,7 +639,7 @@ export default function ChangeSeatSelectionModal({
               }
               onClick={saveSelection}
             >
-              {saving ? "Saving seats…" : "Save changes"}
+              {saving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Save changes"}
             </button>
           </div>
         </div>

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PaymentAPI.DTOs;
@@ -8,6 +9,7 @@ namespace PaymentAPI.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Route("api/admin/payment-reconciliation/exceptions")]
+    [Authorize(Roles = "Admin")]
     public class PaymentReconciliationController : BaseApiController
     {
         private readonly IPaymentReconciliationService _service;
@@ -18,11 +20,11 @@ namespace PaymentAPI.Controllers
             _service = service;
         }
 
-        // Lay danh sach cac giao dich thanh toan / hoan tien can doi soat bat thuong danh cho Admin
         [HttpGet]
         public async Task<IActionResult> GetExceptions(
             [FromQuery] DateTime? from,
             [FromQuery] DateTime? to,
+            [FromQuery] int? orderId,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 20)
         {
@@ -31,6 +33,7 @@ namespace PaymentAPI.Controllers
                 var result = await _service.GetExceptionsAsync(
                     from,
                     to,
+                    orderId,
                     page,
                     pageSize);
 
@@ -50,7 +53,6 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        // Xu ly va giai quyet bat thuong doi soat giao dich thanh toan danh cho Admin
         [HttpPost("{paymentTransactionId}/resolve")]
         public async Task<IActionResult> ResolveException(
             int paymentTransactionId,
@@ -111,6 +113,45 @@ namespace PaymentAPI.Controllers
                     success = false,
                     message = ex.Message
                 });
+            }
+        }
+
+        [HttpGet("/api/admin/ticket-issuance-recovery-queue")]
+        public async Task<IActionResult> GetTicketIssuanceRecoveryQueue(
+            [FromQuery] DateTime? from,
+            [FromQuery] DateTime? to,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            if (!IsAdmin)
+                return Forbid();
+
+            try
+            {
+                var result =
+                    await _service.GetTicketIssuanceRecoveryQueueAsync(
+                        from,
+                        to,
+                        page,
+                        pageSize);
+
+                return Ok(new
+                {
+                    success = true,
+                    data = result
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
             }
         }
     }

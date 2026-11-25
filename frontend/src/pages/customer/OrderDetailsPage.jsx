@@ -305,7 +305,7 @@ export default function OrderDetailsPage() {
           )}
 
           {loading && (
-            <div className="order-details-state">Loading order details...</div>
+            <div className="order-details-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
           )}
 
           {!loading && error && (
@@ -419,11 +419,11 @@ export default function OrderDetailsPage() {
                     <>
                       <div>
                         <span>Customer name</span>
-                        <strong>{order.fullName || "—"}</strong>
+                        <strong>{order.fullName || "-"}</strong>
                       </div>
                       <div>
                         <span>Customer email</span>
-                        <strong>{order.email || "—"}</strong>
+                        <strong>{order.email || "-"}</strong>
                       </div>
                       {order.phone && (
                         <div>
@@ -716,7 +716,7 @@ export default function OrderDetailsPage() {
                         >
                           <optgroup label="Ticket Dispute (Investigation & Resolution Required)">
                             <option value="Invalid Ticket">Invalid ticket (Reported invalid despite legitimate purchase)</option>
-                            <option value="Payment Dispute">Payment dispute (Charged twice / Debited without receiving ticket)</option>
+                            <option value="Payment Dispute">Payment dispute (Debited without receiving ticket)</option>
                           </optgroup>
                           <optgroup label="Support Case (General Helpdesk & Customer Inquiries)">
                             <option value="General Inquiry">General inquiry / Other</option>
@@ -816,7 +816,7 @@ export default function OrderDetailsPage() {
                         Cancel
                       </button>
                       <button type="submit" className="sc-btn sc-btn-primary" disabled={submittingSupport}>
-                        {submittingSupport ? "Submitting..." : "Submit Support Request"}
+                        {submittingSupport ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Submit Support Request"}
                       </button>
                     </div>
                   </form>

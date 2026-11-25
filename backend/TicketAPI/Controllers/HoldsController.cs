@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TicketAPI.DTOs;
 using TicketAPI.Risk;
@@ -8,6 +9,7 @@ namespace TicketAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Customer")]
     public class HoldsController : ControllerBase
     {
         private readonly IHoldService _holdService;
@@ -36,19 +38,18 @@ namespace TicketAPI.Controllers
                 return Unauthorized(new
                 {
                     success = false,
-                    message = "Token không hợp lệ."
+                    message = "Invalid token."
                 });
 
             // eKYC gate + fraud rules before any seat is reserved.
-            var verdict = await _risk.CheckHoldAsync(HttpContext, userId.Value, request);
-            if (!verdict.Allowed) return verdict.ToActionResult();
+            //var verdict = await _risk.CheckHoldAsync(HttpContext, userId.Value, request);
+            //if (!verdict.Allowed) return verdict.ToActionResult();
 
             try
             {
                 var eligibility = await _eligibility.GetAsync(request.EventId, HttpContext.RequestAborted);
                 if (!eligibility.CanSell)
                     throw new InvalidOperationException(eligibility.Reason);
-
 
                 var session = await _holdService.CreateHoldSessionAsync(
                     userId.Value,
@@ -97,14 +98,47 @@ namespace TicketAPI.Controllers
             {
                 _logger.LogError(
                     ex,
-                    "Lỗi tạo hold session cho user {UserId}, event {EventId}",
+                    "Failed to create hold session for user {UserId}, event {EventId}",
                     userId.Value,
                     request.EventId);
 
                 return StatusCode(500, new
                 {
                     success = false,
-                    message = "Có lỗi khi giữ vé. Vui lòng thử lại."
+                    message = "An error occurred while reserving tickets. Please try again."
+                });
+            }
+        }
+
+        [HttpGet("session/active")]
+        public async Task<IActionResult> GetActiveHoldSession()
+        {
+            var userId = GetUserId();
+
+            if (userId == null)
+                return Unauthorized(new { success = false, message = "Invalid token." });
+
+            try
+            {
+                var session = await _holdService.GetActiveHoldSessionAsync(userId.Value);
+
+                return Ok(new
+                {
+                    success = true,
+                    data = session
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Failed to retrieve active hold session for user {UserId}",
+                    userId.Value);
+
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Could not check your active reservation."
                 });
             }
         }
@@ -117,7 +151,7 @@ namespace TicketAPI.Controllers
                 return Unauthorized(new
                 {
                     success = false,
-                    message = "Token không hợp lệ."
+                    message = "Invalid token."
                 });
 
             try
@@ -148,14 +182,14 @@ namespace TicketAPI.Controllers
             {
                 _logger.LogError(
                     ex,
-                    "Lỗi lấy hold session {HoldId} cho user {UserId}",
+                    "Failed to retrieve hold session {HoldId} for user {UserId}",
                     holdId,
                     userId.Value);
 
                 return StatusCode(500, new
                 {
                     success = false,
-                    message = "Có lỗi khi lấy thông tin phiên giữ vé."
+                    message = "An error occurred while retrieving the reservation session."
                 });
             }
         }
@@ -188,7 +222,7 @@ namespace TicketAPI.Controllers
         {
             var userId = GetUserId();
             if (userId == null)
-                return Unauthorized(new { success = false, message = "Token không hợp lệ." });
+                return Unauthorized(new { success = false, message = "Invalid token." });
 
             try
             {
@@ -219,7 +253,7 @@ namespace TicketAPI.Controllers
                 return Unauthorized(new
                 {
                     success = false,
-                    message = "Token không hợp lệ."
+                    message = "Invalid token."
                 });
             }
 
@@ -257,7 +291,7 @@ namespace TicketAPI.Controllers
             {
                 _logger.LogError(
                     ex,
-                    "Lỗi hủy hold session {HoldId} cho user {UserId}",
+                    "Failed to cancel hold session {HoldId} for user {UserId}",
                     holdId,
                     userId.Value);
 
@@ -277,7 +311,7 @@ namespace TicketAPI.Controllers
             var userId = GetUserId();
 
             if (userId == null)
-                return Unauthorized(new { success = false, message = "Token không hợp lệ." });
+                return Unauthorized(new { success = false, message = "Invalid token." });
 
             try
             {

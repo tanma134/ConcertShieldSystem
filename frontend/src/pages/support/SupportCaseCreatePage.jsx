@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import supportCaseApi from "../../api/supportCaseApi";
 import { useToast } from "../../components/ToastProvider";
@@ -301,7 +301,7 @@ export default function SupportCaseCreatePage() {
               Cancel
             </button>
             <button type="submit" className="sc-btn sc-btn-primary" disabled={submitting}>
-              {submitting ? "Submitting..." : "Create Support Case"}
+              {submitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Create Support Case"}
             </button>
           </div>
         </form>

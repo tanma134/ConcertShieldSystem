@@ -40,7 +40,7 @@ public sealed class PaymentRiskService : IPaymentRiskService
             if (!_cfg.GetValue("Risk:Enabled", true) || tx.UserId == null) return;
 
             var since = DateTime.UtcNow - Window;
-            var failed = await _transactions.CountFailedSinceAsync(tx.UserId.Value, since, ct);
+            var failed = await _transactions.CountFailedSinceAsync(tx.UserId.Value, since);
             if (failed < FailedThreshold) return;
 
             var evt = new RiskEvent
@@ -55,8 +55,6 @@ public sealed class PaymentRiskService : IPaymentRiskService
             evt.FraudRules.Add(new RuleHit("FRD_P01", 1, $"{failed} failed payments in 10 minutes"));
             if (tx.DeviceFp == null) evt.SignalsMissing.Add("device_fp");
 
-            // Đây là callback từ VNPay (không có người dùng đợi) nên chỉ ghi nhận.
-            // Việc chặn thật xảy ra lần sau khi user giữ vé/tạo đơn (PreCheckAsync ở TicketAPI).
             await _client.IngestAsync(evt, ct);
         }
         catch (Exception ex)

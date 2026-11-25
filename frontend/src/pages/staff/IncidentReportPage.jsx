@@ -575,7 +575,7 @@ export default function IncidentReportPage() {
               disabled={isSubmitting}
               style={{ minWidth: "180px" }}
             >
-              {isSubmitting ? (uploadProgressText || "Filing Report...") : "Submit Incident Report"}
+              {isSubmitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Submit Incident Report"}
             </button>
           </div>
         </form>

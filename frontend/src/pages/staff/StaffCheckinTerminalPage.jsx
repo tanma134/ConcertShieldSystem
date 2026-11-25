@@ -1031,7 +1031,7 @@ export default function StaffCheckinTerminalPage() {
               disabled={syncingOffline}
               title="Pending offline scans waiting for sync."
             >
-              {syncingOffline ? "Syncing..." : `Pending Sync (${offlineQueueCount})`}
+              {syncingOffline ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : `Pending Sync (${offlineQueueCount})`}
             </button>
           )}
 
@@ -1174,7 +1174,7 @@ export default function StaffCheckinTerminalPage() {
                   <div className={`scanner-frame ${autoScannedFlash ? "detected" : ""}`}></div>
                   {isCooldownActive ? (
                     <div className="cooldown-overlay-banner">
-                      Pausing 2s to verify scan...
+                      <span className="app-loading-spinner" role="status" aria-label="Loading" />
                     </div>
                   ) : (
                     <p className="scanner-hint">Point attendee QR code at camera to scan automatically</p>
@@ -1344,7 +1344,7 @@ export default function StaffCheckinTerminalPage() {
                     onClick={() => searchTicketsByCccd(manualForm.cccdNumber)}
                     disabled={searchingManualTickets || !manualForm.cccdNumber.trim()}
                   >
-                    {searchingManualTickets ? "Đang tìm..." : "Tìm vé theo CCCD"}
+                    {searchingManualTickets ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Tìm vé theo CCCD"}
                   </button>
                 </div>
               </div>
@@ -1476,7 +1476,7 @@ export default function StaffCheckinTerminalPage() {
                   className="btn-validate-ticket-pink"
                   disabled={!manualForm.cccdVerified || !manualForm.cccdNumber.trim() || (!selectedManualTicket && !manualForm.ticketCode.trim()) || scanning}
                 >
-                  {scanning ? "Đang xử lý..." : "Xác nhận Check-in Vé"}
+                  {scanning ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Xác nhận Check-in Vé"}
                 </button>
               </div>
             </form>
@@ -1566,7 +1566,7 @@ export default function StaffCheckinTerminalPage() {
                   className="btn-lookup-pink"
                   disabled={searchingLookup || !lookupSearch.queryValue.trim()}
                 >
-                  {searchingLookup ? "Searching..." : "Search Ticket"}
+                  {searchingLookup ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Search Ticket"}
                 </button>
               </div>
             </form>
@@ -1802,7 +1802,7 @@ export default function StaffCheckinTerminalPage() {
                 onClick={handleDownloadOfflinePackage}
                 disabled={downloadingPackage}
               >
-                {downloadingPackage ? "Preloading..." : "Download / Refresh Offline Package"}
+                {downloadingPackage ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Download / Refresh Offline Package"}
               </button>
 
               <button
@@ -1811,7 +1811,7 @@ export default function StaffCheckinTerminalPage() {
                 onClick={() => handleSyncOfflineScans(false)}
                 disabled={syncingOffline || offlineQueueCount === 0}
               >
-                {syncingOffline ? "Synchronizing..." : `Synchronize Scans to Server (${offlineQueueCount})`}
+                {syncingOffline ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : `Synchronize Scans to Server (${offlineQueueCount})`}
               </button>
 
               <button

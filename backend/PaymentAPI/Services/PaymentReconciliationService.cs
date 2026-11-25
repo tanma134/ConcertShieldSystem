@@ -25,15 +25,18 @@ namespace PaymentAPI.Services
         }
 
         public async Task<PaymentReconciliationExceptionPageDto>
-            GetExceptionsAsync(
-                DateTime? from,
-                DateTime? to,
-                int page,
-                int pageSize)
+    GetExceptionsAsync(
+        DateTime? from,
+        DateTime? to,
+        int? orderId,
+        int page,
+        int pageSize)
         {
             if (from.HasValue && to.HasValue && from.Value > to.Value)
+            {
                 throw new ArgumentException(
                     "From must be earlier than or equal to To.");
+            }
 
             page = Math.Max(page, 1);
             pageSize = Math.Clamp(pageSize, 1, 100);
@@ -42,8 +45,7 @@ namespace PaymentAPI.Services
                 await _repository.GetAllForReconciliationAsync();
 
             var resolvedTransactionIds =
-                await _resolutionRepository
-                    .GetResolvedPaymentTransactionIdsAsync();
+                await _resolutionRepository.GetResolvedPaymentTransactionIdsAsync();
 
             var exceptions =
                 new List<PaymentReconciliationExceptionDto>();
@@ -52,12 +54,16 @@ namespace PaymentAPI.Services
             {
                 var attempts = group
                     .OrderBy(t => t.RequestedAt)
+                    .ThenBy(t => t.PaymentTransactionId)
                     .ToList();
 
                 if (attempts.Count == 0)
                     continue;
 
                 var latest = attempts[^1];
+
+                if (orderId.HasValue && latest.OrderId != orderId.Value)
+                    continue;
 
                 if (resolvedTransactionIds.Contains(latest.PaymentTransactionId))
                     continue;
@@ -69,12 +75,53 @@ namespace PaymentAPI.Services
                     continue;
 
                 var successfulAttempts = attempts
-                    .Where(t => t.Status == "Success")
+                    .Where(t => string.Equals(
+                        t.Status,
+                        "Success",
+                        StringComparison.OrdinalIgnoreCase))
                     .ToList();
 
                 var order =
                     await _ticketApiClient.GetOrderReconciliationInfoAsync(
                         latest.OrderId);
+
+                // Mặc định dùng transaction mới nhất.
+                // Nếu order Paid đang thiếu vé/QR, chọn một payment Success
+                // hợp lệ để hành động Repair có thể xác thực được transaction.
+                var transactionForResolution = latest;
+
+                if (order != null)
+                {
+                    var orderIsPaid = string.Equals(
+                        order.Status,
+                        "Paid",
+                        StringComparison.OrdinalIgnoreCase);
+
+                    var hasMissingArtifacts =
+                        order.IssuedTicketCount < order.ExpectedTicketCount ||
+                        order.TicketsWithoutQrCount > 0;
+
+                    if (orderIsPaid && hasMissingArtifacts)
+                    {
+                        var validSuccess = successfulAttempts
+                            .Where(t =>
+                                !resolvedTransactionIds.Contains(
+                                    t.PaymentTransactionId) &&
+                                t.Amount == order.FinalAmount &&
+                                !string.IsNullOrWhiteSpace(
+                                    t.GatewayTransactionRef) &&
+                                string.Equals(
+                                    t.GatewayTransactionRef,
+                                    order.PaymentGatewayRef,
+                                    StringComparison.Ordinal))
+                            .OrderBy(t => t.RequestedAt)
+                            .ThenBy(t => t.PaymentTransactionId)
+                            .FirstOrDefault();
+
+                        if (validSuccess != null)
+                            transactionForResolution = validSuccess;
+                    }
+                }
 
                 var reasons = new List<string>();
 
@@ -89,7 +136,8 @@ namespace PaymentAPI.Services
                         "Paid",
                         StringComparison.OrdinalIgnoreCase);
 
-                    if (orderIsPaid && order.IssuedTicketCount < order.ExpectedTicketCount)
+                    if (orderIsPaid &&
+                        order.IssuedTicketCount < order.ExpectedTicketCount)
                     {
                         reasons.Add(
                             $"Order is Paid, but only {order.IssuedTicketCount} of " +
@@ -102,14 +150,21 @@ namespace PaymentAPI.Services
                             $"{order.TicketsWithoutQrCount} issued ticket(s) have no QR token.");
                     }
 
-                    if (latest.Status != "Failed" &&
+                    if (!string.Equals(
+                            latest.Status,
+                            "Failed",
+                            StringComparison.OrdinalIgnoreCase) &&
                         latest.Amount != order.FinalAmount)
                     {
                         reasons.Add(
                             $"Payment amount ({latest.Amount}) does not match order amount ({order.FinalAmount}).");
                     }
 
-                    if (latest.Status == "Success" && !orderIsPaid)
+                    if (string.Equals(
+                            latest.Status,
+                            "Success",
+                            StringComparison.OrdinalIgnoreCase) &&
+                        !orderIsPaid)
                     {
                         var confirmationTime =
                             latest.RespondedAt ?? latest.RequestedAt;
@@ -122,7 +177,10 @@ namespace PaymentAPI.Services
                         }
                     }
 
-                    if (latest.Status == "Failed" &&
+                    if (string.Equals(
+                            latest.Status,
+                            "Failed",
+                            StringComparison.OrdinalIgnoreCase) &&
                         orderIsPaid &&
                         successfulAttempts.Count == 0)
                     {
@@ -130,13 +188,20 @@ namespace PaymentAPI.Services
                             "Payment failed, but the order is marked as Paid.");
                     }
 
-                    if (latest.Status == "Pending" && orderIsPaid)
+                    if (string.Equals(
+                            latest.Status,
+                            "Pending",
+                            StringComparison.OrdinalIgnoreCase) &&
+                        orderIsPaid)
                     {
                         reasons.Add(
                             "Order is Paid, but the latest payment transaction is still Pending.");
                     }
                     else if (
-                        latest.Status == "Pending" &&
+                        string.Equals(
+                            latest.Status,
+                            "Pending",
+                            StringComparison.OrdinalIgnoreCase) &&
                         latest.RequestedAt <= DateTime.UtcNow - PendingTimeout &&
                         successfulAttempts.Count == 0)
                     {
@@ -156,21 +221,23 @@ namespace PaymentAPI.Services
 
                 exceptions.Add(new PaymentReconciliationExceptionDto
                 {
-                    PaymentTransactionId = latest.PaymentTransactionId,
-                    OrderId = latest.OrderId,
+                    PaymentTransactionId =
+                        transactionForResolution.PaymentTransactionId,
+                    OrderId = transactionForResolution.OrderId,
                     EventId = order?.EventId,
-                    Gateway = latest.Gateway,
-                    GatewayTransactionRef = latest.GatewayTransactionRef,
-                    PaymentAmount = latest.Amount,
+                    Gateway = transactionForResolution.Gateway,
+                    GatewayTransactionRef =
+                        transactionForResolution.GatewayTransactionRef,
+                    PaymentAmount = transactionForResolution.Amount,
                     OrderAmount = order?.FinalAmount,
-                    PaymentStatus = latest.Status,
+                    PaymentStatus = transactionForResolution.Status,
                     OrderStatus = order?.Status,
                     Reasons = reasons,
-                    RequestedAt = latest.RequestedAt,
-                    RespondedAt = latest.RespondedAt,
+                    RequestedAt = transactionForResolution.RequestedAt,
+                    RespondedAt = transactionForResolution.RespondedAt,
                     ExpectedTicketCount = order?.ExpectedTicketCount ?? 0,
                     IssuedTicketCount = order?.IssuedTicketCount ?? 0,
-                    TicketsWithoutQrCount = order?.TicketsWithoutQrCount ?? 0,
+                    TicketsWithoutQrCount = order?.TicketsWithoutQrCount ?? 0
                 });
             }
 
@@ -196,10 +263,10 @@ namespace PaymentAPI.Services
             int adminUserId)
         {
             if (paymentTransactionId <= 0)
-                throw new ArgumentException("Payment transaction ID không hợp lệ.");
+                throw new ArgumentException("Invalid payment transaction ID.");
 
             if (string.IsNullOrWhiteSpace(request.ResolutionNote))
-                throw new ArgumentException("Vui lòng nhập ghi chú xử lý.");
+                throw new ArgumentException("Please enter a resolution note.");
 
             var action = request.ResolutionAction?.Trim();
             var resolutionStatus = request.ResolutionStatus?.Trim();
@@ -208,28 +275,28 @@ namespace PaymentAPI.Services
                 action != "RepairPaidOrderArtifacts" &&
                 action != "ManualReview")
             {
-                throw new ArgumentException("Resolution action không hợp lệ.");
+                throw new ArgumentException("Invalid resolution action.");
             }
 
             if (resolutionStatus != "Resolved" && resolutionStatus != "Dismissed")
-                throw new ArgumentException("Resolution status không hợp lệ.");
+                throw new ArgumentException("Invalid resolution status.");
 
             if (action != "ManualReview" && resolutionStatus != "Resolved")
                 throw new ArgumentException(
-                    "Các thao tác tự động chỉ được đánh dấu Resolved.");
+                    "Automated actions can only be marked as Resolved.");
 
             var transaction =
                 await _repository.GetByIdAsync(paymentTransactionId);
 
             if (transaction == null)
                 throw new KeyNotFoundException(
-                    "Không tìm thấy payment transaction.");
+                    "Payment transaction not found.");
 
             if (await _resolutionRepository.ExistsByPaymentTransactionIdAsync(
                     paymentTransactionId))
             {
                 throw new InvalidOperationException(
-                    "Exception này đã được resolve trước đó.");
+                    "This exception has already been resolved.");
             }
 
             if (action != "ManualReview")
@@ -240,12 +307,12 @@ namespace PaymentAPI.Services
                         StringComparison.OrdinalIgnoreCase))
                 {
                     throw new InvalidOperationException(
-                        "Chỉ thao tác tự động được transaction đã xác nhận thanh toán thành công.");
+                        "Automated actions are only allowed for transactions confirmed as successful.");
                 }
 
                 if (string.IsNullOrWhiteSpace(transaction.GatewayTransactionRef))
                     throw new InvalidOperationException(
-                        "Transaction chưa có gateway reference để xác minh.");
+                        "The transaction has no gateway reference to verify.");
 
                 var order =
                     await _ticketApiClient.GetOrderReconciliationInfoAsync(
@@ -253,11 +320,11 @@ namespace PaymentAPI.Services
 
                 if (order == null)
                     throw new KeyNotFoundException(
-                        "Không tìm thấy order trong TicketAPI.");
+                        "Order not found in TicketAPI.");
 
                 if (transaction.Amount != order.FinalAmount)
                     throw new InvalidOperationException(
-                        "Payment amount không khớp với FinalAmount của order.");
+                        "The payment amount does not match the order's final amount.");
 
                 var paymentRequest = new ConfirmOrderPaymentRequestDTO
                 {
@@ -273,7 +340,7 @@ namespace PaymentAPI.Services
                             StringComparison.OrdinalIgnoreCase))
                     {
                         throw new InvalidOperationException(
-                            "ConfirmPayment chỉ áp dụng cho order đang Pending.");
+                            "ConfirmPayment only applies to Pending orders.");
                     }
 
                     var confirmed =
@@ -283,7 +350,7 @@ namespace PaymentAPI.Services
 
                     if (!confirmed)
                         throw new InvalidOperationException(
-                            "TicketAPI không xác nhận được thanh toán cho order.");
+                            "TicketAPI could not confirm payment for the order.");
                 }
                 else
                 {
@@ -299,7 +366,7 @@ namespace PaymentAPI.Services
                     if (!isPaid || !hasMissingArtifacts)
                     {
                         throw new InvalidOperationException(
-                            "RepairPaidOrderArtifacts chỉ áp dụng cho order Paid bị thiếu vé hoặc QR.");
+                            "RepairPaidOrderArtifacts only applies to Paid orders with missing tickets or QR codes.");
                     }
 
                     var repaired =
@@ -309,7 +376,7 @@ namespace PaymentAPI.Services
 
                     if (!repaired)
                         throw new InvalidOperationException(
-                            "TicketAPI không khôi phục được vé/QR cho order.");
+                            "TicketAPI could not restore tickets or QR codes for the order.");
                 }
             }
 
@@ -336,52 +403,127 @@ namespace PaymentAPI.Services
             };
         }
 
-        public async Task<PaymentReconciliationExceptionPageDto>GetFailedTransactionQueueAsync(
-            DateTime? from,
-            DateTime? to,
-            int page,
-            int pageSize)
+        public async Task<PaymentReconciliationExceptionPageDto>
+    GetFailedTransactionQueueAsync(
+        DateTime? from,
+        DateTime? to,
+        int page,
+        int pageSize)
         {
             if (from.HasValue && to.HasValue && from.Value > to.Value)
-                throw new ArgumentException("From must be earlier than or equal to To.");
+            {
+                throw new ArgumentException(
+                    "From must be earlier than or equal to To.");
+            }
 
             page = Math.Max(page, 1);
             pageSize = Math.Clamp(pageSize, 1, 100);
 
-            var transactions = await _repository.GetAllForReconciliationAsync();
+            var transactions =
+                await _repository.GetAllForReconciliationAsync();
 
-            var resolvedTransactionIds = await _resolutionRepository.GetResolvedPaymentTransactionIdsAsync();
+            var resolvedTransactionIds =
+                await _resolutionRepository.GetResolvedPaymentTransactionIdsAsync();
 
-            var successfulTransactionsByOrder = transactions
-                .Where(transaction => string.Equals(
-                    transaction.Status,
-                    "Success",
-                    StringComparison.OrdinalIgnoreCase))
-                .GroupBy(transaction => transaction.OrderId);
+            var failedItems = transactions
+                .Where(transaction =>
+                    string.Equals(
+                        transaction.Status,
+                        "Failed",
+                        StringComparison.OrdinalIgnoreCase))
+                .Where(transaction =>
+                    !resolvedTransactionIds.Contains(
+                        transaction.PaymentTransactionId))
+                .Where(transaction =>
+                    !from.HasValue || transaction.RequestedAt >= from.Value)
+                .Where(transaction =>
+                    !to.HasValue || transaction.RequestedAt <= to.Value)
+                .OrderByDescending(transaction => transaction.RequestedAt)
+                .Select(transaction => new PaymentReconciliationExceptionDto
+                {
+                    PaymentTransactionId = transaction.PaymentTransactionId,
+                    OrderId = transaction.OrderId,
+                    EventId = null,
+                    Gateway = transaction.Gateway,
+                    GatewayTransactionRef = transaction.GatewayTransactionRef,
+                    PaymentAmount = transaction.Amount,
+                    OrderAmount = null,
+                    PaymentStatus = transaction.Status,
+                    OrderStatus = null,
+                    Reasons = new List<string>
+                    {
+                "Payment transaction failed."
+                    },
+                    RequestedAt = transaction.RequestedAt,
+                    RespondedAt = transaction.RespondedAt,
+                    ExpectedTicketCount = 0,
+                    IssuedTicketCount = 0,
+                    TicketsWithoutQrCount = 0
+                })
+                .ToList();
 
-            var queueItems = new List<PaymentReconciliationExceptionDto>();
-
-            foreach (var group in successfulTransactionsByOrder)
+            return new PaymentReconciliationExceptionPageDto
             {
-                var payment = group
-                    .OrderByDescending(transaction => transaction.RequestedAt)
-                    .First();
+                Items = failedItems
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToList(),
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = failedItems.Count
+            };
+        }
 
-                if (resolvedTransactionIds.Contains(payment.PaymentTransactionId))
+        public async Task<TicketIssuanceRecoveryPageDto>
+            GetTicketIssuanceRecoveryQueueAsync(
+                DateTime? from,
+                DateTime? to,
+                int page,
+                int pageSize)
+        {
+            if (from.HasValue && to.HasValue && from.Value > to.Value)
+            {
+                throw new ArgumentException(
+                    "From must be earlier than or equal to To.");
+            }
+
+            page = Math.Max(page, 1);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+
+            var transactions =
+                await _repository.GetAllForReconciliationAsync();
+
+            var resolvedTransactionIds =
+                await _resolutionRepository.GetResolvedPaymentTransactionIdsAsync();
+
+            var recoveryItems = new List<TicketIssuanceRecoveryDto>();
+
+            foreach (var orderGroup in transactions.GroupBy(
+                         transaction => transaction.OrderId))
+            {
+                var candidatePayments = orderGroup
+                    .Where(transaction =>
+                        string.Equals(
+                            transaction.Status,
+                            "Success",
+                            StringComparison.OrdinalIgnoreCase) &&
+                        !string.IsNullOrWhiteSpace(
+                            transaction.GatewayTransactionRef) &&
+                        !resolvedTransactionIds.Contains(
+                            transaction.PaymentTransactionId) &&
+                        (!from.HasValue || transaction.RequestedAt >= from.Value) &&
+                        (!to.HasValue || transaction.RequestedAt <= to.Value))
+                    .ToList();
+
+                if (candidatePayments.Count == 0)
                     continue;
 
-                if (from.HasValue && payment.RequestedAt < from.Value)
-                    continue;
+                var order =
+                    await _ticketApiClient.GetOrderReconciliationInfoAsync(
+                        orderGroup.Key);
 
-                if (to.HasValue && payment.RequestedAt > to.Value)
-                    continue;
-
-                var order = await _ticketApiClient.GetOrderReconciliationInfoAsync(payment.OrderId);
-
-                if (order == null)
-                    continue;
-
-                if (!string.Equals(
+                if (order == null ||
+                    !string.Equals(
                         order.Status,
                         "Paid",
                         StringComparison.OrdinalIgnoreCase))
@@ -389,55 +531,70 @@ namespace PaymentAPI.Services
                     continue;
                 }
 
-                var missingTickets =
-                    order.IssuedTicketCount < order.ExpectedTicketCount;
+                var missingTicketCount = Math.Max(
+                    0,
+                    order.ExpectedTicketCount - order.IssuedTicketCount);
 
-                var missingQr = order.TicketsWithoutQrCount > 0;
+                if (missingTicketCount == 0 && order.TicketsWithoutQrCount == 0)
+                    continue;
 
-                // Queue này chỉ gồm order Paid bị thiếu vé hoặc thiếu QR.
-                if (!missingTickets && !missingQr)
+                // Chỉ đưa vào queue payment Success khớp đúng số tiền và
+                // gateway reference mà TicketAPI đã lưu trên order.
+                var matchingPayment = candidatePayments
+                    .Where(transaction =>
+                        transaction.Amount == order.FinalAmount &&
+                        string.Equals(
+                            transaction.GatewayTransactionRef,
+                            order.PaymentGatewayRef,
+                            StringComparison.Ordinal))
+                    .OrderByDescending(transaction => transaction.RequestedAt)
+                    .ThenByDescending(transaction => transaction.PaymentTransactionId)
+                    .FirstOrDefault();
+
+                if (matchingPayment == null)
                     continue;
 
                 var reasons = new List<string>();
 
-                if (missingTickets)
+                if (missingTicketCount > 0)
                 {
                     reasons.Add(
                         $"Order is Paid, but only {order.IssuedTicketCount} of " +
                         $"{order.ExpectedTicketCount} tickets have been issued.");
                 }
 
-                if (missingQr)
+                if (order.TicketsWithoutQrCount > 0)
                 {
                     reasons.Add(
                         $"{order.TicketsWithoutQrCount} issued ticket(s) have no QR token.");
                 }
 
-                queueItems.Add(new PaymentReconciliationExceptionDto
+                recoveryItems.Add(new TicketIssuanceRecoveryDto
                 {
-                    PaymentTransactionId = payment.PaymentTransactionId,
-                    OrderId = payment.OrderId,
+                    PaymentTransactionId = matchingPayment.PaymentTransactionId,
+                    OrderId = matchingPayment.OrderId,
                     EventId = order.EventId,
-                    Gateway = payment.Gateway,
-                    GatewayTransactionRef = payment.GatewayTransactionRef,
-                    PaymentAmount = payment.Amount,
+                    Gateway = matchingPayment.Gateway,
+                    GatewayTransactionRef = matchingPayment.GatewayTransactionRef,
+                    PaymentAmount = matchingPayment.Amount,
                     OrderAmount = order.FinalAmount,
-                    PaymentStatus = payment.Status,
-                    OrderStatus = order.Status,
+                    PaymentStatus = matchingPayment.Status,
+                    OrderStatus = order.Status!,
                     Reasons = reasons,
-                    RequestedAt = payment.RequestedAt,
-                    RespondedAt = payment.RespondedAt,
+                    RequestedAt = matchingPayment.RequestedAt,
+                    RespondedAt = matchingPayment.RespondedAt,
                     ExpectedTicketCount = order.ExpectedTicketCount,
                     IssuedTicketCount = order.IssuedTicketCount,
                     TicketsWithoutQrCount = order.TicketsWithoutQrCount
                 });
             }
 
-            var orderedItems = queueItems
+            var orderedItems = recoveryItems
                 .OrderByDescending(item => item.RequestedAt)
+                .ThenByDescending(item => item.PaymentTransactionId)
                 .ToList();
 
-            return new PaymentReconciliationExceptionPageDto
+            return new TicketIssuanceRecoveryPageDto
             {
                 Items = orderedItems
                     .Skip((page - 1) * pageSize)

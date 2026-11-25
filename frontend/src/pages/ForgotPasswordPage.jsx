@@ -50,7 +50,7 @@ export default function ForgotPasswordPage() {
             </div>
 
             <button className="auth-button" type="submit" disabled={loading}>
-              {loading ? "Sending..." : "Send OTP"}
+              {loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Send OTP"}
             </button>
           </form>
 

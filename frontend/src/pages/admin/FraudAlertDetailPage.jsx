@@ -233,7 +233,7 @@ export default function FraudAlertDetailPage() {
   };
 
   if (loading) {
-    return <Shell title="Fraud Alert Details"><div className="empty-state">Loading...</div></Shell>;
+    return <Shell title="Fraud Alert Details"><div className="empty-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div></Shell>;
   }
   if (!detail) {
     return (
@@ -302,7 +302,7 @@ export default function FraudAlertDetailPage() {
         <div className="panel-header">
           <h2>AI analysis</h2>
           <button type="button" className="admin-button-secondary" onClick={handleGenerateAi} disabled={aiLoading}>
-            {aiLoading ? "Calling AI..." : ai ? "Regenerate summary" : "Generate AI summary"}
+            {aiLoading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : ai ? "Regenerate summary" : "Generate AI summary"}
           </button>
         </div>
 
@@ -477,7 +477,7 @@ export default function FraudAlertDetailPage() {
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
               <button type="button" className="admin-button-secondary" onClick={() => setBlockOpen(false)}>Cancel</button>
               <button type="submit" className="admin-button" disabled={blockSubmitting}>
-                {blockSubmitting ? "Processing..." : "Confirm block"}
+                {blockSubmitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm block"}
               </button>
             </div>
           </form>

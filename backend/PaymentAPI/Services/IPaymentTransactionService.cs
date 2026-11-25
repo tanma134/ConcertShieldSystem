@@ -7,5 +7,6 @@ namespace PaymentAPI.Services
         Task CreatePaymentTransactionAsync(long orderId, long amount, int? userId = null, string? clientIp = null, string? deviceFp = null, string? sessionId = null);
 
         Task<bool> UpdatePaymentTransactionAsync(int orderId, long vnpAmount, string? gatewayTransactionRef, string status, string? responsePayload);
+        Task<int> CancelPendingPaymentsAsync(int orderId);
     }
 }

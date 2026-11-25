@@ -83,7 +83,7 @@ export default function KycImagesAdminPage() {
                     {s?.url ? (
                       <img src={s.url} alt={label} />
                     ) : s?.loading ? (
-                      "Loading..."
+                      <span className="app-loading-spinner" role="status" aria-label="Loading" />
                     ) : (
                       <div>
                         {s?.error && <p className="kyc-image-card__err">{s.error}</p>}

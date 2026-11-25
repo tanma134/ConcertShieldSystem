@@ -2,6 +2,7 @@ import { useLocation } from "react-router-dom";
 import PanelShell, { Icon } from "../../components/PanelShell";
 import useAdminPending from "../../hooks/useAdminPending";
 import { useAuth } from "../../context/AuthContext";
+import "./TicketDisputeListPage.css";
 
 
 // Icon cho từng nhóm (SVG inline, cùng bộ nét 1.8).
@@ -140,6 +141,7 @@ export const ADMIN_GROUPS = [
       ["/admin/ticket-governance", "Governance"],
       ["/admin/ticket-status-history", "Status History"],
       ["/admin/returns", "Returns / Refunds"],
+      ["/admin/ticket-issuance-recovery", "Ticket Recovery"],
     ],
   },
   {
@@ -188,6 +190,7 @@ export const ADMIN_GROUPS = [
     items: [
       ["/admin/incidents", "Incidents"],
       ["/admin/support-cases", "Support Cases"],
+      ["/admin/ticket-disputes", "Ticket Disputes"],
     ],
   },
   {

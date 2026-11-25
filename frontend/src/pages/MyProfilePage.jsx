@@ -149,7 +149,7 @@ export default function MyProfilePage() {
           {success && <div className="profile-alert success">{success}</div>}
 
           {loading ? (
-            <div className="profile-loading">Loading profile...</div>
+            <div className="profile-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
           ) : (
             <>
               <section className="profile-card profile-overview">
@@ -359,7 +359,7 @@ export default function MyProfilePage() {
                   onClick={removeWishlist}
                   disabled={removing}
                 >
-                  {removing ? "Removing..." : "Remove"}
+                  {removing ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Remove"}
                 </button>
               </div>
             </div>
@@ -394,7 +394,7 @@ export default function MyProfilePage() {
                       onClick={requestDeletion}
                       disabled={requestingDeletion}
                     >
-                      {requestingDeletion ? "Submitting..." : "Yes, Submit"}
+                      {requestingDeletion ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Yes, Submit"}
                     </button>
                   </div>
                 </>

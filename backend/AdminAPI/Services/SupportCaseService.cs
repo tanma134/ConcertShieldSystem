@@ -173,7 +173,7 @@ public class SupportCaseService : ISupportCaseService
         if (req.OrderId.HasValue && req.OrderId.Value > 0)
         {
             var existingOrderCase = await _repository.Cases
-                .Where(c => c.OrderId == req.OrderId.Value && c.Status != "Closed" && c.Status != "Resolved")
+                .Where(c => c.OrderId == req.OrderId.Value && c.Status != "Closed" && c.Status != "Resolved" && c.Status != "Dismissed")
                 .OrderByDescending(c => c.CreatedAt)
                 .FirstOrDefaultAsync();
 
@@ -260,6 +260,10 @@ public class SupportCaseService : ISupportCaseService
         {
             q = q.Where(c => c.Status == query.Status.Trim());
         }
+        else if (query.ActiveOnly)
+        {
+            q = q.Where(c => c.Status != "Closed" && c.Status != "Resolved" && c.Status != "Dismissed");
+        }
 
         // Filter by priority
         if (!string.IsNullOrWhiteSpace(query.Priority))
@@ -281,6 +285,13 @@ public class SupportCaseService : ISupportCaseService
                              c.Title.ToLower().Contains(term) ||
                              c.CustomerName.ToLower().Contains(term) ||
                              c.CustomerEmail.ToLower().Contains(term));
+        }
+
+        if (query.TicketDisputesOnly)
+        {
+            q = q.Where(c =>
+                c.Category == "Invalid Ticket" ||
+                c.Category == "Payment Dispute");
         }
 
         // Sort latest first and paginate
@@ -341,9 +352,9 @@ public class SupportCaseService : ISupportCaseService
         }
 
         // Closed support cases cannot be reassigned
-        if (supportCase.Status == "Closed" || supportCase.Status == "Resolved")
+        if (supportCase.Status == "Closed" || supportCase.Status == "Resolved" || supportCase.Status == "Dismissed")
         {
-            throw new InvalidOperationException("Cannot reassign a support case that is already closed or resolved .");
+            throw new InvalidOperationException("Cannot reassign a support case that is already closed, resolved, or dismissed.");
         }
 
         var oldStaff = supportCase.AssignedStaffName;
@@ -454,9 +465,9 @@ public class SupportCaseService : ISupportCaseService
         }
 
         // Prevent closing an already closed case
-        if (supportCase.Status == "Closed")
+        if (supportCase.Status == "Closed" || supportCase.Status == "Resolved" || supportCase.Status == "Dismissed")
         {
-            throw new InvalidOperationException("Support case is already closed.");
+            throw new InvalidOperationException("Support case is already completed.");
         }
 
         supportCase.Status = "Closed";
@@ -516,6 +527,41 @@ public class SupportCaseService : ISupportCaseService
         return MapToDetailDto(supportCase, notes);
     }
 
+    public async Task<SupportCaseDetailDto> DismissCaseAsync(int caseId, DismissCaseRequest req, int resolverId, string resolverName, string role)
+    {
+        var reason = req.Reason?.Trim();
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new ArgumentException("A dismissal reason is required.");
+
+        var supportCase = await _repository.Cases.FirstOrDefaultAsync(c => c.CaseId == caseId);
+        if (supportCase == null)
+            throw new KeyNotFoundException($"Support case #{caseId} not found.");
+        if (supportCase.Status == "Closed" || supportCase.Status == "Resolved" || supportCase.Status == "Dismissed")
+            throw new InvalidOperationException("Support case is already completed.");
+
+        supportCase.Status = "Dismissed";
+        supportCase.Resolution = reason;
+        supportCase.ResolvedBy = resolverId;
+        supportCase.ResolvedByName = resolverName;
+        supportCase.ResolvedAt = DateTime.UtcNow;
+        supportCase.UpdatedAt = DateTime.UtcNow;
+        _repository.AddNote(new SupportCaseNote
+        {
+            CaseId = caseId,
+            AuthorId = resolverId,
+            AuthorName = resolverName,
+            AuthorRole = role,
+            NoteType = "Dismissal",
+            Content = $"Report dismissed: {reason}",
+            CreatedAt = DateTime.UtcNow
+        });
+        await _repository.SaveChangesAsync();
+        _logger.LogInformation("Support case #{CaseId} dismissed by {ResolverName}", caseId, resolverName);
+
+        var notes = await _repository.Notes.AsNoTracking().Where(n => n.CaseId == caseId).OrderBy(n => n.CreatedAt).ToListAsync();
+        return MapToDetailDto(supportCase, notes);
+    }
+
     // Get latest support case linked to an order
     public async Task<SupportCaseDetailDto?> GetCaseByOrderIdAsync(int orderId)
     {
@@ -532,6 +578,27 @@ public class SupportCaseService : ISupportCaseService
             .ToListAsync();
 
         return MapToDetailDto(supportCase, notes);
+    }
+
+    public Task<List<int>> GetReportedOrderIdsAsync(int currentUserId, string? currentUserEmail)
+    {
+        var cases = _repository.Cases.AsNoTracking()
+            .Where(c => c.OrderId.HasValue
+                && c.Status != "Closed"
+                && c.Status != "Resolved"
+                && c.Status != "Dismissed");
+
+        if (!string.IsNullOrWhiteSpace(currentUserEmail))
+        {
+            var email = currentUserEmail.Trim().ToLower();
+            cases = cases.Where(c => c.CustomerId == currentUserId || c.CustomerEmail.ToLower() == email);
+        }
+        else
+        {
+            cases = cases.Where(c => c.CustomerId == currentUserId);
+        }
+
+        return cases.Select(c => c.OrderId!.Value).Distinct().ToListAsync();
     }
 
     // Append internal investigation or communication note
@@ -662,5 +729,12 @@ public class SupportCaseService : ISupportCaseService
                 CreatedAt = n.CreatedAt
             }).ToList()
         };
+    }
+
+    public Task<List<SupportCaseListDto>> GetTicketDisputesAsync(SupportCaseQuery query, int currentUserId, bool isAdmin)
+    {
+        query.TicketDisputesOnly = true;
+
+        return GetCasesAsync(query, currentUserId, isAdmin);
     }
 }

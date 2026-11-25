@@ -98,7 +98,7 @@ export default function StepTicketsSeating({
           </button>
         </div>
       )}
-      {loading && <div className="tb-loading">Loading...</div>}
+      {loading && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
 
       {!loading && (
         <>
@@ -541,7 +541,7 @@ function DynamicPricingSection({ ticketTypes, event, readOnly }) {
             className="tb-btn tb-btn-primary ow-btn-sm"
             disabled={saving}
           >
-            {saving ? "Saving..." : editingRuleId ? "Save changes" : "Add rule"}
+            {saving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : editingRuleId ? "Save changes" : "Add rule"}
           </button>
           {editingRuleId && (
             <button
@@ -962,7 +962,7 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
                 disabled={batchSaving || !batchSaleStart || batchSelectedIds.length === 0}
                 onClick={applyBatchSalesWindow}
               >
-                {batchSaving ? "Applying..." : `Apply to ${batchSelectedIds.length} tickets`}
+                {batchSaving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : `Apply to ${batchSelectedIds.length} tickets`}
               </button>
               <button
                 type="button"
@@ -1236,7 +1236,7 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
               className="tb-btn tb-btn-primary ow-btn-sm"
               disabled={saving || hasBlockingErrors}
             >
-              {saving ? "Saving..." : editingId ? "Save changes" : "Add ticket type"}
+              {saving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : editingId ? "Save changes" : "Add ticket type"}
             </button>
             {editingId && (
               <button
@@ -1889,7 +1889,7 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
                       className="tb-btn tb-btn-primary ow-btn-sm"
                       disabled={saving || hasBlockingErrors || isExceedingTicketQuota}
                     >
-                      {saving ? "Saving..." : editingZoneId ? "Save zone" : "Add zone"}
+                      {saving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : editingZoneId ? "Save zone" : "Add zone"}
                     </button>
                   </div>
                 </form>
@@ -2102,7 +2102,7 @@ function TemplatePicker({ eventId, ticketTypes, onApplied }) {
 
   const hasDuplicateTemplateZoneNames = duplicateNamesList.size > 0;
 
-  if (loading) return <div className="tb-loading">Loading templates...</div>;
+  if (loading) return <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>;
 
   return (
     <div className="ow-template-picker">
@@ -2356,7 +2356,7 @@ function TemplatePicker({ eventId, ticketTypes, onApplied }) {
               onClick={handleApply}
               disabled={applying || ticketTypes.length === 0 || anyQuotaExceeded || hasDuplicateTemplateZoneNames}
             >
-              {applying ? "Applying..." : "Apply template"}
+              {applying ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Apply template"}
             </button>
           </div>
         </div>
@@ -2450,7 +2450,7 @@ function SaveAsTemplateForm({ eventId, onSaved }) {
         className="tb-btn tb-btn-primary ow-btn-sm"
         disabled={saving}
       >
-        {saving ? "Saving..." : "Save as template"}
+        {saving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Save as template"}
       </button>
     </form>
   );
@@ -2682,7 +2682,7 @@ function RefundPolicySection({ eventId, refundPolicies, readOnly, onChanged }) {
             className="tb-btn tb-btn-primary ow-btn-sm"
             disabled={saving}
           >
-            {saving ? "Saving..." : editingId ? "Save policy" : "Add policy"}
+            {saving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : editingId ? "Save policy" : "Add policy"}
           </button>
         </form>
       )}

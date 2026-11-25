@@ -165,5 +165,26 @@ namespace PaymentAPI.API
                 return false;
             }
         }
+
+        public async Task<bool> CancelPendingOrderAsync(int orderId)
+        {
+            try
+            {
+                using var response = await _httpClient.PostAsync(
+                    $"api/Orders/{orderId}/cancel-pending",
+                    content: null);
+
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Không thể yêu cầu TicketAPI hủy order {OrderId}",
+                    orderId);
+
+                return false;
+            }
+        }
     }
 }

@@ -286,7 +286,7 @@ export default function Header() {
                 <div className="tb-search-section">
                   <span className="tb-search-section-label">Suggestions</span>
                   {suggestLoading && (
-                    <div className="tb-search-hint">Searching...</div>
+                    <div className="tb-search-hint"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
                   )}
                   {!suggestLoading && suggestions.length === 0 && (
                     <div className="tb-search-hint">No matching events</div>

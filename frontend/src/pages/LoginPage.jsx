@@ -110,7 +110,7 @@ export default function LoginPage() {
             </div>
 
             <button className="auth-button" type="submit" disabled={loading}>
-              {loading ? "Logging in..." : "Log In"}
+              {loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Log In"}
             </button>
           </form>
 
@@ -118,7 +118,7 @@ export default function LoginPage() {
 
           <div className="google-login-wrapper">
             {googleLoading ? (
-              <p>Logging in with Google...</p>
+              <span className="app-loading-spinner" role="status" aria-label="Loading" />
             ) : (
               <GoogleLogin
                 onSuccess={handleGoogleSuccess}

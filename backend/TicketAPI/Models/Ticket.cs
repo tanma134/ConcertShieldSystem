@@ -42,6 +42,9 @@ public partial class Ticket
     public DateTime? DeletedAt { get; set; }
 
     public int? DeletedBy { get; set; }
+    public int? OrderAttendeeId { get; set; }
+
+    public virtual OrderAttendee? OrderAttendee { get; set; }
 
     public virtual Order Order { get; set; } = null!;
 

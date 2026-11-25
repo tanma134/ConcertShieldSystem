@@ -201,7 +201,7 @@ function EventsListPage() {
           </div>
 
           {/* Loading, Error, Empty States */}
-          {loading && <div className="tb-loading">Loading concerts...</div>}
+          {loading && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
           {!loading && error && <div className="tb-error">{error}</div>}
           {!loading && !error && displayedEvents.length === 0 && (
             <div className="tb-empty">

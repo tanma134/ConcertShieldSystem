@@ -238,6 +238,19 @@ public partial class TicketDbContext : DbContext
             entity.HasOne(d => d.Order).WithMany(p => p.Tickets)
                 .HasForeignKey(d => d.OrderId)
                 .HasConstraintName("fk_tickets_order");
+
+            entity.Property(e => e.OrderAttendeeId)
+                .HasColumnName("order_attendee_id");
+
+            entity.HasIndex(e => e.OrderAttendeeId, "uq_tickets_order_attendee")
+                .IsUnique()
+                .HasFilter("(order_attendee_id IS NOT NULL)");
+
+            entity.HasOne(e => e.OrderAttendee)
+                .WithMany(e => e.Tickets)
+                .HasForeignKey(e => e.OrderAttendeeId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("fk_tickets_order_attendee");
         });
 
         modelBuilder.Entity<TicketQrToken>(entity =>

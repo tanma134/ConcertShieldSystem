@@ -354,8 +354,9 @@ export default function RefundReconciliationPage() {
               {loading ? (
                 <tr>
                   <td colSpan="7" className="rr-table-empty">
-                    Loading reconciliation records...
-                  </td>
+                    <span className="app-loading-spinner" role="status" aria-label="Loading" /></td>
+
+
                 </tr>
               ) : refunds.length === 0 ? (
                 <tr>

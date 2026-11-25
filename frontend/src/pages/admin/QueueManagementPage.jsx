@@ -146,7 +146,7 @@ export default function QueueManagementPage() {
               <input name="admissionRate" type="number" min="1" required value={configuration.admissionRate} onChange={updateConfiguration} />
             </label>
             <button className="admin-button" type="submit" disabled={saving || !selectedEvent}>
-              {saving ? "Opening..." : "Open Queue"}
+              {saving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Open Queue"}
             </button>
           </form>
         </section>
@@ -155,7 +155,7 @@ export default function QueueManagementPage() {
           {["REGISTERED", "WAITING", "ADMITTED", "BLOCKED"].map((status) => (
             <div className="summary-card" key={status}>
               <span className="label">{status}</span>
-              <div className="value">{loading ? "..." : count(status)}</div>
+              <div className="value">{loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : count(status)}</div>
               <span className="trend">Current sessions</span>
             </div>
           ))}
@@ -172,7 +172,7 @@ export default function QueueManagementPage() {
               </p>
             </div>
             <button className="admin-button-secondary" type="button" onClick={() => load()} disabled={loading}>
-              {loading ? "Loading..." : "Refresh"}
+              {loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Refresh"}
             </button>
           </div>
           <div className="toolbar-row queue-management-toolbar">
@@ -194,7 +194,7 @@ export default function QueueManagementPage() {
             </label>
           </div>
           {loading ? (
-            <div className="empty-state">Loading queue sessions...</div>
+            <div className="empty-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
           ) : filteredSessions.length === 0 ? (
             <div className="empty-state">{search ? "No queue sessions match your search." : "No queue sessions found."}</div>
           ) : (

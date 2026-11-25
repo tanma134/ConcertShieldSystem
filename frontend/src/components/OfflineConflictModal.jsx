@@ -145,15 +145,14 @@ export default function OfflineConflictModal({
             onClick={fetchConflicts}
             disabled={loading}
           >
-            {loading ? "Loading..." : "Refresh List"}
+            {loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Refresh List"}
           </button>
         </div>
 
         <div className="conflict-list-body">
           {loading && conflicts.length === 0 ? (
             <div className="conflict-empty-state">
-              <div className="spinner"></div>
-              <p>Loading conflict audit records...</p>
+              <span className="app-loading-spinner" role="status" aria-label="Loading" />
             </div>
           ) : filteredConflicts.length === 0 ? (
             <div className="conflict-empty-state">
@@ -286,7 +285,7 @@ export default function OfflineConflictModal({
                           }
                           title="Accept the earlier admission scan as valid and reject second duplicate"
                         >
-                          {isLoadingThis ? "Processing..." : "Accept Earlier Scan (Reject Scan 2)"}
+                          {isLoadingThis ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Accept Earlier Scan (Reject Scan 2)"}
                         </button>
 
                         <button
@@ -297,7 +296,7 @@ export default function OfflineConflictModal({
                           }
                           title="Revoke both admissions and direct attendees to the Helpdesk counter"
                         >
-                          {isLoadingThis ? "Processing..." : "Revoke Both & Escalate to Helpdesk"}
+                          {isLoadingThis ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Revoke Both & Escalate to Helpdesk"}
                         </button>
 
                         <button
@@ -308,7 +307,7 @@ export default function OfflineConflictModal({
                           }
                           title="Administrator manually approves admittance exception"
                         >
-                          {isLoadingThis ? "Processing..." : "Manual Override (Admin)"}
+                          {isLoadingThis ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Manual Override (Admin)"}
                         </button>
                       </div>
                     </div>

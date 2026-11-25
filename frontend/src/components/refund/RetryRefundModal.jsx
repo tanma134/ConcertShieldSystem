@@ -142,7 +142,7 @@ export default function RetryRefundModal({
               Cancel
             </button>
             <button type="submit" className="rf-btn-submit" disabled={submitting}>
-              {submitting ? "Retrying..." : "Retry Refund"}
+              {submitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Retry Refund"}
             </button>
           </div>
         </form>

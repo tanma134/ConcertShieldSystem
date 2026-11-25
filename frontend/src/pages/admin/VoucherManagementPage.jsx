@@ -544,7 +544,7 @@ export default function VoucherManagementPage() {
         )}
 
         {loading ? (
-          <div className="empty-state">Loading vouchers...</div>
+          <div className="empty-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
         ) : vouchers.length === 0 ? (
           <div className="empty-state">No vouchers found matching the filter criteria.</div>
         ) : (
@@ -938,7 +938,7 @@ export default function VoucherManagementPage() {
                   Cancel
                 </button>
                 <button type="submit" className="admin-button" disabled={submitting}>
-                  {submitting ? "Processing..." : modal === "edit" ? "Save Voucher Changes" : "Confirm Create Voucher"}
+                  {submitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : modal === "edit" ? "Save Voucher Changes" : "Confirm Create Voucher"}
                 </button>
               </div>
             </form>
@@ -969,7 +969,7 @@ export default function VoucherManagementPage() {
               </div>
 
               {usagesLoading ? (
-                <div className="empty-state">Loading history...</div>
+                <div className="empty-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
               ) : usages.length === 0 ? (
                 <div className="empty-state">No orders have redeemed this voucher yet.</div>
               ) : (

@@ -33,10 +33,10 @@ export default function QueueAbuseAlertsPage() {
     </section>
     {error && <div className="auth-message error">{error}</div>}
     <section className="queue-alert-summary">
-      <div><span>Total alerts</span><strong>{loading ? "—" : counts.total}</strong><small>Current filter</small></div>
-      <div className="is-danger"><span>High risk</span><strong>{loading ? "—" : counts.high}</strong><small>Needs escalation</small></div>
-      <div className="is-warning"><span>Open reviews</span><strong>{loading ? "—" : counts.open}</strong><small>Awaiting action</small></div>
-      <div className="is-success"><span>Blocked sessions</span><strong>{loading ? "—" : counts.blocked}</strong><small>Access prevented</small></div>
+      <div><span>Total alerts</span><strong>{loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : counts.total}</strong><small>Current filter</small></div>
+      <div className="is-danger"><span>High risk</span><strong>{loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : counts.high}</strong><small>Needs escalation</small></div>
+      <div className="is-warning"><span>Open reviews</span><strong>{loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : counts.open}</strong><small>Awaiting action</small></div>
+      <div className="is-success"><span>Blocked sessions</span><strong>{loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : counts.blocked}</strong><small>Access prevented</small></div>
     </section>
     <section className="admin-panel queue-alert-panel">
       <div className="admin-panel-head queue-alert-toolbar">
@@ -48,7 +48,7 @@ export default function QueueAbuseAlertsPage() {
         </div>
       </div>
       <div className="admin-table-wrap"><table className="ow-table queue-alert-table"><thead><tr><th>Risk</th><th>Alert</th><th>User / session</th><th>Status</th><th>Detected</th><th /></tr></thead><tbody>
-        {loading && <tr><td colSpan="6" className="queue-alert-empty">Loading security alerts…</td></tr>}
+        {loading && <tr><td colSpan="6" className="queue-alert-empty"><span className="app-loading-spinner" role="status" aria-label="Loading" /></td></tr>}
         {!loading && alerts.length === 0 && <tr><td colSpan="6" className="queue-alert-empty">No alerts match these filters.</td></tr>}
         {!loading && alerts.map((alert) => <tr key={alert.alertId}>
           <td><span className={`queue-risk-badge risk-${alert.severity.toLowerCase()}`}>{alert.severity}</span></td>

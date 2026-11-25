@@ -133,7 +133,7 @@ export default function ProcessRefundModal({
         </div>
 
         {loadingOrder ? (
-          <div className="rf-loading">Loading order transaction details...</div>
+          <div className="rf-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
         ) : (
           <form onSubmit={handleSubmit} className="rf-form">
             {/* Figure 142 Summary Card */}
@@ -253,7 +253,7 @@ export default function ProcessRefundModal({
                 className="rf-btn-submit"
                 disabled={submitting || maxRefundable <= 0}
               >
-                {submitting ? "Processing..." : "Process Refund"}
+                {submitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Process Refund"}
               </button>
             </div>
           </form>

@@ -56,6 +56,7 @@ const ticketApi = {
       `/admin/tickets/${encodeURIComponent(ticketId)}/reissue`,
       { reason }
     ),
+    getActiveHoldSession: () => axiosClient.get("/Holds/session/active"),
 };
 
 export default ticketApi;

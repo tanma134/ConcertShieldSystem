@@ -3,11 +3,13 @@ using Microsoft.AspNetCore.Mvc;
 using static TicketAPI.DTOs.AdminTicketDtos;
 using TicketAPI.Services;
 using TicketAPI.DTOs;
+using Microsoft.AspNetCore.Authorization;
 
 namespace TicketAPI.Controllers
 {
     [Route("api/admin/tickets")]
     [ApiController]
+    [Authorize(Roles = "Admin")]
     public class AdminTicketsController : TicketApiControllerBase
     {
         private readonly ITicketService _ticketService;

@@ -104,6 +104,7 @@ builder.Services.AddScoped<ICheckinService>(sp => new CheckinService(
     sp.GetRequiredService<ILogger<CheckinService>>()));
 builder.Services.AddScoped<IStatusHistoryRepository, StatusHistoryRepository>();
 builder.Services.AddScoped<IStatusHistoryService, StatusHistoryService>();
+builder.Services.AddHostedService<ExpiredOrderWorker>();
 
 // Risk Engine: gui tin hieu gian lan/bot sang AdminAPI
 builder.Services.AddRiskClient(builder.Configuration);

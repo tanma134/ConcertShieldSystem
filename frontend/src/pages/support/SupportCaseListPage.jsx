@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import supportCaseApi from "../../api/supportCaseApi";
 import { useAuth } from "../../context/AuthContext";
@@ -83,8 +83,8 @@ export default function SupportCaseListPage() {
   const stats = useMemo(() => {
     const total = cases.length;
     const open = cases.filter((c) => c.status === "Open" || c.status === "Assigned").length;
-    const critical = cases.filter((c) => c.priority === "Critical" && c.status !== "Closed").length;
-    const resolved = cases.filter((c) => c.status === "Resolved" || c.status === "Closed").length;
+    const critical = cases.filter((c) => c.priority === "Critical" && !["Closed", "Resolved", "Dismissed"].includes(c.status)).length;
+    const resolved = cases.filter((c) => ["Resolved", "Closed", "Dismissed"].includes(c.status)).length;
     return { total, open, critical, resolved };
   }, [cases]);
 
@@ -98,6 +98,8 @@ export default function SupportCaseListPage() {
         return <span className="sc-status-badge sc-status-resolved">Resolved</span>;
       case "Closed":
         return <span className="sc-status-badge sc-status-closed">Closed</span>;
+      case "Dismissed":
+        return <span className="sc-status-badge sc-status-closed">Dismissed</span>;
       default:
         return <span className="sc-status-badge">{status}</span>;
     }
@@ -178,6 +180,7 @@ export default function SupportCaseListPage() {
             <option value="InProgress">In Progress</option>
             <option value="Resolved">Resolved</option>
             <option value="Closed">Closed</option>
+            <option value="Dismissed">Dismissed</option>
           </select>
 
           <select
@@ -197,8 +200,9 @@ export default function SupportCaseListPage() {
         <div className="sc-table-wrap">
           {loading ? (
             <div style={{ padding: "40px", textAlign: "center", color: "var(--sc-text-secondary)" }}>
-              Loading support cases...
-            </div>
+              <span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
+
+
           ) : cases.length === 0 ? (
             <div style={{ padding: "40px", textAlign: "center", color: "var(--sc-text-secondary)" }}>
               No support cases found matching the criteria.

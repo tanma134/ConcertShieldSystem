@@ -86,34 +86,34 @@ namespace TicketAPI.Services
             string reason)
         {
             if (ticketId <= 0)
-                throw new ArgumentException("Ticket ID không hợp lệ.");
+                throw new ArgumentException("Invalid ticket ID.");
 
             if (adminUserId <= 0)
-                throw new ArgumentException("Admin ID không hợp lệ.");
+                throw new ArgumentException("Invalid admin ID.");
 
             var normalizedReason = reason?.Trim();
 
             if (string.IsNullOrWhiteSpace(normalizedReason))
-                throw new ArgumentException("Vui lòng nhập lý do thu hồi vé.");
+                throw new ArgumentException("Please provide a reason for revoking the ticket.");
 
             if (normalizedReason.Length > 500)
-                throw new ArgumentException("Lý do thu hồi không được vượt quá 500 ký tự.");
+                throw new ArgumentException("The revocation reason cannot exceed 500 characters.");
 
             var ticket = await _ticketRepository.GetTicketForAdminRevokeAsync(ticketId);
 
             if (ticket == null)
-                throw new KeyNotFoundException("Không tìm thấy vé.");
+                throw new KeyNotFoundException("Ticket not found.");
 
             if (ticket.CheckedInAt.HasValue ||
                 ticket.TicketQrTokens.Any(token => token.IsUsed))
             {
-                throw new InvalidOperationException("Không thể thu hồi vé đã check-in.");
+                throw new InvalidOperationException("A checked-in ticket cannot be revoked.");
             }
 
             if (ticket.Status != TicketStatuses.Active)
             {
                 throw new InvalidOperationException(
-                    "Chỉ có thể thu hồi vé đang ở trạng thái Active.");
+                    "Only Active tickets can be revoked.");
             }
 
             await _ticketRepository.RevokeTicketAsync(
@@ -199,7 +199,9 @@ namespace TicketAPI.Services
                 UnitPrice = ticket.Order.OrderDetails
                     .FirstOrDefault(detail =>
                         detail.TicketTypeId == ticket.TicketTypeId)
-                    ?.UnitPrice
+                    ?.UnitPrice,
+                HasOwner = ticket.OwnerUserId.HasValue || !string.IsNullOrWhiteSpace(ticket.OwnerName),
+                HasQrToken = ticket.TicketQrTokens.Any(token => !token.IsRevoked)
             };
         }
     }

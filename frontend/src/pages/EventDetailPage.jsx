@@ -153,7 +153,7 @@ export default function EventDetailPage() {
     <div className="tb-app">
       <Header />
 
-      {loading && <div className="tb-loading">Loading event...</div>}
+      {loading && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
       {!loading && error && <div className="tb-error">{error}</div>}
 
       {!loading && !error && event && (
@@ -366,7 +366,7 @@ export default function EventDetailPage() {
                 </div>
 
                 <button type="button" className="tb-btn tb-btn-outline tb-wishlist-btn" onClick={toggleWishlist} disabled={wishlistLoading}>
-                  {wishlistLoading ? "Updating..." : isWishlisted ? "♥ Wishlisted" : "♡ Add to Wishlist"}
+                  {wishlistLoading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : isWishlisted ? "♥ Wishlisted" : "♡ Add to Wishlist"}
                 </button>
                 {wishlistError && <div className="tb-buy-blocked">{wishlistError}</div>}
 
@@ -388,7 +388,7 @@ export default function EventDetailPage() {
               <div className="tb-list-header">
                 <h2>Other Events On Sale</h2>
               </div>
-              {relatedLoading && <div className="tb-loading">Loading...</div>}
+              {relatedLoading && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
               {!relatedLoading && related.length > 0 && (
                 <div className="tb-grid tb-grid-3">
                   {related.map((ev) => (

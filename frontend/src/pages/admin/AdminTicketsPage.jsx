@@ -13,12 +13,12 @@ function unwrap(response) {
 }
 
 function formatDate(value) {
-  if (!value) return "—";
+  if (!value) return "_";
 
   const date = new Date(value);
 
   return Number.isNaN(date.getTime())
-    ? "—"
+    ? "_"
     : date.toLocaleString("en-US", {
         dateStyle: "medium",
         timeStyle: "short",
@@ -226,7 +226,7 @@ export default function AdminTicketsPage() {
           </div>
 
           {loading ? (
-            <div className="admin-tickets-state">Loading tickets...</div>
+            <div className="admin-tickets-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
           ) : error ? null : tickets.length === 0 ? (
             <div className="admin-tickets-state">
               No tickets match these filters.
@@ -255,14 +255,14 @@ export default function AdminTicketsPage() {
                         <small>{ticket.ticketCode}</small>
                       </td>
 
-                      <td>{ticket.ownerName || "—"}</td>
+                      <td>{ticket.ownerName || "_"}</td>
 
                       <td>
                         {ticket.eventName || `Event #${ticket.eventId}`}
                       </td>
 
                       <td>#{ticket.orderId}</td>
-                      <td>{ticket.ticketTypeName || "—"}</td>
+                      <td>{ticket.ticketTypeName || "_"}</td>
 
                       <td>
                         <span

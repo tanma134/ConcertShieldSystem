@@ -182,7 +182,7 @@ export default function StepImages({
             />
             <label htmlFor="poster-input" className="tb-btn tb-btn-outline">
               {uploading.poster
-                ? "Uploading..."
+                ? <span className="app-loading-spinner" role="status" aria-label="Loading" />
                 : event?.posterUrl
                 ? "Replace poster"
                 : "Upload poster"}
@@ -219,7 +219,7 @@ export default function StepImages({
             />
             <label htmlFor="banner-input" className="tb-btn tb-btn-outline">
               {uploading.banner
-                ? "Uploading..."
+                ? <span className="app-loading-spinner" role="status" aria-label="Loading" />
                 : event?.bannerUrl
                 ? "Replace banner"
                 : "Upload banner"}
@@ -295,7 +295,7 @@ export default function StepImages({
                 className="ow-file-input"
               />
               <label htmlFor="gallery-input">
-                {uploading.gallery ? "Uploading..." : "Add photos"}
+                {uploading.gallery ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Add photos"}
               </label>
             </div>
           )}

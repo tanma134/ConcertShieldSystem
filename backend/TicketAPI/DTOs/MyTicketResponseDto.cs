@@ -19,5 +19,7 @@
         public DateTime? OrderDate { get; set; }
         public string? OrderStatus { get; set; }
         public long? UnitPrice { get; set; }
+        public bool HasOwner { get; set; }
+        public bool HasQrToken { get; set; }
     }
 }

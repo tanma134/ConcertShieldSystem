@@ -133,7 +133,7 @@ export default function MyConcertsPage() {
           )}
         </div>
 
-        {loading && <div className="tb-loading">Loading your events...</div>}
+        {loading && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
         {!loading && error && <div className="tb-error">{error}</div>}
         {!loading && !error && events.length === 0 && (
           <div className="mc-empty-card">
@@ -289,7 +289,7 @@ export default function MyConcertsPage() {
                           disabled={deletingId === ev.eventId}
                           title={`Delete this ${ev.status.toLowerCase()} event`}
                         >
-                          {deletingId === ev.eventId ? "Deleting..." : "Delete Draft"}
+                          {deletingId === ev.eventId ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Delete Draft"}
                         </button>
                       )}
                     </div>
@@ -339,7 +339,7 @@ export default function MyConcertsPage() {
                   onClick={confirmDeleteDraft}
                   disabled={!!deletingId}
                 >
-                  {deletingId ? "Deleting..." : "Yes, Delete Event"}
+                  {deletingId ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Yes, Delete Event"}
                 </button>
               </div>
             </div>
@@ -587,7 +587,7 @@ export default function MyConcertsPage() {
                     cancelSubmitting || cancelReason.trim().length < 10 || !cancelEvidenceFile
                   }
                 >
-                  {cancelSubmitting ? "Submitting Request..." : "Submit Cancellation Request to Admin"}
+                  {cancelSubmitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Submit Cancellation Request to Admin"}
                 </button>
               </div>
             </div>

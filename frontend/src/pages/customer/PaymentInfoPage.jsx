@@ -374,6 +374,16 @@ export default function PaymentInfoPage() {
   }, [holdData?.expiresAtUtc]);
 
   useEffect(() => {
+    if (!isExpired) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isExpired]);
+
+  useEffect(() => {
     if (!showVoucherModal) return undefined;
 
     const onKeyDown = (event) => {
@@ -620,18 +630,7 @@ export default function PaymentInfoPage() {
   if (loading) {
     return (
       <main className="qf-page qf-state" aria-live="polite">
-        <section className="qf-loading-card">
-          <div className="qf-spinner" aria-hidden="true">
-            <span />
-          </div>
-          <h2>Preparing your checkout</h2>
-          <p>Loading reservation</p>
-          <div className="qf-loading-skeleton" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-          </div>
-        </section>
+        <span className="app-loading-spinner" role="status" aria-label="Loading" />
       </main>
     );
   }
@@ -643,21 +642,6 @@ export default function PaymentInfoPage() {
           <div className="tb-expired-icon">!</div>
           <h1>Could not load checkout</h1>
           <p>{loadError}</p>
-          <Link to="/" className="tb-primary-link">
-            Back to events
-          </Link>
-        </section>
-      </main>
-    );
-  }
-
-  if (isExpired) {
-    return (
-      <main className="tb-payment-page">
-        <section className="tb-expired-card">
-          <div className="tb-expired-icon">!</div>
-          <h1>Reservation expired</h1>
-          <p>Your held tickets have expired. Please select tickets again.</p>
           <Link to="/" className="tb-primary-link">
             Back to events
           </Link>
@@ -772,15 +756,15 @@ export default function PaymentInfoPage() {
               <div className="tb-contact-grid">
                 <div className="tb-contact-item">
                   <span>Account holder</span>
-                  <strong>{primaryHolder.fullName || "—"}</strong>
+                  <strong>{primaryHolder.fullName || "-"}</strong>
                 </div>
                 <div className="tb-contact-item">
                   <span>Email address</span>
-                  <strong>{primaryHolder.email || "—"}</strong>
+                  <strong>{primaryHolder.email || "-"}</strong>
                 </div>
                 <div className="tb-contact-item">
                   <span>Phone number</span>
-                  <strong>{primaryHolder.phone || "—"}</strong>
+                  <strong>{primaryHolder.phone || "-"}</strong>
                 </div>
               </div>
             </article>
@@ -985,7 +969,7 @@ export default function PaymentInfoPage() {
                 }
               >
                 {isProcessing
-                  ? "Preparing payment..."
+                  ? <span className="app-loading-spinner" role="status" aria-label="Loading" />
                   : `Continue with ${
                       selectedPaymentMethod === "vnpay"
                         ? "VNPay"
@@ -1056,7 +1040,7 @@ export default function PaymentInfoPage() {
                   type="submit"
                   disabled={!voucherCode.trim() || isApplyingVoucher}
                 >
-                  {isApplyingVoucher ? "Applying..." : "Apply"}
+                  {isApplyingVoucher ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Apply"}
                 </button>
               </div>
 
@@ -1075,8 +1059,9 @@ export default function PaymentInfoPage() {
             <div className="voucher-modal-list">
               {voucherLoading ? (
                 <p className="voucher-empty">
-                  Loading available vouchers...
-                </p>
+                  <span className="app-loading-spinner" role="status" aria-label="Loading" /></p>
+
+
               ) : (
                 <>
                   {renderVoucherGroup(
@@ -1178,10 +1163,26 @@ export default function PaymentInfoPage() {
                 onClick={confirmCancelHold}
               >
                 {isCancellingHold
-                  ? "Cancelling..."
+                  ? <span className="app-loading-spinner" role="status" aria-label="Loading" />
                   : "Cancel reservation"}
               </button>
             </div>
+          </section>
+        </div>
+      )}
+
+      {isExpired && (
+        <div className="reservation-expired-overlay">
+          <section
+            className="reservation-expired-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reservation-expired-title"
+          >
+            <div className="reservation-expired-icon" aria-hidden="true">!</div>
+            <h1 id="reservation-expired-title">Reservation expired</h1>
+            <p>Your held tickets have expired. Please select tickets again.</p>
+            <Link to="/" className="reservation-expired-home">Back to events</Link>
           </section>
         </div>
       )}

@@ -302,23 +302,7 @@ export default function TicketDetailsPage() {
       <>
         <Header />
         <main className="ticket-detail-page">
-          <div className="ticket-detail-state">Loading ticket...</div>
-        </main>
-        <Footer />
-      </>
-    );
-  }
-
-  if (error || !ticket) {
-    return (
-      <>
-        <Header />
-        <main className="ticket-detail-page">
-          <div className="ticket-detail-state is-error" role="alert">
-            <strong>Could not open this ticket</strong>
-            <p>{error || "Ticket not found."}</p>
-            <Link to="/my-tickets">Back to My Tickets</Link>
-          </div>
+          <div className="ticket-detail-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
         </main>
         <Footer />
       </>
@@ -395,9 +379,6 @@ export default function TicketDetailsPage() {
 
       <main className="ticket-detail-page">
         <div className="ticket-detail-container">
-          <Link to="/my-tickets" className="ticket-detail-back">
-            ← Back to My Tickets
-          </Link>
 
           <section className="ticket-event-card">
             {ticket.posterUrl && (
@@ -552,8 +533,9 @@ export default function TicketDetailsPage() {
 
             {historyLoading ? (
               <p className="ticket-history-state">
-                Loading ticket history...
-              </p>
+                <span className="app-loading-spinner" role="status" aria-label="Loading" /></p>
+
+
             ) : historyError ? (
               <p className="ticket-history-state is-error" role="alert">
                 {historyError}
@@ -587,9 +569,9 @@ export default function TicketDetailsPage() {
 
                       {(item.oldStatus || item.newStatus) && (
                         <p className="ticket-history-status">
-                          {item.oldStatus || "—"}
+                          {item.oldStatus || "-"}
                           {" → "}
-                          {item.newStatus || "—"}
+                          {item.newStatus || "-"}
                         </p>
                       )}
 
@@ -646,7 +628,7 @@ export default function TicketDetailsPage() {
 
             {qrLoading && !qrImage ? (
               <div className="ticket-qr-placeholder">
-                Generating QR code...
+                <span className="app-loading-spinner" role="status" aria-label="Loading" />
               </div>
             ) : (
               qrImage && (
@@ -790,7 +772,7 @@ export default function TicketDetailsPage() {
                 disabled={submittingReturn || returnReason.trim().length < 10}
                 onClick={handleSubmitReturn}
               >
-                {submittingReturn ? "Submitting..." : "Submit Refund Request"}
+                {submittingReturn ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Submit Refund Request"}
               </button>
             </div>
           </div>

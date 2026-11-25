@@ -87,7 +87,7 @@ export default function SubmitAppealPage() {
       <Banner error={error} notice={notice} onClearError={() => setError("")} onClearNotice={() => setNotice("")} />
 
       {loading ? (
-        <div className="empty-state">Loading...</div>
+        <div className="empty-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
       ) : !d ? null : (
         <section className="admin-panel">
           <div className="panel-header">
@@ -154,7 +154,7 @@ export default function SubmitAppealPage() {
 
                 <div className="fr-row end">
                   <button type="button" className="admin-button-secondary" onClick={() => navigate(-1)}>Cancel</button>
-                  <button type="submit" className="admin-button" disabled={busy}>{busy ? "Sending..." : "Submit appeal"}</button>
+                  <button type="submit" className="admin-button" disabled={busy}>{busy ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Submit appeal"}</button>
                 </div>
               </>
             )}

@@ -76,7 +76,7 @@ export default function AdminLoginPage() {
           </div>
 
           <button className="auth-button" type="submit" disabled={loading}>
-            {loading ? "Logging in..." : "Login as Admin"}
+            {loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Login as Admin"}
           </button>
         </form>
 

@@ -302,6 +302,16 @@ export default function QuestionFormPage() {
     return () => window.clearInterval(timer);
   }, [holdData?.expiresAtUtc]);
 
+  useEffect(() => {
+    if (!isExpired) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isExpired]);
+
   const handleInputChange = useCallback((index, field, value) => {
     setAttendees((current) =>
       current.map((attendee, attendeeIndex) =>
@@ -418,20 +428,7 @@ export default function QuestionFormPage() {
   if (isLoading) {
     return (
       <main className="qf-page qf-state" aria-live="polite">
-        <section className="qf-loading-card">
-          <div className="qf-spinner" aria-hidden="true">
-            <span />
-          </div>
-
-          <h2>Preparing your checkout</h2>
-          <p>Loading reservation and attendee details...</p>
-
-          <div className="qf-loading-skeleton" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-          </div>
-        </section>
+        <span className="app-loading-spinner" role="status" aria-label="Loading" />
       </main>
     );
   }
@@ -443,23 +440,6 @@ export default function QuestionFormPage() {
           <div className="qf-status-icon is-error">!</div>
           <h1>Could not load reservation</h1>
           <p>{loadError}</p>
-          <Link to="/" className="qf-button">
-            Back to events
-          </Link>
-        </section>
-      </main>
-    );
-  }
-
-  if (isExpired) {
-    return (
-      <main className="qf-page qf-state">
-        <section className="qf-message-card">
-          <div className="qf-status-icon is-error">!</div>
-          <h1>Reservation expired</h1>
-          <p>
-            Your held tickets have been released. Please select tickets again.
-          </p>
           <Link to="/" className="qf-button">
             Back to events
           </Link>
@@ -674,7 +654,7 @@ export default function QuestionFormPage() {
                 disabled={isSubmitting || timeLeft <= 0}
               >
                 {isSubmitting
-                  ? "Saving attendee details..."
+                  ? <span className="app-loading-spinner" role="status" aria-label="Loading" />
                   : "Continue to payment"}
                 {!isSubmitting && <span aria-hidden="true">→</span>}
               </button>
@@ -727,9 +707,25 @@ export default function QuestionFormPage() {
                 disabled={isCancellingHold}
                 onClick={confirmCancelHold}
               >
-                {isCancellingHold ? "Cancelling..." : "Cancel reservation"}
+                {isCancellingHold ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Cancel reservation"}
               </button>
             </div>
+          </section>
+        </div>
+      )}
+
+      {isExpired && (
+        <div className="reservation-expired-overlay">
+          <section
+            className="reservation-expired-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reservation-expired-title"
+          >
+            <div className="reservation-expired-icon" aria-hidden="true">!</div>
+            <h1 id="reservation-expired-title">Reservation expired</h1>
+            <p>Your held tickets have expired. Please select tickets again.</p>
+            <Link to="/" className="reservation-expired-home">Back to events</Link>
           </section>
         </div>
       )}

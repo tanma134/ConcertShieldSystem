@@ -167,7 +167,7 @@ export default function RiskBlocksPage() {
             </p>
             <div className="fr-row end">
               <button type="button" className="admin-button-secondary" onClick={() => setBlockOpen(false)}>Cancel</button>
-              <button type="submit" className="admin-button" disabled={saving}>{saving ? "Processing..." : "Confirm block"}</button>
+              <button type="submit" className="admin-button" disabled={saving}>{saving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm block"}</button>
             </div>
           </form>
         </section>
@@ -190,7 +190,7 @@ export default function RiskBlocksPage() {
         </form>
 
         {loading ? (
-          <div className="empty-state">Loading...</div>
+          <div className="empty-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
         ) : items.length === 0 ? (
           <div className="empty-state">No blocks match the current filters.</div>
         ) : (

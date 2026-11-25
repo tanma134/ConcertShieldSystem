@@ -19,5 +19,14 @@ namespace TicketAPI.Repositories
             DateTime? toDateExclusive,
             int page,
             int pageSize);
+
+        Task<List<Order>> GetExpiredPendingOrdersAsync(DateTime now);
+
+        Task<bool> TryMarkOrderExpiredAsync(int orderId, DateTime now);
+
+        Task<int?> GetExistingOrderIdByHoldAsync(string holdId, int customerId);
+
+        Task<int> GetCustomerEventTicketQuantityAsync(int customerId, int eventId);
     }
+
 }

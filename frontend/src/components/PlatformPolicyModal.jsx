@@ -188,8 +188,9 @@ export default function PlatformPolicyModal({ isOpen, onClose, onAgree }) {
 
           {loading ? (
             <div style={{ textAlign: "center", padding: "24px", color: "#7a7392" }}>
-              Loading active policy versions...
-            </div>
+              <span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
+
+
           ) : (
             policies.map((p, idx) => (
               <div key={idx} className="policy-category-block">
