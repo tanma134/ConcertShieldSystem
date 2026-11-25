@@ -8,7 +8,7 @@ using Npgsql;
 
 namespace AdminAPI.Services;
 
-// Xu ly nghiep vu ho tro khach hang; Ticket Dispute thuoc module rieng.
+// Handles customer support cases; ticket disputes live in a separate module.
 public class SupportCaseService : ISupportCaseService
 {
     private static readonly HashSet<string> AllowedCategories = new(StringComparer.OrdinalIgnoreCase)
@@ -80,7 +80,6 @@ public class SupportCaseService : ISupportCaseService
     {
     }
 
-    // Dispatch thong bao qua NotificationAPI hoac outbox/direct DB voi connection tu config
     private async Task DispatchNotificationAsync(int userId, string title, string message, string category, string targetUrl, string idempotencyKey, CancellationToken ct = default)
     {
         if (userId <= 0) return;
@@ -115,7 +114,6 @@ public class SupportCaseService : ISupportCaseService
             var resp = await client.SendAsync(req, ct);
             if (!resp.IsSuccessStatusCode)
             {
-                // Fallback toi public notification endpoint
                 using var fallbackReq = new HttpRequestMessage(HttpMethod.Post, $"{notifApiUrl}/api/notifications");
                 fallbackReq.Content = new StringContent(
                     System.Text.Json.JsonSerializer.Serialize(new
@@ -136,7 +134,7 @@ public class SupportCaseService : ISupportCaseService
         {
             _logger.LogWarning(ex, "Could not dispatch notification via NotificationAPI for user {UserId}. Trying DB fallback if configured.", userId);
 
-            // DB fallback chi thuc hien khi co connection string duoc cau hinh, khong hard-code credentials
+            // Only fall back to direct DB when a connection string is configured.
             var notifConnStr = _configuration?.GetConnectionString("NotificationConnection")
                 ?? _configuration?.GetConnectionString("NotificationDb")
                 ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_NOTIFICATION_POSTGRES")
@@ -166,7 +164,6 @@ public class SupportCaseService : ISupportCaseService
         }
     }
 
-    // Create a new customer support case with transaction context
     public async Task<SupportCaseDetailDto> CreateCaseAsync(CreateSupportCaseRequest req, int creatorId, string creatorName)
     {
         // Anti-spam Rule 1: Prevent duplicate open cases for the same Order ID
@@ -196,7 +193,6 @@ public class SupportCaseService : ISupportCaseService
             throw new InvalidOperationException("You have submitted a request recently. Please wait a moment before sending another request.");
         }
 
-        // Generate unique case number: SC-YYYYMMDD-XXXX
         var datePrefix = $"SC-{DateTime.UtcNow:yyyyMMdd}-";
         var countToday = await _repository.Cases.CountAsync(c => c.CaseNumber.StartsWith(datePrefix));
         var caseNumber = $"{datePrefix}{(countToday + 1):D4}";
@@ -213,7 +209,6 @@ public class SupportCaseService : ISupportCaseService
             Category = NormalizeCategory(req.Category),
             Priority = string.IsNullOrWhiteSpace(req.Priority) ? "Medium" : req.Priority.Trim(),
             Status = "Open",
-            // Preserve transaction links 
             OrderId = req.OrderId,
             TicketId = req.TicketId,
             PaymentReference = req.PaymentReference?.Trim(),
@@ -226,7 +221,6 @@ public class SupportCaseService : ISupportCaseService
         _repository.AddCase(supportCase);
         await _repository.SaveChangesAsync();
 
-        // Create initial creation audit note
         var initialNote = new SupportCaseNote
         {
             CaseId = supportCase.CaseId,
@@ -244,36 +238,30 @@ public class SupportCaseService : ISupportCaseService
         return MapToDetailDto(supportCase, new List<SupportCaseNote> { initialNote });
     }
 
-    // List support cases with staff visibility restriction (Staff only sees assigned or unassigned cases)
     public async Task<List<SupportCaseListDto>> GetCasesAsync(SupportCaseQuery query, int currentUserId, bool isAdmin)
     {
         var q = _repository.Cases.AsNoTracking().AsQueryable();
 
-        // Role-based visibility scope
         if (!isAdmin)
         {
             q = q.Where(c => c.AssignedStaffId == currentUserId || c.AssignedStaffId == null);
         }
 
-        // Filter by status
         if (!string.IsNullOrWhiteSpace(query.Status))
         {
             q = q.Where(c => c.Status == query.Status.Trim());
         }
 
-        // Filter by priority
         if (!string.IsNullOrWhiteSpace(query.Priority))
         {
             q = q.Where(c => c.Priority == query.Priority.Trim());
         }
 
-        // Filter by assigned staff ID
         if (query.AssignedStaffId.HasValue)
         {
             q = q.Where(c => c.AssignedStaffId == query.AssignedStaffId.Value);
         }
 
-        // Search term matching case number, title, or customer name
         if (!string.IsNullOrWhiteSpace(query.SearchTerm))
         {
             var term = query.SearchTerm.Trim().ToLower();
@@ -283,7 +271,6 @@ public class SupportCaseService : ISupportCaseService
                              c.CustomerEmail.ToLower().Contains(term));
         }
 
-        // Sort latest first and paginate
         var items = await q.OrderByDescending(c => c.CreatedAt)
             .Skip((query.Page - 1) * query.PageSize)
             .Take(query.PageSize)
@@ -307,7 +294,6 @@ public class SupportCaseService : ISupportCaseService
         return items;
     }
 
-    // View support case detail along with notes activity timeline
     public async Task<SupportCaseDetailDto> GetCaseDetailAsync(int caseId, int currentUserId, bool isAdmin)
     {
         var supportCase = await _repository.Cases.AsNoTracking().FirstOrDefaultAsync(c => c.CaseId == caseId);
@@ -331,7 +317,6 @@ public class SupportCaseService : ISupportCaseService
         return MapToDetailDto(supportCase, notes);
     }
 
-    // Assign support case to eligible staff (Admin only)
     public async Task<SupportCaseDetailDto> AssignStaffAsync(int caseId, AssignStaffRequest req, int adminId, string adminName)
     {
         var supportCase = await _repository.Cases.FirstOrDefaultAsync(c => c.CaseId == caseId);
@@ -340,7 +325,6 @@ public class SupportCaseService : ISupportCaseService
             throw new KeyNotFoundException($"Support case #{caseId} not found.");
         }
 
-        // Closed support cases cannot be reassigned
         if (supportCase.Status == "Closed" || supportCase.Status == "Resolved")
         {
             throw new InvalidOperationException("Cannot reassign a support case that is already closed or resolved .");
@@ -354,7 +338,6 @@ public class SupportCaseService : ISupportCaseService
         supportCase.Status = "Assigned";
         supportCase.UpdatedAt = DateTime.UtcNow;
 
-        // Log assignment history note
         var note = new SupportCaseNote
         {
             CaseId = caseId,
@@ -372,7 +355,6 @@ public class SupportCaseService : ISupportCaseService
         await _repository.SaveChangesAsync();
         _logger.LogInformation("Support case #{CaseId} assigned to {StaffName} by Admin {AdminId}", caseId, req.StaffName, adminId);
 
-        // 1. Notification cho Staff duoc phan cong
         await DispatchNotificationAsync(
             req.StaffUserId,
             $"Assigned to Case #{supportCase.CaseNumber}",
@@ -381,9 +363,8 @@ public class SupportCaseService : ISupportCaseService
             $"/staff/support-cases/{caseId}",
             $"case-{caseId}-assign-staff-{req.StaffUserId}");
 
-        // Note: Khong gui thong bao phan cong noi bo (staff assignment) cho customer de tranh spam thong bao noi bo staff.
+        // Do not notify the customer about internal staff assignment.
 
-        // 3. Email Notification to Staff
         var staffEmail = req.StaffEmail?.Trim();
         if (string.IsNullOrWhiteSpace(staffEmail))
         {
@@ -439,7 +420,6 @@ public class SupportCaseService : ISupportCaseService
         return MapToDetailDto(supportCase, notes);
     }
 
-    // Resolve and close support case with mandatory resolution
     public async Task<SupportCaseDetailDto> ResolveCaseAsync(int caseId, ResolveCaseRequest req, int resolverId, string resolverName, string role)
     {
         if (string.IsNullOrWhiteSpace(req.Resolution))
@@ -453,7 +433,6 @@ public class SupportCaseService : ISupportCaseService
             throw new KeyNotFoundException($"Support case #{caseId} not found.");
         }
 
-        // Prevent closing an already closed case
         if (supportCase.Status == "Closed")
         {
             throw new InvalidOperationException("Support case is already closed.");
@@ -466,7 +445,6 @@ public class SupportCaseService : ISupportCaseService
         supportCase.ResolvedAt = DateTime.UtcNow;
         supportCase.UpdatedAt = DateTime.UtcNow;
 
-        // Add closure record note
         var resolutionNote = new SupportCaseNote
         {
             CaseId = caseId,
@@ -482,7 +460,6 @@ public class SupportCaseService : ISupportCaseService
         await _repository.SaveChangesAsync();
         _logger.LogInformation("Support case #{CaseId} resolved and closed by {ResolverName}", caseId, resolverName);
 
-        // Thong bao ket qua cho nguoi tao case (Customer)
         if (supportCase.CustomerId.HasValue && supportCase.CustomerId.Value > 0)
         {
             await DispatchNotificationAsync(
@@ -494,7 +471,6 @@ public class SupportCaseService : ISupportCaseService
                 $"case-{caseId}-resolve");
         }
 
-        // Initiate customer outcome notification via email
         try
         {
             await _emailService.SendCaseResolvedEmailAsync(
@@ -516,7 +492,6 @@ public class SupportCaseService : ISupportCaseService
         return MapToDetailDto(supportCase, notes);
     }
 
-    // Get latest support case linked to an order
     public async Task<SupportCaseDetailDto?> GetCaseByOrderIdAsync(int orderId)
     {
         var supportCase = await _repository.Cases.AsNoTracking()
@@ -534,7 +509,6 @@ public class SupportCaseService : ISupportCaseService
         return MapToDetailDto(supportCase, notes);
     }
 
-    // Append internal investigation or communication note
     public async Task<SupportCaseNoteDto> AddNoteAsync(int caseId, AddSupportCaseNoteRequest req, int authorId, string authorName, string authorRole)
     {
         var supportCase = await _repository.Cases.FirstOrDefaultAsync(c => c.CaseId == caseId);
@@ -559,7 +533,7 @@ public class SupportCaseService : ISupportCaseService
 
         var preview = req.Content.Trim().Length > 80 ? req.Content.Trim().Substring(0, 77) + "..." : req.Content.Trim();
 
-        // 1. Chi thong bao cho khach hang neu note cong khai (khong phai InternalNote noi bo staff/admin)
+        // Only notify the customer for public notes (skip InternalNote).
         if (note.NoteType != "InternalNote" && supportCase.CustomerId.HasValue && supportCase.CustomerId.Value > 0 && authorId != supportCase.CustomerId.Value)
         {
             await DispatchNotificationAsync(
@@ -571,7 +545,6 @@ public class SupportCaseService : ISupportCaseService
                 $"case-{caseId}-note-{note.NoteId}-cust");
         }
 
-        // 2. Thong bao cho Staff hoac Admin tuy theo author
         if (authorRole.Equals("Staff", StringComparison.OrdinalIgnoreCase) || authorRole.Equals("SupportStaff", StringComparison.OrdinalIgnoreCase))
         {
             var adminId = supportCase.AssignedBy ?? 1;
@@ -619,7 +592,6 @@ public class SupportCaseService : ISupportCaseService
         };
     }
 
-    // Helper mapper from Entity to Detail DTO
     private static SupportCaseDetailDto MapToDetailDto(SupportCase c, List<SupportCaseNote> notes)
     {
         return new SupportCaseDetailDto

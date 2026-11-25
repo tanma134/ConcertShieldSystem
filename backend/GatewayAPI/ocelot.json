@@ -3542,7 +3542,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7108
+                    "Port": 7268
                 }
             ],
             "UpstreamPathTemplate": "/api/checkin/scan",
@@ -4063,6 +4063,79 @@
             "UpstreamPathTemplate": "/api/incidents/{id}/evidence",
             "UpstreamHttpMethod": [
                 "Post"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "incident-evidences",
+            "DownstreamPathTemplate": "/api/incidents/{id}/evidences",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7340
+                }
+            ],
+            "UpstreamPathTemplate": "/api/incidents/{id}/evidences",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "incident-evidence-delete",
+            "DownstreamPathTemplate": "/api/incidents/{id}/evidences/{evidenceId}",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7340
+                }
+            ],
+            "UpstreamPathTemplate": "/api/incidents/{id}/evidences/{evidenceId}",
+            "UpstreamHttpMethod": [
+                "Delete"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "incident-history",
+            "DownstreamPathTemplate": "/api/incidents/{id}/history",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7340
+                }
+            ],
+            "UpstreamPathTemplate": "/api/incidents/{id}/history",
+            "UpstreamHttpMethod": [
+                "Get"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "incident-status-patch",
+            "DownstreamPathTemplate": "/api/incidents/{id}/status",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7340
+                }
+            ],
+            "UpstreamPathTemplate": "/api/incidents/{id}/status",
+            "UpstreamHttpMethod": [
+                "Patch"
             ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"
@@ -4638,8 +4711,8 @@
             ]
         },
         {
-            "Key": "return-request-retry-refund",
-            "DownstreamPathTemplate": "/api/ticket-returns/{id}/retry-refund",
+            "Key": "return-request-confirm-manual-refund",
+            "DownstreamPathTemplate": "/api/ticket-returns/{id}/confirm-manual-refund",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
                 {
@@ -4647,7 +4720,7 @@
                     "Port": 7268
                 }
             ],
-            "UpstreamPathTemplate": "/api/ticket-returns/{id}/retry-refund",
+            "UpstreamPathTemplate": "/api/ticket-returns/{id}/confirm-manual-refund",
             "UpstreamHttpMethod": [
                 "Post"
             ],

@@ -36,6 +36,13 @@ public partial class TicketReturnRequest
     public string? RefundReference { get; set; }
 
     public string? RefundError { get; set; }
+    public string? BankAccountName { get; set; }
+    public string? BankAccountNumber { get; set; }
+    public string? BankName { get; set; }
+    public string? ManualRefundReference { get; set; }
+    public int? ManualRefundProcessedBy { get; set; }
+    public DateTime? ManualRefundProcessedAt { get; set; }
+    public string? ProofUrl { get; set; }
 
     public virtual Ticket Ticket { get; set; } = null!;
 }

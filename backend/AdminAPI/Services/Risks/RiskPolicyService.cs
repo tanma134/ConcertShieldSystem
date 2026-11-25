@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AdminAPI.Services.Risks;
 
-
 public sealed class RiskPolicyService : IRiskPolicyService
 {
     private static readonly string[] Categories = { "risk_config", "risk_rule" };
@@ -70,7 +69,7 @@ public sealed class RiskPolicyService : IRiskPolicyService
         if (changes.Count == 0)
             throw new RiskServiceException(409, "No parameter value has changed.");
 
-        // Validate cấu hình sau khi áp thay đổi (kết hợp giữa các tham số) trước khi ghi DB.
+        // Validate cross-parameter configuration after applying changes before persisting.
         var merged = rows.ToDictionary(r => r.ParamKey, r => r.ParamValue, StringComparer.OrdinalIgnoreCase);
         foreach (var c in changes) merged[c.Key] = c.NewValue;
         var changedRuleCodes = changes
@@ -81,7 +80,7 @@ public sealed class RiskPolicyService : IRiskPolicyService
 
         var now = DateTime.UtcNow;
 
-        // Mỗi lần đổi chính sách -> tăng rule_version để mọi risk_decision về sau truy vết được cấu hình đã dùng.
+        // Bump rule_version on every policy update so risk_decision rows trace the exact config used.
         if (!changes.Any(c => string.Equals(c.Key, VersionKey, StringComparison.OrdinalIgnoreCase))
             && byKey.TryGetValue(VersionKey, out var versionRow))
         {
@@ -142,7 +141,7 @@ public sealed class RiskPolicyService : IRiskPolicyService
 
         foreach (var (code, r) in c.Rules)
         {
-            // Chỉ kiểm tra rule đang được sửa; dữ liệu seed cũ không được chặn các chỉnh sửa không liên quan.
+            // Only validate modified rules so legacy seeded data does not block unrelated edits.
             if (!changedRuleCodes.Contains(code)) continue;
 
             var isTrust = string.Equals(r.Type, "Trust", StringComparison.OrdinalIgnoreCase);
@@ -151,7 +150,7 @@ public sealed class RiskPolicyService : IRiskPolicyService
                 && !string.Equals(r.Type, "Fraud", StringComparison.OrdinalIgnoreCase))
                 throw new RiskServiceException(400, $"Rule {code}: type must be Bot, Fraud or Trust.");
 
-            // Rule Trust dùng để TRỪ điểm (calculator lấy giá trị tuyệt đối) nên được lưu âm hoặc dương.
+            // Trust rules subtract from score (calculator uses absolute value), so either sign is valid.
             var scoreOk = isTrust
                 ? Math.Abs(r.Score) <= 100 && Math.Abs(r.ScoreL2 ?? 0) <= 100
                 : r.Score is >= 0 and <= 100 && (r.ScoreL2 is null or (>= 0 and <= 100));

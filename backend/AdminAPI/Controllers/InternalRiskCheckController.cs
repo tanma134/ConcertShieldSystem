@@ -5,11 +5,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AdminAPI.Controllers
 {
-    /// <summary>
-    /// Endpoint NỘI BỘ: TicketAPI / AuthenticationAPI hỏi "user / IP / thiết bị / session này đang bị block thật không?".
-    /// Chỉ tính block THẬT (không phải Shadow), còn hiệu lực và chưa Restore, cộng với blacklist.
-    /// Bảo vệ bằng X-Internal-Api-Key. KHÔNG public route này ra Gateway cho browser.
-    /// </summary>
+    // Internal endpoint (protected by X-Internal-Api-Key, never exposed via gateway):
+    // checks active non-shadow blocks and blacklists.
     [ApiController]
     [Route("api/internal/risk")]
     public class InternalRiskCheckController : ControllerBase
@@ -21,7 +18,6 @@ namespace AdminAPI.Controllers
         public InternalRiskCheckController(AdminDbContext db, IConfiguration config, ILogger<InternalRiskCheckController> logger)
         { _db = db; _config = config; _logger = logger; }
 
-        // GET api/internal/risk/check?userId=1&ip=1.2.3.4&deviceFp=abc&sessionId=xyz
         [HttpGet("check")]
         public async Task<IActionResult> Check(
             [FromQuery] int? userId, [FromQuery] string? ip, [FromQuery] string? deviceFp, [FromQuery] string? sessionId,
@@ -46,7 +42,7 @@ namespace AdminAPI.Controllers
                 var hasSession = !string.IsNullOrWhiteSpace(sessionId);
                 var now = DateTime.UtcNow;
 
-                // 1) Block do engine hoặc Admin tạo, còn hiệu lực, chưa Restore, không phải Shadow
+                // Active non-shadow blocks
                 var block = await _db.RiskDecisions.AsNoTracking()
                     .Where(d => d.Action == "BLOCK" && d.Status == "Active" && !d.IsShadow
                                 && (d.ExpiresAt == null || d.ExpiresAt > now)
@@ -67,7 +63,7 @@ namespace AdminAPI.Controllers
                         message = block.ReasonPublic ?? "Your account or device is temporarily restricted due to unusual activity."
                     });
 
-                // 2) Blacklist cứng (HR_BL02 / HR_BL03 và USER)
+                // Hard blacklists (HR_BL02 / HR_BL03 and USER)
                 var values = new List<string>();
                 if (userId.HasValue) values.Add(userId.Value.ToString());
                 if (hasDevice) values.Add(deviceFp!);

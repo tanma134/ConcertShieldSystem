@@ -22,6 +22,9 @@
   border-radius: 16px;
   width: 100%;
   max-width: 540px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 20px 45px rgba(15, 23, 42, 0.16), 0 4px 12px rgba(15, 23, 42, 0.08);
   color: #0f172a;
   overflow: hidden;
@@ -34,6 +37,7 @@
   padding: 20px 24px 16px;
   border-bottom: 1px solid #e2e8f0;
   background: #ffffff;
+  flex-shrink: 0;
 }
 
 .rf-header-title {
@@ -81,8 +85,10 @@
   padding: 20px 24px 24px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
   background: #ffffff;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .rf-loading {

@@ -251,7 +251,7 @@ export default function SupportCaseDetailPage() {
       <Shell title="Case Not Found">
         <div className="sc-container" style={{ textAlign: "center", padding: "60px" }}>
           <h2>Support Case Not Found</h2>
-          <Link to={isAdminPath ? "/admin/support-cases" : (isCustomer ? "/my-orders" : "/staff/support-cases")} className="sc-btn sc-btn-primary">
+          <Link to={isAdminPath ? "/admin/support-cases" : (isCustomerPath ? "/my-orders" : "/staff/support-cases")} className="sc-btn sc-btn-primary">
             Back to List
           </Link>
         </div>
@@ -667,7 +667,7 @@ export default function SupportCaseDetailPage() {
                   onClick={() => setShowAssignModal(false)}
                   style={{ background: "none", border: "none", color: "#7e7694", cursor: "pointer", fontSize: "18px" }}
                 >
-                  ✕
+                  Close
                 </button>
               </div>
 
@@ -744,7 +744,7 @@ export default function SupportCaseDetailPage() {
                   onClick={() => setShowResolveModal(false)}
                   style={{ background: "none", border: "none", color: "#7e7694", cursor: "pointer", fontSize: "18px" }}
                 >
-                  ✕
+                  Close
                 </button>
               </div>
 
@@ -818,7 +818,7 @@ export default function SupportCaseDetailPage() {
                   onClick={() => setShowEvidenceModal(false)}
                   style={{ background: "none", border: "none", color: "#7e7694", cursor: "pointer", fontSize: "18px" }}
                 >
-                  ✕
+                  Close
                 </button>
               </div>
 
@@ -958,7 +958,7 @@ export default function SupportCaseDetailPage() {
                   onClick={() => setShowOrderModal(false)}
                   style={{ background: "none", border: "none", color: "#7e7694", cursor: "pointer", fontSize: "18px" }}
                 >
-                  ✕
+                  Close
                 </button>
               </div>
               <div className="sc-modal-body">

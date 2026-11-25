@@ -9,15 +9,9 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ============================================================
-// 1. Database - PostgreSQL + EF Core (pattern nhất quán với toàn dự án)
-// ============================================================
 builder.Services.AddDbContext<IncidentDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// ============================================================
-// 2. Dependency Injection - Repositories & Services
-// ============================================================
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IIncidentRepository, IncidentRepository>();
 // Explicit factories: both services keep DbContext overloads for tests, so the container
@@ -33,9 +27,6 @@ builder.Services.AddScoped<IEvidenceService>(sp => new EvidenceService(
     sp.GetRequiredService<ILogger<EvidenceService>>()));
 builder.Services.AddSingleton<ICloudinaryService, CloudinaryService>();
 
-// ============================================================
-// 3. JWT Authentication (cùng key/issuer/audience với toàn dự án)
-// ============================================================
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtSection["Key"]
     ?? throw new InvalidOperationException("Thiếu cấu hình Jwt:Key");
@@ -59,38 +50,24 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-// ============================================================
-// 4. Authorization Policies - RBAC phân quyền theo role
-// ============================================================
 builder.Services.AddAuthorization(options =>
 {
-    // Staff và Admin đều được xem/cập nhật incidents
     options.AddPolicy("CanManageIncidents", policy =>
         policy.RequireRole("Staff", "Admin"));
 
-    // Chỉ Staff mới được tạo báo cáo và escalate
-    // (Admin có thể tạo thông qua CanManageIncidents nếu cần, nhưng theo SRS thì Staff là actor chính)
     options.AddPolicy("CanReportIncident", policy =>
         policy.RequireRole("Staff", "Admin"));
 
-    // Chỉ Admin mới được giải quyết sự cố
     options.AddPolicy("CanResolveIncident", policy =>
         policy.RequireRole("Admin"));
 });
 
-// ============================================================
-// 5. Controllers + JSON
-// ============================================================
 builder.Services.AddControllers()
     .AddJsonOptions(opts =>
     {
-        // Giữ camelCase cho JSON response (nhất quán với toàn dự án)
         opts.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     });
 
-// ============================================================
-// 6. Swagger với JWT Bearer support
-// ============================================================
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -123,9 +100,6 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// ============================================================
-// 7. CORS - cho phép Frontend gọi API
-// ============================================================
 const string FrontendCors = "FrontendCors";
 builder.Services.AddCors(options =>
 {
@@ -137,9 +111,6 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// ============================================================
-// 8. Middleware Pipeline
-// ============================================================
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -155,7 +126,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Tự động tạo bảng database nếu chưa tồn tại
 using (var scope = app.Services.CreateScope())
 {
     try

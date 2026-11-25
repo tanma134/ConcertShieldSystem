@@ -34,7 +34,7 @@ axiosClient.interceptors.request.use((config) => {
       delete config.headers["content-type"];
     }
   }
-  // Risk Engine: gửi tín hiệu thiết bị/phiên kèm mọi request (kể cả login/register)
+  // Attach risk signals to every request, including public auth endpoints
   Object.assign(config.headers, riskHeaders());
   if (!isPublicEndpoint(config.url)) {
     const token = localStorage.getItem("accessToken");

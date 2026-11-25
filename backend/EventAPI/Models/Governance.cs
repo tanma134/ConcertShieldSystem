@@ -1,6 +1,6 @@
 namespace EventAPI.Models;
 
-// Hồ sơ hiện tại nằm trên Event; các bảng này giữ tài liệu và quyết định lịch sử.
+// Current dossier state lives on Event; these tables store historical documents and decisions.
 public class ComplianceDocument
 {
     public long Id { get; set; }
@@ -46,7 +46,7 @@ public class EventChangeRequest
     public string? ReviewNotes { get; set; }
     public string ProcessingStatus { get; set; } = "NotApplied";
 }
-// Outbox cùng EventDB: quyết định đã commit vẫn được gửi lại nếu service đích tạm ngừng.
+// Outbox in EventDB ensures committed decisions are retried if downstream services are unavailable.
 public class GovernanceOutbox
 {
     public long Id { get; set; }

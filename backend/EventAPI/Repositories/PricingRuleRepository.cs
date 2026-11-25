@@ -42,12 +42,7 @@ namespace EventAPI.Repositories
             await _context.SaveChangesAsync();
         }
 
-        /// <summary>
-        /// PricingRule has no soft-delete columns in the schema, so removal is a hard
-        /// delete. Safe because rules are only editable while the concert is
-        /// Draft/Rejected (enforced in the service layer) — i.e. before any sale has
-        /// ever been influenced by them.
-        /// </summary>
+        // Hard-delete is safe because rules are only editable in Draft/Rejected before any sales occur.
         public async Task DeleteAsync(int pricingRuleId)
         {
             var entity = await _context.PricingRules.FindAsync(pricingRuleId);

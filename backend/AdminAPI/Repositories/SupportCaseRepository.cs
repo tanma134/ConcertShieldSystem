@@ -3,7 +3,6 @@ using AdminAPI.Models;
 
 namespace AdminAPI.Repositories;
 
-/// Repository duy nhất chịu trách nhiệm đọc/ghi Support Case vào AdminDbContext.
 public sealed class SupportCaseRepository : ISupportCaseRepository
 {
     private readonly AdminDbContext _db;

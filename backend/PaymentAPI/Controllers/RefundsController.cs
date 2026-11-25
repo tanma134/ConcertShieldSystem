@@ -43,7 +43,6 @@ namespace PaymentAPI.Controllers
                  c.Value.Equals("SupportStaff", StringComparison.OrdinalIgnoreCase) ||
                  c.Value.Equals("SecurityStaff", StringComparison.OrdinalIgnoreCase)));
 
-        // Xu ly hoan tien toan phan hoac mot phan cho don hang danh cho Admin va Staff
         [HttpPost("process")]
         public async Task<IActionResult> ProcessRefund([FromBody] ProcessRefundRequestDto request, CancellationToken ct)
         {
@@ -74,7 +73,6 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        // Thu lai yeu cau hoan tien bi loi danh cho Admin va Staff
         [HttpPost("{id:int}/retry")]
         public async Task<IActionResult> RetryRefund(int id, [FromBody] RetryRefundRequestDto? request, CancellationToken ct)
         {
@@ -102,7 +100,6 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        // Xem bao cao doi soat hoan tien danh cho Admin
         [HttpGet("reconciliation")]
         public async Task<IActionResult> GetReconciliationReport([FromQuery] ReconciliationFilterDto filter, CancellationToken ct)
         {
@@ -120,7 +117,6 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        // Xem tong quan thong tin hoan tien cua don hang danh cho Admin va Staff
         [HttpGet("order/{orderId:int}")]
         public async Task<IActionResult> GetOrderRefundSummary(int orderId, CancellationToken ct)
         {
@@ -138,7 +134,6 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        // Xem chi tiet mot giao dich hoan tien theo id danh cho Admin va Staff
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetRefundDetail(int id, CancellationToken ct)
         {

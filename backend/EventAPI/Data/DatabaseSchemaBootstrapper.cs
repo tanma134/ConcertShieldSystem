@@ -4,7 +4,7 @@ namespace EventAPI.Data;
 
 public static class DatabaseSchemaBootstrapper
 {
-    // Giữ DB local tương thích với chức năng Staff mới. Chỉ tạo schema còn thiếu, không xóa dữ liệu.
+    // Keep local DB compatible with Staff features; creates missing schema only without dropping data.
     public static async Task EnsureWeekTaskSchemaAsync(this WebApplication app)
     {
         using var scope = app.Services.CreateScope();

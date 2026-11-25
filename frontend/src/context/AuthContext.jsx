@@ -213,7 +213,7 @@ export function useAuth() {
 
   if (!context) {
     throw new Error(
-      "useAuth phải được dùng bên trong AuthProvider"
+      "useAuth must be used within AuthProvider"
     );
   }
 

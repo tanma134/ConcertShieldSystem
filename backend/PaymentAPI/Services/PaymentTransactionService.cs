@@ -74,7 +74,7 @@ namespace PaymentAPI.Services
 
             await _repository.UpdateAsync(transaction);
 
-            // Risk Engine: thanh toán thất bại nhiều lần (FRD_P01)
+            // Track repeated failed payments (FRD_P01).
             if (status == "Failed")
                 await _risk.OnPaymentFailedAsync(transaction);
 

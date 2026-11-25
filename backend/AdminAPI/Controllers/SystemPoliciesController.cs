@@ -11,11 +11,6 @@ using Npgsql;
 
 namespace AdminAPI.Controllers
 {
-    // ==========================================
-    // NHÓM 2: GOVERNANCE, POLICY VERSIONING & COMPLIANCE
-    // View Policy Version History (Actor: Admin)
-    // Create New Policy Version (Actor: Admin)
-    // ==========================================
 
     public class PolicyVersionDTO
     {
@@ -83,7 +78,6 @@ namespace AdminAPI.Controllers
                 ?? "Platform Administrator";
         }
 
-        // Xem lich su cac phien ban chinh sach he thong theo tung danh muc
         [HttpGet("history")]
         public async Task<IActionResult> GetPolicyHistory([FromQuery] string? category = "PRICE_TICKETING")
         {
@@ -141,7 +135,6 @@ namespace AdminAPI.Controllers
             });
         }
 
-        // Lay danh sach cac ban ghi chinh sach dang co hieu luc theo tung danh muc danh cho moi nguoi dung
         [AllowAnonymous]
         [HttpGet("active")]
         public async Task<IActionResult> GetActivePolicies()
@@ -196,7 +189,6 @@ namespace AdminAPI.Controllers
             });
         }
 
-        // Ban hanh phien ban chinh sach he thong moi va luu tru phien ban cu
         [HttpPost("create")]
         public async Task<IActionResult> CreatePolicyVersion([FromBody] CreatePolicyVersionRequestDTO request)
         {
@@ -222,7 +214,6 @@ namespace AdminAPI.Controllers
                 await conn.OpenAsync();
                 using var tx = await conn.BeginTransactionAsync();
 
-                // 1. Determine next version number
                 var maxVerSql = "SELECT COALESCE(MAX(version_number), 0) FROM system_policies WHERE category = @cat;";
                 int nextVer;
                 using (var cmd = new NpgsqlCommand(maxVerSql, conn, tx))
@@ -231,7 +222,6 @@ namespace AdminAPI.Controllers
                     nextVer = Convert.ToInt32(await cmd.ExecuteScalarAsync()) + 1;
                 }
 
-                // 2. Archive previous active versions for this category
                 var archiveSql = "UPDATE system_policies SET status = 'Archived' WHERE category = @cat AND status = 'Active';";
                 using (var cmd = new NpgsqlCommand(archiveSql, conn, tx))
                 {
@@ -239,7 +229,6 @@ namespace AdminAPI.Controllers
                     await cmd.ExecuteNonQueryAsync();
                 }
 
-                // 3. Generate version code (e.g. POL-PRICE-V2.0)
                 var prefix = category switch
                 {
                     "PRICE_TICKETING" => "PRICE",
@@ -250,7 +239,6 @@ namespace AdminAPI.Controllers
                 };
                 var versionCode = $"POL-{prefix}-V{nextVer}.0";
 
-                // 4. Insert new policy version
                 var insertSql = @"
                     INSERT INTO system_policies (category, version_code, version_number, title, scope, change_summary, content, 
                                                 status, effective_date, created_at, created_by_admin_id, created_by_admin_name)
@@ -304,7 +292,6 @@ namespace AdminAPI.Controllers
                     CreatedByAdminName = adminName
                 };
 
-                // Audit Log to AuditLogs table in database
                 await _auditLog.LogAsync(
                     userId: adminId,
                     actorType: "ADMIN",

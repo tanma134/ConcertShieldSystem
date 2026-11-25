@@ -5,8 +5,7 @@ import { governanceApi } from "../api/governanceApi";
 
 const POLL_MS = 60000;
 
-// Số việc đang chờ admin xử lý: sự kiện chờ duyệt, yêu cầu hoãn/đổi lịch, yêu cầu hoàn vé.
-// Mỗi con số tải độc lập; lỗi của một nguồn chỉ làm con số đó là null, không làm hỏng trang.
+// Fetch pending admin counts independently so one failing source yields null without breaking the page.
 export default function useAdminPending() {
   const [pending, setPending] = useState({ events: null, changes: null, returns: null });
 

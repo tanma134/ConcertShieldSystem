@@ -9,6 +9,9 @@ namespace PaymentAPI.Services
         // Internal ticket return refund (called by TicketAPI)
         Task<RefundResultDto> RefundAsync(CreateRefundRequestDto request, CancellationToken ct = default);
 
+        // Internal manual bank transfer recording (called by TicketAPI)
+        Task<RefundResultDto> RecordManualRefundAsync(RecordManualRefundDto request, CancellationToken ct = default);
+
         // Process Full / Partial Refund
         Task<RefundResultDto> ProcessRefundAsync(ProcessRefundRequestDto request, int actorId, string actorName, CancellationToken ct = default);
 

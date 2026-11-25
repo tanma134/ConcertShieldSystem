@@ -6,7 +6,7 @@ public sealed record RiskVerdict(bool Allowed, int StatusCode, string? Code, str
 {
     public static RiskVerdict Allow(RiskResult? r = null) => new(true, 200, null, null, r);
 
-    /// <summary>Body theo đúng dạng frontend đang đọc: { success:false, code, message }.</summary>
+    // Response body shape expected by frontend: { success: false, code, message }.
     public IActionResult ToActionResult() =>
         new ObjectResult(new { success = false, code = Code, message = Message, challengeType = Result?.ChallengeType })
         { StatusCode = StatusCode };
@@ -14,16 +14,11 @@ public sealed record RiskVerdict(bool Allowed, int StatusCode, string? Code, str
 
 public interface IRiskGuard
 {
-    /// <summary>Gọi ĐẦU action: hỏi AdminAPI user/IP/device này đang bị block thật không.</summary>
     Task<RiskVerdict> PreCheckAsync(HttpContext http, int? userId, CancellationToken ct = default);
 
-    /// <summary>eKYC gate for booking endpoints (see Risk:RequireEkycForPurchase).</summary>
     RiskVerdict CheckEkycAsync(HttpContext http, string? action = null);
 
-    /// <summary>
-    /// Gọi SAU khi đã tính xong rule nghiệp vụ: gộp rule bot từ request, gửi sang AdminAPI, đọc quyết định.
-    /// Chỉ gửi khi có ít nhất 1 rule khớp (không spam AdminAPI cho request sạch).
-    /// </summary>
+    // Evaluates bot rules and sends matched rules to AdminAPI; skips clean requests with zero matches.
     Task<RiskVerdict> EvaluateAsync(HttpContext http, RiskEvent evt, bool isBooking, CancellationToken ct = default);
 }
 
@@ -39,12 +34,7 @@ public sealed class RiskGuard : IRiskGuard
 
     private bool Enabled => _cfg.GetValue("Risk:Enabled", true);
 
-    /// <summary>
-    /// Business rule: a customer must pass eKYC before buying. The status comes from
-    /// the token issued at log-in, so no extra call is needed per request.
-    /// Controlled by Risk:RequireEkycForPurchase so the rule can be switched off for
-    /// environments without a working VNPT account.
-    /// </summary>
+    // Customer must pass eKYC before buying (read from login JWT claim; toggleable via Risk:RequireEkycForPurchase).
     public RiskVerdict CheckEkycAsync(HttpContext http, string? action = null)
     {
         if (!_cfg.GetValue("Risk:RequireEkycForPurchase", true)) return RiskVerdict.Allow();
@@ -54,7 +44,8 @@ public sealed class RiskGuard : IRiskGuard
             return RiskVerdict.Allow();
 
         var status = http.User.FindFirst("ekyc_status")?.Value;
-        if (string.Equals(status, "Passed", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(status, "Passed", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(status, "Verified", StringComparison.OrdinalIgnoreCase))
             return RiskVerdict.Allow();
 
         return new RiskVerdict(false, 403, "EKYC_REQUIRED",
@@ -85,10 +76,10 @@ public sealed class RiskGuard : IRiskGuard
         evt.BotRules.AddRange(det.Hits);
         evt.SignalsMissing.AddRange(det.Missing);
 
-        // Không có rule nào khớp => request sạch, không cần gửi.
+        // Skip clean requests with no matched rules.
         if (evt.BotRules.Count == 0 && evt.FraudRules.Count == 0) return RiskVerdict.Allow();
 
-        // AdminAPI yêu cầu ít nhất một trong UserId/SessionId/DeviceFp/IpAddress.
+        // AdminAPI requires at least one of UserId, SessionId, DeviceFp, or IpAddress.
         if (evt.UserId == null && evt.SessionId == null && evt.DeviceFp == null && evt.IpAddress == null)
             return RiskVerdict.Allow();
 
@@ -99,7 +90,7 @@ public sealed class RiskGuard : IRiskGuard
             res.Action, res.Level, res.Score, res.IsShadow,
             string.Join(",", evt.BotRules.Select(r => r.Code)), string.Join(",", evt.FraudRules.Select(r => r.Code)));
 
-        // SHADOW: engine chỉ ghi nhận, KHÔNG chặn thật.
+        // SHADOW: log only, do not enforce blocks.
         if (res.IsShadow) return RiskVerdict.Allow(res);
 
         return res.Action switch

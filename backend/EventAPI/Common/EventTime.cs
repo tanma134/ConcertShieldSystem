@@ -2,15 +2,8 @@ using System;
 
 namespace EventAPI.Common
 {
-    /// <summary>
-    /// Npgsql maps DateTime to PostgreSQL "timestamp with time zone", which only accepts
-    /// DateTimeKind.Utc. A JSON body such as "2027-06-01T19:00:00" (no offset) deserializes
-    /// to DateTimeKind.Unspecified and used to make SaveChanges throw, surfacing as a 500.
-    /// Everything coming from a client is therefore converted here:
-    ///   - Utc      -> unchanged
-    ///   - Local    -> ToUniversalTime()
-    ///   - Unspecified -> interpreted in the event timezone (default SE Asia), then converted
-    /// </summary>
+    // Npgsql maps DateTime to PostgreSQL "timestamp with time zone", which only accepts DateTimeKind.Utc.
+    // Unspecified client timestamps are interpreted in the event timezone (default SE Asia) and converted to UTC.
     public static class EventTime
     {
         public const string DefaultTimezone = "SE Asia Standard Time";

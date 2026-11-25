@@ -6,6 +6,8 @@ import Footer from "../../components/Footer";
 import ticketApi from "../../api/ticketApi";
 import ticketReturnApi from "../../api/ticketReturnApi";
 import { useToast } from "../../components/ToastProvider";
+import EvidenceUploader from "../../components/EvidenceUploader";
+import { VIETNAM_BANKS } from "../../constants/vietnamBanks";
 import "./TicketDetailsPage.css";
 
 function getValidDate(value) {
@@ -135,7 +137,11 @@ export default function TicketDetailsPage() {
   const [returnCategory, setReturnCategory] = useState("PersonalSchedule");
   const [returnReason, setReturnReason] = useState("");
   const [returnProofUrl, setReturnProofUrl] = useState("");
+  const [bankAccountName, setBankAccountName] = useState("");
+  const [bankAccountNumber, setBankAccountNumber] = useState("");
+  const [bankName, setBankName] = useState("");
   const [submittingReturn, setSubmittingReturn] = useState(false);
+  const [touched, setTouched] = useState({});
 
   const [qrOpen, setQrOpen] = useState(false);
   const [qrImage, setQrImage] = useState("");
@@ -365,9 +371,50 @@ export default function TicketDetailsPage() {
     Other: "Other reason (detailed explanation required)",
   };
 
+  const getFieldError = (field) => {
+    if (!touched[field]) return null;
+    if (field === "returnReason") {
+      if (!returnReason.trim()) return "Detailed explanation is required and cannot be empty.";
+      if (returnReason.trim().length < 10) {
+        return `Explanation must be at least 10 characters (currently ${returnReason.trim().length}/10).`;
+      }
+    }
+    if (field === "bankName") {
+      if (!bankName.trim()) return "Bank name is required and cannot be empty.";
+    }
+    if (field === "bankAccountNumber") {
+      if (!bankAccountNumber.trim()) return "Bank account number is required and cannot be empty.";
+      if (bankAccountNumber.trim().length < 6 || bankAccountNumber.trim().length > 20) {
+        return `Account number must be between 6 and 20 digits (currently ${bankAccountNumber.trim().length} digits).`;
+      }
+    }
+    if (field === "bankAccountName") {
+      if (!bankAccountName.trim()) return "Account holder name is required and cannot be empty.";
+      if (bankAccountName.trim().length < 2) return "Account holder name is too short.";
+    }
+    return null;
+  };
+
   const handleSubmitReturn = async () => {
-    if (returnReason.trim().length < 10) {
-      toast.error("Please enter a detailed explanation of at least 10 characters.");
+    setTouched({
+      returnReason: true,
+      bankName: true,
+      bankAccountNumber: true,
+      bankAccountName: true,
+    });
+
+    const hasErrors =
+      !returnReason.trim() ||
+      returnReason.trim().length < 10 ||
+      !bankName.trim() ||
+      !bankAccountNumber.trim() ||
+      bankAccountNumber.trim().length < 6 ||
+      bankAccountNumber.trim().length > 20 ||
+      !bankAccountName.trim() ||
+      bankAccountName.trim().length < 2;
+
+    if (hasErrors) {
+      toast.error("Please fill in all required fields correctly.");
       return;
     }
     setSubmittingReturn(true);
@@ -375,8 +422,15 @@ export default function TicketDetailsPage() {
       const categoryLabel = REFUND_CATEGORIES[returnCategory] || returnCategory;
       const fullReason = `[${categoryLabel}] ${returnReason.trim()}`;
       const proofUrl = returnProofUrl.trim() || null;
-      await ticketReturnApi.submit(ticket.ticketId, fullReason, proofUrl);
-      toast.success("Refund request submitted successfully! Staff will review shortly.");
+      await ticketReturnApi.submit(
+        ticket.ticketId,
+        fullReason,
+        bankAccountName.trim().toUpperCase(),
+        bankAccountNumber.trim(),
+        bankName.trim(),
+        proofUrl
+      );
+      toast.success("Return request submitted. Staff will review it and process a bank transfer if approved.");
       setReturnModalOpen(false);
       window.location.reload();
     } catch (err) {
@@ -514,7 +568,7 @@ export default function TicketDetailsPage() {
                     className="ticket-help-link"
                     title="Get help or dispute issues regarding this order"
                   >
-                    💬 Need Help?
+                    Need Help?
                   </Link>
                 )}
                 {canRequestReturn && (
@@ -523,7 +577,7 @@ export default function TicketDetailsPage() {
                     className="ticket-refund-btn"
                     onClick={() => setReturnModalOpen(true)}
                   >
-                    ↺ Request Ticket Refund
+                    Request Ticket Refund
                   </button>
                 )}
                 {canShowQr && (
@@ -681,98 +735,171 @@ export default function TicketDetailsPage() {
         <div className="ticket-modal-overlay" onClick={() => !submittingReturn && setReturnModalOpen(false)}>
           <div className="ticket-modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="ticket-modal-header">
-              <div className="ticket-modal-icon">↺</div>
-              <div>
+              <div style={{ flex: 1 }}>
                 <h3 className="ticket-modal-title">Ticket Refund Request</h3>
-                <p className="ticket-modal-subtitle">Step 11 · Customer ticket refund submission</p>
+                <p className="ticket-modal-subtitle">Policy verification & refund payment destination</p>
               </div>
-            </div>
-
-            <div className="ticket-modal-info-box">
-              <div className="ticket-modal-info-row">
-                <span>Event</span>
-                <strong>{ticket.eventName}</strong>
-              </div>
-              <div className="ticket-modal-info-row">
-                <span>Ticket Type</span>
-                <strong>{ticket.ticketTypeName} ({formatPrice(ticket.unitPrice || 2500000)})</strong>
-              </div>
-              <div className="ticket-modal-info-row">
-                <span>Payment Method</span>
-                <strong>{ticket.paymentMethod || "VNPay"}</strong>
-              </div>
-              <div className="ticket-modal-policy-badge">
-                ✓ 100% Refund Eligible (Policy Active)
-              </div>
-            </div>
-
-            <div style={{ marginBottom: "14px" }}>
-              <label className="ticket-modal-label" style={{ marginBottom: "6px", display: "block" }}>
-                <span>Refund Reason Category *</span>
-              </label>
-              <select
-                className="ticket-modal-select"
-                value={returnCategory}
-                onChange={(e) => setReturnCategory(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  borderRadius: "8px",
-                  border: "1px solid #d1d5db",
-                  background: "#ffffff",
-                  fontSize: "13px",
-                  fontWeight: 500,
-                  color: "#1f2937",
-                  outline: "none",
-                }}
+              <button
+                type="button"
+                className="ticket-modal-close-btn"
+                onClick={() => setReturnModalOpen(false)}
+                disabled={submittingReturn}
               >
-                <option value="PersonalSchedule">Personal schedule conflict / Unable to attend</option>
-                <option value="MedicalEmergency">Medical emergency / Health issue / Hospitalization</option>
-                <option value="EventChanged">Event schedule or venue changed</option>
-                <option value="AccidentalBooking">Accidental booking / Wrong tier or quantity</option>
-                <option value="ForceMajeure">Severe weather / Natural disaster / Travel disruption</option>
-                <option value="Other">Other reason (detailed explanation required)</option>
-              </select>
+                Close
+              </button>
             </div>
 
-            <label className="ticket-modal-label">
-              <span>Detailed Explanation / Notes *</span>
-              <span className="ticket-modal-char-count">
-                {returnReason.trim().length}/10 min characters
-              </span>
-            </label>
-            <textarea
-              className="ticket-modal-textarea"
-              rows={3}
-              placeholder="Please describe your reason clearly to help staff review and approve your refund..."
-              value={returnReason}
-              onChange={(e) => setReturnReason(e.target.value)}
-            />
+            <div className="ticket-modal-body">
+              <div className="ticket-modal-info-box">
+                <div className="ticket-modal-info-row">
+                  <span>Event</span>
+                  <strong>{ticket.eventName}</strong>
+                </div>
+                <div className="ticket-modal-info-row">
+                  <span>Ticket Tier</span>
+                  <strong>{ticket.ticketTypeName} ({formatPrice(ticket.unitPrice || 600000)})</strong>
+                </div>
+                <div className="ticket-modal-info-row">
+                  <span>Payment Method</span>
+                  <strong>{ticket.paymentMethod || "VNPay"}</strong>
+                </div>
+                <div className="ticket-modal-policy-badge">
+                  100% Refund Eligible (Policy Active)
+                </div>
+              </div>
 
-            <div style={{ marginTop: "12px", marginBottom: "14px" }}>
-              <label className="ticket-modal-label" style={{ marginBottom: "6px", display: "flex", justifyContent: "space-between" }}>
-                <span>Supporting Document / Evidence Link</span>
-                <span style={{ fontSize: "12px", color: "#6b7280" }}>(Optional)</span>
-              </label>
-              <input
-                type="url"
-                placeholder="https://... (Link to doctor's note, travel disruption notice...)"
+              <div style={{ marginBottom: "12px" }}>
+                <label className="ticket-modal-label" style={{ marginBottom: "6px", display: "block" }}>
+                  <span>Refund Reason Category *</span>
+                </label>
+                <select
+                  className="ticket-form-input"
+                  value={returnCategory}
+                  onChange={(e) => setReturnCategory(e.target.value)}
+                  style={{ fontWeight: 500 }}
+                >
+                  <option value="PersonalSchedule">Personal schedule conflict / Unable to attend</option>
+                  <option value="MedicalEmergency">Medical emergency / Hospitalization</option>
+                  <option value="EventChanged">Event schedule or venue changed</option>
+                  <option value="AccidentalBooking">Accidental booking / Wrong tier or quantity</option>
+                  <option value="ForceMajeure">Severe weather / Travel disruption / Force majeure</option>
+                  <option value="Other">Other reason (Detailed explanation required)</option>
+                </select>
+              </div>
+
+              <div style={{ marginBottom: "12px" }}>
+                <label className="ticket-modal-label">
+                  <span>Detailed Explanation / Notes *</span>
+                  <span className="ticket-modal-char-count">
+                    {returnReason.trim().length}/10 min characters
+                  </span>
+                </label>
+                <textarea
+                  className="ticket-modal-textarea"
+                  style={getFieldError("returnReason") ? { borderColor: "#e11d48", boxShadow: "0 0 0 2px rgba(225, 29, 72, 0.15)" } : {}}
+                  rows={2}
+                  placeholder="Please describe your reason clearly to help staff review your request..."
+                  value={returnReason}
+                  onBlur={() => setTouched((prev) => ({ ...prev, returnReason: true }))}
+                  onChange={(e) => {
+                    setReturnReason(e.target.value);
+                    setTouched((prev) => ({ ...prev, returnReason: true }));
+                  }}
+                />
+                {getFieldError("returnReason") && (
+                  <span style={{ display: "block", color: "#e11d48", fontSize: "11.5px", marginTop: "4px", fontWeight: 500 }}>
+                    {getFieldError("returnReason")}
+                  </span>
+                )}
+              </div>
+
+              {/* Supporting Evidence Component */}
+              <EvidenceUploader
                 value={returnProofUrl}
-                onChange={(e) => setReturnProofUrl(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "9px 12px",
-                  borderRadius: "8px",
-                  border: "1px solid #d1d5db",
-                  background: "#ffffff",
-                  fontSize: "13px",
-                  color: "#1f2937",
-                  outline: "none",
-                }}
+                onChange={setReturnProofUrl}
+                maxSizeMb={8}
               />
-              <small style={{ display: "block", marginTop: "4px", fontSize: "11px", color: "#6b7280" }}>
-                Providing valid evidence helps expedite the review process for medical or force majeure reasons.
-              </small>
+
+              {/* Bank Account Destination */}
+              <div className="ticket-bank-box">
+                <div className="ticket-bank-box-header">
+                  <div className="ticket-bank-box-title">
+                    <strong>Bank Account for Refund</strong>
+                    <p>Approved refunds will be transferred directly to this account</p>
+                  </div>
+                </div>
+
+                <div className="ticket-bank-grid">
+                  <div className="ticket-bank-field">
+                    <label>Bank Name *</label>
+                    <input
+                      list="ticket-bank-list"
+                      className="ticket-form-input"
+                      style={getFieldError("bankName") ? { borderColor: "#e11d48", boxShadow: "0 0 0 2px rgba(225, 29, 72, 0.15)" } : {}}
+                      placeholder="Select or enter bank name..."
+                      value={bankName}
+                      onBlur={() => setTouched((prev) => ({ ...prev, bankName: true }))}
+                      onChange={(e) => {
+                        setBankName(e.target.value);
+                        setTouched((prev) => ({ ...prev, bankName: true }));
+                      }}
+                      maxLength={100}
+                    />
+                    <datalist id="ticket-bank-list">
+                      {VIETNAM_BANKS.map((b) => (
+                        <option key={b} value={b} />
+                      ))}
+                    </datalist>
+                    {getFieldError("bankName") && (
+                      <span style={{ color: "#e11d48", fontSize: "11px", fontWeight: 500, marginTop: "2px", display: "block" }}>
+                        {getFieldError("bankName")}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="ticket-bank-field">
+                    <label>Account Number *</label>
+                    <input
+                      className="ticket-form-input"
+                      style={getFieldError("bankAccountNumber") ? { borderColor: "#e11d48", boxShadow: "0 0 0 2px rgba(225, 29, 72, 0.15)" } : {}}
+                      placeholder="e.g. 1029384756..."
+                      value={bankAccountNumber}
+                      onBlur={() => setTouched((prev) => ({ ...prev, bankAccountNumber: true }))}
+                      onChange={(e) => {
+                        setBankAccountNumber(e.target.value.replace(/[^0-9A-Za-z]/g, ""));
+                        setTouched((prev) => ({ ...prev, bankAccountNumber: true }));
+                      }}
+                      maxLength={20}
+                    />
+                    {getFieldError("bankAccountNumber") && (
+                      <span style={{ color: "#e11d48", fontSize: "11px", fontWeight: 500, marginTop: "2px", display: "block" }}>
+                        {getFieldError("bankAccountNumber")}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="ticket-bank-field ticket-bank-field--full">
+                    <label>Account Holder Name (Uppercase) *</label>
+                    <input
+                      className="ticket-form-input"
+                      style={getFieldError("bankAccountName") ? { borderColor: "#e11d48", boxShadow: "0 0 0 2px rgba(225, 29, 72, 0.15)" } : {}}
+                      placeholder="e.g. NGUYEN VAN A"
+                      value={bankAccountName}
+                      onBlur={() => setTouched((prev) => ({ ...prev, bankAccountName: true }))}
+                      onChange={(e) => {
+                        setBankAccountName(e.target.value.toUpperCase());
+                        setTouched((prev) => ({ ...prev, bankAccountName: true }));
+                      }}
+                      maxLength={100}
+                    />
+                    {getFieldError("bankAccountName") && (
+                      <span style={{ color: "#e11d48", fontSize: "11px", fontWeight: 500, marginTop: "2px", display: "block" }}>
+                        {getFieldError("bankAccountName")}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="ticket-modal-actions">
@@ -787,7 +914,7 @@ export default function TicketDetailsPage() {
               <button
                 type="button"
                 className="ticket-modal-submit-btn"
-                disabled={submittingReturn || returnReason.trim().length < 10}
+                disabled={submittingReturn}
                 onClick={handleSubmitReturn}
               >
                 {submittingReturn ? "Submitting..." : "Submit Refund Request"}

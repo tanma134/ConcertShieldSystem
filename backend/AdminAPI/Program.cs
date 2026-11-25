@@ -50,7 +50,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
  };
  });
 
-
 builder.Services.AddAuthorization(options =>
 {
  options.AddPolicy("CanManageUsers", policy =>
@@ -59,9 +58,8 @@ builder.Services.AddAuthorization(options =>
  options.AddPolicy("CanManageSupportCases", policy =>
  policy.RequireRole("Admin", "Staff", "SupportStaff", "SecurityStaff"));
 
- // chỉ Admin được xem/xử lý fraud-risk (Staff không còn quyền).
- // Bật "Risk:RequirePermissionClaim": true để yêu cầu thêm claim permission = fraud.manage | risk.manage
- // (claim này phải do AuthenticationAPI cấp trong JWT).
+ // Restrict fraud-risk management to Admin; optionally require
+ // fraud.manage or risk.manage JWT permission claim.
  options.AddPolicy("CanReviewFraud", policy =>
  {
  policy.RequireRole("Admin");
@@ -128,7 +126,6 @@ builder.Services.AddHttpClient("RiskNotificationDelivery", c =>
 builder.Services.AddHostedService<RiskMaintenanceWorker>();
 var app = builder.Build();
 
-// Tự động khởi tạo schema Support Cases nếu chưa có trong admin_db
 using (var scope = app.Services.CreateScope())
 {
  var adminDb = scope.ServiceProvider.GetRequiredService<AdminDbContext>();

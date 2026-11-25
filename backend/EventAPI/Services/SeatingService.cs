@@ -6,21 +6,7 @@ using System.Text.Json;
 
 namespace EventAPI.Services
 {
-    /// <summary>
-    /// Owns a concert's layout.
-    ///
-    /// A concert either has no layout at all (pure general admission — capacity comes
-    /// straight from TicketType.Quantity), or it has ONE SeatMap containing any mix of:
-    ///
-    ///   * Seated zones   — one Seat row per physical seat. Buyers pick their own seat.
-    ///   * Standing zones — no Seat rows, just a headcount.
-    ///
-    /// Mixing is the normal case for concerts: numbered seats on the balcony plus a
-    /// standing pit at the front.
-    ///
-    /// CAPACITY RULE: once a chart exists, its zones are the source of truth and
-    /// TicketType.Quantity is synchronized to their effective capacity.
-    /// </summary>
+    // Owns concert seating layouts (either no chart for General Admission, or one SeatMap mixing Seated and Standing zones).
     public class SeatingService : ISeatingService
     {
         private readonly ISeatingRepository _seatingRepository;
@@ -47,10 +33,6 @@ namespace EventAPI.Services
             _eventAccessService = eventAccessService;
             _logger = logger;
         }
-
-        // =====================================================================
-        // Reads
-        // =====================================================================
 
         public async Task<SeatingChartResponseDTO?> GetByEventIdAsync(int eventId, int? callerId, bool isAdmin)
         {
@@ -130,10 +112,6 @@ namespace EventAPI.Services
             return dto;
         }
 
-        // =====================================================================
-        // Build / replace the whole layout
-        // =====================================================================
-
         public async Task<SeatingChartResponseDTO> BuildAsync(
             int eventId, BuildSeatingChartDTO dto, int callerId, bool isAdmin)
         {
@@ -209,10 +187,6 @@ namespace EventAPI.Services
             return MapChart(reloaded, includeSeats: true);
         }
 
-        // =====================================================================
-        // Zone-level operations
-        // =====================================================================
-
         public async Task<SeatZoneResponseDTO> AddZoneAsync(
             int eventId, CreateSeatZoneDTO dto, int callerId, bool isAdmin)
         {
@@ -230,7 +204,6 @@ namespace EventAPI.Services
             if (map.SeatZones.Any(z => string.Equals(z.ZoneName, dto.ZoneName, StringComparison.OrdinalIgnoreCase)))
                 errors.Add($"A zone named '{dto.ZoneName}' already exists on this layout.");
 
-            // Kiem tra hinh dang zone moi khong duoc chong lan voi cac zone da co
             var newBox = ParseBounds(dto.ShapeJson);
             if (newBox is { } nb)
             {
@@ -314,7 +287,6 @@ namespace EventAPI.Services
                 zone.ZoneName = dto.ZoneName.Trim();
             }
 
-            // --- Re-link to a different ticket type ----
             if (dto.TicketTypeId.HasValue && dto.TicketTypeId.Value != zone.TicketTypeId)
             {
                 if (!ticketTypes.Any(t => t.TicketTypeId == dto.TicketTypeId.Value))
@@ -326,7 +298,6 @@ namespace EventAPI.Services
                 zone.TicketTypeId = dto.TicketTypeId.Value;
             }
 
-            // --- Resize a standing zone ----
             if (dto.Capacity.HasValue)
             {
                 if (SeatZoneType.IsSeated(zone.ZoneType))
@@ -348,7 +319,6 @@ namespace EventAPI.Services
                 zone.Capacity = dto.Capacity.Value;
             }
 
-            // --- Resize/regenerate a numbered grid ----
             if (dto.Rows.HasValue || dto.SeatsPerRow.HasValue || dto.RowLabelPrefix != null)
             {
                 if (!SeatZoneType.IsSeated(zone.ZoneType))
@@ -446,10 +416,6 @@ namespace EventAPI.Services
             await _eventRepository.UpdateAsync(ev);
         }
 
-        // =====================================================================
-        // Internals
-        // =====================================================================
-
         private async Task<SeatZone> CreateZoneInternalAsync(int seatMapId, CreateSeatZoneDTO dto)
         {
             var zoneType = SeatZoneType.Normalize(dto.ZoneType);
@@ -525,7 +491,6 @@ namespace EventAPI.Services
                 errors.Add("Zone names must be unique within a layout.");
             }
 
-            // Kiem tra hop le hinh hoc ShapeJson: rectangle hoac polygon
             foreach (var zone in zones)
             {
                 var label = string.IsNullOrWhiteSpace(zone.ZoneName) ? "A zone" : $"Zone '{zone.ZoneName}'";
@@ -559,7 +524,6 @@ namespace EventAPI.Services
                 }
             }
 
-            // Kiem tra bbox cua cac hinh zone de chan cac layout chong lan.
             var boxes = zones.Select(ParseBounds).ToList();
             for (var i = 0; i < boxes.Count; i++)
                 for (var j = i + 1; j < boxes.Count; j++)
@@ -627,7 +591,6 @@ namespace EventAPI.Services
             return Task.CompletedTask;
         }
 
-        /// <summary>Seated zones: any non-Available seat. Standing zones: any sold ticket.</summary>
         private async Task EnsureZoneNotSoldAsync(SeatZone zone, List<TicketType> ticketTypes, string action)
         {
             if (SeatZoneType.IsSeated(zone.ZoneType))
@@ -652,10 +615,6 @@ namespace EventAPI.Services
                 await EnsureZoneNotSoldAsync(zone, ticketTypes, action);
         }
 
-        /// <summary>
-        /// Generates seats for a Seated zone: rows labelled from RowLabelPrefix
-        /// (A, B, C... then AA, AB past Z) and seats numbered 1..SeatsPerRow.
-        /// </summary>
         private static List<Seat> GenerateSeats(int seatZoneId, CreateSeatZoneDTO dto)
         {
             var seats = new List<Seat>(dto.Rows * dto.SeatsPerRow);
@@ -690,7 +649,6 @@ namespace EventAPI.Services
             return seats;
         }
 
-        /// <summary>"A" -> 0, "B" -> 1, "Z" -> 25, "AA" -> 26.</summary>
         private static int RowLabelToIndex(string label)
         {
             int index = 0;
@@ -702,7 +660,6 @@ namespace EventAPI.Services
             return index - 1;
         }
 
-        /// <summary>0 -> "A", 25 -> "Z", 26 -> "AA".</summary>
         private static string IndexToRowLabel(int index)
         {
             var label = string.Empty;
@@ -717,11 +674,7 @@ namespace EventAPI.Services
             return label;
         }
 
-        /// <summary>
-        /// Ownership + status gate. The layout is only configurable while the concert
-        /// is Draft or Rejected (an Admin may override) — once Pending or Published
-        /// it's what the Admin reviewed and what buyers are booking against.
-        /// </summary>
+        // Ownership and status gate: layouts are only editable in Draft/Rejected (unless Admin overrides).
         private async Task<Event> GetEditableEventAsync(int eventId, int callerId, bool isAdmin)
         {
             var ev = await _eventRepository.GetByIdAsync(eventId)
@@ -737,8 +690,6 @@ namespace EventAPI.Services
 
             return ev;
         }
-
-        // --- Mapping ----
 
         internal static SeatingChartResponseDTO MapChart(SeatMap m, bool includeSeats) => new()
         {

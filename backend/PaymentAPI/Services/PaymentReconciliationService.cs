@@ -394,7 +394,7 @@ namespace PaymentAPI.Services
 
                 var missingQr = order.TicketsWithoutQrCount > 0;
 
-                // Queue này chỉ gồm order Paid bị thiếu vé hoặc thiếu QR.
+                // Queue only includes Paid orders missing tickets or QR codes.
                 if (!missingTickets && !missingQr)
                     continue;
 

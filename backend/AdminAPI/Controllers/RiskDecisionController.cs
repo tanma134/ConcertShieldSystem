@@ -24,7 +24,6 @@ namespace AdminAPI.Controllers
             _logger = logger;
         }
 
-        // GET api/risk/decisions/me - decision của chính user đang đăng nhập (My Profile -> Account Restrictions)
         [HttpGet("me")]
         public async Task<IActionResult> GetMine(CancellationToken ct)
         {

@@ -107,7 +107,7 @@ export default function Header() {
                 mapped.unshift(item);
               }
             }
-          } catch (_) {}
+          } catch (_) { }
         }
 
         setNotifications(mapped);
@@ -121,7 +121,7 @@ export default function Header() {
             const localSaved = JSON.parse(localStorage.getItem(`cs_user_notifs_${currentUid}`) || "[]");
             setNotifications(localSaved);
             setUnreadCount(localSaved.filter((n) => !n.isRead).length);
-          } catch (_) {}
+          } catch (_) { }
         }
       });
   };
@@ -151,7 +151,7 @@ export default function Header() {
       channel.onmessage = () => {
         fetchHeaderNotifications();
       };
-    } catch (e) {}
+    } catch (e) { }
 
     return () => {
       clearInterval(intervalId);
@@ -400,7 +400,7 @@ export default function Header() {
             </Link>
           )}
 
-          {/* Notification Bell Dropdown (Chỉ icon chuông, đặt bên trái User Account Menu) */}
+          {/* Notification Bell Dropdown */}
           {isAuthenticated && !isAdmin && (
             <div className="tb-notif-wrap" ref={notifRef}>
               <button
@@ -438,7 +438,7 @@ export default function Header() {
                           setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
                           try {
                             await notificationApi.markAllAsRead();
-                          } catch (e) {}
+                          } catch (e) { }
                         }}
                       >
                         Mark all read
@@ -464,7 +464,7 @@ export default function Header() {
                               setUnreadCount((prev) => Math.max(0, prev - 1));
                               try {
                                 await notificationApi.markAsRead(notif.notificationId);
-                              } catch (e) {}
+                              } catch (e) { }
                             }
                             setNotifOpen(false);
                             if (notif.targetUrl) {
@@ -490,11 +490,11 @@ export default function Header() {
                               }
                               try {
                                 await notificationApi.deleteNotification(targetId);
-                              } catch (err) {}
+                              } catch (err) { }
                               window.dispatchEvent(new Event("notification-updated"));
                             }}
                           >
-                            ✕
+                            Close
                           </button>
                         </div>
                       ))

@@ -92,7 +92,7 @@ export default function StepTicketsSeating({
               marginLeft: "12px",
               opacity: 0.85,
             }}
-            title="Đóng thông báo"
+            title="Close notification"
           >
             ×
           </button>
@@ -115,6 +115,7 @@ export default function StepTicketsSeating({
           {(!only || only === "seating") && <SeatingSection
             eventId={eventId}
             chart={chart}
+            setChart={setChart}
             ticketTypes={ticketTypes}
             readOnly={readOnly}
             onChanged={loadAll}
@@ -881,7 +882,6 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
             )}
           </div>
 
-          {/* Phased sales selection pills */}
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", marginBottom: "14px", padding: "8px 12px", background: "#f1f5f9", borderRadius: "8px" }}>
             <span style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Tickets in this phase:</span>
             <button
@@ -1004,7 +1004,7 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
               marginLeft: "12px",
               opacity: 0.85,
             }}
-            title="Đóng thông báo"
+            title="Close notification"
           >
             ×
           </button>
@@ -1183,52 +1183,6 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
                 placeholder="e.g. VIP standing near stage with sound & light experience"
               />
             </label>
-            <label className="ow-field">
-              <span>Sales starts at (optional)</span>
-              <input
-                type="datetime-local"
-                name="salesStartsAt"
-                value={form.salesStartsAt}
-                min={startOfTodayLocal()}
-                max={event?.startsAt ? formatDateTimeLocal(event.startsAt) : undefined}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                aria-invalid={!!(touched.salesStartsAt && fieldErrors.salesStartsAt)}
-              />
-              {touched.salesStartsAt && fieldErrors.salesStartsAt && (
-                <span className="ow-field-error">{fieldErrors.salesStartsAt}</span>
-              )}
-              <span className="ow-hint">Leave blank to open sales immediately upon publishing.</span>
-            </label>
-            <label className="ow-field">
-              <span>Sales ends at (optional)</span>
-              <input
-                type="datetime-local"
-                name="salesEndsAt"
-                value={form.salesEndsAt}
-                min={form.salesStartsAt || startOfTodayLocal()}
-                max={twoHoursBeforeShow || (event?.endsAt ? formatDateTimeLocal(event.endsAt) : undefined)}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                aria-invalid={!!(touched.salesEndsAt && fieldErrors.salesEndsAt)}
-              />
-              {touched.salesEndsAt && fieldErrors.salesEndsAt && (
-                <span className="ow-field-error">{fieldErrors.salesEndsAt}</span>
-              )}
-              <span className="ow-hint">
-                {twoHoursBeforeShow ? (
-                  <button
-                    type="button"
-                    style={{ background: "none", border: "none", color: "#6366f1", padding: 0, cursor: "pointer", textDecoration: "underline", fontSize: "11px" }}
-                    onClick={() => setForm((f) => ({ ...f, salesEndsAt: twoHoursBeforeShow }))}
-                  >
-                    Auto-close 2h before show
-                  </button>
-                ) : (
-                  "Leave blank to keep sales open until concert starts."
-                )}
-              </span>
-            </label>
           </div>
           <div className="ow-form-actions">
             <button
@@ -1268,7 +1222,7 @@ const emptyZone = {
   capacity: "",
 };
 
-function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSilentRefresh }) {
+function SeatingSection({ eventId, chart, setChart, ticketTypes, readOnly, onChanged, onSilentRefresh }) {
   const [mode, setMode] = useState(chart ? "assigned" : "general");
   const [form, setForm] = useState(emptyZone);
   const [showForm, setShowForm] = useState(false);
@@ -1497,8 +1451,7 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
   // Uses a SILENT refresh: the canvas already shows the new position/size
   // optimistically, so re-fetching with the full-page loading state here would
   // make the whole section flicker/reload on every single drag or resize.
-  // Lưu nguyên geometry của zone (rectangle hoặc polygon) vào ShapeJson.
-  // EventAPI đã dùng jsonb nên không cần đổi schema khi thêm loại hình mới.
+  // Persist raw rectangle or polygon geometry in ShapeJson (stored as jsonb on EventAPI).
   const handleZoneShapeChange = async (seatZoneId, shape) => {
     try {
       const payloadShape = { ...shape };
@@ -1567,7 +1520,7 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
               marginLeft: "12px",
               opacity: 0.85,
             }}
-            title="Đóng thông báo"
+            title="Close notification"
           >
             ×
           </button>
@@ -2124,7 +2077,7 @@ function TemplatePicker({ eventId, ticketTypes, onApplied }) {
               marginLeft: "12px",
               opacity: 0.85,
             }}
-            title="Đóng thông báo"
+            title="Close notification"
           >
             ×
           </button>
@@ -2419,7 +2372,7 @@ function SaveAsTemplateForm({ eventId, onSaved }) {
               marginLeft: "12px",
               opacity: 0.85,
             }}
-            title="Đóng thông báo"
+            title="Close notification"
           >
             ×
           </button>
@@ -2574,7 +2527,7 @@ function RefundPolicySection({ eventId, refundPolicies, readOnly, onChanged }) {
               marginLeft: "12px",
               opacity: 0.85,
             }}
-            title="Đóng thông báo"
+            title="Close notification"
           >
             ×
           </button>

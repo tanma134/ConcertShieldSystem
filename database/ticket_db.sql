@@ -208,7 +208,7 @@ CREATE TABLE IF NOT EXISTS public.ticket_return_requests (
     event_id         integer      NOT NULL,
     requester_user_id integer     NOT NULL,
     reason           varchar(500) NOT NULL,
-    status           varchar(20)  NOT NULL DEFAULT 'Pending',
+    status           varchar(40)  NOT NULL DEFAULT 'Pending',
     refund_amount    bigint       NOT NULL DEFAULT 0,
     created_at       timestamp with time zone NOT NULL DEFAULT now(),
     updated_at       timestamp with time zone NOT NULL DEFAULT now(),
@@ -217,7 +217,7 @@ CREATE TABLE IF NOT EXISTS public.ticket_return_requests (
     reviewed_at      timestamp with time zone NULL,
     review_note      varchar(500) NULL,
     CONSTRAINT fk_ticket_return_requests_ticket FOREIGN KEY (ticket_id) REFERENCES public.tickets (ticket_id),
-    CONSTRAINT ck_ticket_return_requests_status CHECK (status IN ('Pending', 'Approved', 'Rejected', 'Cancelled'))
+    CONSTRAINT ck_ticket_return_requests_status CHECK (status IN ('Pending', 'Approved', 'ApprovedPendingManualRefund', 'Rejected', 'Cancelled', 'Refunded', 'RefundFailed', 'RefundProcessing', 'RefundInfoRequired'))
 );
 
 -- Upgrade an existing older ticket_return_requests table to the shape expected by current TicketAPI.
@@ -331,7 +331,7 @@ CREATE TABLE IF NOT EXISTS public.ticket_return_requests (
     event_id         integer      NOT NULL,
     requester_user_id integer     NOT NULL,
     reason           varchar(500) NOT NULL,
-    status           varchar(20)  NOT NULL DEFAULT 'Pending',
+    status           varchar(40)  NOT NULL DEFAULT 'Pending',
     refund_amount    bigint       NOT NULL DEFAULT 0,
     created_at       timestamp with time zone NOT NULL DEFAULT now(),
     updated_at       timestamp with time zone NOT NULL DEFAULT now(),
@@ -340,7 +340,7 @@ CREATE TABLE IF NOT EXISTS public.ticket_return_requests (
     reviewed_at      timestamp with time zone NULL,
     review_note      varchar(500) NULL,
     CONSTRAINT fk_ticket_return_requests_ticket FOREIGN KEY (ticket_id) REFERENCES public.tickets (ticket_id),
-    CONSTRAINT ck_ticket_return_requests_status CHECK (status IN ('Pending', 'Approved', 'Rejected', 'Cancelled'))
+    CONSTRAINT ck_ticket_return_requests_status CHECK (status IN ('Pending', 'Approved', 'ApprovedPendingManualRefund', 'Rejected', 'Cancelled', 'Refunded', 'RefundFailed', 'RefundProcessing', 'RefundInfoRequired'))
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ticket_return_requests_open
@@ -371,13 +371,20 @@ CREATE INDEX IF NOT EXISTS ix_affected_notification_pending ON affected_tickets(
 COMMIT;
 
 -- ---------- 011 return/refund (ticket) ----------
+ALTER TABLE public.ticket_return_requests ALTER COLUMN status TYPE varchar(40);
 ALTER TABLE public.ticket_return_requests ADD COLUMN IF NOT EXISTS refunded_at timestamp with time zone NULL;
 ALTER TABLE public.ticket_return_requests ADD COLUMN IF NOT EXISTS refund_reference varchar(100) NULL;
 ALTER TABLE public.ticket_return_requests ADD COLUMN IF NOT EXISTS refund_error varchar(500) NULL;
+ALTER TABLE public.ticket_return_requests ADD COLUMN IF NOT EXISTS bank_account_name varchar(150) NULL;
+ALTER TABLE public.ticket_return_requests ADD COLUMN IF NOT EXISTS bank_account_number varchar(50) NULL;
+ALTER TABLE public.ticket_return_requests ADD COLUMN IF NOT EXISTS bank_name varchar(150) NULL;
+ALTER TABLE public.ticket_return_requests ADD COLUMN IF NOT EXISTS manual_refund_reference varchar(100) NULL;
+ALTER TABLE public.ticket_return_requests ADD COLUMN IF NOT EXISTS manual_refund_processed_by integer NULL;
+ALTER TABLE public.ticket_return_requests ADD COLUMN IF NOT EXISTS manual_refund_processed_at timestamp with time zone NULL;
 ALTER TABLE public.ticket_return_requests DROP CONSTRAINT IF EXISTS ck_ticket_return_requests_status;
 ALTER TABLE public.ticket_return_requests
     ADD CONSTRAINT ck_ticket_return_requests_status
-    CHECK (status IN ('Pending', 'Approved', 'Rejected', 'Cancelled', 'Refunded', 'RefundFailed'));
+    CHECK (status IN ('Pending', 'Approved', 'ApprovedPendingManualRefund', 'Rejected', 'Cancelled', 'Refunded', 'RefundFailed', 'RefundProcessing', 'RefundInfoRequired'));
 
 -- ---------- 012 check-in / re-entry (ticket) ----------
 ALTER TABLE public.tickets ADD COLUMN IF NOT EXISTS last_exit_at timestamp with time zone NULL;

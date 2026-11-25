@@ -35,7 +35,6 @@ export default function AdminDashboardPage() {
         adminApi.getRoles(signal),
       ]);
 
-      // Nếu request bị hủy (component unmount) thì không set state nữa
       if (signal?.aborted) return;
 
       const users = usersResponse?.data || [];
@@ -52,7 +51,6 @@ export default function AdminDashboardPage() {
         ).length
       );
     } catch (requestError) {
-      // Bỏ qua lỗi do abort (component unmount)
       if (requestError?.name === "CanceledError" || requestError?.code === "ERR_CANCELED") {
         return;
       }

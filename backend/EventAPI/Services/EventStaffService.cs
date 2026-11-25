@@ -7,8 +7,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EventAPI.Services
 {
-    // (view staff list) and (assign / unassign staff).
-    // Only the event's organizer (or an Admin) may use it, and only real Staff accounts can be assigned.
     public class EventStaffService : IEventStaffService
     {
         private readonly IEventStaffRepository _staffRepository;
@@ -29,11 +27,8 @@ namespace EventAPI.Services
         {
         }
 
-        // the staff currently assigned to the event, oldest assignment first.
-        // Lay danh sach nhan vien duoc phan cong lam viec tai su kien
         public async Task<List<EventStaffDTO>> ListAsync(int eventId, int callerId, bool isAdmin, string? bearer)
         {
-            // Luu y: Kiem tra quyen so huu cua Organizer va lay day du thong tin tu Staff Directory
             await EnsureOwnerAsync(eventId, callerId, isAdmin);
 
             var rows = await _staffRepository.GetActiveByEventIdAsync(eventId);
@@ -47,7 +42,6 @@ namespace EventAPI.Services
             }).ToList();
         }
 
-        // Staff accounts matching the text, each marked when already assigned.
         public async Task<List<StaffCandidateDTO>> SearchCandidatesAsync(
             int eventId, int callerId, bool isAdmin, string? bearer, string? query)
         {
@@ -66,11 +60,8 @@ namespace EventAPI.Services
             }).ToList();
         }
 
-        // assigns a Staff account to the event.
-        // Phan cong mot nhan vien vao lam viec tai concert kem cong soat ve
         public async Task<EventStaffDTO> AssignAsync(int eventId, int staffUserId, string? gateName, int callerId, bool isAdmin, string? bearer, bool canReviewReturns = false)
         {
-            // Luu y: Kiem tra nhan vien hop le tu Directory va ngan chan phan cong trung lap
             if (staffUserId <= 0)
                 throw new ArgumentException("Please choose a staff member.");
 
@@ -112,7 +103,6 @@ namespace EventAPI.Services
             return ToDto(row, person);
         }
 
-        // Organizer decides whether an assigned staff member may review ticket returns of this event.
         public async Task<EventStaffDTO> SetReturnReviewAsync(
             int eventId, int staffUserId, bool canReviewReturns, int callerId, bool isAdmin, string? bearer)
         {
@@ -128,23 +118,18 @@ namespace EventAPI.Services
             return ToDto(row, person);
         }
 
-        // Events where the staff member is actively assigned with the return-review duty.
         public async Task<List<int>> GetReturnReviewEventIdsAsync(int staffUserId)
         {
             return await _staffRepository.GetReturnReviewEventIdsAsync(staffUserId);
         }
 
-        // Returns active event and gate assignments for the given staff member.
         public async Task<List<StaffEventAssignmentDTO>> GetAssignmentsByStaffAsync(int staffUserId)
         {
             return await _staffRepository.GetAssignmentsByStaffAsync(staffUserId);
         }
 
-        // removes a staff member from the event; the row is kept as history.
-        // Huy phan cong nhan vien khoi concert
         public async Task UnassignAsync(int eventId, int staffUserId, int callerId, bool isAdmin)
         {
-            // Luu y: Xoa ban ghi phan cong de thu hoi quyen soat ve cua nhan vien
             await EnsureOwnerAsync(eventId, callerId, isAdmin);
 
             var row = await _staffRepository.GetActiveAssignmentAsync(eventId, staffUserId)
@@ -170,7 +155,6 @@ namespace EventAPI.Services
             return ev;
         }
 
-        // Combines the assignment row with the account details from AuthenticationAPI.
         private static EventStaffDTO ToDto(EventStaff row, StaffDirectoryEntry? person)
         {
             return new EventStaffDTO

@@ -3,7 +3,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace AdminAPI.Models;
 
-// Nhat ky xu ly, trao doi va lich su trang thai ho so
 [Table("support_case_notes")]
 public class SupportCaseNote
 {
@@ -30,7 +29,7 @@ public class SupportCaseNote
     [Column("author_role")]
     public string AuthorRole { get; set; } = string.Empty;
 
-    // Phan loai ghi chu: InternalNote, Assignment, StatusChange, Resolution
+    // InternalNote, Assignment, StatusChange, Resolution
     [Required]
     [MaxLength(50)]
     [Column("note_type")]

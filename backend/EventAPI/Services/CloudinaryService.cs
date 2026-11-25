@@ -3,10 +3,7 @@ using CloudinaryDotNet.Actions;
 
 namespace EventAPI.Services
 {
-    /// <summary>
-    /// Wraps the Cloudinary SDK. Reads credentials from configuration section "Cloudinary"
-    /// (CloudName / ApiKey / ApiSecret) — never hardcode the secret, never return it to clients.
-    /// </summary>
+    // Reads Cloudinary credentials from configuration section "Cloudinary"; never expose the secret.
     public class CloudinaryService : ICloudinaryService
     {
         private readonly Cloudinary _cloudinary;
@@ -17,7 +14,7 @@ namespace EventAPI.Services
         {
             ".jpg", ".jpeg", ".png", ".webp", ".gif"
         };
-        private const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB
+        private const long MaxFileSizeBytes = 10 * 1024 * 1024;
 
         public CloudinaryService(IConfiguration configuration, ILogger<CloudinaryService> logger)
         {

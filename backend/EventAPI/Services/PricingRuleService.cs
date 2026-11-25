@@ -37,7 +37,6 @@ namespace EventAPI.Services
             _eventAccessService = eventAccessService;
         }
 
-        // Lay danh sach cac quy tac gia dong ap dung cho mot hang ve
         public async Task<List<PricingRuleResponseDTO>> GetByTicketTypeIdAsync(int ticketTypeId, int? callerId, bool isAdmin)
         {
             var ticketType = await _ticketTypeRepository.GetByIdAsync(ticketTypeId)
@@ -52,11 +51,9 @@ namespace EventAPI.Services
             return items.Select(Map).ToList();
         }
 
-        // Tao quy tac gia dong nhu EarlyBird hoac LastMinute cho hang ve
         public async Task<PricingRuleResponseDTO> CreateAsync(
             int ticketTypeId, CreatePricingRuleDTO dto, int callerId, bool isAdmin)
         {
-            // Luu y: Khi concert da Published chi cho phep quy tac giam gia, khong duoc tang gia ve
             var ticketType = await GetEditableTicketTypeAsync(ticketTypeId, callerId, isAdmin);
 
             var existing = await _pricingRuleRepository.GetByTicketTypeIdAsync(ticketTypeId);
@@ -87,11 +84,9 @@ namespace EventAPI.Services
             return Map(created);
         }
 
-        // Cap nhat thong tin quy tac gia dong cua hang ve
         public async Task<PricingRuleResponseDTO> UpdateAsync(
             int pricingRuleId, UpdatePricingRuleDTO dto, int callerId, bool isAdmin)
         {
-            // Luu y: Validate khoang thoi gian ap dung nam trong thoi gian ban ve
             var entity = await _pricingRuleRepository.GetByIdAsync(pricingRuleId)
                 ?? throw new KeyNotFoundException($"Pricing rule {pricingRuleId} not found.");
 
@@ -102,8 +97,16 @@ namespace EventAPI.Services
 
             if (dto.RuleName != null) entity.RuleName = dto.RuleName;
             if (dto.RuleType != null) entity.RuleType = dto.RuleType;
-            if (dto.AdjustedPrice.HasValue) entity.AdjustedPrice = dto.AdjustedPrice;
-            if (dto.DiscountPercent.HasValue) entity.DiscountPercent = dto.DiscountPercent;
+            if (dto.AdjustedPrice.HasValue)
+            {
+                entity.AdjustedPrice = dto.AdjustedPrice;
+                if (!dto.DiscountPercent.HasValue) entity.DiscountPercent = null;
+            }
+            if (dto.DiscountPercent.HasValue)
+            {
+                entity.DiscountPercent = dto.DiscountPercent;
+                if (!dto.AdjustedPrice.HasValue) entity.AdjustedPrice = null;
+            }
             if (dto.TriggerFrom.HasValue) entity.TriggerFrom = EventTime.ToUtc(dto.TriggerFrom);
             if (dto.TriggerTo.HasValue) entity.TriggerTo = EventTime.ToUtc(dto.TriggerTo);
             if (dto.QuantityThreshold.HasValue) entity.QuantityThreshold = dto.QuantityThreshold;
@@ -119,10 +122,8 @@ namespace EventAPI.Services
             return Map(entity);
         }
 
-        // Xoa quy tac gia dong khoi hang ve
         public async Task DeleteAsync(int pricingRuleId, int callerId, bool isAdmin)
         {
-            // Luu y: Chi Organizer chu so huu hoac Admin moi co quyen xoa quy tac gia
             var entity = await _pricingRuleRepository.GetByIdAsync(pricingRuleId)
                 ?? throw new KeyNotFoundException($"Pricing rule {pricingRuleId} not found.");
 
@@ -205,7 +206,6 @@ namespace EventAPI.Services
                     $"Published events only allow discounts. Adjusted price ({adjustedPrice.Value:N0}) must be lower than the base price ({ticketType.Price:N0}).");
         }
 
-        // Doc lich concert hien tai truoc khi chap nhan cau hinh giam gia
         private async Task ValidateScheduleAsync(TicketType ticket, string type, DateTime? from, DateTime? to, bool requireFuture)
         {
             var ev = await _eventRepository.GetByIdAsync(ticket.EventId)

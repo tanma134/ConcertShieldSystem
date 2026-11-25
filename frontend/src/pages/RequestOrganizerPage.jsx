@@ -55,8 +55,8 @@ function StatusBadge({ status }) {
     status === "Approved"
       ? "org-badge--approved"
       : status === "Rejected"
-      ? "org-badge--rejected"
-      : "org-badge--pending";
+        ? "org-badge--rejected"
+        : "org-badge--pending";
   return <span className={`org-badge ${cls}`}>{STATUS_LABEL[status] || status}</span>;
 }
 
@@ -104,7 +104,7 @@ function FileUploadField({ label, required = false, fileData, onSelect, onRemove
           }}
           onClick={() => inputRef.current?.click()}
         >
-          <span>📁 Choose file (Image or PDF)</span>
+          <span>Choose file (Image or PDF)</span>
         </button>
       ) : (
         <div
@@ -228,7 +228,7 @@ export default function RequestOrganizerPage() {
         await refreshRoles();
       }
     } catch {
-      // im lặng bỏ qua nếu không load được lịch sử, không chặn form
+      // Ignore history fetch errors so the form remains usable.
     } finally {
       setLoadingHistory(false);
     }
@@ -440,7 +440,6 @@ export default function RequestOrganizerPage() {
                 />
               </div>
 
-              {/* 3 Upload Sections */}
               <FileUploadField
                 label="Business registration license"
                 required
@@ -499,7 +498,6 @@ export default function RequestOrganizerPage() {
                     <p className="org-history-item__note">Note: {r.reviewNote}</p>
                   )}
 
-                  {/* Attached Documents List */}
                   {r.documents && r.documents.length > 0 && (
                     <div style={{ marginTop: "8px", display: "flex", flexWrap: "wrap", gap: "8px" }}>
                       {r.documents.map((doc) => (
@@ -563,7 +561,6 @@ export default function RequestOrganizerPage() {
         </div>
       </div>
 
-      {/* In-Tab Document Preview Lightbox Modal */}
       {viewingDoc && (
         <div
           className="org-modal-backdrop"

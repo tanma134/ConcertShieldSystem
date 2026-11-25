@@ -39,8 +39,6 @@ namespace EventAPI.Validators
             RuleFor(x => x.Timezone)
                 .MaximumLength(50).When(x => x.Timezone != null);
 
-            // Cau hinh gioi han so ve toi thieu va toi da cho moi tai khoan o cap su kien
-            // Luu y: MinTicketsPerAccount phai nho hon hoac bang MaxTicketsPerAccount
             RuleFor(x => x.MinTicketsPerAccount)
                 .GreaterThan(0).When(x => x.MinTicketsPerAccount.HasValue)
                 .WithMessage("Minimum tickets per account must be greater than 0");

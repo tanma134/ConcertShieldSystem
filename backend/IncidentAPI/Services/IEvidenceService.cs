@@ -5,7 +5,6 @@ namespace IncidentAPI.Services;
 
 public interface IEvidenceService
 {
-    // Upload tệp bằng chứng lên Cloudinary và lưu DB
     Task<IncidentEvidenceDto> UploadEvidenceAsync(
         int incidentId,
         IFormFile file,
@@ -15,9 +14,7 @@ public interface IEvidenceService
         bool isAdmin,
         CancellationToken ct = default);
 
-    // Lấy danh sách bằng chứng của một sự cố
     Task<List<IncidentEvidenceDto>> GetEvidencesAsync(int incidentId, CancellationToken ct = default);
 
-    // Xóa một bằng chứng
     Task DeleteEvidenceAsync(int incidentId, int evidenceId, int requestingUserId, bool isAdmin, CancellationToken ct = default);
 }

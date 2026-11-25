@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AdminAPI.Controllers
 {
-    /// <summary>Fraud Alert Dashboard, Fraud Alert Details (Admin, Staff, chỉ đọc).</summary>
     [ApiController]
     [Route("api/admin/fraud-alerts")]
     // Admin and Staff may view alert details (read-only). All block/restore actions live in RiskBlockAdminController (Admin only).
@@ -24,7 +23,6 @@ namespace AdminAPI.Controllers
             _logger = logger;
         }
 
-       
         [HttpGet("summary")]
         public Task<IActionResult> Summary([FromQuery] DateTime? from, [FromQuery] DateTime? to) =>
             Run(async () => Ok(await _service.GetSummaryAsync(from, to)));

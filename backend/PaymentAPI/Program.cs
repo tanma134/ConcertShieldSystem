@@ -14,11 +14,9 @@ using PaymentAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Controllers & JSON
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// PostgreSQL DbContext
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
         ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_PAYMENT_POSTGRES") ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TEST_POSTGRES") ?? throw new InvalidOperationException("Connection string is not configured.");
 
@@ -47,7 +45,6 @@ builder.Services.AddHttpClient<IEventApiClient, EventApiClient>(client =>
     client.BaseAddress = new Uri(eventApiUrl);
 });
 
-// Repositories & Services
 builder.Services.AddScoped<IVoucherRepository, VoucherRepository>();
 builder.Services.AddScoped<IVoucherService, VoucherService>();
 builder.Services.Configure<VnPayConfig>(
@@ -70,7 +67,6 @@ builder.Services.AddScoped<IPaymentReconciliationResolutionRepository,PaymentRec
 
 builder.Services.AddScoped<IPaymentReconciliationService, PaymentReconciliationService>();
 
-// Risk Engine
 builder.Services.AddRiskClient(builder.Configuration);
 // Explicit factory: a DbContext overload is kept for tests, so the container cannot choose.
 builder.Services.AddScoped<IPaymentRiskService>(sp => new PaymentRiskService(
@@ -79,7 +75,6 @@ builder.Services.AddScoped<IPaymentRiskService>(sp => new PaymentRiskService(
     sp.GetRequiredService<IConfiguration>(),
     sp.GetRequiredService<ILogger<PaymentRiskService>>()));
 
-// JWT Authentication
 var jwtSecretKey = builder.Configuration["JwtSettings:SecretKey"] ?? throw new InvalidOperationException("Configure JwtSettings:SecretKey");
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"] ?? "AuthenticationAPI";
 var jwtAudience = builder.Configuration["JwtSettings:Audience"] ?? "AuthenticationAPIUsers";
@@ -108,7 +103,6 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("RequireOrganizer", policy => policy.RequireRole("Organizer", "Admin"));
 });
 
-// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -120,7 +114,6 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Swagger with JWT Bearer
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
@@ -158,7 +151,6 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// ThĂªm schema cho Risk Engine, Refund vĂ  Äá»‘i soĂ¡t náº¿u chÆ°a cĂ³
 try
 {
     using var schemaScope = app.Services.CreateScope();

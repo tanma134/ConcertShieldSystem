@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AdminAPI.Controllers
 {
-    /// <summary>Review & Resolve Appeal (Admin, Staff).</summary>
     [ApiController]
     [Route("api/admin/risk/appeals")]
     [Authorize(Policy = "CanReviewFraud")]
@@ -24,17 +23,14 @@ namespace AdminAPI.Controllers
             _logger = logger;
         }
 
-        // GET api/admin/risk/appeals?status=Pending
         [HttpGet]
         public Task<IActionResult> Search([FromQuery] AppealQuery query) =>
             Run(async () => Ok(await _service.SearchAppealsAsync(query)));
 
-        // GET api/admin/risk/appeals/5
         [HttpGet("{id:int}")]
         public Task<IActionResult> Detail(int id) =>
             Run(async () => Ok(await _service.GetAppealDetailAsync(id)));
 
-        // POST api/admin/risk/appeals/5/resolve
         [HttpPost("{id:int}/resolve")]
         public Task<IActionResult> Resolve(int id, [FromBody] ResolveAppealRequest req) =>
             Run(async () =>

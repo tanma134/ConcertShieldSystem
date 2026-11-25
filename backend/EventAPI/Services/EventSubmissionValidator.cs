@@ -44,7 +44,6 @@ namespace EventAPI.Services
             bool requireBanner = _configuration.GetValue("Publication:RequireBanner", false);
             bool requireRefundPolicy = _configuration.GetValue("Publication:RequireRefundPolicy", true);
 
-            // --- Core text ----
             if (string.IsNullOrWhiteSpace(ev.Title))
                 result.Errors.Add("Title is required.");
 
@@ -64,7 +63,6 @@ namespace EventAPI.Services
                     result.Errors.Add($"Slug '{ev.Slug}' is already used by another concert.");
             }
 
-            // --- Venue / location ----
             if (string.IsNullOrWhiteSpace(ev.LocationName))
                 result.Errors.Add("Venue name (LocationName) is required.");
 
@@ -77,7 +75,6 @@ namespace EventAPI.Services
             if (!ev.Latitude.HasValue || !ev.Longitude.HasValue)
                 result.Warnings.Add("Latitude/Longitude are not set — the venue won't show on a map.");
 
-            // --- Schedule ----
             if (ev.StartsAt == default)
                 result.Errors.Add("Start time (StartsAt) is required.");
 
@@ -90,7 +87,6 @@ namespace EventAPI.Services
             if (ev.StartsAt != default && ev.StartsAt <= DateTime.UtcNow)
                 result.Errors.Add("StartsAt must be in the future.");
 
-            // --- Artwork ----
             if (requirePoster && string.IsNullOrWhiteSpace(ev.PosterUrl))
                 result.Errors.Add("A poster image is required before submitting.");
 
@@ -100,7 +96,6 @@ namespace EventAPI.Services
             if (!requireBanner && string.IsNullOrWhiteSpace(ev.BannerUrl))
                 result.Warnings.Add("No banner image uploaded — the concert detail page will fall back to the poster.");
 
-            // --- Ticket types ----
             var ticketTypes = await _ticketTypeRepository.GetByEventIdAsync(eventId);
             var sellableTicketTypes = ticketTypes.Where(t => t.Status == "Active").ToList();
 
@@ -138,7 +133,6 @@ namespace EventAPI.Services
                 if (ev.MaxTicketsPerAccount.HasValue && t.MaxPerOrder > ev.MaxTicketsPerAccount.Value)
                     result.Errors.Add($"{label}: MaxPerOrder ({t.MaxPerOrder}) cannot exceed event MaxTicketsPerAccount ({ev.MaxTicketsPerAccount.Value}).");
 
-                // Sale window
                 if (t.SalesStartsAt.HasValue && t.SalesEndsAt.HasValue && t.SalesEndsAt <= t.SalesStartsAt)
                     result.Errors.Add($"{label}: SalesEndsAt must be after SalesStartsAt.");
 
@@ -149,7 +143,7 @@ namespace EventAPI.Services
                     result.Warnings.Add($"{label}: no sale window set — tickets go on sale as soon as the concert is published.");
             }
 
-            // Kiểm tra lại rule theo lịch hiện tại: event/ticket có thể đã được sửa sau khi tạo rule.
+            // Re-validate rules against current schedules since event or ticket dates may have changed.
             var ticketIds = ticketTypes.Select(t => t.TicketTypeId).ToList();
             var activePricing = await _context.PricingRules.AsNoTracking()
                 .Where(r => ticketIds.Contains(r.TicketTypeId) && r.IsActive).ToListAsync();
@@ -173,7 +167,6 @@ namespace EventAPI.Services
                 result.Errors.Add("MinTicketsPerAccount cannot be greater than MaxTicketsPerAccount.");
             }
 
-            // --- Refund policy ----
             var refundPolicies = await _refundPolicyRepository.GetByEventIdAsync(eventId);
             if (refundPolicies.Count == 0)
             {
@@ -192,7 +185,6 @@ namespace EventAPI.Services
                     result.Errors.Add($"Refund policy '{p.PolicyName}': DeadlineBeforeEventHours must be greater than 0.");
             }
 
-            // --- Seating ----
             var seatMap = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: true);
 
             if (ev.HasSeatingChart)

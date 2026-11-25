@@ -602,7 +602,7 @@ export default function OrderDetailsPage() {
                     onClick={() => setShowSupportModal(false)}
                     style={{ background: "none", border: "none", color: "#7e7694", cursor: "pointer", fontSize: "18px" }}
                   >
-                    ✕
+                    Close
                   </button>
                 </div>
 
@@ -799,7 +799,7 @@ export default function OrderDetailsPage() {
                                 padding: "2px 6px",
                               }}
                             >
-                              ✕ Remove
+                              Remove
                             </button>
                           )}
                         </div>

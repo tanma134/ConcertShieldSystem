@@ -44,7 +44,6 @@ public class EvidenceService : IEvidenceService
         if (currentCount >= MaxEvidencesPerIncident)
             throw new IncidentServiceException(400, $"This incident has reached the maximum of {MaxEvidencesPerIncident} evidence files.");
 
-        // Upload lên Cloudinary
         var uploadResult = await _cloudinary.UploadFileAsync(file, $"{CloudinaryFolder}/{incidentId}", ct);
 
         var fileType = (uploadResult.MimeType ?? "").StartsWith("video/") ? "video"
@@ -69,7 +68,6 @@ public class EvidenceService : IEvidenceService
 
         await _incidentRepository.AddEvidenceAsync(evidence, ct);
 
-        // Ghi nhận nhật ký đính kèm bằng chứng
         var update = new IncidentUpdate
         {
             IncidentId = incidentId,
@@ -133,7 +131,6 @@ public class EvidenceService : IEvidenceService
         if (!isAdmin && evidence.UploadedById != requestingUserId)
             throw new IncidentServiceException(403, "You do not have permission to delete this evidence.");
 
-        // Xóa trên Cloudinary
         try
         {
             await _cloudinary.DeleteFileAsync(evidence.PublicId, ct);

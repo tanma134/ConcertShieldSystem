@@ -8,7 +8,7 @@ namespace PaymentAPI.Services
 {
     public class VnPayService : IVnPayService
     {
-        // VNPay chỉ nhận mỗi giao dịch dưới 1 tỷ VND.
+        // VNPay requires each transaction to be under 1 billion VND.
         private const long MaxVnPayAmountVnd = 999_999_999L;
 
         private readonly VnPayConfig _config;
@@ -25,8 +25,7 @@ namespace PaymentAPI.Services
         }
         public string CreatePaymentUrl(long orderId, long amount, string ipAddress)
         {
-            // vnp_Amount = số tiền VND x 100. PHẢI tính bằng long: với int, 50.000.000 x 100 = 5 tỷ
-            // vượt 2,147,483,647 nên bị tràn số và VNPay nhận ~7 triệu thay vì 50 triệu.
+            // vnp_Amount is VND * 100; use long because int overflows above ~21.4M VND.
             if (amount <= 0 || amount > MaxVnPayAmountVnd)
                 throw new ArgumentOutOfRangeException(nameof(amount),
                     $"Số tiền phải từ 1 đến {MaxVnPayAmountVnd:N0} VND.");
@@ -75,17 +74,6 @@ namespace PaymentAPI.Services
                     .Where(x => !x.StartsWith("vnp_SecureHash"))
                     .OrderBy(x => x)
             );
-
-            //var sortedParams = queryString.Split('&')
-            //.Where(x => !x.StartsWith("vnp_SecureHash"))
-            //.Select(x => {
-            //    var parts = x.Split('=', 2);
-            //    return new { Key = parts[0], Value = parts.Length > 1 ? parts[1] : "" };
-            //})
-            //.OrderBy(x => x.Key, StringComparer.Ordinal)  
-            //.Select(x => $"{x.Key}={x.Value}");
-
-            //var filtered = string.Join("&", sortedParams);
 
             var computedHash = HmacSHA512(hashSecret, filtered);
 

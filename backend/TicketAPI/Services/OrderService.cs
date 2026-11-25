@@ -44,7 +44,7 @@ namespace TicketAPI.Services
             if (string.IsNullOrWhiteSpace(dto.HoldId))
                 throw new ArgumentException("HoldId không hợp lệ.");
 
-            // Idempotent retry: neu don hang da duoc tao cho hold session nay thi tra ve OrderId ngay
+            // Idempotent retry: return existing OrderId if an order was already created for this hold session.
             var existingOrder = await _context.Orders
                 .Include(o => o.OrderDetails)
                 .FirstOrDefaultAsync(o => o.HoldToken == dto.HoldId && !o.IsDeleted && o.CustomerId == customerId);
@@ -66,10 +66,9 @@ namespace TicketAPI.Services
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                // Khoa advisory lock theo customerId de tranh race condition vuot han muc qua nhieu order dong thoi
+                // Acquire advisory lock per customerId to prevent concurrent orders from bypassing ticket limits.
                 await _context.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(9823, {customerId})");
 
-                // Kiem tra gioi han toi thieu va toi da theo tai khoan truoc khi tao don moi
                 var requestedQuantity = dto.OrderDetails.Sum(x => x.Quantity);
                 if (eventInfo.MinTicketsPerAccount is > 0 && requestedQuantity < eventInfo.MinTicketsPerAccount.Value)
                 {
@@ -744,8 +743,7 @@ namespace TicketAPI.Services
                 throw new InvalidOperationException(
                     "Order đã có nhiều ticket hơn số lượng dự kiến.");
 
-            // Hiện Ticket không lưu OrderAttendeeId nên không thể xác định
-            // an toàn attendee nào còn thiếu khi chỉ có một phần ticket.
+            // Ticket does not store OrderAttendeeId, so missing attendees cannot be safely identified for partial ticket sets.
             if (existingTickets.Count > 0 &&
                 existingTickets.Count < expectedTicketCount)
             {

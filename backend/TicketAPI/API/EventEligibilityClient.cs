@@ -2,7 +2,7 @@ namespace TicketAPI.API;
 public record EventEligibility(bool CanSell, string Reason, string Status, DateTime StartsAt, DateTime EndsAt, int ScheduleVersion, bool RequiresVirtualQueue);
 public class EventEligibilityClient(HttpClient http)
 {
-    // Fail closed khi EventAPI không thể xác nhận điều kiện bán; không dùng dữ liệu cache cũ để cho mua.
+    // Fail closed when EventAPI cannot confirm sale eligibility; never use stale cached data.
     public async Task<EventEligibility> GetAsync(int eventId, CancellationToken ct = default)
     {
         if (eventId <= 0) throw new ArgumentException("Invalid event ID.");

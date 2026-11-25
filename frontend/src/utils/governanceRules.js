@@ -1,4 +1,4 @@
-// Validation FE báo sớm; backend luôn kiểm tra lại cùng quy tắc.
+// Early client-side validation; backend enforces the same rules.
 export function validateChange(input, now = Date.now()) {
   if (!['Postpone','Reschedule','Cancel'].includes(input.type)) return 'Select a valid change type.';
   const reason = (input.reason || '').trim();
@@ -15,7 +15,7 @@ export function validateReview(decision, notes) {
   const clean = (notes || '').trim();
   return !clean || clean.length > 2000 ? 'Review notes must contain 1 to 2000 characters.' : '';
 }
-// Report 3 (3.10.10): note is required only when rejecting (10-1000 characters); optional (max 1000) when approving.
+// Note is required only when rejecting (10-1000 characters); optional (max 1000) when approving.
 export function validateChangeReview(decision, notes) {
   if (!['Approved','Rejected'].includes(decision)) return 'Select a decision.';
   const clean = (notes || '').trim();
@@ -30,7 +30,7 @@ export function fileError(file, maxBytes) {
   if (!/\.(pdf|png|jpe?g)$/i.test(file.name)) return 'Only PDF, PNG and JPEG are supported.';
   return '';
 }
-// Chuyển giờ nhập theo timezone concert, không phụ thuộc timezone máy người dùng.
+// Convert input wall-clock time using the concert timezone rather than the browser timezone.
 export function localToUtc(value, zone) {
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value || '')) throw new Error('Enter a valid local date and time.');
   const timezone = zone === 'SE Asia Standard Time' ? 'Asia/Ho_Chi_Minh' : zone;
@@ -43,7 +43,7 @@ export function localToUtc(value, zone) {
   }
   const p = parts(utc);
   if (`${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}` !== value) throw new Error('This time does not exist in the concert timezone.');
-  // Thời gian DST lặp phải được nhập bằng công cụ chọn offset rõ ràng, không chọn ngầm.
+  // Reject ambiguous repeated DST times rather than picking an offset implicitly.
   for (const shift of [-3600000,3600000]) {
     const q=parts(utc+shift);
     if (`${q.year}-${q.month}-${q.day}T${q.hour}:${q.minute}` === value) throw new Error('Ambiguous daylight-saving time. Choose another time.');

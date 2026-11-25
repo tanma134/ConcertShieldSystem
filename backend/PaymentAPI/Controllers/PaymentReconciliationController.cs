@@ -18,7 +18,6 @@ namespace PaymentAPI.Controllers
             _service = service;
         }
 
-        // Lay danh sach cac giao dich thanh toan / hoan tien can doi soat bat thuong danh cho Admin
         [HttpGet]
         public async Task<IActionResult> GetExceptions(
             [FromQuery] DateTime? from,
@@ -50,7 +49,6 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        // Xu ly va giai quyet bat thuong doi soat giao dich thanh toan danh cho Admin
         [HttpPost("{paymentTransactionId}/resolve")]
         public async Task<IActionResult> ResolveException(
             int paymentTransactionId,
@@ -79,7 +77,6 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        // Lay danh sach hang cho cac giao dich thanh toan hoan tien that bai danh cho Admin
         [HttpGet("/api/admin/failed-transaction-queue")]
         public async Task<IActionResult> GetFailedTransactionQueue(
             [FromQuery] DateTime? from,

@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AdminAPI.Repositories;
 
-/// Cung cấp truy cập dữ liệu Support Case cho Service.
 public interface ISupportCaseRepository
 {
     IQueryable<SupportCase> Cases { get; }

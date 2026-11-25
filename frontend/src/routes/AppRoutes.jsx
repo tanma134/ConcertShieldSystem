@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import RegisterPage from "../pages/RegisterPage";
 import VerifyEmailPage from "../pages/VerifyEmailPage";
 import LoginPage from "../pages/LoginPage";
@@ -143,9 +143,36 @@ export default function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route path="/my_tickets" element={<Navigate to="/my-tickets" replace />} />
+      <Route path="/my%20tickets" element={<Navigate to="/my-tickets" replace />} />
+      <Route path="/tickets" element={<Navigate to="/my-tickets" replace />} />
 
       <Route
         path="/my-tickets/:ticketId"
+        element={
+          <ProtectedRoute>
+            <TicketDetailsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/my_tickets/:ticketId"
+        element={
+          <ProtectedRoute>
+            <TicketDetailsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/my%20tickets/:ticketId"
+        element={
+          <ProtectedRoute>
+            <TicketDetailsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tickets/:ticketId"
         element={
           <ProtectedRoute>
             <TicketDetailsPage />
@@ -419,6 +446,8 @@ export default function AppRoutes() {
       {/* Organizer Verification & Real-time Check-in Monitor (UC_11.3, 14.1, 14.7) */}
       <Route path="/organizer/events/:eventId/realtime-checkin" element={<ProtectedRoute organizerOnly><RealtimeCheckinMonitorPage /></ProtectedRoute>} />
       <Route path="/organizer/realtime-checkin" element={<ProtectedRoute organizerOnly><RealtimeCheckinMonitorPage /></ProtectedRoute>} />
+      {/* Fallback route */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

@@ -31,7 +31,8 @@ export default function RefundReconciliationPage() {
       setLoading(true);
       setError("");
       const params = {};
-      if (statusFilter !== "All") params.status = statusFilter;
+      if (statusFilter === "Mismatched") params.matchStatus = "Mismatched";
+      else if (statusFilter !== "All") params.status = statusFilter;
       if (selectedEventId !== "All") params.eventId = selectedEventId;
       if (search.trim()) params.search = search.trim();
 
@@ -277,7 +278,7 @@ export default function RefundReconciliationPage() {
                     setTimeout(fetchReport, 50);
                   }}
                 >
-                  ✕
+                  Close
                 </button>
               )}
             </form>
@@ -329,7 +330,7 @@ export default function RefundReconciliationPage() {
         {/* Zero Mismatches Banner (A.1) */}
         {!loading && mismatchedCount === 0 && (
           <div className="rr-banner-match">
-            <span className="rr-banner-icon">✓</span>
+            
             <span>
               All compared refund records reconcile successfully (0 mismatches detected).
             </span>
@@ -347,7 +348,7 @@ export default function RefundReconciliationPage() {
                 <th>Status</th>
                 <th>Match</th>
                 <th>Date</th>
-                <th>Actions</th>
+                <th style={{ textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -404,36 +405,41 @@ export default function RefundReconciliationPage() {
                       <td className="rr-cell-date">
                         {formatDateDisplay(r.completedAt || r.createdAt)}
                       </td>
-                      <td className="rr-cell-actions">
-                        {r.status === "Pending" && (
+                      <td className="rr-cell-actions" style={{ textAlign: "right" }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "flex-end", gap: "6px" }}>
+                          {r.status === "Pending" && (
+                            <button
+                              type="button"
+                              className="rr-action-process-btn"
+                              style={{ margin: 0, padding: "4px 10px", fontSize: "12px" }}
+                              onClick={() => {
+                                setProcessOrderId(r.orderId);
+                                setProcessCustomerName(r.customerName);
+                              }}
+                              title="Process refund for this order"
+                            >
+                              Process
+                            </button>
+                          )}
+                          {r.status === "Failed" && (
+                            <button
+                              type="button"
+                              className="rr-action-retry-btn"
+                              style={{ margin: 0, padding: "4px 10px", fontSize: "12px" }}
+                              onClick={() => setRetryRefundItem(r)}
+                            >
+                              Retry
+                            </button>
+                          )}
                           <button
                             type="button"
-                            className="rr-action-process-btn"
-                            onClick={() => {
-                              setProcessOrderId(r.orderId);
-                              setProcessCustomerName(r.customerName);
-                            }}
-                            title="Process refund for this order"
+                            className="rr-action-link"
+                            style={{ padding: "4px 6px", fontSize: "12.5px" }}
+                            onClick={() => setInspectRefundItem(r)}
                           >
-                            Process Refund
+                            Inspect
                           </button>
-                        )}
-                        <button
-                          type="button"
-                          className="rr-action-link"
-                          onClick={() => setInspectRefundItem(r)}
-                        >
-                          Inspect
-                        </button>
-                        {r.status === "Failed" && (
-                          <button
-                            type="button"
-                            className="rr-action-retry-btn"
-                            onClick={() => setRetryRefundItem(r)}
-                          >
-                            Retry
-                          </button>
-                        )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -460,7 +466,7 @@ export default function RefundReconciliationPage() {
                 className="rf-close"
                 onClick={() => setPromptOrderId(false)}
               >
-                ✕
+                Close
               </button>
             </div>
             <form onSubmit={handleOpenProcessOrder} className="rf-form">
@@ -531,7 +537,7 @@ export default function RefundReconciliationPage() {
                 className="rf-close"
                 onClick={() => setInspectRefundItem(null)}
               >
-                ✕
+                Close
               </button>
             </div>
             <div className="rf-form">

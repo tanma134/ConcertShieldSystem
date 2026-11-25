@@ -32,7 +32,6 @@ export default function RegisterPage() {
       return;
     }
 
-    // UC 11.1 & 11.2: Check policy agreement
     if (!agreedPolicies) {
       setError("Please agree to the Terms of Service and Platform Privacy Policy to continue.");
       return;
@@ -41,7 +40,6 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await authApi.register(form);
-      // Chuyển sang trang nhập OTP, kèm email để dùng ở bước sau
       navigate("/verify-email", { state: { email: form.email } });
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed. Please try again.");
@@ -111,7 +109,6 @@ export default function RegisterPage() {
               <small className="auth-hint">At least {MIN_PASSWORD_LENGTH} characters.</small>
             </div>
 
-            {/* Policy Agreement Checkbox */}
             <div className="auth-policy-group">
               <input
                 type="checkbox"
@@ -154,7 +151,6 @@ export default function RegisterPage() {
         </div>
       </div>
 
-      {/* Platform Policy Modal */}
       <PlatformPolicyModal
         isOpen={showPolicyModal}
         onClose={() => setShowPolicyModal(false)}

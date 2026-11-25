@@ -20,7 +20,6 @@ public class IncidentController : ControllerBase
         _logger = logger;
     }
 
-    // Tim kiem va loc danh sach su co hien truong danh cho Staff va Admin
     [HttpGet]
     [Authorize(Policy = "CanManageIncidents")]
     public Task<IActionResult> Search([FromQuery] IncidentQuery query) =>
@@ -32,7 +31,6 @@ public class IncidentController : ControllerBase
             return Ok(result);
         });
 
-    // Xem thong tin chi tiet ho so su co theo id danh cho Staff va Admin
     [HttpGet("{id:int}")]
     [Authorize(Policy = "CanManageIncidents")]
     public Task<IActionResult> GetDetail(int id) =>
@@ -44,20 +42,17 @@ public class IncidentController : ControllerBase
             return Ok(result);
         });
 
-    // Bao cao su co phat sinh tai hien truong concert danh cho Staff
     [HttpPost]
     [Authorize(Policy = "CanReportIncident")]
     public Task<IActionResult> Create([FromBody] CreateIncidentRequest req) =>
         Run(async () =>
         {
-            // Luu y: Tu dong lay dinh danh Staff lap bao cao va gan trang thai Open
             var staffId = GetCurrentUserId();
             var staffName = GetCurrentUserName();
             var result = await _service.CreateIncidentAsync(req, staffId, staffName);
             return CreatedAtAction(nameof(GetDetail), new { id = result.Id }, result);
         });
 
-    // Cap nhat noi dung chi tiet ho so su co danh cho Staff va Admin
     [HttpPut("{id:int}")]
     [Authorize(Policy = "CanManageIncidents")]
     public Task<IActionResult> Update(int id, [FromBody] UpdateIncidentRequest req) =>
@@ -70,7 +65,6 @@ public class IncidentController : ControllerBase
             return Ok(result);
         });
 
-    // Cap nhat nhanh trang thai xu ly su co danh cho Staff va Admin
     [HttpPatch("{id:int}/status")]
     [Authorize(Policy = "CanManageIncidents")]
     public Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateStatusRequest req) =>
@@ -83,33 +77,28 @@ public class IncidentController : ControllerBase
             return Ok(result);
         });
 
-    // Leo thang ho so su co len Admin xu ly danh cho Staff
     [HttpPost("{id:int}/escalate")]
     [Authorize(Policy = "CanReportIncident")]
     public Task<IActionResult> Escalate(int id, [FromBody] EscalateIncidentRequest req) =>
         Run(async () =>
         {
-            // Luu y: Ghi nhan ly do leo thang vao timeline va thong bao den Admin
             var staffId = GetCurrentUserId();
             var staffName = GetCurrentUserName();
             var result = await _service.EscalateIncidentAsync(id, req, staffId, staffName);
             return Ok(result);
         });
 
-    // Giai quyet dut diem su co va dong ho so danh cho Admin
     [HttpPost("{id:int}/resolve")]
     [Authorize(Policy = "CanManageIncidents")]
     public Task<IActionResult> Resolve(int id, [FromBody] ResolveIncidentRequest req) =>
         Run(async () =>
         {
-            // Luu y: Ghi nhan phuong an xu ly chinh thuc va cap nhat trang thai Resolved
             var adminId = GetCurrentUserId();
             var adminName = GetCurrentUserName();
             var result = await _service.ResolveIncidentAsync(id, req, adminId, adminName);
             return Ok(result);
         });
 
-    // Xem ket qua va phuong an giai quyet su co danh cho Staff va Admin
     [HttpGet("{id:int}/resolution")]
     [Authorize(Policy = "CanManageIncidents")]
     public Task<IActionResult> GetResolution(int id) =>
@@ -119,7 +108,6 @@ public class IncidentController : ControllerBase
             return Ok(result);
         });
 
-    // Xem tien trinh lich su xu ly su co theo dong thoi gian danh cho Staff va Admin
     [HttpGet("{id:int}/history")]
     [Authorize(Policy = "CanManageIncidents")]
     public Task<IActionResult> GetHistory(int id) =>

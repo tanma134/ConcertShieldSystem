@@ -438,7 +438,7 @@ export default function IncidentListPage() {
                   className="inc-modal-close"
                   onClick={() => setEscalateTarget(null)}
                 >
-                  ✕
+                  Close
                 </button>
               </div>
               <form onSubmit={handleConfirmEscalate}>

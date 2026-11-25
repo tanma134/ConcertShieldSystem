@@ -11,7 +11,7 @@ namespace AdminAPI.Services
 {
     public class AuditLogService : IAuditLogService
     {
-        // Giới hạn để tránh export/query quá nặng khi bảng audit_logs phình to theo thời gian
+        // Cap export/query size as audit_logs grows over time.
         private const int MaxPageSize = 100;
         private const int MaxExportDays = 90;
         private const int MaxExportRows = 50_000;
@@ -23,9 +23,6 @@ namespace AdminAPI.Services
             _db = db;
         }
 
-        // -----------------------------------------------------------
-        // 19.1 View Activity Log List
-        // -----------------------------------------------------------
         public async Task<PagedResult<AuditLogDto>> SearchAsync(AuditLogQuery query)
         {
             if (query.From is not null && query.To is not null && query.From > query.To)
@@ -55,9 +52,6 @@ namespace AdminAPI.Services
             };
         }
 
-        // -----------------------------------------------------------
-        // 19.2 Export Audit Log
-        // -----------------------------------------------------------
         public async Task<(byte[] Content, string ContentType, string FileName)> ExportAsync(AuditLogQuery query, string format)
         {
             if (query.From is null || query.To is null)
@@ -73,7 +67,7 @@ namespace AdminAPI.Services
 
             var rows = await q
                 .OrderBy(a => a.CreatedAt)
-                .Take(MaxExportRows + 1) // +1 để phát hiện có vượt giới hạn hay không
+                .Take(MaxExportRows + 1)  // Fetch +1 row to detect if export limit was exceeded.
                 .Select(a => ToDto(a))
                 .ToListAsync();
 
@@ -88,9 +82,6 @@ namespace AdminAPI.Services
             };
         }
 
-        // -----------------------------------------------------------
-        // Ghi log (dùng ở các service/controller khác trong AdminAPI)
-        // -----------------------------------------------------------
         public async Task LogAsync(int? userId, string actorType, string action, string entityType,
             string? entityId = null, object? oldValue = null, object? newValue = null,
             string? ipAddress = null, string? requestId = null, string? userAgent = null)
@@ -114,9 +105,6 @@ namespace AdminAPI.Services
             await _db.SaveChangesAsync();
         }
 
-        // -----------------------------------------------------------
-        // Helpers
-        // -----------------------------------------------------------
         private IQueryable<AuditLog> BuildFilteredQuery(AuditLogQuery query)
         {
             var q = _db.AuditLogs.AsNoTracking().AsQueryable();
@@ -138,9 +126,7 @@ namespace AdminAPI.Services
 
             if (query.From is not null)
             {
-                // Cột created_at là "timestamp with time zone" (timestamptz) nên Npgsql bắt buộc
-                // DateTime truyền vào phải có Kind=Utc. Giá trị bind từ query string (?from=2026-09-25)
-                // luôn có Kind=Unspecified, nên phải ép lại trước khi dùng trong biểu thức LINQ.
+                // Npgsql requires Kind=Utc for timestamptz columns; query-bound DateTimes default to Unspecified.
                 var from = DateTime.SpecifyKind(query.From.Value, DateTimeKind.Utc);
                 q = q.Where(a => a.CreatedAt >= from);
             }
@@ -192,7 +178,7 @@ namespace AdminAPI.Services
                     Csv(r.UserAgent)));
             }
 
-            // Thêm BOM để Excel mở file UTF-8 không bị lỗi font tiếng Việt
+            // Prepend UTF-8 BOM so Excel opens CSV with proper encoding.
             var preamble = Encoding.UTF8.GetPreamble();
             var body = Encoding.UTF8.GetBytes(sb.ToString());
             var result = new byte[preamble.Length + body.Length];
@@ -201,7 +187,6 @@ namespace AdminAPI.Services
             return result;
         }
 
-        // Escape field theo chuẩn CSV: bọc "..." nếu có dấu phẩy/xuống dòng/dấu ngoặc kép
         private static string Csv(string? field)
         {
             if (string.IsNullOrEmpty(field)) return "";

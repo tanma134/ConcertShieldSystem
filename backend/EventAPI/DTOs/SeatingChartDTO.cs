@@ -32,22 +32,15 @@ namespace EventAPI.DTOs
 
         public string? ShapeJson { get; set; }
 
-        // Loai khu vuc: Seated (co so ghe cu the) hoac Standing (suc chua dung)
         [MaxLength(20)]
         public string ZoneType { get; set; } = "Seated";
 
-        // --- Seated zones only ----
-        // So luong hang ghe can tao tu dong
         public int Rows { get; set; } = 1;
 
-        // So luong ghe tren moi hang
         public int SeatsPerRow { get; set; } = 10;
 
-        // Ky hieu hang ghe bat dau (vi du: A, B, C...)
         public string RowLabelPrefix { get; set; } = "A";
 
-        // --- Standing zones only ----
-        // Suc chua toi da cua khu vuc dung (Standing)
         public int? Capacity { get; set; }
     }
 
@@ -59,10 +52,8 @@ namespace EventAPI.DTOs
         public int? TicketTypeId { get; set; }
         public string? ShapeJson { get; set; }
 
-        // Suc chua khu vuc dung (khong duoc nho hon so ve da ban)
         public int? Capacity { get; set; }
 
-        // So luong hang ghe va so ghe tren hang de ve lai luoi toa do
         public int? Rows { get; set; }
         public int? SeatsPerRow { get; set; }
 
@@ -90,21 +81,16 @@ namespace EventAPI.DTOs
         public string ZoneName { get; set; } = null!;
         public string? ShapeJson { get; set; }
 
-        // Loai khu vuc Seated hoac Standing
         public string ZoneType { get; set; } = "Seated";
 
-        // Co phai la khu vuc co danh so ghe hay khong
         public bool IsSeated => ZoneType == "Seated";
 
-        // Tong suc chua cua khu vuc
         public int Capacity { get; set; }
 
-        // Tong so ghe danh so trong khu vuc Seated
         public int TotalSeats { get; set; }
 
         public int AvailableSeats { get; set; }
 
-        // Danh sach chi tiet cac ghe trong khu vuc
         public List<SeatResponseDTO> Seats { get; set; } = new();
     }
 
@@ -126,10 +112,8 @@ namespace EventAPI.DTOs
         public int SeatedZones { get; set; }
         public int StandingZones { get; set; }
 
-        // Tong suc chua tat ca cac khu vuc
         public int TotalCapacity { get; set; }
 
-        // Tong so ghe co danh so
         public int TotalSeats { get; set; }
 
         public int AvailableSeats { get; set; }

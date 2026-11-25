@@ -555,7 +555,7 @@ export default function MyConcertsPage() {
                       }}
                       onClick={() => setCancelEvidenceFile(null)}
                     >
-                      ✕ Remove
+                      Remove
                     </button>
                   </div>
                 )}

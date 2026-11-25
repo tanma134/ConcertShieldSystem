@@ -3,7 +3,6 @@ using System.Collections.Generic;
 
 namespace EventAPI.DTOs
 {
-// Du lieu thong ke concert va doanh thu ve ban tren dashboard cua Organizer
     public class OrganizerDashboardEventDTO
     {
         public int EventId { get; set; }
@@ -17,7 +16,6 @@ namespace EventAPI.DTOs
         public long Revenue { get; set; }
     }
 
-    // Tong hop cac chi so concert, tong so ve ban va tong doanh thu cua Organizer
     public class OrganizerDashboardSummaryDTO
     {
         public int TotalEvents { get; set; }
@@ -30,7 +28,6 @@ namespace EventAPI.DTOs
         public int TotalTicketsSold { get; set; }
         public long TotalRevenue { get; set; }
 
-        // Danh sach concert sap xep theo moi nhat truoc tien
         public List<OrganizerDashboardEventDTO> Events { get; set; } = new();
     }
 }

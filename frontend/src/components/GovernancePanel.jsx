@@ -4,16 +4,12 @@ import { validateChange, validateReview, canPublish, fileError, localToUtc } fro
 import { useToast } from './ToastProvider';
 import './GovernancePanel.css';
 
-// Chuan hoa thong diep loi tra ve tu response hoac ngoai le
 const message = err => err.response?.data?.message || err.message || 'Request failed. Please retry.';
 
-// Format so tien sang dinh dang VND
 const money = amount => new Intl.NumberFormat('en-US').format(amount || 0) + ' VND';
 
-// Format thoi gian sang chuoi ngay gio de doc
 const date = value => value ? new Date(value).toLocaleString() : 'To be announced';
 
-// Danh muc ly do bat kha khang Force Majeure theo tieu chuan quan tri
 const REASON_CATEGORIES = [
   'Natural Disaster / Extreme Weather',
   'Authority Directive / Public Security',
@@ -27,7 +23,6 @@ export default function GovernancePanel({ event, admin = false, onUpdated, onCom
   const toast = useToast();
   const id = event.eventId;
 
-  // State luu ho so phap ly va danh sach change requests
   const [record, setRecord] = useState(null);
   const [changes, setChanges] = useState([]);
   const [error, setError] = useState('');
@@ -35,29 +30,24 @@ export default function GovernancePanel({ event, admin = false, onUpdated, onCom
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // State cho phan upload ho so phap ly
   const [type, setType] = useState('');
   const [file, setFile] = useState(null);
   const [fileKey, setFileKey] = useState(0);
 
-  // State cho phan danh gia cua Admin
   const [decision, setDecision] = useState('Approved');
   const [notes, setNotes] = useState('');
 
-  // State cho form de xuat thay doi lich trinh
   const [category, setCategory] = useState(REASON_CATEGORIES[0]);
   const [form, setForm] = useState({ type: 'Reschedule', reason: '', newStartsAt: '', newEndsAt: '' });
   const [preview, setPreview] = useState(null);
   const [changeEvidenceFile, setChangeEvidenceFile] = useState(null);
 
-  // State cho man hinh kiem toan cac don hang bi anh huong
   const [request, setRequest] = useState(null);
   const [affected, setAffected] = useState(null);
   const [reading, setReading] = useState(false);
   const [filters, setFilters] = useState({ tab: 'orders', status: '', orderCode: '', userId: '', page: 1, pageSize: 10 });
   const [search, setSearch] = useState({ status: '', orderCode: '', userId: '' });
 
-  // Tai lai toan bo du lieu quan tri cua su kien
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -75,7 +65,6 @@ export default function GovernancePanel({ event, admin = false, onUpdated, onCom
 
   useEffect(() => { load(); }, [load]);
 
-  // Tu dong mo change request duoc chon tu trang Admin query params
   const [autoOpened, setAutoOpened] = useState(false);
   useEffect(() => {
     if (autoOpened || changes.length === 0) return;
@@ -89,7 +78,6 @@ export default function GovernancePanel({ event, admin = false, onUpdated, onCom
     }
   }, [changes, autoOpened]);
 
-  // Wrapper thuc thi cac tac vu bat dong bo an toan va tu reload
   const run = async action => {
     setBusy(true);
     setError('');
@@ -104,7 +92,6 @@ export default function GovernancePanel({ event, admin = false, onUpdated, onCom
     }
   };
 
-  // Tai ve file tai lieu phap ly
   const download = doc => run(async () => {
     const response = await api.download(id, doc.id);
     const url = URL.createObjectURL(response.data);
@@ -115,14 +102,11 @@ export default function GovernancePanel({ event, admin = false, onUpdated, onCom
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
 
-  // Kiem tra dieu kien chinh sua ho so phap ly
   const editable = !admin && ['Draft', 'Rejected'].includes(event.status);
   const current = record?.documents.filter(d => d.version === record.version) || [];
 
-  // Kiem tra dieu kien tao de xuat thay doi lich trinh
   const changeable = !admin && ['Published', 'Postponed'].includes(event.status) && !changes.some(c => c.status === 'Pending');
 
-  // Dong goi va validate du lieu thay doi truoc khi preview hoac submit
   const buildInput = () => {
     const isPostpone = form.type === 'Postpone';
     const combinedReason = `[${category}] ${form.reason.trim()}`;
@@ -137,13 +121,11 @@ export default function GovernancePanel({ event, admin = false, onUpdated, onCom
     return input;
   };
 
-  // Cap nhat gia tri tung truong trong form thay doi
   const updateForm = (key, value) => {
     setForm(f => ({ ...f, [key]: value }));
     setPreview(null);
   };
 
-  // Lay moc thoi gian hien tai theo local timezone de chan chon ngay qua khu
   const getNowLocal = () => {
     const d = new Date();
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
@@ -151,11 +133,9 @@ export default function GovernancePanel({ event, admin = false, onUpdated, onCom
   };
   const nowMin = getNowLocal();
 
-  // Kiem tra cac rang buoc ve thoi gian khi doi lich
   const isStartInPast = form.type === 'Reschedule' && form.newStartsAt && form.newStartsAt <= nowMin;
   const isEndBeforeStart = form.type === 'Reschedule' && form.newStartsAt && form.newEndsAt && form.newEndsAt <= form.newStartsAt;
 
-  // Kiem tra gio mo ban ve som nhat de tranh doi gio dien truoc gio ban ve
   const ticketTypes = event?.ticketTypes || [];
   const earliestSalesStart = ticketTypes.reduce((min, t) => {
     if (!t.salesStartsAt) return min;
@@ -174,7 +154,6 @@ export default function GovernancePanel({ event, admin = false, onUpdated, onCom
     form.type === 'Reschedule' &&
     (!form.newStartsAt || !form.newEndsAt || isStartInPast || isEndBeforeStart || isStartBeforeSales);
 
-  // Tai danh sach cac don hang va ve bi anh huong khi mo xem audit
   useEffect(() => {
     if (!request) return;
     let active = true;
@@ -189,7 +168,6 @@ export default function GovernancePanel({ event, admin = false, onUpdated, onCom
 
   return (
     <section className="governance-panel ow-panel">
-      {/* Banner canh bao dong bang ban ve khi su kien hoan hoac dang ap dung thay doi */}
       {(event.salesFrozen || event.status === 'Postponed') && (
         <div style={{ padding: '12px 16px', background: '#fef2f2', border: '1px solid #f87171', borderRadius: '8px', marginBottom: '16px' }}>
           <strong style={{ color: '#b91c1c', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -221,7 +199,6 @@ export default function GovernancePanel({ event, admin = false, onUpdated, onCom
             </ul>
           )}
 
-          {/* Form tai len tai lieu phap ly cho Organizer */}
           {editable && (
             <form onSubmit={e => {
               e.preventDefault();
@@ -262,7 +239,6 @@ export default function GovernancePanel({ event, admin = false, onUpdated, onCom
 
           {!editable && !admin && <p>Documents are read-only while this concert is {event.status}.</p>}
 
-          {/* Form Admin phe duyet hoac yeu cau bo sung ho so */}
           {admin && event.status === 'Pending' && record.status === 'PendingReview' && (
             <form className="gov-admin-review-form" onSubmit={e => {
               e.preventDefault();
@@ -301,14 +277,12 @@ export default function GovernancePanel({ event, admin = false, onUpdated, onCom
         </>
       )}
 
-      {/* Phan quan tri thay doi lich trinh */}
       <h2 style={{ marginTop: '28px' }}>Event Change Governance</h2>
       <p style={{ margin: "4px 0 10px 0", color: "#6b7280", fontSize: "13px" }}>
         Formal workflow for event schedule modification after ticket sales have opened. Requires Force Majeure justification, impact preview, and Admin approval.
       </p>
       <p>Current schedule: {event.status === 'Postponed' ? 'To be announced (Postponed)' : `${date(event.startsAt)} – ${date(event.endsAt)}`} · Timezone: {event.timezone}</p>
 
-      {/* Form Submit Change Request danh cho Organizer */}
       {changeable && (
         <form className="gov-change-schedule-form" onSubmit={e => {
           e.preventDefault();
@@ -394,7 +368,6 @@ export default function GovernancePanel({ event, admin = false, onUpdated, onCom
             />
           </label>
 
-          {/* Upload bang chung ho tro Force Majeure (Supporting Evidence) */}
           <div style={{ width: '100%', marginTop: '6px', marginBottom: '8px' }}>
             <span style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#374151', marginBottom: '4px' }}>
               Supporting Evidence / Legal Directive (Optional: PDF, PNG, JPG - max 15MB)
@@ -433,7 +406,6 @@ export default function GovernancePanel({ event, admin = false, onUpdated, onCom
             Review change impact
           </button>
 
-          {/* Man hinh uoc tinh tac dong truoc khi gui */}
           {preview && (
             <div style={{ width: '100%', marginTop: '12px', padding: '14px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px' }}>
               <h4 style={{ margin: '0 0 8px 0', color: '#0f172a' }}>Impact Preview</h4>
@@ -481,7 +453,6 @@ export default function GovernancePanel({ event, admin = false, onUpdated, onCom
         </form>
       )}
 
-      {/* Danh sach cac Change Requests da nop */}
       {changes.length === 0 ? <p>No schedule change requests recorded.</p> : changes.map(change => (
         <article key={change.id} className="governance-change">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -525,7 +496,6 @@ export default function GovernancePanel({ event, admin = false, onUpdated, onCom
         </article>
       ))}
 
-      {/* Man hinh kiem toan cac don hang va ve bi anh huong */}
       {request && (
         <section aria-label="Affected orders and tickets" style={{ marginTop: '24px', padding: '16px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

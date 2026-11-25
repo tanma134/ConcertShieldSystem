@@ -79,7 +79,8 @@ namespace TicketAPI.Services
                 };
             }
 
-            if (ticket.Status != "Active" || (ticket.Order != null && ticket.Order.Status != "Paid"))
+            var isValidTicketStatus = ticket.Status == "Active" || (ticket.Status == "Used" && ticket.CheckedInAt.HasValue);
+            if (!isValidTicketStatus || (ticket.Order != null && ticket.Order.Status != "Paid"))
             {
                 return new CheckinScanResponseDto
                 {

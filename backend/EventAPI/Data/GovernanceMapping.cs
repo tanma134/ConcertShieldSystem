@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 namespace EventAPI.Data;
 public static class GovernanceMapping
 {
-    // Đặt tên cột snake_case đúng migration, không đổi mapping các bảng cũ.
+    // Match migration snake_case column names without altering legacy table mappings.
     public static void ConfigureGovernance(this ModelBuilder model)
     {
         Map<ComplianceDocument>(model, "event_compliance_documents");
@@ -16,7 +16,7 @@ public static class GovernanceMapping
         model.Entity<EventChangeRequest>().HasIndex(x => x.EventId).IsUnique().HasFilter("status = 'Pending'");
         foreach (var name in new[] { nameof(Event.ComplianceStatus), nameof(Event.ComplianceVersion), nameof(Event.ComplianceReviewedVersion), nameof(Event.ScheduleVersion), nameof(Event.SalesFrozen) })
             model.Entity<Event>().Property(name).HasColumnName(Snake(name));
-        // xmin ngăn các thao tác cũ ghi đè trạng thái đã được governance cập nhật.
+        // Optimistic concurrency token (xmin) prevents stale writes from overwriting governance updates.
         model.Entity<Event>().Property(x => x.RowVersion).IsRowVersion();
     }
     private static string Snake(string name) => Regex.Replace(name, "([a-z0-9])([A-Z])", "$1_$2").ToLowerInvariant();

@@ -53,14 +53,11 @@ namespace EventAPI.DTOs
         [MaxLength(500)]
         public string? MetaDescription { get; set; }
 
-        // Thoi gian giu ghe tinh bang phut (tu 1 den 30, mac dinh 10 phut)
         public int? HoldTimeoutMinutes { get; set; }
 
-        // Chinh sach vao lai su kien (NoReEntry, Unlimited, TimeLimited)
         [MaxLength(30)]
         public string? ReEntryPolicy { get; set; }
 
-        // Thoi gian cho phep vao lai khi chon TimeLimited (tu 5 den 120 phut)
         public int? ReEntryDurationMinutes { get; set; }
     }
 
@@ -113,14 +110,11 @@ namespace EventAPI.DTOs
         [MaxLength(500)]
         public string? MetaDescription { get; set; }
 
-        // Thoi gian giu ghe tinh bang phut (tu 1 den 30 phut)
         public int? HoldTimeoutMinutes { get; set; }
 
-        // Chinh sach vao lai su kien (NoReEntry, Unlimited, TimeLimited)
         [MaxLength(30)]
         public string? ReEntryPolicy { get; set; }
 
-        // Thoi gian cho phep vao lai khi chon TimeLimited (tu 5 den 120 phut)
         public int? ReEntryDurationMinutes { get; set; }
     }
 

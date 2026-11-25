@@ -8,7 +8,7 @@ public class GovernanceMiddleware(RequestDelegate next, ILogger<GovernanceMiddle
         try { await next(context); }
         catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
         {
-            // Client/Gateway đã đóng kết nối: không ghi JSON vào stream đã hủy.
+            // Client or gateway closed the connection; skip writing JSON to the cancelled stream.
             logger.LogWarning("Caller/Gateway aborted request at {Path}; trace={Trace}", context.Request.Path, context.TraceIdentifier);
             if (!context.Response.HasStarted) context.Response.StatusCode = 499;
         }

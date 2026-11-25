@@ -14,7 +14,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// Repositories
 builder.Services.AddScoped<IEventRepository, EventRepository>();
 builder.Services.AddScoped<IEventImageRepository, EventImageRepository>();
 builder.Services.AddScoped<ITicketTypeRepository, TicketTypeRepository>();
@@ -24,10 +23,10 @@ builder.Services.AddScoped<IWishlistRepository, WishlistRepository>();
 builder.Services.AddScoped<IPricingRuleRepository, PricingRuleRepository>();
 builder.Services.AddScoped<ISeatingTemplateRepository, SeatingTemplateRepository>();
 
-// Governance dung repository thao tac du lieu va API noi bo khong truy cap truc tiep service khac
+// Governance uses repositories and internal APIs rather than accessing other services directly.
 builder.Services.AddScoped<IGovernanceRepository, GovernanceRepository>();
 builder.Services.AddScoped<GovernanceService>();
-// Upload phải hết hạn trước Gateway để EventAPI còn thời gian trả lỗi có nội dung.
+// Upload must time out before the gateway so EventAPI can still return a structured error.
 builder.Services.AddHttpClient<IComplianceAssetStore, ComplianceAssetStore>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(120);
@@ -52,7 +51,6 @@ foreach (var service in new[] { "Ticket", "Notification" })
     });
 }
 
-// Services
 builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<ITicketTypeService, TicketTypeService>();
 builder.Services.AddScoped<IEventImageService, EventImageService>();
@@ -90,12 +88,8 @@ builder.Services.AddScoped<IValidator<EventAPI.DTOs.UpdateEventDTO>, UpdateEvent
 builder.Services.AddScoped<IValidator<EventAPI.DTOs.CreateTicketTypeDTO>, CreateTicketTypeValidator>();
 builder.Services.AddScoped<IValidator<EventAPI.DTOs.UpdateTicketTypeDTO>, UpdateTicketTypeValidator>();
 builder.Services.AddScoped<IValidator<EventAPI.DTOs.CreateRefundPolicyDTO>, CreateRefundPolicyValidator>();
-// NOTE: CreatePricingRuleValidator already existed in Validators/TicketTypeValidators.cs
-// but was never wired into DI, so PricingRulesController could not have started up
-// (constructor asks for IValidator<CreatePricingRuleDTO>). Fixed here.
 builder.Services.AddScoped<IValidator<EventAPI.DTOs.CreatePricingRuleDTO>, CreatePricingRuleValidator>();
 
-// Swagger with JWT Bearer
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
@@ -131,7 +125,6 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// PostgreSQL DbContext
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? builder.Configuration["ConnectionStrings__DefaultConnection"]
         ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_EVENT_POSTGRES") ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TEST_POSTGRES") ?? throw new InvalidOperationException("Connection string is not configured.");
@@ -140,7 +133,6 @@ builder.Services.AddDbContext<EventDbContext>(options =>
     options.UseNpgsql(connectionString)
 );
 
-// JWT Authentication
 var jwtSecretKey = builder.Configuration["JwtSettings:SecretKey"] ?? throw new InvalidOperationException("Configure JwtSettings:SecretKey");
 var jwtIssuer = builder.Configuration["JwtSettings:Issuer"] ?? "AuthenticationAPI";
 var jwtAudience = builder.Configuration["JwtSettings:Audience"] ?? "AuthenticationAPIUsers";
@@ -168,7 +160,6 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("RequireAdmin", policy => policy.RequireRole("Admin"));
 });
 
-// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>

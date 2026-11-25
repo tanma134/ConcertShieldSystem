@@ -3,19 +3,13 @@ using System.Text.Json;
 
 namespace AdminAPI.Services.Risks;
 
-/// <summary>Minimal account facts returned by AuthenticationAPI for a user id.</summary>
 public sealed record AccountInfo(int UserId, bool IsActive, IReadOnlyList<string> Roles);
 
-/// <summary>
-/// Verifies that a fraud-case assignee is an active Staff account, and looks up
-/// account existence before a manual block is created.
-/// AuthenticationAPI exposes /api/users/staff?ids=... for trusted internal callers.
-/// </summary>
+// Internal client for AuthenticationAPI /api/users/staff to verify assignees and account existence.
 public interface IStaffDirectoryClient
 {
     Task<bool> IsActiveStaffAsync(int userId, CancellationToken ct = default);
 
-    /// <summary>Returns null when the user does not exist.</summary>
     Task<AccountInfo?> FindAccountAsync(int userId, CancellationToken ct = default);
 }
 

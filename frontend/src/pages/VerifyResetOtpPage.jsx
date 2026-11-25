@@ -22,7 +22,6 @@ export default function VerifyResetOtpPage() {
     setError("");
     setLoading(true);
     try {
-      // Giả định API trả về resetToken để dùng ở bước đặt lại mật khẩu
       const res = await authApi.verifyResetOtp(form);
       navigate("/reset-password", {
         state: { email: form.email, resetToken: res.data?.resetToken },

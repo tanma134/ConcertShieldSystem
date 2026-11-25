@@ -9,10 +9,8 @@ namespace EventAPI.Repositories
         Task<Event?> GetByIdAsync(int id, bool includeChildren = false);
         Task<Event?> GetBySlugAsync(string slug, bool includeChildren = false);
 
-        /// <summary>Counts non-deleted ticket types for an event (cheap pre-submit check).</summary>
         Task<int> CountTicketTypesAsync(int eventId);
 
-        /// <summary>Counts active refund policies for an event.</summary>
         Task<int> CountRefundPoliciesAsync(int eventId);
         Task<(List<Event> Items, int TotalCount)> GetFilteredAsync(EventFilterDTO filter);
         Task<List<Event>> GetFeaturedAsync(int count = 10);

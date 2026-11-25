@@ -1,9 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import "./ToastProvider.css";
 
-// Thông báo ngắn (thành công / lỗi / thông tin) hiển thị ở góc phải màn hình.
-// Khác NotificationToast (đẩy thông báo từ server qua SignalR): cái này dùng
-// cho phản hồi tức thì của thao tác người dùng vừa làm (lưu, lỗi nhập liệu...).
+// Ephemeral user-action toasts (distinct from server-pushed SignalR NotificationToast).
 const ToastContext = createContext(null);
 
 const DURATION_MS = { success: 3500, info: 4000, error: 6000, warning: 5000 };
@@ -20,7 +18,7 @@ export function ToastProvider({ children }) {
     (type, message) => {
       if (!message) return;
       const id = nextId.current++;
-      // Cùng một nội dung đang hiển thị thì không chồng thêm.
+      // Avoid stacking duplicate active toasts.
       setToasts((current) =>
         current.some((t) => t.type === type && t.message === message)
           ? current
@@ -62,16 +60,14 @@ export function ToastProvider({ children }) {
   );
 }
 
-// Dùng ngoài Provider (ví dụ trong test) thì trả về hàm rỗng thay vì crash.
+// Fall back to no-op handlers when used outside Provider (e.g. in tests).
 const NOOP = { success: () => {}, error: () => {}, info: () => {} };
 
 export function useToast() {
   return useContext(ToastContext) || NOOP;
 }
 
-// Thay thế trực tiếp cho `useState("")` của state lỗi: vẫn trả về [error, setError]
-// như cũ (banner đỏ trong trang không đổi) nhưng mỗi lỗi mới còn hiện thêm một toast,
-// đồng thời tự động xóa banner sau một khoảng thời gian (mặc định 8s) để không bị kẹt thông báo.
+// Drop-in replacement for error state: preserves [error, setError], shows a toast, and auto-clears the banner.
 export function useToastedError(autoDismissMs = 8000) {
   const toast = useToast();
   const [error, setErrorState] = useState("");

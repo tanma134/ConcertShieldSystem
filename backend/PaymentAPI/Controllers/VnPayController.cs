@@ -66,7 +66,7 @@ namespace PaymentAPI.Controllers
             if (request.OrderId <= 0 || request.FinalAmount <= 0)
                 return BadRequest("Invalid order or amount.");
 
-            // VNPay giới hạn dưới 1 tỷ VND / giao dịch.
+            // VNPay limits each transaction to under 1 billion VND.
             if (request.FinalAmount > 999_999_999L)
                 return BadRequest("Order amount exceeds the VNPay per-transaction limit (999,999,999 VND).");
 

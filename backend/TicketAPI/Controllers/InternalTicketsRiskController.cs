@@ -3,10 +3,7 @@ using TicketAPI.Services;
 
 namespace TicketAPI.Controllers;
 
-/// <summary>
-/// Internal endpoints called by AdminAPI risk engine. Protected with the shared
-/// X-Internal-Api-Key; never exposed through the gateway.
-/// </summary>
+// Internal endpoints called by AdminAPI risk engine, protected with X-Internal-Api-Key.
 [ApiController]
 [Route("api/internal/tickets/risk")]
 public class InternalTicketsRiskController : ControllerBase
@@ -81,7 +78,6 @@ public class InternalTicketsRiskController : ControllerBase
         catch (InvalidOperationException ex) { return Conflict(new { message = ex.Message }); }
     }
 
-    // GET api/internal/tickets/risk/{ticketId}?userId=43
     // Lets AdminAPI confirm the ticket exists and belongs to the user before
     // creating a manual TICKET block.
     [HttpGet("{ticketId:int}")]

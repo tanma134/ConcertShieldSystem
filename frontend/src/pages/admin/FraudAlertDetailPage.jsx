@@ -5,7 +5,6 @@ import AdminShell from "./AdminShell";
 import { useAuth } from "../../context/AuthContext";
 import "./fraudRisk.css";
 
-// Bọc mọi nội dung (kể cả loading / lỗi / popup) trong .fr-page để fraudRisk.css được áp dụng
 const Shell = ({ title, children }) => (
   <AdminShell title={title}>
     <div className="fr-page">{children}</div>
@@ -116,8 +115,6 @@ function VerdictPill({ verdict }) {
   return <span className={`kyc-pill ${cls}`}>{verdict}</span>;
 }
 
-// View Fraud Alert Details, with  Block /  Restore actions
-// attached directly to the alert for convenience.
 export default function FraudAlertDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -266,7 +263,6 @@ export default function FraudAlertDetailPage() {
         ← Alert list
       </button>
 
-      {/* View Fraud Alert Details */}
       <section className="admin-panel">
         <div className="panel-header">
           <h2>Alert information</h2>
@@ -297,7 +293,6 @@ export default function FraudAlertDetailPage() {
         )}
       </section>
 
-      {/* AI summary */}
       <section className="admin-panel">
         <div className="panel-header">
           <h2>AI analysis</h2>
@@ -329,7 +324,6 @@ export default function FraudAlertDetailPage() {
         )}
       </section>
 
-      {/* Decisions (blocks) related to this alert */}
       <section className="admin-panel">
         <div className="panel-header"><h2>Risk Decisions</h2></div>
 
@@ -405,7 +399,6 @@ export default function FraudAlertDetailPage() {
         ))}
       </section>
 
-      {/* Simple modal to create a block for this alert */}
       {blockOpen && (
         <div style={{
           position: "fixed", inset: 0, background: "rgba(0,0,0,.5)",

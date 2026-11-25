@@ -28,9 +28,7 @@ export default function EventGovernancePage({ admin = false }) {
 
   const Shell = admin ? AdminShell : OrganizerShell;
 
-  // Xác định đường dẫn quay lại chính xác:
-  // Nếu là admin -> quay về chi tiết duyệt sự kiện admin
-  // Nếu là organizer -> quay về trang chỉnh sửa sự kiện, đúng step đang làm dang dở!
+  // Route back to admin event approval or the organizer's current edit step.
   const backUrl = admin
     ? `/admin/events/${id}`
     : `/organizer/events/${id}/edit${fromStep ? `?step=${fromStep}` : ""}`;

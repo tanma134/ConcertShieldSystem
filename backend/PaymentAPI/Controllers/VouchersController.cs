@@ -20,7 +20,6 @@ namespace PaymentAPI.Controllers
             _voucherService = voucherService;
         }
 
-        // Tao voucher giam gia moi danh cho Admin va Organizer
         [HttpPost]
         public async Task<IActionResult> CreateVoucher([FromBody] CreateVoucherDTO dto)
         {
@@ -35,7 +34,6 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        // Lay danh sach voucher co phan trang va bo loc danh cho Admin va Organizer
         [HttpGet]
         public async Task<IActionResult> GetVouchers(
             [FromQuery] int page = 1,
@@ -66,7 +64,6 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        // Xem thong tin chi tiet voucher theo ma dinh danh danh cho Admin va Organizer
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetVoucherById(int id)
         {
@@ -81,7 +78,6 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        // Xem lich su cac don hang da su dung voucher danh cho Admin va Organizer
         [HttpGet("{id:int}/usages")]
         public async Task<IActionResult> GetVoucherUsages(int id)
         {
@@ -96,7 +92,6 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        // Bat hoac tat trang thai kich hoat cua voucher danh cho Admin va Organizer
         [HttpPatch("{id:int}/status")]
         public async Task<IActionResult> UpdateVoucherStatus(int id, [FromBody] UpdateVoucherStatusDTO? dto)
         {
@@ -123,7 +118,6 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        // Cap nhat thong tin voucher he thong hoac voucher cua ban to chuc
         [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateVoucher(int id, [FromBody] UpdateVoucherDTO dto)
         {
@@ -138,7 +132,6 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        // Xoa mem voucher khoi he thong bang cach danh dau IsDeleted
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteVoucher(int id)
         {

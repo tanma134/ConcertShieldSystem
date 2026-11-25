@@ -1,16 +1,14 @@
 namespace PaymentAPI.Risk;
 
-/// <summary>Một rule đã khớp. Code phải trùng mã trong bảng tham số của AdminAPI (vd BOT_H01, FRD_T01, TRU_01).</summary>
 public class RuleHit
 {
     public string Code { get; set; } = "";
-    public int Level { get; set; } = 1;      // rule có mức 1/2 (BOT_V01, BOT_S01) thì truyền 1 hoặc 2
-    public string? Value { get; set; }       // bằng chứng ngắn hiển thị cho Admin, vd "8 tickets"
+    public int Level { get; set; } = 1;  // 1 or 2 for leveled rules (e.g. BOT_V01, BOT_S01)
+    public string? Value { get; set; }
     public RuleHit() { }
     public RuleHit(string code, int level = 1, string? value = null) { Code = code; Level = level; Value = value; }
 }
 
-/// <summary>Khớp IngestRiskEventRequest của AdminAPI.</summary>
 public class RiskEvent
 {
     public int? UserId { get; set; }
@@ -29,7 +27,6 @@ public class RiskEvent
     public List<string> SignalsMissing { get; set; } = new();
 }
 
-/// <summary>Khớp IngestRiskEventResponse của AdminAPI.</summary>
 public class RiskResult
 {
     public string? DecisionCode { get; set; }

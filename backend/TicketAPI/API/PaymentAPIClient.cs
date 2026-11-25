@@ -74,6 +74,43 @@ public class PaymentAPIClient : IPaymentAPIClient
         }
     }
 
+    public async Task<RefundOutcome> RecordManualRefundAsync(
+        int returnRequestId,
+        int orderId,
+        long amount,
+        string reference,
+        int processedByUserId,
+        string? customerName = null,
+        int? eventId = null,
+        string? eventName = null,
+        string? reason = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using var response = await _httpClient.PostAsJsonAsync(
+                "api/internal/refunds/manual",
+                new { returnRequestId, orderId, amount, reference, processedByUserId, customerName, eventId, eventName, reason },
+                cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("PaymentAPI manual refund record returned HTTP {Status} for return request {Id}", (int)response.StatusCode, returnRequestId);
+                return new RefundOutcome(false, null, $"Payment service returned HTTP {(int)response.StatusCode}.");
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<RefundResponse>(cancellationToken: cancellationToken);
+            return result?.Status == "Refunded"
+                ? new RefundOutcome(true, result.Reference, null)
+                : new RefundOutcome(false, null, result?.Error ?? "Manual refund record failed.");
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, "PaymentAPI manual refund record call failed for return request {Id}", returnRequestId);
+            return new RefundOutcome(false, null, "Payment service is unavailable.");
+        }
+    }
+
     private sealed class RefundResponse
     {
         public string? Status { get; set; }

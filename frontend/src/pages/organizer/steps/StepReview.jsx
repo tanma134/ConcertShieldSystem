@@ -273,7 +273,7 @@ export default function StepReview({ eventId, event, onRefresh, onSaved, onBack,
               Compliance Documents
             </h3>
             <p className="ow-hint" style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>
-              Official permits, fire safety, and copyright documents required for platform admin approval. PDF, PNG, JPG (max {Math.round((compliance?.maxBytes || 20971520) / 1048576)} MB).
+              Official event permits and fire safety documents required for platform admin approval. PDF, PNG, JPG (max {Math.round((compliance?.maxBytes || 20971520) / 1048576)} MB).
             </p>
           </div>
           {compliance && (

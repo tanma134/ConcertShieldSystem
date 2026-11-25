@@ -7,7 +7,6 @@ using TicketAPI.Services;
 
 namespace TicketAPI.Controllers
 {
-    // ticket return requests of the signed-in customer.
     [Route("api/ticket-returns")]
     [Authorize]
     public class TicketReturnsController : TicketApiControllerBase
@@ -32,11 +31,10 @@ namespace TicketAPI.Controllers
             return (await _eventApiClient.GetReturnReviewEventIdsAsync(CurrentUserId)).ToList();
         }
 
-        // Gui yeu cau tra ve (hoan ve) danh cho Customer
         [HttpPost]
         public async Task<IActionResult> Submit([FromBody] SubmitTicketReturnDto dto)
         {
-            // Luu y: Kiem tra chan gian lan Risk Engine FRD_T02 truoc khi tao yeu cau hoan ve
+            // Check Risk Engine FRD_T02 fraud block before creating the return request.
             var verdict = await _risk.CheckReturnAsync(HttpContext, CurrentUserId, dto.TicketId);
             if (!verdict.Allowed) return verdict.ToActionResult();
 
@@ -51,7 +49,6 @@ namespace TicketAPI.Controllers
             }
         }
 
-        // Lay danh sach cac yeu cau tra ve cua toi danh cho Customer
         [HttpGet]
         public async Task<IActionResult> List([FromQuery] string? status)
         {
@@ -65,7 +62,6 @@ namespace TicketAPI.Controllers
             }
         }
 
-        // Xem chi tiet mot yeu cau tra ve theo id danh cho Customer
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -79,7 +75,6 @@ namespace TicketAPI.Controllers
             }
         }
 
-        // Huy yeu cau tra ve dang cho duyet danh cho Customer
         [HttpPost("{id:int}/cancel")]
         public async Task<IActionResult> Cancel(int id)
         {
@@ -94,7 +89,6 @@ namespace TicketAPI.Controllers
             }
         }
 
-        // Lay danh sach hang cho duyet tra ve danh cho Staff va Admin
         [HttpGet("review")]
         [Authorize(Roles = "Staff,Admin")]
         public async Task<IActionResult> ReviewQueue([FromQuery] string? status)
@@ -109,7 +103,6 @@ namespace TicketAPI.Controllers
             }
         }
 
-        // Support Staff/Admin: approve or reject a pending return.
         [HttpPost("{id:int}/review")]
         [Authorize(Roles = "Staff,Admin")]
         public async Task<IActionResult> Review(int id, [FromBody] ReviewTicketReturnDto dto)
@@ -125,15 +118,14 @@ namespace TicketAPI.Controllers
             }
         }
 
-        // Support Staff/Admin: retry paying the money back after a failed refund.
-        [HttpPost("{id:int}/retry-refund")]
+        [HttpPost("{id:int}/confirm-manual-refund")]
         [Authorize(Roles = "Staff,Admin")]
-        public async Task<IActionResult> RetryRefund(int id)
+        public async Task<IActionResult> ConfirmManualRefund(int id, [FromBody] ConfirmManualRefundDto dto)
         {
             try
             {
-                return Success(await _service.RetryRefundAsync(CurrentUserId, id, await ReviewScopeAsync()),
-                    "Refund retried.");
+                return Success(await _service.ConfirmManualRefundAsync(CurrentUserId, id, dto, await ReviewScopeAsync()),
+                    "Manual bank refund confirmed.");
             }
             catch (Exception ex)
             {

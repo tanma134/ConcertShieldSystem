@@ -76,7 +76,7 @@ public sealed class FraudAlertService : IFraudAlertService
                 && await HadBlockAsync(uid, now.AddSeconds(-Math.Max(1, l02.WindowSec)), ct))
                 fraud.Add(ToMatched("FRD_L02", l02, 1, "recent block"));
 
-            // FRD_A03: vừa đổi/đặt lại mật khẩu rồi giữ vé hoặc tạo đơn (sự kiện đặt vé luôn có EventId)
+            // FRD_A03: password reset/change followed by ticket hold or order creation (booking events include EventId).
             if (req.EventId != null && cfg.Rules.TryGetValue("FRD_A03", out var a03) && a03.Enabled
                 && fraud.All(r => r.Code != "FRD_A03"))
             {

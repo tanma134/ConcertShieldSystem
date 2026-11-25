@@ -35,5 +35,23 @@ namespace PaymentAPI.Controllers
                 return BadRequest(new { success = false, message = ex.Message });
             }
         }
+
+        [HttpPost("manual")]
+        public async Task<IActionResult> RecordManual([FromBody] RecordManualRefundDto request, CancellationToken ct)
+        {
+            var expected = _config["TicketApi:InternalApiKey"];
+            var supplied = Request.Headers["X-Internal-Api-Key"].ToString();
+            if (string.IsNullOrWhiteSpace(expected) || !string.Equals(supplied, expected, StringComparison.Ordinal))
+                return Unauthorized(new { success = false, message = "Invalid service credentials." });
+
+            try
+            {
+                return Ok(await _service.RecordManualRefundAsync(request, ct));
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
     }
 }

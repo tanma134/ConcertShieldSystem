@@ -99,6 +99,61 @@ namespace PaymentAPI.Services
             return await ExecuteRefundAsync(refund, request.OrderId, request.Amount, ct);
         }
 
+        // Records a manual bank-transfer refund confirmed in TicketAPI so reconciliation reports stay in sync.
+        public async Task<RefundResultDto> RecordManualRefundAsync(RecordManualRefundDto request, CancellationToken ct = default)
+        {
+            if (request.ReturnRequestId <= 0 || request.OrderId <= 0 || request.Amount < 0 || string.IsNullOrWhiteSpace(request.Reference))
+                throw new ArgumentException("Invalid manual refund record.");
+
+            var now = DateTime.UtcNow;
+            var refund = await _refunds.GetByReturnRequestIdAsync(request.ReturnRequestId, ct);
+            if (refund != null && refund.Status == "Refunded")
+                return new RefundResultDto { RefundId = refund.PaymentRefundId, Status = "Refunded", Reference = refund.GatewayRefundRef };
+
+            if (refund == null)
+            {
+                refund = new PaymentRefund
+                {
+                    ReturnRequestId = request.ReturnRequestId,
+                    OrderId = request.OrderId,
+                    Amount = request.Amount,
+                    CustomerName = request.CustomerName,
+                    EventId = request.EventId,
+                    EventName = request.EventName,
+                    Gateway = "ManualBankTransfer",
+                    GatewayRefundRef = request.Reference.Trim(),
+                    Status = "Refunded",
+                    RefundType = "Full",
+                    Reason = string.IsNullOrWhiteSpace(request.Reason) ? "Manual Bank Transfer" : request.Reason.Trim(),
+                    ProcessedByUserId = request.ProcessedByUserId,
+                    ProcessedByUserName = $"User #{request.ProcessedByUserId}",
+                    GatewayAmount = request.Amount,
+                    ReconciliationStatus = "Matched",
+                    CreatedAt = now,
+                    CompletedAt = now
+                };
+                await _refunds.AddAsync(refund, ct);
+            }
+            else
+            {
+                refund.Amount = request.Amount;
+                refund.Gateway = "ManualBankTransfer";
+                refund.GatewayRefundRef = request.Reference.Trim();
+                refund.Status = "Refunded";
+                refund.ErrorMessage = null;
+                refund.GatewayErrorCode = null;
+                refund.GatewayAmount = request.Amount;
+                refund.ReconciliationStatus = "Matched";
+                refund.ProcessedByUserId = request.ProcessedByUserId;
+                refund.ProcessedByUserName = $"User #{request.ProcessedByUserId}";
+                refund.CompletedAt = now;
+                if (!string.IsNullOrWhiteSpace(request.CustomerName)) refund.CustomerName = request.CustomerName;
+            }
+
+            await _refunds.SaveChangesAsync(ct);
+            return new RefundResultDto { RefundId = refund.PaymentRefundId, Status = "Refunded", Reference = refund.GatewayRefundRef };
+        }
+
         // Process Full / Partial Refund
         public async Task<RefundResultDto> ProcessRefundAsync(ProcessRefundRequestDto request, int actorId, string actorName, CancellationToken ct = default)
         {

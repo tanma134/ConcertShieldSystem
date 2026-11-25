@@ -5,7 +5,6 @@ import AdminShell from "./AdminShell";
 
 import "./fraudRisk.css";
 
-// Bọc mọi nội dung trong .fr-page để fraudRisk.css được áp dụng
 const Shell = ({ title, children }) => (
   <AdminShell title={title}>
     <div className="fr-page">{children}</div>
@@ -134,7 +133,6 @@ export default function FraudAlertDashboardPage() {
         </div>
       )}
 
-      {/* View Fraud Alert Dashboard */}
       <section className="admin-panel">
         <div className="panel-header">
           <h2>Fraud alert dashboard</h2>

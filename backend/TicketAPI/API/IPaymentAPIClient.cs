@@ -9,6 +9,9 @@ namespace TicketAPI.API
         // Asks PaymentAPI to pay the money of an approved return back to the customer.
         Task<RefundOutcome> RefundAsync(int returnRequestId, int orderId, long amount, string? customerName = null, int? eventId = null, string? eventName = null, CancellationToken cancellationToken = default);
 
+        // Records a confirmed manual bank-transfer refund in PaymentAPI for reconciliation reporting.
+        Task<RefundOutcome> RecordManualRefundAsync(int returnRequestId, int orderId, long amount, string reference, int processedByUserId, string? customerName = null, int? eventId = null, string? eventName = null, string? reason = null, CancellationToken cancellationToken = default);
+
         Task<ApplyVoucherResponseDto> ApplyVoucherAsync(ApplyVoucherRequestDto request, CancellationToken cancellationToken = default);
     }
 

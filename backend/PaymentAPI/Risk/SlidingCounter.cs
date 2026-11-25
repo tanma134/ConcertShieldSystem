@@ -2,12 +2,11 @@ using System.Collections.Concurrent;
 
 namespace PaymentAPI.Risk;
 
-/// <summary>Đếm số lần xảy ra trong một cửa sổ thời gian (trong bộ nhớ, đủ cho demo/1 instance).</summary>
+// In-memory sliding-window counter (single-instance).
 public sealed class SlidingCounter
 {
     private readonly ConcurrentDictionary<string, Queue<long>> _d = new();
 
-    /// <summary>Ghi 1 lần xảy ra và trả về tổng số lần trong cửa sổ (đã gồm lần này).</summary>
     public int Hit(string key, TimeSpan window)
     {
         var now = Environment.TickCount64;
@@ -24,7 +23,6 @@ public sealed class SlidingCounter
         return count;
     }
 
-    /// <summary>Đếm không ghi thêm.</summary>
     public int Peek(string key, TimeSpan window)
     {
         if (!_d.TryGetValue(key, out var q)) return 0;

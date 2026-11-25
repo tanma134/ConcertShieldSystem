@@ -5,15 +5,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AdminAPI.Services.Risks;
 
-/// <summary>
-/// Delivers pending rows of risk_notification to NotificationAPI, and closes
-/// temporary blocks whose ExpiresAt has passed.
-///
-/// Both jobs exist because every risk decision writes a notification row and a
-/// block expires on a wall-clock deadline; without a worker those rows stay
-/// "pending" forever and the customer is never told anything.
-/// Runs every 30 seconds; safe to run multiple instances (delivery is keyed).
-/// </summary>
+// Delivers pending rows of risk_notification to NotificationAPI, and closes
+// temporary blocks whose ExpiresAt has passed.
+// Both jobs exist because every risk decision writes a notification row and blocks
+// expire on a wall-clock deadline; runs every 30s and is safe across multiple instances.
 public sealed class RiskMaintenanceWorker : BackgroundService
 {
     private static readonly TimeSpan Interval = TimeSpan.FromSeconds(30);

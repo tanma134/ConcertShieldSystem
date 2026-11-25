@@ -41,7 +41,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [touched, setTouched] = useState({});
-  // Sau lần bấm Save đầu tiên, mọi trường lỗi đều hiện đỏ (kể cả trường chưa chạm vào).
+  // Reveal errors on all fields after the first Save attempt, even untouched ones.
   const [attempted, setAttempted] = useState(false);
   const toast = useToast();
   const formRef = useRef(null);
@@ -112,11 +112,10 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
     return "";
   }, [form.startsAt, form.endsAt]);
 
-  // Các trường backend bắt buộc ngay khi lưu nháp (CreateEventDTO).
+  // Fields required by CreateEventDTO even when saving a draft.
   const DRAFT_REQUIRED = ["title", "slug", "startsAt", "endsAt"];
 
-  // Tất cả lỗi hiện có, theo từng trường. Trường nào đủ điều kiện "nộp duyệt"
-  // (EventSubmissionValidator) cũng được kiểm ở đây để organizer thấy sớm.
+  // Surface submission-level errors early so the organizer can fix them before submitting.
   const allErrors = useMemo(() => {
     const errors = {};
     if (!form.title.trim()) errors.title = "Event name is required.";
@@ -142,18 +141,16 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
     return errors;
   }, [form, dateRangeError, slugState, clock]);
 
-  // Chỉ hiện lỗi của trường đã chạm vào, hoặc tất cả sau khi bấm Save.
   const fieldErrors = useMemo(() => {
     const visible = {};
     for (const [name, message] of Object.entries(allErrors)) {
       if (attempted || touched[name]) visible[name] = message;
     }
-    // Start/End liên quan nhau: lỗi khoảng thời gian luôn hiện ngay khi có.
+    // Always show cross-field date range errors as soon as they occur.
     if (dateRangeError) visible.endsAt = dateRangeError;
     return visible;
   }, [allErrors, attempted, touched, dateRangeError]);
 
-  // Gắn aria-invalid để CSS tô viền đỏ cho ô nhập.
   const invalid = (name) => !!fieldErrors[name];
 
   const buildDto = () => {
@@ -183,9 +180,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
     return dto;
   };
 
-  // Kiểm tra trước khi gọi API. mode "draft" chỉ chặn các trường backend bắt buộc;
-  // mode "next" yêu cầu đủ thông tin cần cho bước nộp duyệt.
-  // Trả về true nếu hợp lệ; nếu không thì tô đỏ, báo toast và cuộn tới ô lỗi đầu tiên.
+  // Draft mode only blocks backend-required fields; "next" enforces all submission rules.
   const validateBeforeSave = (mode) => {
     setAttempted(true);
     const freshErrors = { ...allErrors };

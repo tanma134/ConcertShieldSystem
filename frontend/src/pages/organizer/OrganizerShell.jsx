@@ -1,7 +1,6 @@
 import PanelShell from "../../components/PanelShell";
 
-// Sidebar của Organizer. Các trang theo từng concert (revenue, check-in,
-// seating, pricing, refunds) được mở từ "My Concerts".
+// Concert-scoped pages (revenue, check-in, seating, pricing, refunds) open from "My Concerts".
 export const ORGANIZER_LINKS = [
   ["/organizer/dashboard", "Dashboard", true],
   ["/organizer/events", "My Concerts", true],

@@ -36,7 +36,7 @@ namespace TicketAPI.Controllers
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
                 return Unauthorized(new { success = false, message = "Token không hợp lệ!" });
 
-            // Risk Engine: kiểm tra block + ghi nhận rule đáng ngờ (fail-open nếu AdminAPI lỗi)
+            // Risk Engine: check blocks and record suspicious rules (fail-open if AdminAPI errors).
             var verdict = await _risk.CheckOrderAsync(HttpContext, userId, dto);
             if (!verdict.Allowed) return verdict.ToActionResult();
 
@@ -56,7 +56,7 @@ namespace TicketAPI.Controllers
 
                 CancellationToken cancellationToken = default;
 
-                // Truyền IP/thiết bị thật sang PaymentAPI (trước đây IP bị gán cứng 127.0.0.1)
+                // Forward real client IP and device fingerprint to PaymentAPI.
                 var rc = RiskRequestContext.From(HttpContext);
                 order.UserId = userId;
                 order.ClientIp = rc.Ip ?? "127.0.0.1";

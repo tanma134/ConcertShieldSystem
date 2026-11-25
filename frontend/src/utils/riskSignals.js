@@ -1,6 +1,4 @@
-// src/utils/riskSignals.js
-// Thu tín hiệu phía trình duyệt cho Risk Engine và gửi kèm mọi request qua header.
-// Backend đọc các header này ở RiskRequestContext (X-Session-Id, X-Device-Fp, X-Webdriver, X-Had-Input).
+// Browser risk signals attached to every request and read by backend RiskRequestContext.
 
 const SESSION_KEY = "riskSid";
 
@@ -8,7 +6,6 @@ let hadInput = false;
 let tracking = false;
 let cachedFp = null;
 
-// Hash 53-bit đơn giản, đồng bộ (không cần thư viện)
 function cyrb53(str, seed = 0) {
   let h1 = 0xdeadbeef ^ seed;
   let h2 = 0x41c6ce57 ^ seed;
@@ -40,8 +37,7 @@ function canvasSignature() {
   }
 }
 
-// Vân tay thiết bị: ổn định giữa các lần mở trang / ẩn danh, khác nhau giữa các máy.
-// Dùng để gom nhiều tài khoản chung một thiết bị (BOT_S01, FRD_M01, block theo DEVICE).
+// Stable device fingerprint across tabs/incognito to correlate accounts on the same device.
 export function getDeviceFp() {
   if (cachedFp) return cachedFp;
   try {
@@ -78,8 +74,7 @@ export function getSessionId() {
   }
 }
 
-// Gọi một lần khi app khởi động (main.jsx). Có thao tác thật của người dùng hay chưa
-// (di chuột / chạm / cuộn / gõ phím) => header X-Had-Input, dùng cho BOT_E03.
+// Call once on app startup to track real user input for the X-Had-Input header.
 export function startRiskTracking() {
   if (tracking || typeof window === "undefined") return;
   tracking = true;
@@ -91,7 +86,6 @@ export function startRiskTracking() {
   events.forEach((e) => window.addEventListener(e, onInput, { capture: true, passive: true }));
 }
 
-// Header gửi kèm mọi request tới backend.
 export function riskHeaders() {
   return {
     "X-Session-Id": getSessionId(),

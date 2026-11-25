@@ -6,7 +6,6 @@ public sealed record RiskVerdict(bool Allowed, int StatusCode, string? Code, str
 {
     public static RiskVerdict Allow(RiskResult? r = null) => new(true, 200, null, null, r);
 
-    /// <summary>Body theo đúng dạng frontend đang đọc: { success:false, code, message }.</summary>
     public IActionResult ToActionResult() =>
         new ObjectResult(new { success = false, code = Code, message = Message, challengeType = Result?.ChallengeType })
         { StatusCode = StatusCode };
@@ -14,13 +13,8 @@ public sealed record RiskVerdict(bool Allowed, int StatusCode, string? Code, str
 
 public interface IRiskGuard
 {
-    /// <summary>Gọi ĐẦU action: hỏi AdminAPI user/IP/device này đang bị block thật không.</summary>
     Task<RiskVerdict> PreCheckAsync(HttpContext http, int? userId, CancellationToken ct = default);
 
-    /// <summary>
-    /// Gọi SAU khi đã tính xong rule nghiệp vụ: gộp rule bot từ request, gửi sang AdminAPI, đọc quyết định.
-    /// Chỉ gửi khi có ít nhất 1 rule khớp (không spam AdminAPI cho request sạch).
-    /// </summary>
     Task<RiskVerdict> EvaluateAsync(HttpContext http, RiskEvent evt, bool isBooking, CancellationToken ct = default);
 }
 
@@ -60,10 +54,9 @@ public sealed class RiskGuard : IRiskGuard
         evt.BotRules.AddRange(det.Hits);
         evt.SignalsMissing.AddRange(det.Missing);
 
-        // Không có rule nào khớp => request sạch, không cần gửi.
         if (evt.BotRules.Count == 0 && evt.FraudRules.Count == 0) return RiskVerdict.Allow();
 
-        // AdminAPI yêu cầu ít nhất một trong UserId/SessionId/DeviceFp/IpAddress.
+        // AdminAPI requires at least one of UserId, SessionId, DeviceFp, or IpAddress.
         if (evt.UserId == null && evt.SessionId == null && evt.DeviceFp == null && evt.IpAddress == null)
             return RiskVerdict.Allow();
 
@@ -74,7 +67,7 @@ public sealed class RiskGuard : IRiskGuard
             res.Action, res.Level, res.Score, res.IsShadow,
             string.Join(",", evt.BotRules.Select(r => r.Code)), string.Join(",", evt.FraudRules.Select(r => r.Code)));
 
-        // SHADOW: engine chỉ ghi nhận, KHÔNG chặn thật.
+        // SHADOW mode logs decisions without blocking.
         if (res.IsShadow) return RiskVerdict.Allow(res);
 
         return res.Action switch

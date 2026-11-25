@@ -6,15 +6,11 @@ namespace PaymentAPI.Risk;
 
 public interface IPaymentRiskService
 {
-    /// <summary>Gọi sau khi một giao dịch VNPay được ghi nhận là Failed.</summary>
     Task OnPaymentFailedAsync(PaymentTransaction tx, CancellationToken ct = default);
 }
 
-/// <summary>
-/// FRD_P01: thanh toán thất bại >= 3 lần trong 10 phút (theo tài khoản).
-/// Không làm được với VNPay (khách nhập thẻ trên trang VNPay, hệ thống không nhận số thẻ/hash):
-/// FRD_P02, FRD_P03, FRD_P04. Xem README.
-/// </summary>
+// Implements FRD_P01 (>= 3 failed payments in 10 min per account).
+// FRD_P02..P04 are omitted because VNPay collects card details off-site.
 public sealed class PaymentRiskService : IPaymentRiskService
 {
     private const int FailedThreshold = 3;
@@ -55,8 +51,8 @@ public sealed class PaymentRiskService : IPaymentRiskService
             evt.FraudRules.Add(new RuleHit("FRD_P01", 1, $"{failed} failed payments in 10 minutes"));
             if (tx.DeviceFp == null) evt.SignalsMissing.Add("device_fp");
 
-            // Đây là callback từ VNPay (không có người dùng đợi) nên chỉ ghi nhận.
-            // Việc chặn thật xảy ra lần sau khi user giữ vé/tạo đơn (PreCheckAsync ở TicketAPI).
+            // VNPay callback has no waiting user, so only record here;
+            // blocking takes effect on the next TicketAPI PreCheckAsync.
             await _client.IngestAsync(evt, ct);
         }
         catch (Exception ex)

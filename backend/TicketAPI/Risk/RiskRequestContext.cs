@@ -2,7 +2,6 @@ using System.Net;
 
 namespace TicketAPI.Risk;
 
-/// <summary>Tín hiệu lấy từ request: IP thật, User-Agent, và các header frontend gửi lên (xem riskSignals.js).</summary>
 public sealed class RiskRequestContext
 {
     public string? Ip { get; init; }
@@ -10,7 +9,7 @@ public sealed class RiskRequestContext
     public string? DeviceFp { get; init; }
     public string? SessionId { get; init; }
     public bool Webdriver { get; init; }
-    /// <summary>true/false nếu frontend gửi X-Had-Input; null nếu không gửi (không biết).</summary>
+    // true/false when X-Had-Input header is present; null if omitted.
     public bool? HadInput { get; init; }
     public HttpRequest Request { get; init; } = null!;
 
@@ -35,10 +34,7 @@ public sealed class RiskRequestContext
         return v.Length == 0 ? null : (v.Length > 128 ? v[..128] : v);
     }
 
-    /// <summary>
-    /// Ưu tiên X-Forwarded-For (do Gateway thêm); nếu không có thì RemoteIpAddress.
-    /// Trả null nếu không parse được (AdminAPI từ chối IP sai định dạng bằng 400).
-    /// </summary>
+    // Prefer X-Forwarded-For from gateway; return null on invalid IP since AdminAPI rejects malformed IPs with 400.
     public static string? ResolveIp(HttpContext http)
     {
         string? raw = null;

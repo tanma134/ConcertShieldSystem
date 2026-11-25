@@ -8,7 +8,7 @@ import { formatDate, formatPrice } from "../utils/format";
 import "../styles/theme-dark.css";
 import "./HomePage.css";
 
-// value = giá trị gửi lên API (giữ nguyên tên thành phố trong DB), label = hiển thị tiếng Anh
+// value must match the DB city name sent to the API; label is the English display name
 const CITIES = [
   { value: "Hồ Chí Minh", label: "Ho Chi Minh City" },
   { value: "Hà Nội", label: "Hanoi" },
@@ -21,7 +21,6 @@ const FALLBACK_POSTER =
     `<svg xmlns='http://www.w3.org/2000/svg' width='640' height='400'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='#a855f7'/><stop offset='1' stop-color='#e8439c'/></linearGradient></defs><rect width='100%' height='100%' fill='url(#g)'/></svg>`
   );
 
-// Thẻ sự kiện nổi bật ở cột phải hero (giống preview trong ảnh thiết kế).
 function SpotlightCard({ event }) {
   const navigate = useNavigate();
 
@@ -121,7 +120,6 @@ export default function HomePage() {
   const [city, setCity] = useState("");
   const [saleStatus, setSaleStatus] = useState("all"); // "all" | "on_sale" | "upcoming_sale"
 
-  // "Trending Concerts" - lấy sự kiện nổi bật
   useEffect(() => {
     setFeaturedLoading(true);
     eventApi
@@ -131,7 +129,6 @@ export default function HomePage() {
       .finally(() => setFeaturedLoading(false));
   }, []);
 
-  // Danh sách sự kiện (tìm kiếm / lọc theo thành phố / sắp diễn ra)
   useEffect(() => {
     setLoading(true);
     setError("");
@@ -156,11 +153,10 @@ export default function HomePage() {
   }, [q, city]);
 
   const sectionTitle = useMemo(
-    () => (q ? `Search results for "${q}"` : "🎵 Upcoming Concerts"),
+    () => (q ? `Search results for "${q}"` : "Upcoming Concerts"),
     [q]
   );
 
-  // Lọc theo trạng thái mở bán (Đang mở bán / Sắp mở bán)
   const filteredEvents = useMemo(() => {
     return events.filter((ev) => {
       const isEnded = new Date(ev.endsAt || ev.startsAt) < new Date();
@@ -176,12 +172,11 @@ export default function HomePage() {
     });
   }, [events, saleStatus]);
 
-  // Hien thi 8 su kien o trang chu de vua van 2 hang (luoi 4 cot x 2 hang = 8 cards)
+  // Cap at 8 cards for a balanced 4x2 home page grid
   const displayedEvents = useMemo(() => {
     return filteredEvents.slice(0, 8);
   }, [filteredEvents]);
 
-  // Sự kiện nổi bật nhất dùng cho thẻ preview trong hero
   const spotlight = useMemo(
     () => featured.find((ev) => ev?.posterUrl) || featured[0] || null,
     [featured]
@@ -229,7 +224,7 @@ export default function HomePage() {
                   className="tb-btn tb-btn-primary"
                   onClick={() => scrollTo(upcomingRef)}
                 >
-                  <span aria-hidden="true">🎆</span> Explore Concerts
+                  Explore Concerts
                   <svg viewBox="0 0 20 20" width="15" height="15" fill="none">
                     <path
                       d="M4 10h12M11 5l5 5-5 5"
@@ -245,7 +240,7 @@ export default function HomePage() {
                   className="tb-btn tb-btn-outline"
                   onClick={() => scrollTo(hotRef)}
                 >
-                  <span aria-hidden="true">🔥</span> Hot Festivals
+                  Hot Festivals
                 </button>
               </div>
             </div>
@@ -260,7 +255,7 @@ export default function HomePage() {
       {!q && (featuredLoading || featured.length > 0) && (
         <section className="tb-container tb-list-section" ref={hotRef}>
           <div className="tb-list-header">
-            <h2>🔥 Trending Concerts</h2>
+            <h2>Trending Concerts</h2>
             <a
               className="tb-section-link"
               onClick={(e) => {
@@ -293,7 +288,6 @@ export default function HomePage() {
         <div className="tb-list-header">
           <div className="tb-list-header-left">
             <h2>{sectionTitle}</h2>
-            {/* Sale status pills */}
             <div className="tb-status-filter">
               <button
                 type="button"
@@ -307,7 +301,7 @@ export default function HomePage() {
                 className={saleStatus === "on_sale" ? "active" : ""}
                 onClick={() => setSaleStatus("on_sale")}
               >
-                🔥 On Sale
+                On Sale
               </button>
               <button
                 type="button"
@@ -360,7 +354,6 @@ export default function HomePage() {
               ))}
             </div>
 
-            {/* View all events CTA button */}
             <div className="tb-view-more-container">
               <Link to="/events" className="tb-view-more-btn">
                 <span>View all {filteredEvents.length} concerts</span>

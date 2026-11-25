@@ -56,7 +56,11 @@ namespace PaymentAPI.Repositories
                 var cleanDigits = new string(term.Where(char.IsDigit).ToArray());
                 if (int.TryParse(cleanDigits, out var numericId))
                 {
-                    query = query.Where(r => r.PaymentRefundId == numericId || r.OrderId == numericId);
+                    query = query.Where(r =>
+                        r.PaymentRefundId == numericId ||
+                        r.OrderId == numericId ||
+                        (r.CustomerName != null && r.CustomerName.ToLower().Contains(term)) ||
+                        (r.GatewayRefundRef != null && r.GatewayRefundRef.ToLower().Contains(term)));
                 }
                 else
                 {

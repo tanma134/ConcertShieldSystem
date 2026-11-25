@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AdminAPI.Services.Risks;
 
-
 public sealed class FraudCaseService : IFraudCaseService
 {
     private static readonly string[] OpenStatuses = { "Open", "InReview" };
@@ -143,7 +142,7 @@ public sealed class FraudCaseService : IFraudCaseService
         if (await RiskSupport.HasPendingAppealAsync(_db, caseId))
             throw new RiskServiceException(409, "The case has a pending appeal. Resolve the appeal first.");
 
-        // FalsePositive/Dismissed nghĩa là "không có gian lận" -> không được còn biện pháp đang áp dụng lên user.
+        // FalsePositive/Dismissed means no fraud occurred, so no active restriction may remain on the user.
         if (status != "Resolved")
         {
             var nowUtc = DateTime.UtcNow;

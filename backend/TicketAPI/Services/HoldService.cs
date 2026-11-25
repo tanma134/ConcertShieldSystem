@@ -489,7 +489,7 @@ namespace TicketAPI.Services
             return response;
         }
 
-        // Gắn tên vé + đơn giá (nguồn: EventAPI) vào phản hồi để frontend hiển thị "vé đang mua".
+        // Attach ticket name and unit price from EventAPI for frontend display.
         private async Task EnrichTicketsAsync(HoldSessionResponse response)
         {
             try

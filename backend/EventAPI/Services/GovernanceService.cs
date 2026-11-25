@@ -6,16 +6,12 @@ using EventAPI.Repositories;
 
 namespace EventAPI.Services;
 
-// Lop nghiep vu xu ly logic quan tri su kien, ho so phap ly va thay doi lich trinh
 public class GovernanceService(IGovernanceRepository repo, IComplianceAssetStore assets, IHttpClientFactory http, IConfiguration config)
 {
-    // Danh sach cac loai tai lieu bat buoc cau hinh tu he thong
     public string[] RequiredTypes => config.GetSection("Compliance:RequiredTypes").Get<string[]>() ?? new[] { "EventPermit", "SafetyPlan" };
 
-    // Dung luong tep tin toi da cho phep upload tu 1MB den 20MB
     public long MaxBytes => Math.Clamp(config.GetValue<long>("Compliance:MaxFileBytes", 10485760), 1, 20971520);
 
-    // Lay su kien va kiem tra quyen truy cap cua nguoi goi
     public async Task<Event> GetAsync(int id, int caller, bool admin, bool locked, CancellationToken ct)
     {
         if (id <= 0) throw new ArgumentException("Invalid event ID.");
@@ -28,7 +24,6 @@ public class GovernanceService(IGovernanceRepository repo, IComplianceAssetStore
         return ev;
     }
 
-    // Ghi ban ghi outbox xu ly bat dong bo
     public void Queue(string kind, object payload)
     {
         repo.AddOutbox(new()
@@ -40,11 +35,9 @@ public class GovernanceService(IGovernanceRepository repo, IComplianceAssetStore
         });
     }
 
-    // Gui thong bao he thong toi Organizer cua su kien
     public void Notify(Event ev, string title, string message) =>
         Queue("Notification", new NotificationMessage(ev.OrganizerId, title, message, "event_compliance", $"/organizer/events/{ev.EventId}/compliance"));
 
-    // Gui thong bao he thong toi toan bo cac Admin quan tri
     public void NotifyAdmins(Event ev, string title, string message)
     {
         var ids = config.GetSection("Governance:AdminUserIds").Get<int[]>() ?? Array.Empty<int>();
@@ -52,7 +45,6 @@ public class GovernanceService(IGovernanceRepository repo, IComplianceAssetStore
             Queue("Notification", new NotificationMessage(adminId, title, message, "admin_change_request", "/admin/change-requests"));
     }
 
-    // Kiem tra bo ho so phap ly da day du cac giay to theo quy dinh truoc khi nop
     public async Task EnsureCompleteAsync(Event ev, CancellationToken ct)
     {
         var allDocs = await repo.GetComplianceDocumentsAsync(ev.EventId, ct);
@@ -61,7 +53,6 @@ public class GovernanceService(IGovernanceRepository repo, IComplianceAssetStore
             throw new InvalidOperationException("Upload all required compliance documents before submitting.");
     }
 
-    // Lay toan bo thong tin ho so phap ly, tai lieu va lich su danh gia
     public async Task<object> ComplianceAsync(int id, int caller, bool admin, CancellationToken ct)
     {
         var ev = await GetAsync(id, caller, admin, false, ct);
@@ -71,7 +62,6 @@ public class GovernanceService(IGovernanceRepository repo, IComplianceAssetStore
         return new { ev.EventId, ev.Title, EventStatus = ev.Status, Status = ev.ComplianceStatus, Version = ev.ComplianceVersion, ReviewedVersion = ev.ComplianceReviewedVersion, RequiredTypes, MaxBytes, Documents = docDtos, Reviews = reviews };
     }
 
-    // Tai len mot tai lieu phap ly moi va tang version ho so
     public async Task UploadAsync(int id, int caller, string type, Microsoft.AspNetCore.Http.IFormFile file, CancellationToken ct)
     {
         if (!RequiredTypes.Contains(type)) throw new ArgumentException("Unsupported document type.");
@@ -152,7 +142,6 @@ public class GovernanceService(IGovernanceRepository repo, IComplianceAssetStore
         }
     }
 
-    // Tai ve tep tin tai lieu phap ly cua su kien
     public async Task<(byte[] Bytes, string Mime, string Name)> DownloadAsync(int id, long docId, int caller, bool admin, CancellationToken ct)
     {
         await GetAsync(id, caller, admin, false, ct);
@@ -160,7 +149,6 @@ public class GovernanceService(IGovernanceRepository repo, IComplianceAssetStore
         return (await assets.DownloadAsync(doc.PublicId, ct), doc.ContentType, doc.FileName);
     }
 
-    // Admin tham dinh va luu quyet dinh phe duyet ho so phap ly
     public async Task ReviewComplianceAsync(int id, int admin, ComplianceReviewInput input, CancellationToken ct)
     {
         var notes = GovernanceRules.ValidateReview(input.Decision, input.Notes, true);
@@ -186,10 +174,8 @@ public class GovernanceService(IGovernanceRepository repo, IComplianceAssetStore
         await tx.CommitAsync(ct);
     }
 
-    // Tao Http client ket noi sang TicketAPI noi bo
     private HttpClient TicketClient() => http.CreateClient("GovernanceTicket");
 
-    // Xem truoc thong ke so ve va don hang bi anh huong khi hoan hoac doi lich (UC-35 Preview)
     public async Task<object> PreviewAsync(int id, int caller, bool admin, ChangeInput input, CancellationToken ct)
     {
         var ev = await GetAsync(id, caller, admin, false, ct);
@@ -200,7 +186,6 @@ public class GovernanceService(IGovernanceRepository repo, IComplianceAssetStore
         return new { ev.EventId, ev.Title, ev.Timezone, ev.StartsAt, ev.EndsAt, Change = clean, Affected = affected, IsPreview = true };
     }
 
-    // Organizer gui yeu cau thay doi lich trinh hoan hoac doi ngay len Admin phe duyet (UC-35)
     public async Task<long> SubmitChangeAsync(int id, int caller, ChangeInput input, CancellationToken ct)
     {
         await using var tx = await repo.BeginTransactionAsync(ct);
@@ -232,14 +217,12 @@ public class GovernanceService(IGovernanceRepository repo, IComplianceAssetStore
         return request.Id;
     }
 
-    // Lay danh sach tat ca cac yeu cau thay doi lich trinh cua mot su kien
     public async Task<object> ChangesAsync(int id, int caller, bool admin, CancellationToken ct)
     {
         await GetAsync(id, caller, admin, false, ct);
         return await repo.GetChangeRequestsByEventIdAsync(id, ct);
     }
 
-    // Admin tham dinh va phe duyet hoac tu choi yeu cau thay doi lich (UC-34 trigger tu UC-35)
     public async Task ReviewChangeAsync(int id, long requestId, int admin, ChangeReviewInput input, CancellationToken ct)
     {
         var notes = GovernanceRules.ValidateChangeReview(input.Decision, input.Notes);
@@ -273,7 +256,7 @@ public class GovernanceService(IGovernanceRepository repo, IComplianceAssetStore
                 }
             }
 
-            // Dong bang ban ve ngay lap tuc de bao ve tinh nhat quan cua he thong
+            // Freeze ticket sales immediately to prevent new purchases during schedule transitions.
             ev.SalesFrozen = true;
             ev.ScheduleVersion++;
             ev.UpdatedAt = DateTime.UtcNow;
@@ -291,7 +274,6 @@ public class GovernanceService(IGovernanceRepository repo, IComplianceAssetStore
         await tx.CommitAsync(ct);
     }
 
-    // Admin chu dong thuc thi hoan hoac doi ngay truc tiep trong truong hop khan cap (UC-34 Direct Execution)
     public async Task<long> AdminDirectChangeAsync(int id, int admin, AdminDirectChangeInput input, CancellationToken ct)
     {
         await using var tx = await repo.BeginTransactionAsync(ct);
@@ -339,7 +321,7 @@ public class GovernanceService(IGovernanceRepository repo, IComplianceAssetStore
             }
         }
 
-        // Dong bang ban ve lap tuc de ngan chan race condition mua ve moi
+        // Freeze ticket sales immediately to prevent race conditions with new purchases.
         ev.SalesFrozen = true;
         ev.ScheduleVersion++;
         ev.UpdatedAt = DateTime.UtcNow;
@@ -353,7 +335,6 @@ public class GovernanceService(IGovernanceRepository repo, IComplianceAssetStore
         return request.Id;
     }
 
-    // Lay danh sach tat ca change requests tren toan he thong cho Admin
     public async Task<object> AllChangesAsync(string? status, CancellationToken ct)
     {
         if (!string.IsNullOrEmpty(status) && status != "Pending" && status != "Approved" && status != "Rejected")
@@ -361,7 +342,6 @@ public class GovernanceService(IGovernanceRepository repo, IComplianceAssetStore
         return await repo.GetAllChangeRequestsAsync(status, ct);
     }
 
-    // Lay danh sach chi tiet ve va don hang bi anh huong boi yeu cau thay doi lich (UC-36)
     public async Task<JsonElement> AffectedAsync(int id, long requestId, int caller, bool admin, string tab, string? status, string? orderCode, int? userId, int page, int pageSize, CancellationToken ct)
     {
         await GetAsync(id, caller, admin, false, ct);
@@ -379,7 +359,6 @@ public class GovernanceService(IGovernanceRepository repo, IComplianceAssetStore
         return await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
     }
 
-    // Kiem tra dieu kien ban ve hop le de phuc vu TicketAPI truoc khi giu cho hoac ban ve
     public async Task<SaleEligibility> EligibilityAsync(int id, CancellationToken ct)
     {
         var ev = await repo.GetEventAsNoTrackingAsync(id, ct) ?? throw new KeyNotFoundException("Concert not found.");
@@ -388,5 +367,4 @@ public class GovernanceService(IGovernanceRepository repo, IComplianceAssetStore
     }
 }
 
-// Ngoai le xung dot trang thai hoac phien ban trong qua trinh quan tri
 public class GovernanceConflictException(string message) : Exception(message) { }

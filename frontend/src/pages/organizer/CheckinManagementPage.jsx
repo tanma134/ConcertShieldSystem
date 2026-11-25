@@ -9,7 +9,6 @@ import "../organizer/OrganizerWizard.css";
 import "./OrganizerDashboardPage.css";
 import "../../styles/reportPages.css";
 
-// (export check-in report),  (view staff list) and  (assign / unassign staff).
 export default function CheckinManagementPage() {
   const { id } = useParams();
   const [checkin, setCheckin] = useState(null);
@@ -22,17 +21,15 @@ export default function CheckinManagementPage() {
   const [busy, setBusy] = useState(false);
   const [searched, setSearched] = useState(false);
   const [gateByStaff, setGateByStaff] = useState({});
-  // Staff được chọn thêm nhiệm vụ duyệt hoàn vé ngay khi gán.
+  // Allow granting refund-review permission at the same time as check-in access.
   const [reviewByStaff, setReviewByStaff] = useState({});
   const gates = ["Main Gate", "Gate A", "Gate B", "Gate C"];
 
-  // Shows a short message in the corner and hides it after a few seconds.
   const showToast = (message, type = "ok") => {
     setToast({ message, type });
     window.setTimeout(() => setToast(null), 4000);
   };
 
-  // Loads the check-in figures and the assigned staff together.
   const loadAll = async () => {
     setLoading(true);
     setError("");
@@ -57,7 +54,6 @@ export default function CheckinManagementPage() {
     loadAll();
   }, [id]);
 
-  // downloads the check-in report as a CSV file.
   const exportCsv = async () => {
     setBusy(true);
     try {
@@ -70,7 +66,6 @@ export default function CheckinManagementPage() {
     }
   };
 
-  // looks up Staff accounts by name or email.
   const searchCandidates = async () => {
     setBusy(true);
     try {
@@ -84,7 +79,6 @@ export default function CheckinManagementPage() {
     }
   };
 
-  // assigns one account, then refreshes both lists.
   const assign = async (candidate) => {
     setBusy(true);
     try {
@@ -98,7 +92,6 @@ export default function CheckinManagementPage() {
     }
   };
 
-  // Bật/tắt nhiệm vụ duyệt hoàn vé của một staff đã được gán.
   const toggleReturnReview = async (member) => {
     setBusy(true);
     try {
@@ -114,7 +107,6 @@ export default function CheckinManagementPage() {
     }
   };
 
-  // removes one staff member after the organizer confirms.
   const unassign = async (member) => {
     if (!window.confirm(`Remove ${member.fullName} from this concert?`)) return;
 
