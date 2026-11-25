@@ -14,7 +14,9 @@ public sealed record SystemPolicyRecord(
     DateTime EffectiveDate,
     DateTime CreatedAt,
     int CreatedByAdminId,
-    string CreatedByAdminName);
+    string CreatedByAdminName,
+    decimal PlatformFeePercent = 5.0m,
+    int PayoutDays = 7);
 
 /// <summary>Dữ liệu để publish một phiên bản chính sách mới.</summary>
 public sealed record NewSystemPolicyVersion(
@@ -27,7 +29,9 @@ public sealed record NewSystemPolicyVersion(
     string Content,
     DateTime EffectiveDate,
     int AdminId,
-    string AdminName);
+    string AdminName,
+    decimal PlatformFeePercent = 5.0m,
+    int PayoutDays = 7);
 
 public interface ISystemPolicyRepository
 {
@@ -62,7 +66,7 @@ public sealed class SystemPolicyRepository(IConfiguration configuration) : ISyst
 
         const string sql = @"
             SELECT policy_id, category, version_code, version_number, title, scope, change_summary, content,
-                   status, effective_date, created_at, created_by_admin_id, created_by_admin_name
+                   platform_fee_percent, payout_days, status, effective_date, created_at, created_by_admin_id, created_by_admin_name
             FROM system_policies
             WHERE category = @cat
             ORDER BY version_number DESC, created_at DESC;";
@@ -87,10 +91,10 @@ public sealed class SystemPolicyRepository(IConfiguration configuration) : ISyst
         const string sql = @"
             SELECT DISTINCT ON (category)
                    policy_id, category, version_code, version_number, title, scope, change_summary, content,
-                   status, effective_date, created_at, created_by_admin_id, created_by_admin_name
+                   platform_fee_percent, payout_days, status, effective_date, created_at, created_by_admin_id, created_by_admin_name
             FROM system_policies
-            WHERE status = 'Active'
-            ORDER BY category, version_number DESC;";
+            WHERE LOWER(status) = 'active'
+            ORDER BY category, version_number DESC, policy_id DESC;";
 
         await using var cmd = new Npgsql.NpgsqlCommand(sql, conn);
         await using var reader = await cmd.ExecuteReaderAsync(ct);
@@ -119,7 +123,7 @@ public sealed class SystemPolicyRepository(IConfiguration configuration) : ISyst
         await using var tx = await conn.BeginTransactionAsync(ct);
 
         // 1. Archive previous active versions for this category
-        const string archiveSql = "UPDATE system_policies SET status = 'Archived' WHERE category = @cat AND status = 'Active';";
+        const string archiveSql = "UPDATE system_policies SET status = 'Archived' WHERE category = @cat AND LOWER(status) = 'active';";
         await using (var cmd = new Npgsql.NpgsqlCommand(archiveSql, conn, tx))
         {
             cmd.Parameters.AddWithValue("cat", version.Category);
@@ -129,8 +133,8 @@ public sealed class SystemPolicyRepository(IConfiguration configuration) : ISyst
         // 2. Insert new policy version
         const string insertSql = @"
             INSERT INTO system_policies (category, version_code, version_number, title, scope, change_summary, content,
-                                        status, effective_date, created_at, created_by_admin_id, created_by_admin_name)
-            VALUES (@cat, @code, @num, @title, @scope, @sum, @content, 'Active', @eff, NOW(), @aid, @aname)
+                                        platform_fee_percent, payout_days, status, effective_date, created_at, created_by_admin_id, created_by_admin_name)
+            VALUES (@cat, @code, @num, @title, @scope, @sum, @content, @fee, @payout, 'Active', @eff, NOW(), @aid, @aname)
             RETURNING policy_id, created_at;";
 
         int policyId;
@@ -144,6 +148,8 @@ public sealed class SystemPolicyRepository(IConfiguration configuration) : ISyst
             cmd.Parameters.AddWithValue("scope", version.Scope);
             cmd.Parameters.AddWithValue("sum", version.ChangeSummary);
             cmd.Parameters.AddWithValue("content", version.Content);
+            cmd.Parameters.AddWithValue("fee", version.PlatformFeePercent);
+            cmd.Parameters.AddWithValue("payout", version.PayoutDays);
             cmd.Parameters.AddWithValue("eff", version.EffectiveDate);
             cmd.Parameters.AddWithValue("aid", version.AdminId);
             cmd.Parameters.AddWithValue("aname", version.AdminName);
@@ -173,5 +179,7 @@ public sealed class SystemPolicyRepository(IConfiguration configuration) : ISyst
         Convert.ToDateTime(reader["effective_date"]),
         Convert.ToDateTime(reader["created_at"]),
         Convert.ToInt32(reader["created_by_admin_id"]),
-        Convert.ToString(reader["created_by_admin_name"]) ?? "Platform Administrator");
+        Convert.ToString(reader["created_by_admin_name"]) ?? "Platform Administrator",
+        reader["platform_fee_percent"] != DBNull.Value ? Convert.ToDecimal(reader["platform_fee_percent"]) : 5.0m,
+        reader["payout_days"] != DBNull.Value ? Convert.ToInt32(reader["payout_days"]) : 7);
 }

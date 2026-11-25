@@ -29,6 +29,12 @@ public partial class TicketDbContext : DbContext
 
     public virtual DbSet<StatusHistory> StatusHistories { get; set; }
 
+    public virtual DbSet<TicketReconciliation> TicketReconciliations { get; set; }
+
+    public virtual DbSet<TicketRevocation> TicketRevocations { get; set; }
+
+    public virtual DbSet<TicketReissue> TicketReissues { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         // Khi chay qua DI, Program.cs la nguon connection string duy nhat.
@@ -208,6 +214,7 @@ public partial class TicketDbContext : DbContext
             entity.Property(e => e.CheckedInAt).HasColumnName("checked_in_at");
             entity.Property(e => e.CheckedInBy).HasColumnName("checked_in_by");
             entity.Property(e => e.CheckedInGate).HasColumnName("checked_in_gate").HasMaxLength(100);
+            entity.Property(e => e.GateId).HasColumnName("gate_id").HasMaxLength(50);
             entity.Property(e => e.LastExitAt).HasColumnName("last_exit_at");
             entity.Property(e => e.IsInside).HasColumnName("is_inside").HasDefaultValue(false);
             entity.Property(e => e.ReEntryCount).HasColumnName("re_entry_count").HasDefaultValue(0);
@@ -429,6 +436,67 @@ public partial class TicketDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.TicketId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TicketReconciliation>(entity =>
+        {
+            entity.HasKey(e => e.ReconciliationId);
+            entity.ToTable("ticket_reconciliations");
+            entity.Property(e => e.ReconciliationId).HasColumnName("reconciliation_id").ValueGeneratedOnAdd();
+            entity.Property(e => e.EventId).HasColumnName("event_id");
+            entity.Property(e => e.EventTitle).HasMaxLength(255).HasColumnName("event_title");
+            entity.Property(e => e.AdminId).HasColumnName("admin_id");
+            entity.Property(e => e.AdminName).HasMaxLength(100).HasColumnName("admin_name");
+            entity.Property(e => e.TotalTicketsRevoked).HasColumnName("total_tickets_revoked");
+            entity.Property(e => e.ReasonType).HasMaxLength(50).HasColumnName("reason_type");
+            entity.Property(e => e.Notes).HasColumnName("notes");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+            entity.Property(e => e.RefundStatus).HasMaxLength(50).HasDefaultValue("QUEUED").HasColumnName("refund_status");
+        });
+
+        modelBuilder.Entity<TicketRevocation>(entity =>
+        {
+            entity.HasKey(e => e.RevocationId);
+            entity.ToTable("ticket_revocations");
+            entity.Property(e => e.RevocationId).HasColumnName("revocation_id").ValueGeneratedOnAdd();
+            entity.Property(e => e.TicketCode).HasMaxLength(100).HasColumnName("ticket_code");
+            entity.Property(e => e.EventId).HasColumnName("event_id");
+            entity.Property(e => e.EventTitle).HasMaxLength(255).HasColumnName("event_title");
+            entity.Property(e => e.RevokedByAdminId).HasColumnName("revoked_by_admin_id");
+            entity.Property(e => e.RevokedByName).HasMaxLength(100).HasColumnName("revoked_by_name");
+            entity.Property(e => e.RevokedAt).HasColumnName("revoked_at");
+            entity.Property(e => e.ReasonType).HasMaxLength(50).HasColumnName("reason_type");
+            entity.Property(e => e.ReasonNote).HasColumnName("reason_note");
+            entity.Property(e => e.ReconciliationId).HasColumnName("reconciliation_id");
+            entity.Property(e => e.IsBulk).HasDefaultValue(false).HasColumnName("is_bulk");
+            entity.Property(e => e.RefundQueued).HasDefaultValue(true).HasColumnName("refund_queued");
+            entity.Property(e => e.NotificationSent).HasDefaultValue(true).HasColumnName("notification_sent");
+            entity.Property(e => e.SeatOrZone).HasMaxLength(100).HasColumnName("seat_or_zone");
+            entity.Property(e => e.CustomerName).HasMaxLength(100).HasColumnName("customer_name");
+
+            entity.HasOne(e => e.Reconciliation)
+                .WithMany(r => r.Revocations)
+                .HasForeignKey(e => e.ReconciliationId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<TicketReissue>(entity =>
+        {
+            entity.HasKey(e => e.ReissueId);
+            entity.ToTable("ticket_reissues");
+            entity.Property(e => e.ReissueId).HasColumnName("reissue_id").ValueGeneratedOnAdd();
+            entity.Property(e => e.OldTicketCode).HasMaxLength(100).HasColumnName("old_ticket_code");
+            entity.Property(e => e.NewTicketCode).HasMaxLength(100).HasColumnName("new_ticket_code");
+            entity.Property(e => e.EventId).HasColumnName("event_id");
+            entity.Property(e => e.EventTitle).HasMaxLength(255).HasColumnName("event_title");
+            entity.Property(e => e.ReissuedByAdminId).HasColumnName("reissued_by_admin_id");
+            entity.Property(e => e.ReissuedByName).HasMaxLength(100).HasColumnName("reissued_by_name");
+            entity.Property(e => e.ReissuedAt).HasColumnName("reissued_at");
+            entity.Property(e => e.Reason).HasMaxLength(255).HasColumnName("reason");
+            entity.Property(e => e.CustomerName).HasMaxLength(100).HasColumnName("customer_name");
+            entity.Property(e => e.CustomerEmail).HasMaxLength(100).HasColumnName("customer_email");
+            entity.Property(e => e.SeatOrZone).HasMaxLength(100).HasColumnName("seat_or_zone");
+            entity.Property(e => e.DynamicQrStatus).HasMaxLength(50).HasDefaultValue("ACTIVE").HasColumnName("dynamic_qr_status");
         });
     }
 

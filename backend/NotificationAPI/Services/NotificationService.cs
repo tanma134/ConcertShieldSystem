@@ -120,8 +120,8 @@ namespace NotificationAPI.Services
 
         public async Task BroadcastNewEventAsync(BroadcastEventNotificationDTO dto)
         {
-            var title = $"Sự kiện mới: {dto.Title}";
-            var message = $"Sự kiện '{dto.Title}' vừa được mở bán/đăng tải. Nhấp vào đây để xem chi tiết ngay!";
+            var title = $"New Event: {dto.Title}";
+            var message = $"Event '{dto.Title}' is now published and tickets are available. Click here to view details and book your seats!";
             var targetUrl = $"/events/{dto.Slug}";
 
             // Create broadcast notification record (UserId = 0 represents system broadcast to all customers)
@@ -223,8 +223,8 @@ namespace NotificationAPI.Services
                                     notificationsToInsert.Add(new Notification
                                     {
                                         UserId = 0,
-                                        Title = $"Sự kiện mới: {title}",
-                                        Message = $"Sự kiện '{title}' vừa được phát hành và mở bán vé. Nhấp vào đây để xem chi tiết ngay!",
+                                        Title = $"New Event: {title}",
+                                        Message = $"Event '{title}' has been published and tickets are now on sale. Click here to view event details!",
                                         Category = "event_new",
                                         TargetUrl = $"/events/{slug}",
                                         IsRead = false,
@@ -247,8 +247,8 @@ namespace NotificationAPI.Services
                         new Notification
                         {
                             UserId = 0,
-                            Title = "Sự kiện mới: Anh Trai Say Hi Concert 2026",
-                            Message = "Sự kiện 'Anh Trai Say Hi Concert 2026' vừa được mở bán vé. Nhấp vào đây để xem chi tiết và đặt vé ngay!",
+                            Title = "New Event: Say Hi Live Concert 2026",
+                            Message = "Tickets for 'Say Hi Live Concert 2026' are now open. Explore seating tiers and book your tickets today!",
                             Category = "event_new",
                             TargetUrl = "/events/anh-trai-say-hi-concert-2026",
                             IsRead = false,
@@ -257,8 +257,8 @@ namespace NotificationAPI.Services
                         new Notification
                         {
                             UserId = 0,
-                            Title = "Sự kiện mới: Tri Âm Concert - Mỹ Tâm",
-                            Message = "Sự kiện 'Tri Âm Concert - Mỹ Tâm' vừa được cập nhật lịch biểu diễn mới. Đặt vé ngay hôm nay!",
+                            Title = "New Event: Tri Am Arena Concert",
+                            Message = "Tri Am Arena Concert schedule has been finalized. Secure your tickets before sold out!",
                             Category = "event_new",
                             TargetUrl = "/events/tri-am-concert-my-tam",
                             IsRead = false,
@@ -267,8 +267,8 @@ namespace NotificationAPI.Services
                         new Notification
                         {
                             UserId = 0,
-                            Title = "Sự kiện mới: Lễ Hội Âm Nhạc Hò Dô 2026",
-                            Message = "Lễ Hội Âm Nhạc Hò Dô 2026 chính thức phát hành mã giảm giá sớm. Nhấp để xem thông tin chi tiết!",
+                            Title = "New Event: Ho Do International Music Festival 2026",
+                            Message = "Early bird promo codes for Ho Do International Music Festival 2026 are now available. Check them out!",
                             Category = "event_new",
                             TargetUrl = "/events/ho-do-music-festival-2026",
                             IsRead = false,
@@ -278,7 +278,7 @@ namespace NotificationAPI.Services
                 }
             }
 
-            // 2. Explicitly seed notifications targeting User ID 3 (Nguyễn Văn Khách) if none exist
+            // 2. Explicitly seed notifications targeting User ID 3 if none exist
             var hasUser3 = await _context.Notifications.AnyAsync(n => n.UserId == 3 && !n.IsDeleted);
             if (!hasUser3)
             {
@@ -287,8 +287,8 @@ namespace NotificationAPI.Services
                     new Notification
                     {
                         UserId = 3,
-                        Title = "Chào mừng Nguyễn Văn Khách!",
-                        Message = "Tài khoản của bạn đã được kích hoạt thành công. Đã có các sự kiện concert mới mở bán vé, nhấp vào đây để xem chi tiết!",
+                        Title = "Welcome to ConcertShield!",
+                        Message = "Your customer account is active. Explore newly published concert events and reserve your tickets with dynamic QR security!",
                         Category = "account",
                         TargetUrl = "/events/anh-trai-say-hi-concert-2026",
                         IsRead = false,
@@ -297,8 +297,8 @@ namespace NotificationAPI.Services
                     new Notification
                     {
                         UserId = 3,
-                        Title = "Sự kiện gợi ý dành riêng cho bạn",
-                        Message = "Sự kiện 'Anh Trai Say Hi Concert 2026' đang mở bán vé. Đặt vé ngay hôm nay để nhận được vị trí tốt nhất!",
+                        Title = "Recommended Concert for You",
+                        Message = "Concert 'Say Hi Live Concert 2026' is now selling tickets. Check out available zones for the best experience!",
                         Category = "event_new",
                         TargetUrl = "/events/anh-trai-say-hi-concert-2026",
                         IsRead = false,
@@ -307,8 +307,8 @@ namespace NotificationAPI.Services
                     new Notification
                     {
                         UserId = 3,
-                        Title = "Ưu đãi đặt vé sớm",
-                        Message = "Bạn nhận được ưu đãi giảm giá khi đăng ký đặt vé sự kiện 'Tri Âm Concert - Mỹ Tâm'. Nhấp vào đây để xem chi tiết!",
+                        Title = "Early-Bird Promotional Voucher",
+                        Message = "A promotional discount is applicable for 'Tri Am Arena Concert'. Visit the event details page to claim your discount!",
                         Category = "event_new",
                         TargetUrl = "/events/tri-am-concert-my-tam",
                         IsRead = false,

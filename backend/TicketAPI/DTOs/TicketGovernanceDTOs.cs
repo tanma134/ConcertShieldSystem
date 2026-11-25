@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace CheckinAPI.DTOs
+namespace TicketAPI.DTOs
 {
     // ==========================================
     // Bulk Revoke Tickets DTOs
@@ -127,95 +127,5 @@ namespace CheckinAPI.DTOs
         public int ActiveTicketsCount { get; set; }
         public DateTime StartDate { get; set; }
         public string Location { get; set; } = string.Empty;
-    }
-
-    // ==========================================
-    // Offline Check-in DTOs
-    // ==========================================
-    public class OfflineTicketItemDTO
-    {
-        public string TicketCode { get; set; } = string.Empty;
-        public string? QrToken { get; set; }
-        public string TicketTokenHash { get; set; } = string.Empty;
-        public string AttendeeName { get; set; } = string.Empty;
-        public string ZoneName { get; set; } = string.Empty;
-        public string SeatNumber { get; set; } = string.Empty;
-        public string AssignedGate { get; set; } = "GATE_A";
-        public bool IsCheckedIn { get; set; } = false;
-        public string Status { get; set; } = "Available"; // Available, Used, Revoked
-    }
-
-    public class OfflinePackageResponseDTO
-    {
-        public int EventId { get; set; }
-        public string EventTitle { get; set; } = string.Empty;
-        public DateTime ExportedAt { get; set; }
-        public int TotalTickets { get; set; }
-        public string Signature { get; set; } = string.Empty;
-        public List<OfflineTicketItemDTO> Tickets { get; set; } = new();
-    }
-
-    public class OfflineScanRecordDTO
-    {
-        public string TicketCode { get; set; } = string.Empty;
-        public string GateId { get; set; } = "GATE_A";
-        public DateTime ScannedAt { get; set; }
-        public string ScanMethod { get; set; } = "Offline QR Scan";
-        public int StaffUserId { get; set; }
-    }
-
-    public class OfflineSyncRequestDTO
-    {
-        public int EventId { get; set; }
-        public string GateId { get; set; } = "GATE_A";
-        public List<OfflineScanRecordDTO> Scans { get; set; } = new();
-    }
-
-    public class OfflineSyncConflictDTO
-    {
-        public string ConflictId { get; set; } = string.Empty;
-        public int EventId { get; set; }
-        public string TicketCode { get; set; } = string.Empty;
-        public string AttendeeName { get; set; } = "Khán Giả";
-        public string ZoneName { get; set; } = "Khu Khán Đài";
-        public string SeatNumber { get; set; } = "S-01";
-
-        // Scan 1: earlier scan
-        public DateTime EarlierScannedAt { get; set; }
-        public string EarlierGateId { get; set; } = "GATE_A";
-        public string EarlierGateName { get; set; } = "Cổng A - Lối vào chính";
-        public string EarlierStaffName { get; set; } = "Nhân viên Soát vé 1";
-        public string EarlierMethod { get; set; } = "Offline QR Scan";
-
-        // Scan 2: duplicate scan
-        public DateTime DuplicateScannedAt { get; set; }
-        public string DuplicateGateId { get; set; } = "GATE_B";
-        public string DuplicateGateName { get; set; } = "Cổng B - Cánh Bắc";
-        public string DuplicateStaffName { get; set; } = "Nhân viên Soát vé 2";
-        public string DuplicateMethod { get; set; } = "Offline QR Scan";
-
-        public int TimeDifferenceSeconds => (int)Math.Abs((DuplicateScannedAt - EarlierScannedAt).TotalSeconds);
-        public string Status { get; set; } = "PENDING_REVIEW"; // PENDING_REVIEW, RESOLVED_EARLIER_VALID, RESOLVED_SECURITY_ESCALATED
-        public string? ResolutionNotes { get; set; }
-        public string? ResolvedByName { get; set; }
-        public DateTime? ResolvedAt { get; set; }
-    }
-
-    public class ResolveConflictRequestDTO
-    {
-        public string Decision { get; set; } = "ACCEPT_EARLIER_REJECT_LATER"; // ACCEPT_EARLIER_REJECT_LATER, ESCALATE_SECURITY, REVOKE_BOTH
-        public string Notes { get; set; } = string.Empty;
-    }
-
-    public class OfflineSyncResponseDTO
-    {
-        public bool Success { get; set; }
-        public int TotalProcessed { get; set; }
-        public int NewlyCheckedIn { get; set; }
-        public int AlreadyUsedCount { get; set; }
-        public int ConflictCount { get; set; }
-        public List<OfflineSyncConflictDTO> Conflicts { get; set; } = new();
-        public DateTime SyncedAt { get; set; }
-        public string Message { get; set; } = string.Empty;
     }
 }

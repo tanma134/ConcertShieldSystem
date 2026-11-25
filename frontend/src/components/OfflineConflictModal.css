@@ -558,3 +558,48 @@
 .btn-footer-close:hover {
   background: #334366;
 }
+
+.conflict-account-info-box {
+  background: #182239;
+  border: 1px solid #2a3754;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 14px;
+}
+
+.account-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px 18px;
+}
+
+.info-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.info-lbl {
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.info-val {
+  font-size: 13.5px;
+  color: #f1f5f9;
+  word-break: break-all;
+}
+
+.info-val.font-semibold {
+  font-weight: 600;
+  color: #38bdf8;
+}
+
+.info-val.font-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12.5px;
+  color: #cbd5e1;
+}

@@ -514,6 +514,11 @@ namespace EventAPI.Services
 
             await _eventRepository.UpdateAsync(entity);
 
+            if (!isAdmin)
+            {
+                _governance.NotifyAdmins(entity, "Event Cancelled: " + entity.Title, $"The organizer has cancelled the concert \"{entity.Title}\". Please review ticket refund operations.");
+            }
+
             var reloaded = await _eventRepository.GetByIdAsync(id, includeChildren: true);
             return MapToResponse(reloaded!);
         }

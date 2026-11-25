@@ -3,36 +3,8 @@ import policyApi from "../../api/policyApi";
 import AdminShell from "./AdminShell";
 import "./SystemPoliciesPage.css";
 
-const CATEGORIES = [
-  {
-    id: "PRICE_TICKETING",
-    name: "Pricing & Ticketing Policy",
-    desc: "Regulations on official ticket pricing, platform service fees, per-order limits, and anti-scalping mechanisms.",
-  },
-  {
-    id: "REFUND_CANCELLATION",
-    name: "Refund & Event Cancellation",
-    desc: "Standards for 100% attendee refunds upon cancellation, refund processing timelines, and purchase protection.",
-  },
-  {
-    id: "VIRTUAL_QUEUE",
-    name: "Virtual Queue & Reservation",
-    desc: "Fair randomized queue number allocation, waiting room throughput, and seat reservation hold timeouts.",
-  },
-  {
-    id: "RISK_ANTI_FRAUD",
-    name: "Anti-Scalping & Dynamic QR Protection",
-    desc: "Dynamic rotating QR security mandates, screenshot anti-fraud measures, and secondary market account blacklisting.",
-  },
-  {
-    id: "TERMS_OF_SERVICE",
-    name: "Platform Terms of Service (TOS)",
-    desc: "Binding user agreements, legal responsibilities, and dispute resolution for Organizers, Attendees, and Platform.",
-  },
-];
-
 export default function SystemPoliciesPage() {
-  const [selectedCategory, setSelectedCategory] = useState("PRICE_TICKETING");
+  const selectedCategory = "PRICE_TICKETING";
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -42,6 +14,60 @@ export default function SystemPoliciesPage() {
   const [readingDoc, setReadingDoc] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const getTodayDateTimeLocal = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  const getMinDateLocal = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}T00:00`;
+  };
+
+  // Real-time Field Validator
+  const validateField = (name, value) => {
+    if (name === "platformFeePercent") {
+      if (value === "" || value === null || value === undefined) {
+        return "Platform service fee is required.";
+      }
+      const num = parseFloat(value);
+      if (isNaN(num)) {
+        return "Platform service fee must be a valid number.";
+      }
+      if (num < 0) {
+        return "Platform service fee cannot be less than 0%.";
+      }
+      if (num > 100) {
+        return "Platform service fee cannot be greater than 100%.";
+      }
+      return "";
+    }
+
+    if (name === "effectiveDate") {
+      if (!value) {
+        return "Effective start date is required.";
+      }
+      const selected = new Date(value);
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      if (selected < startOfToday) {
+        return "Effective start date cannot be earlier than today.";
+      }
+      return "";
+    }
+
+    return "";
+  };
 
   // Form State for creating a new version
   const [createForm, setCreateForm] = useState({
@@ -49,14 +75,16 @@ export default function SystemPoliciesPage() {
     scope: "All Platform Attendees & Event Organizers",
     changeSummary: "",
     content: "",
-    effectiveDate: new Date().toISOString().slice(0, 16),
+    platformFeePercent: 5.0,
+    payoutDays: 7,
+    effectiveDate: getTodayDateTimeLocal(),
   });
 
-  const loadHistory = useCallback(async (category) => {
+  const loadHistory = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await policyApi.getPolicyHistory(category);
+      const res = await policyApi.getPolicyHistory("PRICE_TICKETING");
       if (res?.data?.data) {
         setHistory(res.data.data);
       } else {
@@ -71,23 +99,26 @@ export default function SystemPoliciesPage() {
   }, []);
 
   useEffect(() => {
-    loadHistory(selectedCategory);
-  }, [selectedCategory, loadHistory]);
+    loadHistory();
+  }, [loadHistory]);
 
   const activePolicy = history.find((p) => p.status === "Active") || history[0];
 
   const handleOpenCreateModal = () => {
     const defaultTemplate = activePolicy
-      ? `ARTICLE 1. OBJECTIVES AND APPLICABLE SCOPE\n1. This policy update establishes binding standards across the platform to ensure full transparency and consumer protection.\n\nARTICLE 2. OPERATIONAL REQUIREMENTS AND COMPLIANCE MANDATES\n1. All participants must adhere strictly to platform regulations regarding ticket issuance and dispute management.\n\nARTICLE 3. EFFECTIVE DATE AND ENFORCEMENT\n1. This policy version takes legal effect immediately upon publication on the system.`
+      ? `ARTICLE 1. OBJECTIVES AND APPLICABLE SCOPE\n1. This platform policy establishes binding operational, ticketing, and financial standards across ConcertShield.\n\nARTICLE 2. OPERATIONAL REQUIREMENTS AND COMPLIANCE MANDATES\n1. All participants must adhere strictly to platform regulations regarding ticket issuance, platform fee deductions (${activePolicy.platformFeePercent}%), and payout schedules (${activePolicy.payoutDays} business days).\n\nARTICLE 3. EFFECTIVE DATE AND ENFORCEMENT\n1. This policy version takes legal effect immediately upon publication on the system.`
       : "";
 
     setCreateForm({
-      title: activePolicy ? `Update ${activePolicy.title}` : `Policy for ${selectedCategory}`,
+      title: activePolicy ? `Update ${activePolicy.title}` : "ConcertShield Platform Policy & Financial Terms",
       scope: activePolicy?.scope || "All Platform Attendees & Event Organizers",
       changeSummary: "",
       content: activePolicy?.content || defaultTemplate,
-      effectiveDate: new Date().toISOString().slice(0, 16),
+      platformFeePercent: activePolicy?.platformFeePercent ?? 5.0,
+      payoutDays: activePolicy?.payoutDays ?? 7,
+      effectiveDate: getTodayDateTimeLocal(),
     });
+    setFieldErrors({});
     setShowCreateModal(true);
   };
 
@@ -106,6 +137,37 @@ export default function SystemPoliciesPage() {
       return;
     }
 
+    const feeErr = validateField("platformFeePercent", createForm.platformFeePercent);
+    const dateErr = validateField("effectiveDate", createForm.effectiveDate);
+
+    if (feeErr || dateErr) {
+      setFieldErrors({
+        platformFeePercent: feeErr,
+        effectiveDate: dateErr,
+      });
+      return;
+    }
+
+    const feeNum = parseFloat(createForm.platformFeePercent);
+    if (isNaN(feeNum) || feeNum < 0 || feeNum > 100) {
+      setFieldErrors((prev) => ({ ...prev, platformFeePercent: "Platform service fee must be between 0% and 100%." }));
+      return;
+    }
+
+    const daysNum = parseInt(createForm.payoutDays, 10);
+    if (isNaN(daysNum) || daysNum < 1 || daysNum > 60) {
+      setError("Payout timeline must be between 1 and 60 business days.");
+      return;
+    }
+
+    const selectedDate = new Date(createForm.effectiveDate);
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    if (selectedDate < startOfToday) {
+      setFieldErrors((prev) => ({ ...prev, effectiveDate: "Effective start date cannot be earlier than today." }));
+      return;
+    }
+
     try {
       setSubmitting(true);
       const payload = {
@@ -114,6 +176,8 @@ export default function SystemPoliciesPage() {
         scope: createForm.scope.trim(),
         changeSummary: createForm.changeSummary.trim(),
         content: createForm.content.trim(),
+        platformFeePercent: feeNum,
+        payoutDays: daysNum,
         effectiveDate: new Date(createForm.effectiveDate).toISOString(),
       };
 
@@ -132,8 +196,6 @@ export default function SystemPoliciesPage() {
       setSubmitting(false);
     }
   };
-
-  const currentCatObj = CATEGORIES.find((c) => c.id === selectedCategory) || CATEGORIES[0];
 
   return (
     <AdminShell title="Platform Governance & Policy Versioning">
@@ -167,27 +229,18 @@ export default function SystemPoliciesPage() {
           </div>
         )}
 
-        {/* Category Tabs */}
-        <div className="policy-category-tabs">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.id}
-              className={`cat-tab-btn ${selectedCategory === cat.id ? "active" : ""}`}
-              onClick={() => setSelectedCategory(cat.id)}
-            >
-              <div className="cat-text">
-                <strong>{cat.name}</strong>
-              </div>
-            </button>
-          ))}
-        </div>
-
         {/* Current Active Policy Snapshot Card */}
         {activePolicy && (
           <div className="active-policy-spotlight">
             <div className="spotlight-badge-row">
               <span className="badge-active-version">
                 Active In-Force Version: {activePolicy.versionCode} (v{activePolicy.versionNumber})
+              </span>
+              <span style={{ background: "rgba(236, 72, 153, 0.25)", color: "#fbcfe8", border: "1px solid #ec4899", padding: "0.3rem 0.85rem", borderRadius: "999px", fontWeight: "700", fontSize: "0.82rem" }}>
+                💰 Platform Fee: {activePolicy.platformFeePercent}%
+              </span>
+              <span style={{ background: "rgba(139, 92, 246, 0.25)", color: "#ddd6fe", border: "1px solid #8b5cf6", padding: "0.3rem 0.85rem", borderRadius: "999px", fontWeight: "700", fontSize: "0.82rem" }}>
+                ⏱️ Payout Schedule: {activePolicy.payoutDays} Business Days
               </span>
               <span className="badge-effective-date">
                 Effective from: {new Date(activePolicy.effectiveDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
@@ -217,12 +270,12 @@ export default function SystemPoliciesPage() {
         <section className="policy-history-section">
           <div className="history-section-header">
             <div>
-              <h3>Enacted Version History ({currentCatObj.name})</h3>
-              <p>{currentCatObj.desc}</p>
+              <h3>Enacted Version History</h3>
+              <p>Platform pricing, ticketing fee structures, and payout rules.</p>
             </div>
             <button
               className="btn-refresh-history"
-              onClick={() => loadHistory(selectedCategory)}
+              onClick={() => loadHistory()}
               disabled={loading}
             >
               {loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Refresh Data"}
@@ -235,6 +288,7 @@ export default function SystemPoliciesPage() {
                 <tr>
                   <th>Version Code</th>
                   <th>Policy Document Title</th>
+                  <th>Fee / Payout</th>
                   <th>Applicable Scope</th>
                   <th>Summary of Changes</th>
                   <th>Effective Date</th>
@@ -246,13 +300,13 @@ export default function SystemPoliciesPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="8" className="table-loading">
+                    <td colSpan="9" className="table-loading">
                       <span className="app-loading-spinner" role="status" aria-label="Loading" />
                     </td>
                   </tr>
                 ) : history.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="table-empty">
+                    <td colSpan="9" className="table-empty">
                       No policy documents have been published for this category yet.
                     </td>
                   </tr>
@@ -267,6 +321,11 @@ export default function SystemPoliciesPage() {
                       </td>
                       <td className="policy-title-cell">
                         <strong>{item.title}</strong>
+                      </td>
+                      <td>
+                        <span style={{ display: "inline-block", background: "rgba(236,72,153,0.15)", color: "#f472b6", padding: "3px 8px", borderRadius: "6px", fontSize: "12px", fontWeight: "700", whiteSpace: "nowrap" }}>
+                          {item.platformFeePercent}% / {item.payoutDays}d
+                        </span>
                       </td>
                       <td>
                         <span className="scope-tag">{item.scope}</span>
@@ -317,6 +376,8 @@ export default function SystemPoliciesPage() {
                   <div className="doc-meta-row">
                     <span>Effective: <strong>{new Date(readingDoc.effectiveDate).toLocaleDateString("en-US")}</strong></span>
                     <span>Enacted By: <strong>{readingDoc.createdByAdminName}</strong></span>
+                    <span>Platform Fee: <strong>{readingDoc.platformFeePercent}%</strong></span>
+                    <span>Payout Window: <strong>{readingDoc.payoutDays} Business Days</strong></span>
                     <span>Date Signed: <strong>{new Date(readingDoc.createdAt).toLocaleString("en-US")}</strong></span>
                   </div>
                 </div>
@@ -359,7 +420,7 @@ export default function SystemPoliciesPage() {
               <header className="create-modal-header">
                 <div>
                   <h2>Enact & Publish New Policy Version</h2>
-                  <p>Category: <strong>{currentCatObj.name}</strong></p>
+                  <p>Category: <strong>Platform Pricing, Fee & Ticketing Policies</strong></p>
                 </div>
                 <button className="btn-close-doc" onClick={() => setShowCreateModal(false)}>Close</button>
               </header>
@@ -380,6 +441,55 @@ export default function SystemPoliciesPage() {
 
                   <div className="form-row-2">
                     <div className="form-group">
+                      <label>Platform Service Fee (%) (*):</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        className={`form-input ${fieldErrors.platformFeePercent ? "input-error" : ""}`}
+                        placeholder="e.g. 5.0"
+                        value={createForm.platformFeePercent}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCreateForm({ ...createForm, platformFeePercent: val });
+                          const err = validateField("platformFeePercent", val);
+                          setFieldErrors((prev) => ({ ...prev, platformFeePercent: err }));
+                        }}
+                        required
+                      />
+                      {fieldErrors.platformFeePercent ? (
+                        <div style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px", fontWeight: "600", display: "flex", alignItems: "center", gap: "4px" }}>
+                          <span>⚠️</span>
+                          <span>{fieldErrors.platformFeePercent}</span>
+                        </div>
+                      ) : (
+                        <small style={{ color: "#94a3b8", fontSize: "11px", marginTop: "2px", display: "block" }}>
+                          Commission percentage deducted from ticket revenue (0% - 100%).
+                        </small>
+                      )}
+                    </div>
+
+                    <div className="form-group">
+                      <label>Payout Timeline (Business Days) (*):</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="60"
+                        className="form-input"
+                        placeholder="e.g. 7"
+                        value={createForm.payoutDays}
+                        onChange={(e) => setCreateForm({ ...createForm, payoutDays: e.target.value })}
+                        required
+                      />
+                      <small style={{ color: "#94a3b8", fontSize: "11px", marginTop: "2px", display: "block" }}>
+                        Disbursement deadline after sales report is finalized (1 - 60 days).
+                      </small>
+                    </div>
+                  </div>
+
+                  <div className="form-row-2">
+                    <div className="form-group">
                       <label>Applicable Scope (*):</label>
                       <input
                         type="text"
@@ -395,11 +505,23 @@ export default function SystemPoliciesPage() {
                       <label>Effective Start Date (*):</label>
                       <input
                         type="datetime-local"
-                        className="form-input"
+                        min={getMinDateLocal()}
+                        className={`form-input ${fieldErrors.effectiveDate ? "input-error" : ""}`}
                         value={createForm.effectiveDate}
-                        onChange={(e) => setCreateForm({ ...createForm, effectiveDate: e.target.value })}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCreateForm({ ...createForm, effectiveDate: val });
+                          const err = validateField("effectiveDate", val);
+                          setFieldErrors((prev) => ({ ...prev, effectiveDate: err }));
+                        }}
                         required
                       />
+                      {fieldErrors.effectiveDate && (
+                        <div style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px", fontWeight: "600", display: "flex", alignItems: "center", gap: "4px" }}>
+                          <span>⚠️</span>
+                          <span>{fieldErrors.effectiveDate}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 

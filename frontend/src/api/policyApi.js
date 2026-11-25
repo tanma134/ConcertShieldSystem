@@ -9,6 +9,10 @@ const policyApi = {
   getActivePolicies: () =>
     axiosClient.get("/admin/policies/active"),
 
+  // Get Active Pricing & Payout Policy (Public / Become Organizer)
+  getPricingTerms: () =>
+    axiosClient.get("/admin/policies/pricing-terms"),
+
   // Create New Policy Version
   createPolicyVersion: (data) =>
     axiosClient.post("/admin/policies/create", data),

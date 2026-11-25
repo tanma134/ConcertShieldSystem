@@ -52,18 +52,22 @@ namespace AuthenticationAPI.Services
             if (alreadyOrganizer)
             {
                 _logger.LogWarning("Organizer request rejected: UserId={UserId} is already an Organizer.", userId);
-                throw new InvalidOperationException("Tài khoản của bạn đã có vai trò Nhà tổ chức (Organizer).");
+                throw new InvalidOperationException("Your account already holds the Organizer role.");
             }
 
             var pending = await _requestRepository.GetPendingByUserIdAsync(userId);
             if (pending != null)
             {
                 _logger.LogWarning("Organizer request rejected: UserId={UserId} already has a pending request.", userId);
-                throw new InvalidOperationException("Bạn đã có một yêu cầu đang chờ phê duyệt. Vui lòng đợi quản trị viên xử lý.");
+                throw new InvalidOperationException("You already have a pending verification request. Please wait for an administrator to review it.");
             }
 
-            // Upload mandatory documents to Cloudinary
-            var licenseUpload = await _documentStorageService.UploadDocumentAsync(dto.BusinessLicenseFile, "BUSINESS_LICENSE");
+            // Upload optional business license & mandatory representative ID to Cloudinary
+            UploadedDocumentResult? licenseUpload = null;
+            if (dto.BusinessLicenseFile != null && dto.BusinessLicenseFile.Length > 0)
+            {
+                licenseUpload = await _documentStorageService.UploadDocumentAsync(dto.BusinessLicenseFile, "BUSINESS_LICENSE");
+            }
             var idUpload = await _documentStorageService.UploadDocumentAsync(dto.RepresentativeIdFile, "REPRESENTATIVE_ID");
 
             UploadedDocumentResult? portfolioUpload = null;
@@ -76,9 +80,13 @@ namespace AuthenticationAPI.Services
             {
                 UserId = userId,
                 Reason = dto.Reason.Trim(),
-                CompanyName = dto.CompanyName.Trim(),
+                CompanyName = string.IsNullOrWhiteSpace(dto.CompanyName) ? null : dto.CompanyName.Trim(),
                 TaxCode = dto.TaxCode.Trim(),
                 RepresentativeName = dto.RepresentativeName.Trim(),
+                BankAccountHolder = dto.BankAccountHolder.Trim(),
+                BankAccountNumber = dto.BankAccountNumber.Trim(),
+                BankName = dto.BankName.Trim(),
+                BankBranch = string.IsNullOrWhiteSpace(dto.BankBranch) ? null : dto.BankBranch.Trim(),
                 Website = string.IsNullOrWhiteSpace(dto.Website) ? null : dto.Website.Trim(),
                 PhoneNumber = string.IsNullOrWhiteSpace(dto.PhoneNumber) ? null : dto.PhoneNumber.Trim(),
                 Experience = string.IsNullOrWhiteSpace(dto.Experience) ? null : dto.Experience.Trim(),
@@ -88,16 +96,19 @@ namespace AuthenticationAPI.Services
                 IsDeleted = false
             };
 
-            request.Documents.Add(new OrganizerRequestDocument
+            if (licenseUpload != null && dto.BusinessLicenseFile != null)
             {
-                DocumentType = "BUSINESS_LICENSE",
-                FileName = dto.BusinessLicenseFile.FileName,
-                FileUrl = licenseUpload.SecureUrl,
-                PreviewUrl = licenseUpload.PreviewUrl,
-                PublicId = licenseUpload.PublicId,
-                IsImage = licenseUpload.IsImage,
-                UploadedAt = DateTime.UtcNow
-            });
+                request.Documents.Add(new OrganizerRequestDocument
+                {
+                    DocumentType = "BUSINESS_LICENSE",
+                    FileName = dto.BusinessLicenseFile.FileName,
+                    FileUrl = licenseUpload.SecureUrl,
+                    PreviewUrl = licenseUpload.PreviewUrl,
+                    PublicId = licenseUpload.PublicId,
+                    IsImage = licenseUpload.IsImage,
+                    UploadedAt = DateTime.UtcNow
+                });
+            }
 
             request.Documents.Add(new OrganizerRequestDocument
             {
@@ -130,6 +141,63 @@ namespace AuthenticationAPI.Services
             _logger.LogInformation("Organizer request created: UserId={UserId}, RequestId={RequestId}, DocsCount={Count}.",
                 userId, request.RequestId, request.Documents.Count);
 
+            // Notify Admin of new Organizer verification application
+            _ = Task.Run(async () =>
+            {
+                var displayName = !string.IsNullOrWhiteSpace(request.CompanyName) ? request.CompanyName : request.RepresentativeName;
+                var adminNotifTitle = $"New Organizer Application: {displayName}";
+                var adminNotifMsg = $"Applicant '{displayName}' (Tax: {request.TaxCode}, Bank: {request.BankName} - {request.BankAccountNumber}) has submitted verification documents for review.";
+                try
+                {
+                    using var conn = new Npgsql.NpgsqlConnection("Host=localhost;Port=5432;Database=notification_db;Username=postgres;Password=123456");
+                    await conn.OpenAsync();
+                    using var cmd = new Npgsql.NpgsqlCommand(
+                        "INSERT INTO notifications (user_id, title, message, category, target_url, is_read, created_at, is_deleted) VALUES (@uid, @title, @msg, @cat, @url, false, NOW(), false);", conn);
+                    cmd.Parameters.AddWithValue("uid", 1); // Admin user id 1
+                    cmd.Parameters.AddWithValue("title", adminNotifTitle);
+                    cmd.Parameters.AddWithValue("msg", adminNotifMsg);
+                    cmd.Parameters.AddWithValue("cat", "organizer_request_submitted");
+                    cmd.Parameters.AddWithValue("url", "/admin/organizer-requests");
+                    await cmd.ExecuteNonQueryAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to persist admin notification for organizer request {RequestId}", request.RequestId);
+                }
+
+                try
+                {
+                    var handler = new HttpClientHandler
+                    {
+                        ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true
+                    };
+                    using var httpClient = new HttpClient(handler);
+                    httpClient.Timeout = TimeSpan.FromSeconds(3);
+
+                    var payload = new
+                    {
+                        userId = 1,
+                        title = adminNotifTitle,
+                        message = adminNotifMsg,
+                        category = "organizer_request_submitted",
+                        targetUrl = "/admin/organizer-requests"
+                    };
+                    var content = new StringContent(System.Text.Json.JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
+
+                    var endpoints = new[] { "https://localhost:7197/api/notifications", "http://localhost:5174/api/notifications" };
+                    foreach (var ep in endpoints)
+                    {
+                        try
+                        {
+                            var res = await httpClient.PostAsync(ep, content);
+                            if (res.IsSuccessStatusCode) break;
+                        }
+                        catch { }
+                    }
+                }
+                catch { }
+            });
+
             return MapToDto(request, user);
         }
 
@@ -156,10 +224,10 @@ namespace AuthenticationAPI.Services
         public async Task<OrganizerRequestResponseDTO> ReviewRequestAsync(int requestId, int reviewerId, ReviewOrganizerRequestDTO dto)
         {
             if (dto.Status != StatusApproved && dto.Status != StatusRejected)
-                throw new ArgumentException("Trạng thái phải là 'Approved' hoặc 'Rejected'.");
+                throw new ArgumentException("Status must be either 'Approved' or 'Rejected'.");
 
             if (dto.Status == StatusRejected && string.IsNullOrWhiteSpace(dto.RejectionReason))
-                throw new ArgumentException("Lý do từ chối là bắt buộc khi từ chối yêu cầu.");
+                throw new ArgumentException("Rejection reason is required when rejecting the request.");
 
             var request = await _requestRepository.GetByIdAsync(requestId)
                 ?? throw new KeyNotFoundException("Organizer request not found.");
@@ -167,7 +235,7 @@ namespace AuthenticationAPI.Services
             if (request.Status != StatusPending)
             {
                 _logger.LogWarning("Review rejected: RequestId={RequestId} is not pending (current status: {Status}).", requestId, request.Status);
-                throw new InvalidOperationException($"Yêu cầu này đã được {request.Status.ToLower()} trước đó.");
+                throw new InvalidOperationException($"This request has already been {request.Status.ToLower()} previously.");
             }
 
             request.Status = dto.Status;
@@ -204,10 +272,35 @@ namespace AuthenticationAPI.Services
             {
                 var targetUserId = request.UserId;
                 var isApproved = dto.Status == StatusApproved;
+                var userEmail = request.User?.Email;
+                var userFullName = request.User?.FullName ?? "Customer";
+                var rejectionReason = dto.RejectionReason;
+                var reviewNote = dto.ReviewNote;
+
+                decimal feePercent = 5.0m;
+                int payoutDays = 7;
+                if (isApproved)
+                {
+                    try
+                    {
+                        using var pConn = new Npgsql.NpgsqlConnection("Host=localhost;Port=5432;Database=admin_db;Username=postgres;Password=123456");
+                        pConn.Open();
+                        using var pCmd = new Npgsql.NpgsqlCommand("SELECT platform_fee_percent, payout_days FROM system_policies WHERE category = 'PRICE_TICKETING' AND LOWER(status) = 'active' ORDER BY version_number DESC LIMIT 1;", pConn);
+                        using var pReader = pCmd.ExecuteReader();
+                        if (pReader.Read())
+                        {
+                            if (pReader["platform_fee_percent"] != DBNull.Value) feePercent = Convert.ToDecimal(pReader["platform_fee_percent"]);
+                            if (pReader["payout_days"] != DBNull.Value) payoutDays = Convert.ToInt32(pReader["payout_days"]);
+                        }
+                    }
+                    catch { }
+                }
+
+                var bankInfoStr = !string.IsNullOrWhiteSpace(request.BankName) ? $" to {request.BankName} ({request.BankAccountNumber})" : "";
                 var notifTitle = isApproved ? "Organizer Account Approved" : "Organizer Request Rejected";
                 var notifMessage = isApproved
-                    ? "Congratulations! Your organizer registration request has been approved. You now have full access to Organizer features and dashboard."
-                    : $"Your organizer request has been rejected. Reason: {dto.RejectionReason ?? "Information did not meet verification criteria."}";
+                    ? $"Congratulations! Your organizer account has been approved. Net ticket revenue (after {feePercent}% platform service fee) will be disbursed{bankInfoStr} within {payoutDays} business days after post-event settlement."
+                    : $"Your organizer request has been rejected. Reason: {rejectionReason ?? "Information did not meet verification criteria."}";
                 var notifCategory = isApproved ? "organizer_approved" : "organizer_rejected";
                 var notifUrl = isApproved ? "/organizer/dashboard" : "/organizer/request";
 
@@ -273,23 +366,25 @@ namespace AuthenticationAPI.Services
                     // 3. Email notification to applicant
                     try
                     {
-                        var userEmail = request.User?.Email;
-                        var userFullName = request.User?.FullName ?? "Customer";
                         if (!string.IsNullOrWhiteSpace(userEmail))
                         {
                             await _emailService.SendOrganizerRequestResultAsync(
                                 userEmail,
                                 userFullName,
                                 isApproved,
-                                dto.RejectionReason,
-                                dto.ReviewNote
+                                rejectionReason,
+                                reviewNote
                             );
-                            _logger.LogInformation("Sent organizer review email to {Email} (Status={Status})", userEmail, dto.Status);
+                            _logger.LogInformation("Sent organizer review email to {Email} (Status={Status})", userEmail, isApproved ? "Approved" : "Rejected");
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Cannot send organizer email: User or User.Email is null for RequestId={RequestId}", requestId);
                         }
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "Failed to send organizer review email to user for request {RequestId}", requestId);
+                        _logger.LogError(ex, "Failed to send organizer review email to user for request {RequestId}", requestId);
                     }
                 });
             }
@@ -313,6 +408,11 @@ namespace AuthenticationAPI.Services
                 Website = request.Website,
                 PhoneNumber = request.PhoneNumber,
                 Experience = request.Experience,
+
+                BankAccountHolder = request.BankAccountHolder,
+                BankAccountNumber = request.BankAccountNumber,
+                BankName = request.BankName,
+                BankBranch = request.BankBranch,
 
                 Status = request.Status,
                 ReviewedBy = request.ReviewedBy,

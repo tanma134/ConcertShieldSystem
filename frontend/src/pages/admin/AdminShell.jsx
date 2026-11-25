@@ -43,6 +43,12 @@ const ICONS = {
       <path d="M13 5v2M13 11v2M13 17v2" />
     </Icon>
   ),
+  vouchers: (
+    <Icon>
+      <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
+      <path d="M9 9h.01M15 15h.01M9 15l6-6" />
+    </Icon>
+  ),
   finance: (
     <Icon>
       <rect x="1" y="4" width="22" height="16" rx="2" />
@@ -145,10 +151,16 @@ export const ADMIN_GROUPS = [
     ],
   },
   {
+    key: "vouchers",
+    label: "Voucher Management",
+    items: [
+      ["/admin/vouchers", "Vouchers"],
+    ],
+  },
+  {
     key: "finance",
     label: "Finance Management",
     items: [
-      ["/admin/vouchers", "Vouchers"],
       ["/admin/refund-reconciliation", "Refund Reconciliation"],
       ["/admin/payment-reconciliation", "Payment Exceptions"],
       ["/admin/failed-transaction-queue", "Failed Transactions"],

@@ -4,49 +4,6 @@ import notificationApi from "../api/notificationApi";
 import { useAuth } from "../context/AuthContext";
 import "./NotificationCenterPage.css";
 
-const MOCK_NOTIFICATIONS = [
-  {
-    notificationId: 101,
-    userId: 3,
-    title: "Sự kiện mới: Anh Trai Say Hi Concert 2026",
-    message: "Sự kiện 'Anh Trai Say Hi Concert 2026' vừa được phát hành và mở bán vé. Nhấp vào đây để xem chi tiết ngay!",
-    category: "event_new",
-    targetUrl: "/events/anh-trai-say-hi-concert-2026",
-    isRead: false,
-    createdAt: new Date(Date.now() - 10 * 60000).toISOString(),
-  },
-  {
-    notificationId: 102,
-    userId: 3,
-    title: "Sự kiện mới: Tri Âm Concert - Mỹ Tâm",
-    message: "Sự kiện 'Tri Âm Concert - Mỹ Tâm' vừa được cập nhật lịch biểu diễn mới. Đặt vé ngay hôm nay!",
-    category: "event_new",
-    targetUrl: "/events/tri-am-concert-my-tam",
-    isRead: false,
-    createdAt: new Date(Date.now() - 45 * 60000).toISOString(),
-  },
-  {
-    notificationId: 103,
-    userId: 3,
-    title: "Sự kiện mới: Lễ Hội Âm Nhạc Hò Dô 2026",
-    message: "Lễ Hội Âm Nhạc Hò Dô 2026 chính thức phát hành mã giảm giá sớm. Nhấp để xem thông tin chi tiết!",
-    category: "event_new",
-    targetUrl: "/events/ho-do-music-festival-2026",
-    isRead: false,
-    createdAt: new Date(Date.now() - 120 * 60000).toISOString(),
-  },
-  {
-    notificationId: 104,
-    userId: 3,
-    title: "Chào mừng Nguyễn Văn Khách!",
-    message: "Tài khoản của bạn đã được kích hoạt thành công trên ConcertShield. Khám phá ngay các concert nổi bật!",
-    category: "account",
-    targetUrl: "/events/anh-trai-say-hi-concert-2026",
-    isRead: true,
-    createdAt: new Date(Date.now() - 300 * 60000).toISOString(),
-  },
-];
-
 const normalizeNotification = (n) => ({
   notificationId: n.notificationId ?? n.NotificationId ?? n.id ?? 0,
   userId: n.userId ?? n.UserId ?? 0,
@@ -61,9 +18,9 @@ const normalizeNotification = (n) => ({
 
 export default function NotificationCenterPage() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
-  const [unreadCount, setUnreadCount] = useState(MOCK_NOTIFICATIONS.filter(n => !n.isRead).length);
+  const { user, isAuthenticated } = useAuth();
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState("all"); // 'all' | 'unread'
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
@@ -73,11 +30,49 @@ export default function NotificationCenterPage() {
       .getNotifications()
       .then((res) => {
         const rawItems = res.data?.items || res.data?.Items || res.data?.data?.items || res.data?.data?.Items || [];
-        const rawUnread = res.data?.unreadCount ?? res.data?.UnreadCount ?? res.data?.data?.unreadCount ?? res.data?.data?.UnreadCount ?? 0;
-        const normalized = rawItems.map(normalizeNotification);
-        if (normalized.length > 0) {
-          setNotifications(normalized);
-          setUnreadCount(rawUnread);
+        let normalized = rawItems.map(normalizeNotification);
+
+        const uid = user?.userId ?? user?.id;
+        if (uid) {
+          try {
+            const userNotifsKey = `cs_user_notifs_${uid}`;
+            const localSaved = JSON.parse(localStorage.getItem(userNotifsKey) || "[]");
+            let localChanged = false;
+            for (const item of localSaved) {
+              const matched = normalized.find((n) => n.title === item.title && n.message === item.message);
+              if (!matched) {
+                normalized.unshift(item);
+              } else {
+                if (matched.isRead && !item.isRead) {
+                  item.isRead = true;
+                  localChanged = true;
+                } else if (!matched.isRead && item.isRead) {
+                  matched.isRead = true;
+                }
+              }
+            }
+            if (localChanged) {
+              localStorage.setItem(userNotifsKey, JSON.stringify(localSaved));
+            }
+          } catch (_) {}
+        }
+
+        setNotifications(normalized);
+        setUnreadCount(normalized.filter((n) => !n.isRead).length);
+      })
+      .catch((err) => {
+        console.warn("Could not fetch remote notifications:", err?.message);
+        const uid = user?.userId ?? user?.id;
+        if (uid) {
+          try {
+            const userNotifsKey = `cs_user_notifs_${uid}`;
+            const localSaved = JSON.parse(localStorage.getItem(userNotifsKey) || "[]");
+            setNotifications(localSaved);
+            setUnreadCount(localSaved.filter((n) => !n.isRead).length);
+          } catch (_) {}
+        }
+      });
+  };
         }
       })
       .catch(() => {});
@@ -100,11 +95,26 @@ export default function NotificationCenterPage() {
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
 
+      const uid = user?.userId ?? user?.id;
+      if (uid) {
+        try {
+          const userNotifsKey = `cs_user_notifs_${uid}`;
+          const localSaved = JSON.parse(localStorage.getItem(userNotifsKey) || "[]");
+          const updatedLocal = localSaved.map((n) =>
+            n.notificationId === notif.notificationId || (n.title === notif.title && n.message === notif.message)
+              ? { ...n, isRead: true }
+              : n
+          );
+          localStorage.setItem(userNotifsKey, JSON.stringify(updatedLocal));
+        } catch (_) {}
+      }
+
       try {
         await notificationApi.markAsRead(notif.notificationId);
       } catch (err) {
         console.warn("Background mark read warning:", err?.message);
       }
+      window.dispatchEvent(new Event("notification-updated"));
     }
     if (notif.targetUrl) {
       navigate(notif.targetUrl);
@@ -115,11 +125,22 @@ export default function NotificationCenterPage() {
     setUnreadCount(0);
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
 
+    const uid = user?.userId ?? user?.id;
+    if (uid) {
+      try {
+        const userNotifsKey = `cs_user_notifs_${uid}`;
+        const localSaved = JSON.parse(localStorage.getItem(userNotifsKey) || "[]");
+        const updatedLocal = localSaved.map((n) => ({ ...n, isRead: true }));
+        localStorage.setItem(userNotifsKey, JSON.stringify(updatedLocal));
+      } catch (_) {}
+    }
+
     try {
       await notificationApi.markAllAsRead();
     } catch (err) {
       console.warn("Background mark all read warning:", err?.message);
     }
+    window.dispatchEvent(new Event("notification-updated"));
   };
 
   const handleDelete = async (id, e) => {
@@ -156,8 +177,8 @@ export default function NotificationCenterPage() {
     <div className="nc-container">
       <div className="nc-header">
         <h1 className="nc-title">
-          <span>Trung tâm Thông báo</span>
-          {unreadCount > 0 && <span className="nc-unread-badge">{unreadCount} chưa đọc</span>}
+          <span>Notification Center</span>
+          {unreadCount > 0 && <span className="nc-unread-badge">{unreadCount} unread</span>}
         </h1>
 
         {unreadCount > 0 && (
@@ -167,7 +188,7 @@ export default function NotificationCenterPage() {
               className="tb-btn tb-btn-outline"
               onClick={handleMarkAllAsRead}
             >
-              Đánh dấu tất cả đã đọc
+              Mark all as read
             </button>
           </div>
         )}
@@ -179,23 +200,23 @@ export default function NotificationCenterPage() {
           className={`nc-tab ${filter === "all" ? "active" : ""}`}
           onClick={() => setFilter("all")}
         >
-          Tất cả ({notifications.length})
+          All ({notifications.length})
         </button>
         <button
           type="button"
           className={`nc-tab ${filter === "unread" ? "active" : ""}`}
           onClick={() => setFilter("unread")}
         >
-          Chưa đọc ({unreadCount})
+          Unread ({unreadCount})
         </button>
       </div>
 
       {loading ? (
-        <div className="nc-empty">Đang tải thông báo...</div>
+        <div className="nc-empty">Loading notifications...</div>
       ) : filteredItems.length === 0 ? (
         <div className="nc-empty">
           <div className="nc-empty-icon">🔔</div>
-          <div className="nc-empty-text">Chưa có thông báo nào</div>
+          <div className="nc-empty-text">No notifications found</div>
         </div>
       ) : (
         <div className="nc-list">
@@ -223,7 +244,7 @@ export default function NotificationCenterPage() {
               <button
                 type="button"
                 className="nc-card-delete"
-                title="Xóa thông báo"
+                title="Delete notification"
                 onClick={(e) => {
                   e.stopPropagation();
                   setDeleteConfirmId(n.notificationId);
@@ -235,14 +256,14 @@ export default function NotificationCenterPage() {
               {deleteConfirmId === n.notificationId && (
                 <div className="tb-notif-confirm-overlay" onClick={(e) => e.stopPropagation()}>
                   <div className="tb-notif-confirm-box">
-                    <p>Bạn có chắc chắn muốn xóa thông báo này?</p>
+                    <p>Are you sure you want to delete this notification?</p>
                     <div className="tb-notif-confirm-actions">
                       <button
                         type="button"
                         className="tb-btn tb-btn-sm tb-btn-danger"
                         onClick={(e) => handleDelete(n.notificationId, e)}
                       >
-                        Xóa
+                        Delete
                       </button>
                       <button
                         type="button"
@@ -252,7 +273,7 @@ export default function NotificationCenterPage() {
                           setDeleteConfirmId(null);
                         }}
                       >
-                        Hủy
+                        Cancel
                       </button>
                     </div>
                   </div>

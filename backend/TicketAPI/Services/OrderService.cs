@@ -612,7 +612,10 @@ namespace TicketAPI.Services
                 .OrderByDescending(qr => qr.IssuedAt)
                 .FirstOrDefault();
 
-            var newToken = GenerateQrToken();
+            var tokenRandom = GenerateQrToken();
+            var codeStr = ticket.TicketCode != Guid.Empty ? ticket.TicketCode.ToString() : ticket.TicketId.ToString();
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var newToken = $"{codeStr}:{timestamp}:{tokenRandom}";
             var expiresAt = now.AddSeconds(60);
 
             if (currentToken == null)

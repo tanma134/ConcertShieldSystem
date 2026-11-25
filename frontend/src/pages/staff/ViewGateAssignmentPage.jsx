@@ -15,7 +15,7 @@ export default function ViewGateAssignmentPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const currentEventId = eventId ? Number(eventId) : (assignedEvents.length > 0 ? assignedEvents[0].eventId : 20);
+  const currentEventId = eventId ? Number(eventId) : (assignedEvents.length > 0 ? assignedEvents[0].eventId : null);
 
   // Load events assigned to this staff member from event_staff table
   useEffect(() => {
@@ -24,34 +24,42 @@ export default function ViewGateAssignmentPage() {
 
   const loadAssignedEvents = async () => {
     try {
+      setLoading(true);
       const staffId = user?.userId ?? user?.id ?? user?.UserId ?? 0;
       const res = await staffApi.getMyAssignments(staffId);
       const list = res.data?.data || [];
       setAssignedEvents(list);
 
-      // If user navigated to base path without eventId or event is no longer assigned, auto-select their first assigned event
       if (list.length > 0) {
         const isCurrentAssigned = list.some((e) => e.eventId === Number(currentEventId));
-        if (!isCurrentAssigned) {
+        if (!isCurrentAssigned && !eventId) {
           navigate(`/staff/gate-assignment/${list[0].eventId}`, { replace: true });
         }
+      } else {
+        setLoading(false);
       }
     } catch (err) {
       console.warn("Could not load staff assignments from event_staff:", err);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     if (currentEventId) {
       fetchGateAssignment();
+    } else {
+      setAssignment(null);
+      setLoading(false);
     }
   }, [currentEventId]);
 
   const fetchGateAssignment = async () => {
+    if (!currentEventId) return;
     try {
       setLoading(true);
       setError("");
-      const res = await checkinApi.getGateAssignment(currentEventId);
+      const staffId = user?.userId ?? user?.id ?? user?.UserId ?? 0;
+      const res = await checkinApi.getGateAssignment(currentEventId, staffId);
       const assignmentData = res.data?.data || res.data;
       if (assignmentData) {
         setAssignment(assignmentData);
@@ -60,7 +68,7 @@ export default function ViewGateAssignmentPage() {
       }
     } catch (err) {
       console.error("Failed to load gate assignment:", err);
-      setError("Error connecting to server. Please try again later.");
+      setError("Unable to connect to server. Please try again later.");
     } finally {
       setLoading(false);
     }
@@ -68,28 +76,27 @@ export default function ViewGateAssignmentPage() {
 
   const handleOpenScanner = () => {
     const targetEventId = assignment?.eventId || currentEventId;
-    navigate(`/staff/checkin/${targetEventId}`);
+    if (targetEventId) {
+      navigate(`/staff/checkin/${targetEventId}`);
+    }
   };
 
   const currentAssignedEvent = assignedEvents.find((e) => e.eventId === currentEventId);
-  const eventTitle =
-    currentEventId === 20
-      ? "Acoustic Night"
-      : currentEventId === 21
-      ? "Hà Anh Tuấn - \"Chân Trời Rực Rỡ\" Live Concert"
-      : currentAssignedEvent?.eventTitle
-      || (assignment?.eventTitle && !assignment.eventTitle.startsWith("Concert") && !assignment.eventTitle.startsWith("Event") ? assignment.eventTitle : null)
-      || assignment?.eventName
-      || `Event ${currentEventId}`;
+  const eventTitle = currentAssignedEvent?.eventTitle
+    || (assignment?.eventTitle && !assignment.eventTitle.startsWith("Concert") && !assignment.eventTitle.startsWith("Event") ? assignment.eventTitle : null)
+    || assignment?.eventName
+    || (currentEventId ? `Event #${currentEventId}` : "");
 
   const formatEventTime = () => {
     if (currentAssignedEvent?.startsAt && currentAssignedEvent?.endsAt) {
       const s = new Date(currentAssignedEvent.startsAt);
       const e = new Date(currentAssignedEvent.endsAt);
-      return `${s.toLocaleDateString("vi-VN")} · ${s.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })} - ${e.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`;
+      return `${s.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · ${s.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })} - ${e.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`;
     }
-    return currentEventId === 20 ? "20/10/2026 · 18:00 - 23:59" : "20/11/2026 · 19:30 - 23:00";
+    return "";
   };
+
+  const hasAssignment = assignedEvents.length > 0 || assignment?.isAssigned;
 
   return (
     <div className="gate-assignment-page-wrapper">
@@ -97,17 +104,18 @@ export default function ViewGateAssignmentPage() {
         {/* Header */}
         <div className="gate-assignment-header">
           <div>
-            <h1 className="gate-main-title">Gate Assignment</h1>
+            <h1 className="gate-main-title">Gate Assignment & Shift Schedule</h1>
             <p className="gate-subtitle">
-              View your assigned event, gate location, and operational details.
+              View your assigned concert, physical gate location, and shift operational schedule.
             </p>
           </div>
           <div className="event-picker-box">
             <span className="picker-label">Select Event:</span>
             <select
-              value={currentEventId}
+              value={currentEventId || ""}
               onChange={(e) => navigate(`/staff/gate-assignment/${e.target.value}`)}
               className="event-select-dropdown"
+              disabled={assignedEvents.length === 0}
             >
               {assignedEvents.length > 0 ? (
                 assignedEvents.map((ev) => (
@@ -116,7 +124,7 @@ export default function ViewGateAssignmentPage() {
                   </option>
                 ))
               ) : (
-                <option value="" disabled>Chưa có sự kiện nào được phân công</option>
+                <option value="">No events assigned</option>
               )}
             </select>
           </div>
@@ -131,16 +139,28 @@ export default function ViewGateAssignmentPage() {
             {error}
             <button className="btn-retry" onClick={fetchGateAssignment}>Retry</button>
           </div>
+        ) : !hasAssignment ? (
+          /* Empty State when Staff is Not Assigned to Any Event */
+          <div style={{ textAlign: "center", padding: "56px 24px", background: "#18181b", borderRadius: "14px", border: "1px dashed #3f3f46", margin: "24px 0" }}>
+            <h2 style={{ color: "#ffffff", fontSize: "1.35rem", fontWeight: 700, marginBottom: "8px" }}>
+              No Event Assigned Yet
+            </h2>
+            <p style={{ color: "#9ca3af", maxWidth: "520px", margin: "0 auto", fontSize: "0.95rem", lineHeight: "1.6" }}>
+              Your staff account has not been assigned to any concert or admission gate yet. Please contact your Event Organizer to be assigned to a shift schedule and gate.
+            </p>
+          </div>
         ) : (
           <div className="gate-content-layout">
             {/* Top Event Banner Card */}
             <div className="event-banner-card">
               <div className="banner-left">
                 <h2 className="event-name-pink">{eventTitle}</h2>
-                <div className="event-date-sub">{formatEventTime()}</div>
+                {formatEventTime() && <div className="event-date-sub">{formatEventTime()}</div>}
               </div>
               <div className="banner-right">
-                <span className="event-status-active">Event Active</span>
+                <span className="event-status-active">
+                  Assigned Event
+                </span>
               </div>
             </div>
 
@@ -150,10 +170,7 @@ export default function ViewGateAssignmentPage() {
               <div className="detail-dark-card">
                 <div className="card-label-gray">Assigned Gate</div>
                 <div className="card-value-white">
-                  {assignment?.gateName || currentAssignedEvent?.gateName || "Main Gate"}
-                </div>
-                <div className="card-meta-line">
-                  Gate Code: <strong>{assignment?.gateId || "GATE_A"}</strong>
+                  {assignment?.gateName || currentAssignedEvent?.gateName || "Unassigned"}
                 </div>
                 <div className="card-meta-line">
                   Assigned Event: <strong>{eventTitle}</strong>
@@ -166,10 +183,12 @@ export default function ViewGateAssignmentPage() {
                 <div className="card-value-white">
                   {assignment?.shiftStartTime && assignment?.shiftEndTime
                     ? `${assignment.shiftStartTime} - ${assignment.shiftEndTime}`
-                    : "17:30 - 00:30"}
+                    : (currentAssignedEvent?.shiftStartTime && currentAssignedEvent?.shiftEndTime)
+                    ? `${currentAssignedEvent.shiftStartTime} - ${currentAssignedEvent.shiftEndTime}`
+                    : "All Day / Flexible"}
                 </div>
                 <div className="card-meta-line">
-                  Shift Name: <strong>{assignment?.shiftName || "Active Shift"}</strong>
+                  Shift Date: <strong>{assignment?.shiftDate ? new Date(assignment.shiftDate).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : (currentAssignedEvent?.shiftDate || "All Event Dates")}</strong>
                 </div>
                 <div className="card-meta-line">
                   Shift Status:{" "}
@@ -179,14 +198,14 @@ export default function ViewGateAssignmentPage() {
                 </div>
               </div>
 
-              {/* Card 3: Staff & Shift Admission Counts */}
+              {/* Card 3: Staff Officer Assignment */}
               <div className="detail-dark-card">
-                <div className="card-label-gray">Staff Officer Assignment</div>
+                <div className="card-label-gray">Staff Member</div>
                 <div className="card-value-white">
-                  {user?.fullName || user?.email || "Check-in Officer"}
+                  {user?.fullName || user?.email || "Check-in Staff"}
                 </div>
                 <div className="card-meta-line">
-                  Staff ID: <strong>{user?.userId || user?.id || 1}</strong>
+                  Email: <strong>{user?.email || "N/A"}</strong>
                 </div>
                 <div className="card-meta-line">
                   Scanned in Shift:{" "}
@@ -198,15 +217,56 @@ export default function ViewGateAssignmentPage() {
 
               {/* Card 4: Allowed Ticket Categories */}
               <div className="detail-dark-card">
-                <div className="card-label-gray">Allowed Gate Categories</div>
-                <div className="card-value-white" style={{ fontSize: "1.1rem" }}>
-                  All Ticket Categories
+                <div className="card-label-gray">Permitted Admission Tiers</div>
+                <div className="card-value-white" style={{ fontSize: "1.1rem", color: "#38bdf8" }}>
+                  {assignment?.allowedTicketTiers && assignment.allowedTicketTiers.length > 0
+                    ? assignment.allowedTicketTiers.join(", ")
+                    : "All Ticket Types (Open Gate)"}
                 </div>
                 <div className="card-meta-line">
-                  Tiers: <strong>VIP Diamond, Standard GA, Early Bird</strong>
+                  Gate Rule:{" "}
+                  <strong style={{ color: "#facc15" }}>
+                    {assignment?.allowedTicketTiers && assignment.allowedTicketTiers.length > 0
+                      ? `Gate accepts ticket tier(s): ${assignment.allowedTicketTiers.join(", ")}`
+                      : "All valid ticket types accepted at this entrance"}
+                  </strong>
                 </div>
-                <div className="card-meta-line">
-                  Verification Mode: <strong>Dynamic QR & CCCD Manual</strong>
+              </div>
+            </div>
+
+            {/* Assigned Roles & Duties for this Event */}
+            <div style={{ marginTop: "20px", background: "#1c1917", borderRadius: "12px", padding: "18px 20px", border: "1px solid #292524" }}>
+              <div style={{ fontSize: "0.85rem", color: "#a8a29e", fontWeight: 700, marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                Your Assigned Duties & Operational Roles
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "10px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px", borderRadius: "8px", background: currentAssignedEvent?.canCheckin !== false ? "rgba(16, 185, 129, 0.1)" : "rgba(255, 255, 255, 0.03)", border: `1px solid ${currentAssignedEvent?.canCheckin !== false ? "#059669" : "#3f3f46"}` }}>
+                  <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: currentAssignedEvent?.canCheckin !== false ? "#10b981" : "#6b7280" }} />
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: "0.88rem", color: currentAssignedEvent?.canCheckin !== false ? "#34d399" : "#9ca3af" }}>Gate Check-in</div>
+                    <div style={{ fontSize: "0.76rem", color: "#a1a1aa" }}>{currentAssignedEvent?.canCheckin !== false ? `Assigned to ${currentAssignedEvent?.gateName || assignment?.gateName || "Main Gate"}` : "No check-in duty"}</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px", borderRadius: "8px", background: currentAssignedEvent?.canReviewReturns ? "rgba(16, 185, 129, 0.1)" : "rgba(255, 255, 255, 0.03)", border: `1px solid ${currentAssignedEvent?.canReviewReturns ? "#059669" : "#3f3f46"}` }}>
+                  <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: currentAssignedEvent?.canReviewReturns ? "#10b981" : "#6b7280" }} />
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: "0.88rem", color: currentAssignedEvent?.canReviewReturns ? "#34d399" : "#9ca3af" }}>Return Review</div>
+                    <div style={{ fontSize: "0.76rem", color: "#a1a1aa" }}>{currentAssignedEvent?.canReviewReturns ? "Review & Refund Allowed" : "No permission"}</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px", borderRadius: "8px", background: currentAssignedEvent?.canManageIncidents ? "rgba(16, 185, 129, 0.1)" : "rgba(255, 255, 255, 0.03)", border: `1px solid ${currentAssignedEvent?.canManageIncidents ? "#059669" : "#3f3f46"}` }}>
+                  <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: currentAssignedEvent?.canManageIncidents ? "#10b981" : "#6b7280" }} />
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: "0.88rem", color: currentAssignedEvent?.canManageIncidents ? "#34d399" : "#9ca3af" }}>Incident Handling</div>
+                    <div style={{ fontSize: "0.76rem", color: "#a1a1aa" }}>{currentAssignedEvent?.canManageIncidents ? "Report & Escalate Allowed" : "No permission"}</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px", borderRadius: "8px", background: currentAssignedEvent?.canManageSupportCases ? "rgba(16, 185, 129, 0.1)" : "rgba(255, 255, 255, 0.03)", border: `1px solid ${currentAssignedEvent?.canManageSupportCases ? "#059669" : "#3f3f46"}` }}>
+                  <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: currentAssignedEvent?.canManageSupportCases ? "#10b981" : "#6b7280" }} />
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: "0.88rem", color: currentAssignedEvent?.canManageSupportCases ? "#34d399" : "#9ca3af" }}>Helpdesk Support</div>
+                    <div style={{ fontSize: "0.76rem", color: "#a1a1aa" }}>{currentAssignedEvent?.canManageSupportCases ? "Customer Help Desk Allowed" : "No permission"}</div>
+                  </div>
                 </div>
               </div>
             </div>

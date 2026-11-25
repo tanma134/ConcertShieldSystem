@@ -20,7 +20,7 @@ public interface ISystemPolicyService
 
 public sealed class SystemPolicyService(ISystemPolicyRepository repository) : ISystemPolicyService
 {
-    private const string DefaultScope = "Toàn bộ người dùng & Ban tổ chức";
+    private const string DefaultScope = "All Platform Attendees & Event Organizers";
 
     public async Task<List<PolicyVersionDTO>> GetHistoryAsync(string? category, CancellationToken ct = default)
     {
@@ -39,7 +39,9 @@ public sealed class SystemPolicyService(ISystemPolicyRepository repository) : IS
         string adminName, CancellationToken ct = default)
     {
         var category = NormalizeCategory(request.Category);
-        var effectiveDate = request.EffectiveDate ?? DateTime.UtcNow;
+        var effectiveDate = request.EffectiveDate?.ToUniversalTime() ?? DateTime.UtcNow;
+        var feePercent = request.PlatformFeePercent ?? 5.0m;
+        var payoutDays = request.PayoutDays ?? 7;
         var nextVersion = await repository.GetNextVersionNumberAsync(category, ct);
 
         // Generate version code (e.g. POL-PRICE-V2.0)
@@ -56,7 +58,9 @@ public sealed class SystemPolicyService(ISystemPolicyRepository repository) : IS
             request.Content.Trim(),
             effectiveDate,
             adminId,
-            adminName), ct);
+            adminName,
+            feePercent,
+            payoutDays), ct);
 
         return new PolicyVersionDTO
         {
@@ -68,6 +72,8 @@ public sealed class SystemPolicyService(ISystemPolicyRepository repository) : IS
             Scope = scope,
             ChangeSummary = request.ChangeSummary.Trim(),
             Content = request.Content.Trim(),
+            PlatformFeePercent = feePercent,
+            PayoutDays = payoutDays,
             Status = "Active",
             EffectiveDate = effectiveDate,
             CreatedAt = createdAt,
@@ -107,6 +113,8 @@ public sealed class SystemPolicyService(ISystemPolicyRepository repository) : IS
         Scope = r.Scope,
         ChangeSummary = r.ChangeSummary,
         Content = r.Content,
+        PlatformFeePercent = r.PlatformFeePercent,
+        PayoutDays = r.PayoutDays,
         Status = r.Status,
         EffectiveDate = r.EffectiveDate,
         CreatedAt = r.CreatedAt,

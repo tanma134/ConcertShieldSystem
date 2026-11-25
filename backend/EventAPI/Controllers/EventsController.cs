@@ -119,7 +119,7 @@ namespace EventAPI.Controllers
         {
             try
             {
-                var result = await _eventService.GetByIdAsync(id, incrementView: true, publicOnly: true);
+                var result = await _eventService.GetByIdAsync(id, incrementView: true, publicOnly: false);
                 return Ok(ApiResponseDTO<EventResponseDTO>.SuccessResponse(result));
             }
             catch (Exception ex) { return HandleException(ex); }

@@ -11,6 +11,8 @@ namespace AdminAPI.DTOs
         public string Scope { get; set; } = string.Empty;
         public string ChangeSummary { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
+        public decimal PlatformFeePercent { get; set; } = 5.0m;
+        public int PayoutDays { get; set; } = 7;
         public string Status { get; set; } = "Active"; // Active, Archived
         public DateTime EffectiveDate { get; set; }
         public DateTime CreatedAt { get; set; }
@@ -25,6 +27,8 @@ namespace AdminAPI.DTOs
         public string Scope { get; set; } = "Toàn bộ người dùng & Ban tổ chức";
         public string ChangeSummary { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
+        public decimal? PlatformFeePercent { get; set; } = 5.0m;
+        public int? PayoutDays { get; set; } = 7;
         public DateTime? EffectiveDate { get; set; }
     }
 }
