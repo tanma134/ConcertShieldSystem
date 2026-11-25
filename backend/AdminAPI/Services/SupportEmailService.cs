@@ -140,7 +140,7 @@ public class SupportEmailService : ISupportEmailService
     {
         var host = _config["EmailSettings:Host"];
         var portStr = _config["EmailSettings:Port"];
-        var senderEmail = _config["EmailSettings:SenderEmail"] ?? "support@concertshield.com";
+        var senderEmail = _config["EmailSettings:SenderEmail"] ?? "vinhntce181630@fpt.edu.vn";
         var senderName = _config["EmailSettings:SenderName"] ?? "ConcertShield Support";
         var password = _config["EmailSettings:Password"];
 

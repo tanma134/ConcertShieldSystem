@@ -14,6 +14,9 @@ export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(
     () => !!localStorage.getItem("accessToken")
   );
+  const [authReady, setAuthReady] = useState(
+    () => !!localStorage.getItem("accessToken") || !localStorage.getItem("refreshToken")
+  );
 
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem("user");
@@ -62,6 +65,7 @@ export function AuthProvider({ children }) {
       localStorage.setItem("accessToken", accessToken);
       setIsAuthenticated(true);
     }
+    setAuthReady(true);
 
     // Refresh Token
     if (refreshToken) {
@@ -93,6 +97,7 @@ export function AuthProvider({ children }) {
     setUser(null);
     setRoles([]);
     setIsAuthenticated(false);
+    setAuthReady(true);
   };
 
   const updateUser = (nextUser) => {
@@ -125,16 +130,20 @@ export function AuthProvider({ children }) {
     const nextUser = { ...(user || {}), ...profile };
     localStorage.setItem("user", JSON.stringify(nextUser));
     setUser(nextUser);
+    setIsAuthenticated(true);
     return latestRoles;
   };
 
   useEffect(() => {
-    if (initialRoleRefreshStarted.current || !localStorage.getItem("refreshToken")) return;
+    if (initialRoleRefreshStarted.current) return;
+    if (!localStorage.getItem("refreshToken")) return;
     initialRoleRefreshStarted.current = true;
+    // This startup refresh synchronizes persisted credentials with React state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refreshRoles().catch(() => {
       // Keep the current session state. The normal 401 interceptor will handle
       // an actually expired/revoked session on the next protected request.
-    });
+    }).finally(() => setAuthReady(true));
     // Run once on application startup; the ref also protects React StrictMode.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -195,6 +204,7 @@ export function AuthProvider({ children }) {
         refreshRoles,
 
         isAuthenticated,
+        authReady,
         isAdmin,
         isOrganizer,
         isStaff,

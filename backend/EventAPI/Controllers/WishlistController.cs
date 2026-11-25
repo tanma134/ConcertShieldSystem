@@ -18,7 +18,8 @@ public sealed class WishlistController(IWishlistService service) : BaseApiContro
     [HttpPost("events/{eventId:int}")]
     public async Task<IActionResult> Add(int eventId)
     {
-        try { await service.AddAsync(CurrentUserId, eventId); return Ok(ApiResponseDTO<object>.SuccessResponse(new { eventId }, "Event added to your wishlist.")); }
+        try { await service.AddAsync(CurrentUserId, eventId); 
+        return Ok(ApiResponseDTO<object>.SuccessResponse(new { eventId }, "Event added to your wishlist.")); }
         catch (Exception ex) { return HandleException(ex); }
     }
 

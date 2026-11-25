@@ -19,6 +19,7 @@ namespace AuthenticationAPI.Services
         private readonly IDocumentStorageService _documentStorageService;
         private readonly IEmailService _emailService;
         private readonly ILogger<OrganizerRequestService> _logger;
+        private readonly IOrganizerApprovalNotifier? _approvalNotifier;
 
         private const string RoleOrganizer = "Organizer";
         private const string StatusPending = "Pending";
@@ -33,7 +34,8 @@ namespace AuthenticationAPI.Services
             IDocumentStorageService documentStorageService,
             IEmailService emailService,
             ILogger<OrganizerRequestService> logger,
-            Microsoft.Extensions.Configuration.IConfiguration? configuration = null)
+            Microsoft.Extensions.Configuration.IConfiguration? configuration = null,
+            IOrganizerApprovalNotifier? approvalNotifier = null)
         {
             _requestRepository = requestRepository;
             _userRepository = userRepository;
@@ -41,6 +43,7 @@ namespace AuthenticationAPI.Services
             _emailService = emailService;
             _logger = logger;
             _configuration = configuration;
+            _approvalNotifier = approvalNotifier;
         }
 
         public async Task<OrganizerRequestResponseDTO> CreateRequestAsync(int userId, CreateOrganizerRequestDTO dto)
@@ -306,61 +309,78 @@ namespace AuthenticationAPI.Services
 
                 _ = Task.Run(async () =>
                 {
-                    // 1. Direct persistence to notification_db
-                    try
+                    if (isApproved && _approvalNotifier != null)
                     {
-                        var notifConnStr = _configuration?.GetConnectionString("NotificationConnection")
-                            ?? _configuration?.GetConnectionString("NotificationDb")
-                            ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_NOTIFICATION_POSTGRES")
-                            ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TEST_POSTGRES");
-                        if (string.IsNullOrWhiteSpace(notifConnStr)) return;
-                        using var conn = new Npgsql.NpgsqlConnection(notifConnStr);
-                        await conn.OpenAsync();
-                        using var cmd = new Npgsql.NpgsqlCommand(
-                            "INSERT INTO notifications (user_id, title, message, category, target_url, is_read, created_at, is_deleted) VALUES (@uid, @title, @msg, @cat, @url, false, NOW(), false);", conn);
-                        cmd.Parameters.AddWithValue("uid", targetUserId);
-                        cmd.Parameters.AddWithValue("title", notifTitle);
-                        cmd.Parameters.AddWithValue("msg", notifMessage);
-                        cmd.Parameters.AddWithValue("cat", notifCategory);
-                        cmd.Parameters.AddWithValue("url", notifUrl);
-                        await cmd.ExecuteNonQueryAsync();
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Direct DB notification failed for organizer request {RequestId}", requestId);
-                    }
-
-                    // 2. HTTP Realtime ping to NotificationAPI
-                    try
-                    {
-                        var handler = new HttpClientHandler
+                        // In-app notification handled by the dedicated notifier
+                        try
                         {
-                            ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true
-                        };
-                        using var httpClient = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(3) };
-                        var payload = new
+                            await _approvalNotifier.NotifyApprovedAsync(requestId, targetUserId);
+                        }
+                        catch (Exception ex)
                         {
-                            userId = targetUserId,
-                            title = notifTitle,
-                            message = notifMessage,
-                            category = notifCategory,
-                            targetUrl = notifUrl
-                        };
-                        var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-                        var endpoints = new[] { "https://localhost:7197/api/notifications", "http://localhost:5174/api/notifications" };
-                        foreach (var ep in endpoints)
-                        {
-                            try
-                            {
-                                var res = await httpClient.PostAsync(ep, content);
-                                if (res.IsSuccessStatusCode) break;
-                            }
-                            catch { }
+                            _logger.LogWarning(ex, "Approval notifier failed for organizer request {RequestId}", requestId);
                         }
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        _logger.LogWarning(ex, "Failed to send HTTP notification for organizer request {RequestId}", requestId);
+                        // 1. Direct persistence to notification_db
+                        try
+                        {
+                            var notifConnStr = _configuration?.GetConnectionString("NotificationConnection")
+                                ?? _configuration?.GetConnectionString("NotificationDb")
+                                ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_NOTIFICATION_POSTGRES")
+                                ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TEST_POSTGRES");
+                            if (!string.IsNullOrWhiteSpace(notifConnStr))
+                            {
+                                using var conn = new Npgsql.NpgsqlConnection(notifConnStr);
+                                await conn.OpenAsync();
+                                using var cmd = new Npgsql.NpgsqlCommand(
+                                    "INSERT INTO notifications (user_id, title, message, category, target_url, is_read, created_at, is_deleted) VALUES (@uid, @title, @msg, @cat, @url, false, NOW(), false);", conn);
+                                cmd.Parameters.AddWithValue("uid", targetUserId);
+                                cmd.Parameters.AddWithValue("title", notifTitle);
+                                cmd.Parameters.AddWithValue("msg", notifMessage);
+                                cmd.Parameters.AddWithValue("cat", notifCategory);
+                                cmd.Parameters.AddWithValue("url", notifUrl);
+                                await cmd.ExecuteNonQueryAsync();
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Direct DB notification failed for organizer request {RequestId}", requestId);
+                        }
+
+                        // 2. HTTP Realtime ping to NotificationAPI
+                        try
+                        {
+                            var handler = new HttpClientHandler
+                            {
+                                ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true
+                            };
+                            using var httpClient = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(3) };
+                            var payload = new
+                            {
+                                userId = targetUserId,
+                                title = notifTitle,
+                                message = notifMessage,
+                                category = notifCategory,
+                                targetUrl = notifUrl
+                            };
+                            var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+                            var endpoints = new[] { "https://localhost:7197/api/notifications", "http://localhost:5174/api/notifications" };
+                            foreach (var ep in endpoints)
+                            {
+                                try
+                                {
+                                    var res = await httpClient.PostAsync(ep, content);
+                                    if (res.IsSuccessStatusCode) break;
+                                }
+                                catch { }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to send HTTP notification for organizer request {RequestId}", requestId);
+                        }
                     }
 
                     // 3. Email notification to applicant
