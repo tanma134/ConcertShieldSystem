@@ -37,7 +37,7 @@ public class GovernancePostgresTests
     [PostgresFact] public async Task ConcurrentReviewsProduceOneDecision()
     {
         using var f=new EventFlowFixture();var id=await Pending(f);
-        async Task<bool> Review() { await using var db=f.NewContext();var service=new GovernanceService(db,null!,null!,new ConfigurationBuilder().Build());try{await service.ReviewComplianceAsync(id,1,new(1,"Approved","Reviewed concurrently"),default);return true;}catch(GovernanceConflictException){return false;} }
+        async Task<bool> Review() { await using var db=f.NewContext();var service=new GovernanceService(new EventAPI.Repositories.GovernanceRepository(db),null!,null!,new ConfigurationBuilder().Build());try{await service.ReviewComplianceAsync(id,1,new(1,"Approved","Reviewed concurrently"),default);return true;}catch(GovernanceConflictException){return false;} }
         var result=await Task.WhenAll(Review(),Review());Assert.Single(result.Where(x=>x));Assert.Single(await f.Context.Set<ComplianceReview>().ToListAsync());
     }
 }

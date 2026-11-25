@@ -1,6 +1,8 @@
 import { useLocation } from "react-router-dom";
 import PanelShell, { Icon } from "../../components/PanelShell";
 import useAdminPending from "../../hooks/useAdminPending";
+import { useAuth } from "../../context/AuthContext";
+import "./TicketDisputeListPage.css";
 
 
 // Icon cho từng nhóm (SVG inline, cùng bộ nét 1.8).
@@ -145,6 +147,7 @@ export const ADMIN_GROUPS = [
       ["/admin/ticket-governance", "Governance"],
       ["/admin/ticket-status-history", "Status History"],
       ["/admin/returns", "Returns / Refunds"],
+      ["/admin/ticket-issuance-recovery", "Ticket Recovery"],
     ],
   },
   {
@@ -199,6 +202,7 @@ export const ADMIN_GROUPS = [
     items: [
       ["/admin/incidents", "Incidents"],
       ["/admin/support-cases", "Support Cases"],
+      ["/admin/ticket-disputes", "Ticket Disputes"],
     ],
   },
   {
@@ -228,9 +232,9 @@ export const ADMIN_LINKS = [
 const matches = (pathname, path) => pathname === path || pathname.startsWith(`${path}/`);
 
 // Tìm tab khớp nhất (đường dẫn dài nhất) để /admin/events/all không bị tính là /admin/events.
-function findGroup(pathname) {
+function findGroup(pathname, groups = ADMIN_GROUPS) {
   let best = null;
-  for (const group of ADMIN_GROUPS) {
+  for (const group of groups) {
     for (const [path] of group.items) {
       if (matches(pathname, path) && (!best || path.length > best.path.length)) {
         best = { group, path };
@@ -240,8 +244,20 @@ function findGroup(pathname) {
   return best;
 }
 
-export default function AdminShell({ children, title = "Admin Panel" }) {
+export default function AdminShell({ children, title = "Admin Panel", activeSubnavPath }) {
   const { pathname } = useLocation();
+  const { isAdmin } = useAuth();
+
+  // Staff only handle fraud-case reviews. They must not see (or be able to open)
+  // the rest of the admin navigation.
+  const visibleGroups = isAdmin
+    ? ADMIN_GROUPS
+    : ADMIN_GROUPS
+        .map((group) => ({
+          ...group,
+          items: group.items.filter(([path]) => path === "/admin/fraud-cases"),
+        }))
+        .filter((group) => group.items.length > 0);
   // Badge đỏ để admin biết còn việc chờ duyệt.
   const pending = useAdminPending();
   const tabBadges = {
@@ -250,15 +266,15 @@ export default function AdminShell({ children, title = "Admin Panel" }) {
     "/admin/returns": pending.returns,
   };
 
-  const found = findGroup(pathname);
+  const found = findGroup(pathname, visibleGroups);
   const activeGroup = found?.group;
 
   const sum = (group) =>
     group.items.reduce((total, [path]) => total + (tabBadges[path] > 0 ? tabBadges[path] : 0), 0);
 
   const links = [
-    { to: "/admin", label: "Dashboard", end: true, icon: ICONS.dashboard },
-    ...ADMIN_GROUPS.map((group) => ({
+    ...(isAdmin ? [{ to: "/admin", label: "Dashboard", end: true, icon: ICONS.dashboard }] : []),
+    ...visibleGroups.map((group) => ({
       to: group.items[0][0],
       label: group.label,
       icon: ICONS[group.key],
@@ -272,7 +288,7 @@ export default function AdminShell({ children, title = "Admin Panel" }) {
       title={title}
       links={links}
       subnav={activeGroup ? activeGroup.items : null}
-      subnavActivePath={found?.path}
+      subnavActivePath={activeSubnavPath || found?.path}
       subnavLabel={activeGroup?.label}
       subnavIcon={activeGroup ? ICONS[activeGroup.key] : null}
       roleLabel="Admin"

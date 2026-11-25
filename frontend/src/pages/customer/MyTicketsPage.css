@@ -1,8 +1,8 @@
 .mt-page {
   min-height: 68vh;
   padding: 44px 24px 72px;
-  color: #f4f4f5;
-  background: #09090b;
+  color: #2a2438;
+  background: #faf5ff;
 }
 
 .mt-container {
@@ -20,7 +20,7 @@
 
 .mt-eyebrow {
   margin: 0 0 8px;
-  color: #e879f9;
+  color: #7e22ce;
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -29,29 +29,38 @@
 
 .mt-heading h1 {
   margin: 0;
-  color: #fafafa;
+  color: #1e1b2e;
   font-size: clamp(32px, 4vw, 42px);
 }
 
 .mt-heading p:last-child {
   margin: 9px 0 0;
-  color: #b9b9bf;
+  color: #6b6480;
 }
 
 .mt-total {
   padding: 9px 14px;
-  border: 1px solid #3f3f46;
+  border: 1px solid #ddd4e9;
   border-radius: 999px;
-  color: #d4d4d8;
+  color: #5a5470;
   white-space: nowrap;
+}
+
+.mt-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid #f1ecfa;
 }
 
 .mt-tabs {
   display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
   gap: 8px;
   overflow-x: auto;
-  margin-bottom: 22px;
-  border-bottom: 1px solid #27272a;
 }
 
 .mt-tabs button {
@@ -61,7 +70,7 @@
   padding: 13px 14px;
   border: 0;
   border-bottom: 2px solid transparent;
-  color: #b9b9bf;
+  color: #6b6480;
   background: transparent;
   font: inherit;
   cursor: pointer;
@@ -69,22 +78,89 @@
 }
 
 .mt-tabs button:hover {
-  color: #f4f4f5;
+  color: #2a2438;
 }
 
 .mt-tabs button.is-active {
   border-bottom-color: #d946ef;
-  color: #fafafa;
+  color: #1e1b2e;
 }
 
 .mt-tabs button span {
   min-width: 22px;
   padding: 2px 6px;
   border-radius: 999px;
-  color: #d4d4d8;
-  background: #27272a;
+  color: #5a5470;
+  background: #f1ecfa;
   font-size: 12px;
   text-align: center;
+}
+
+.mt-date-filter {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+  gap: 12px;
+  padding-bottom: 8px;
+  margin: 0;
+}
+
+.mt-date-filter label {
+  display: grid;
+  gap: 6px;
+  color: #6b6480;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mt-date-filter input {
+  width: 142px;
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid #ddd4e9;
+  border-radius: 8px;
+  color: #2a2438;
+  background: #fff;
+  font: inherit;
+}
+
+@media (max-width: 900px) {
+  .mt-toolbar {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .mt-tabs {
+    flex-basis: 100%;
+  }
+
+  .mt-date-filter {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .mt-date-filter {
+    width: 100%;
+    justify-content: flex-start;
+    margin-left: 0;
+  }
+
+  .mt-date-filter input {
+    width: min(142px, calc((100vw - 64px) / 2));
+  }
+}
+
+.mt-date-filter button {
+  min-height: 38px;
+  padding: 7px 12px;
+  border: 1px solid #d8b4fe;
+  border-radius: 8px;
+  color: #7e22ce;
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
 }
 
 .mt-orders {
@@ -94,9 +170,9 @@
 
 .mt-order {
   overflow: hidden;
-  border: 1px solid #27272a;
+  border: 1px solid #f1ecfa;
   border-radius: 16px;
-  background: #111113;
+  background: #f7f2fc;
 }
 
 .mt-order-header {
@@ -105,12 +181,12 @@
   justify-content: space-between;
   gap: 16px;
   padding: 18px 20px;
-  border-bottom: 1px solid #27272a;
+  border-bottom: 1px solid #f1ecfa;
 }
 
 .mt-order-label {
   margin: 0 0 5px;
-  color: #b9b9bf;
+  color: #6b6480;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -119,7 +195,7 @@
 
 .mt-order-header h2 {
   margin: 0;
-  color: #fafafa;
+  color: #1e1b2e;
   font-size: 18px;
 }
 
@@ -128,13 +204,13 @@
   flex-wrap: wrap;
   gap: 7px;
   margin: 7px 0 0;
-  color: #b9b9bf;
+  color: #6b6480;
   font-size: 13px;
 }
 
 .mt-order-count {
   flex: 0 0 auto;
-  color: #d4d4d8;
+  color: #5a5470;
   font-size: 13px;
 }
 
@@ -151,9 +227,9 @@
   align-items: center;
   gap: 18px;
   padding: 14px;
-  border: 1px solid #27272a;
+  border: 1px solid #f1ecfa;
   border-radius: 12px;
-  background: #18181b;
+  background: #f5f0fa;
 }
 
 .mt-ticket-poster {
@@ -165,8 +241,8 @@
   overflow: hidden;
   place-items: center;
   border-radius: 9px;
-  color: #e879f9;
-  background: linear-gradient(145deg, #272033, #101014);
+  color: #7e22ce;
+  background: linear-gradient(145deg, #d6d1dc, #f5effb);
   text-align: center;
   font-size: 11px;
   font-weight: 900;
@@ -187,14 +263,14 @@
 
 .mt-ticket-content h3 {
   margin: 0;
-  color: #f4f4f5;
+  color: #2a2438;
   font-size: 16px;
 }
 
 .mt-ticket-event {
   overflow: hidden;
   margin: 5px 0 0;
-  color: #b9b9bf;
+  color: #6b6480;
   font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -206,12 +282,12 @@
   align-items: center;
   gap: 8px 16px;
   margin-top: 14px;
-  color: #b9b9bf;
+  color: #6b6480;
   font-size: 12px;
 }
 
 .mt-ticket-info strong {
-  color: #f4f4f5;
+  color: #2a2438;
   white-space: nowrap;
 }
 
@@ -235,23 +311,56 @@
 }
 
 .mt-status.success {
-  color: #86efac;
-  background: #14532d55;
+  color: #065f46;
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
+  font-weight: 700;
 }
 
-.mt-status.processing {
-  color: #fcd34d;
-  background: #713f1255;
-}
+.mt-status.processing { color: #ffffff; background: #92400e; }
 
-.mt-status.cancelled {
-  color: #fca5a5;
-  background: #7f1d1d55;
-}
+.mt-status.cancelled { color: #ffffff; background: #991b1b; }
 
 .mt-status.other {
-  color: #d4d4d8;
-  background: #3f3f4655;
+  color: #374151;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  font-weight: 700;
+}
+
+.mt-status.restricted {
+  color: #b91c1c;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+}
+
+/* A ticket blocked by the risk engine: the customer needs a visible reason and
+   a direct route to the appeal form. */
+.mt-restriction-note {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+  font-size: 12px;
+  color: #9f1239;
+  white-space: normal;
+  text-align: right;
+}
+
+.mt-appeal-link {
+  color: #9f1239;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.mt-appeal-link:hover {
+  color: #4c0519;
+}
+
+.mt-appeal-link:focus-visible {
+  outline: 2px solid #9f1239;
+  outline-offset: 2px;
+
 }
 
 .mt-details-link {
@@ -260,10 +369,10 @@
   justify-content: center;
   min-height: 38px;
   padding: 8px 11px;
-  border: 1px solid #3f3f46;
+  border: 1px solid #ddd4e9;
   border-radius: 8px;
-  color: #f0abfc;
-  background: #18181b;
+  color: #6d28d9;
+  background: #f5f0fa;
   font-size: 12px;
   text-decoration: none;
   white-space: nowrap;
@@ -276,21 +385,21 @@
 
 .mt-details-link:focus-visible,
 .mt-tabs button:focus-visible {
-  outline: 2px solid #e879f9;
+  outline: 2px solid #c26ee0;
   outline-offset: 3px;
 }
 
 .mt-state {
   padding: 56px 20px;
-  border: 1px dashed #3f3f46;
+  border: 1px dashed #ddd4e9;
   border-radius: 14px;
-  color: #b9b9bf;
+  color: #6b6480;
   text-align: center;
 }
 
 .mt-state strong {
   display: block;
-  color: #e4e4e7;
+  color: #4a4458;
   font-size: 18px;
 }
 
@@ -298,10 +407,7 @@
   margin-bottom: 0;
 }
 
-.mt-state.is-error {
-  border-color: #7f1d1d;
-  color: #fca5a5;
-}
+.mt-state.is-error { border-color: #fecaca; color: #b91c1c; }
 
 @media (max-width: 900px) {
   .mt-ticket {
@@ -383,4 +489,107 @@
   .mt-order-dates > span[aria-hidden="true"] {
     display: none;
   }
+}
+
+
+/* ==========================================================================
+   Batch Refund / Partial Return in My Tickets
+   ========================================================================== */
+.mt-batch-refund-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid #c084fc;
+  background: #fdf4ff;
+  color: #7e22ce;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mt-batch-refund-btn:hover {
+  background: #7e22ce;
+  color: #ffffff;
+}
+
+.bm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.bm-card {
+  width: 100%;
+  max-width: 580px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 24px 26px;
+  box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.25);
+}
+
+.bm-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.bm-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fdf4ff;
+  color: #7e22ce;
+  font-size: 20px;
+}
+
+.bm-ticket-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 12px 0;
+  padding: 6px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.bm-ticket-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bm-ticket-row.is-selected {
+  border-color: #a855f7;
+  background: #faf5ff;
+}
+
+.bm-ticket-row.is-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #f1f5f9;
 }

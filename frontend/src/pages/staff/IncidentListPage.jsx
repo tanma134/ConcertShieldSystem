@@ -95,7 +95,7 @@ export default function IncidentListPage() {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [onlyEscalated, setOnlyEscalated] = useState(false);
 
-  // Quick Escalation Modal (UC_16.4)
+  // Quick Escalation Modal
   const [escalateTarget, setEscalateTarget] = useState(null);
   const [escalateReason, setEscalateReason] = useState("");
   const [isEscalating, setIsEscalating] = useState(false);
@@ -294,7 +294,7 @@ export default function IncidentListPage() {
             <option value="Other">Other</option>
           </select>
 
-          <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer", color: "#e5e7eb" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", cursor: "pointer", color: "#4a4458" }}>
             <input
               type="checkbox"
               checked={onlyEscalated}
@@ -311,7 +311,7 @@ export default function IncidentListPage() {
               <div className="inc-empty-icon">
                 <ClockIcon />
               </div>
-              <div className="inc-empty-title">Synchronizing incident database...</div>
+              <div className="inc-empty-title"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
             </div>
           ) : filteredIncidents.length === 0 ? (
             <div className="inc-empty-state">
@@ -348,39 +348,39 @@ export default function IncidentListPage() {
                 {filteredIncidents.map((inc) => (
                   <tr key={inc.id}>
                     <td>
-                      <strong style={{ color: "#94a3b8", fontFamily: "ui-monospace, monospace" }}>
+                      <strong style={{ color: "#7a7392", fontFamily: "ui-monospace, monospace" }}>
                         #{inc.id}
                       </strong>
                     </td>
                     <td>
-                      <div style={{ fontWeight: 700, color: "#fff", marginBottom: "4px" }}>
+                      <div style={{ fontWeight: 700, color: "#1d1730", marginBottom: "4px" }}>
                         {inc.title}
                       </div>
                       <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                         <span className="inc-cat-badge">{inc.category}</span>
                         {inc.evidenceCount > 0 && (
-                          <span style={{ fontSize: "11px", color: "#9ca3af", display: "inline-flex", alignItems: "center" }}>
+                          <span style={{ fontSize: "11px", color: "#7e7694", display: "inline-flex", alignItems: "center" }}>
                             {inc.evidenceCount} {inc.evidenceCount === 1 ? "file" : "files"}
                           </span>
                         )}
                       </div>
                     </td>
                     <td>
-                      <div style={{ color: "#e2e8f0", fontWeight: 600 }}>
+                      <div style={{ color: "#1d1730", fontWeight: 700 }}>
                         {inc.eventName || `Event #${inc.eventId}`}
                       </div>
-                      <div style={{ fontSize: "12px", color: "#d1d5db", marginTop: "2px" }}>
+                      <div style={{ fontSize: "12px", color: "#524b68", marginTop: "2px", fontWeight: 500 }}>
                         {inc.location}
                       </div>
                     </td>
                     <td>{getSeverityBadge(inc.severity)}</td>
                     <td>{getStatusBadge(inc.status, inc.isEscalated)}</td>
                     <td>
-                      <div style={{ color: "#f1f5f9", fontWeight: 600 }}>{inc.reporterName}</div>
+                      <div style={{ color: "#1e1b2e", fontWeight: 600 }}>{inc.reporterName}</div>
                       <div style={{ fontSize: "11px", color: "var(--inc-text-muted)" }}>ID: {inc.reporterId}</div>
                     </td>
                     <td>
-                      <div style={{ fontSize: "12px", color: "#cbd5e1" }}>
+                      <div style={{ fontSize: "12px", color: "#5f587a" }}>
                         {new Date(inc.createdAt).toLocaleString("en-US", {
                           hour: "2-digit",
                           minute: "2-digit",
@@ -427,7 +427,7 @@ export default function IncidentListPage() {
           )}
         </div>
 
-        {/* Modal: Escalate to Admin (UC_16.4) */}
+        {/* Modal: Escalate to Admin */}
         {escalateTarget && (
           <div className="inc-modal-overlay">
             <div className="inc-modal-content">
@@ -445,17 +445,18 @@ export default function IncidentListPage() {
                 <div className="inc-modal-body">
                   <div
                     style={{
-                      background: "#2d1519",
-                      border: "1px solid #7f1d1d",
+                      background: "#fef2f2",
+                      border: "1px solid #fecaca",
                       borderRadius: "6px",
                       padding: "12px 14px",
                       marginBottom: "16px",
-                      color: "#fecdd3",
+                      color: "#991b1b",
                       fontSize: "13px",
                       lineHeight: "1.5",
+                      fontWeight: 500,
                     }}
                   >
-                    <strong style={{ color: "#fda4af" }}>Notice:</strong> Incident <strong>#{escalateTarget.id} - "{escalateTarget.title}"</strong> will be forwarded to administrator command for review.
+                    <strong style={{ color: "#7f1d1d" }}>Notice:</strong> Incident <strong style={{ color: "#7f1d1d" }}>#{escalateTarget.id} - "{escalateTarget.title}"</strong> will be forwarded to administrator command for review.
                   </div>
 
                   <div className="inc-form-group">
@@ -485,7 +486,7 @@ export default function IncidentListPage() {
                     className="inc-btn inc-btn-danger"
                     disabled={isEscalating}
                   >
-                    {isEscalating ? "Escalating..." : "Confirm Escalation"}
+                    {isEscalating ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm Escalation"}
                   </button>
                 </div>
               </form>

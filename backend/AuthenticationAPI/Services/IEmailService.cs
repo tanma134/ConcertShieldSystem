@@ -12,6 +12,9 @@ namespace AuthenticationAPI.Services
 
         Task SendKycDeletionResultAsync(string toEmail, bool approved, string? reason);
 
+        /// <summary>Result of a manual eKYC review (approve / reject).</summary>
+        Task SendKycReviewResultAsync(string toEmail, bool approved, string? reason);
+
         Task SendOrganizerRequestResultAsync(string toEmail, string fullName, bool approved, string? rejectionReason, string? reviewNote);
     }
 }

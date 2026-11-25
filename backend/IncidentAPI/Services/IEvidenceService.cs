@@ -5,7 +5,7 @@ namespace IncidentAPI.Services;
 
 public interface IEvidenceService
 {
-    // UC_16.2: Upload tệp bằng chứng lên Cloudinary và lưu DB
+    // Upload tệp bằng chứng lên Cloudinary và lưu DB
     Task<IncidentEvidenceDto> UploadEvidenceAsync(
         int incidentId,
         IFormFile file,

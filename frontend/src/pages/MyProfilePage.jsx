@@ -149,7 +149,7 @@ export default function MyProfilePage() {
           {success && <div className="profile-alert success">{success}</div>}
 
           {loading ? (
-            <div className="profile-loading">Loading profile...</div>
+            <div className="profile-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
           ) : (
             <>
               <section className="profile-card profile-overview">
@@ -243,19 +243,28 @@ export default function MyProfilePage() {
                     {restrictions.map((d) => {
                       const id = d.riskDecisionId ?? d.id;
                       const hasAppeal = d.existingAppealId != null;
+                      const isTicket = String(d.scope || "").toUpperCase() === "TICKET";
+                      const subject = isTicket ? "Ticket blocked" : "Activity blocked";
                       return (
                         <article className="restriction-item" key={id}>
                           <div className="restriction-info">
                             <h3>
-                              {d.action === "BLOCK" ? "Activity blocked" : "Under review"}
+                              {d.action === "BLOCK" ? subject : "Under review"}
                               <span className="restriction-status">{d.status}</span>
                             </h3>
                             <p>{d.reasonPublic || "No details provided."}</p>
                             <p>
                               {d.decisionCode ? `${d.decisionCode} · ` : ""}
+                              {isTicket && d.ticketId != null ? `Ticket #${d.ticketId} · ` : ""}
                               Since {formatDate(d.createdAt)}
                               {d.expiresAt ? ` · Until ${formatDate(d.expiresAt)}` : ""}
                             </p>
+                            {d.canAppeal && d.appealDeadlineAt && (
+                              <p className="restriction-deadline">
+                                Appeal by {formatDate(d.appealDeadlineAt)}
+                                {isTicket ? " (24 hours from the notice)" : ""}
+                              </p>
+                            )}
                             {hasAppeal && (
                               <p>Appeal #{d.existingAppealId}: <strong>{d.existingAppealStatus}</strong></p>
                             )}
@@ -350,7 +359,7 @@ export default function MyProfilePage() {
                   onClick={removeWishlist}
                   disabled={removing}
                 >
-                  {removing ? "Removing..." : "Remove"}
+                  {removing ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Remove"}
                 </button>
               </div>
             </div>
@@ -385,7 +394,7 @@ export default function MyProfilePage() {
                       onClick={requestDeletion}
                       disabled={requestingDeletion}
                     >
-                      {requestingDeletion ? "Submitting..." : "Yes, Submit"}
+                      {requestingDeletion ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Yes, Submit"}
                     </button>
                   </div>
                 </>

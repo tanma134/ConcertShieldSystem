@@ -4,12 +4,12 @@ namespace TicketAPI.API
 {
     public interface IPaymentAPIClient
     {
-        Task<CreateVnPayPaymentResponseDto> CreateVnPayPaymentAsync(CreateVnPayPaymentRequestDto request, CancellationToken cancellationToken = default);
+        Task<CreateVnPayPaymentResponseDto> CreateVnPayPaymentAsync(CreateVnPayPaymentRequestDto request);
+        Task<RefundOutcome> RefundAsync(int returnRequestId, int orderId, long amount, string? customerName = null, int? eventId = null, string? eventName = null, CancellationToken cancellationToken = default);
 
-        // Asks PaymentAPI to pay the money of an approved return back to the customer.
-        Task<RefundOutcome> RefundAsync(int returnRequestId, int orderId, long amount, CancellationToken cancellationToken = default);
+        Task<ApplyVoucherResponseDto> ApplyVoucherAsync(ApplyVoucherRequestDto request);
 
-        Task<ApplyVoucherResponseDto> ApplyVoucherAsync(ApplyVoucherRequestDto request, CancellationToken cancellationToken = default);
+        Task<int> CancelPendingPaymentsAsync(int orderId);
     }
 
     public sealed record RefundOutcome(bool Success, string? Reference, string? Error);

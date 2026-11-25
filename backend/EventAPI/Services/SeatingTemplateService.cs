@@ -7,7 +7,7 @@ using EventAPI.Repositories;
 namespace EventAPI.Services
 {
     /// <summary>
-    /// Reusable venue layouts (UC_26.2 Apply Seating Template / UC_26.3 Save Seating
+    /// Reusable venue layouts (Apply Seating Template / Save Seating
     /// Chart as Template), so an organizer running several similar concerts doesn't
     /// have to redraw the same zones every time.
     ///
@@ -119,6 +119,17 @@ namespace EventAPI.Services
             if (dto.Name != null) entity.Name = dto.Name;
             if (dto.Description != null) entity.Description = dto.Description;
             if (dto.IsPublic.HasValue && isAdmin) entity.IsPublic = dto.IsPublic.Value;
+            if (dto.Zones != null)
+            {
+                if (dto.Zones.Count == 0)
+                    throw new InvalidOperationException("At least one zone is required.");
+
+                foreach (var z in dto.Zones)
+                    ValidateTemplateZone(z);
+                entity.ZonesJson = JsonSerializer.Serialize(dto.Zones);
+            }
+            if (dto.LayoutJson != null) entity.LayoutJson = dto.LayoutJson;
+            entity.UpdatedAt = DateTime.UtcNow;
 
             await _templateRepository.UpdateAsync(entity);
             return MapToResponse(entity);
@@ -136,9 +147,9 @@ namespace EventAPI.Services
             var template = await GetVisibleEntityAsync(templateId, callerId, isAdmin);
             var zones = DeserializeZones(template.ZonesJson);
 
-            if (dto.ZoneMappings == null || dto.ZoneMappings.Count != zones.Count)
+            if (dto.ZoneMappings == null || dto.ZoneMappings.Count == 0)
                 throw new InvalidOperationException(
-                    $"This template has {zones.Count} zone(s) — map every zone to a ticket type before applying it.");
+                    "At least one zone must be mapped to a ticket type before applying it.");
 
             var ticketTypes = await _ticketTypeRepository.GetByEventIdAsync(eventId);
             var validTicketTypeIds = ticketTypes.Select(t => t.TicketTypeId).ToHashSet();
@@ -185,7 +196,7 @@ namespace EventAPI.Services
             return await _seatingService.BuildAsync(eventId, buildDto, callerId, isAdmin);
         }
 
-        // ---- mapping helpers ----
+        // --- mapping helpers ----
 
         /// <summary>
         /// Seats are always generated as a rectangular grid (see
@@ -237,7 +248,7 @@ namespace EventAPI.Services
                 throw new ArgumentException($"Seated zone '{z.ZoneName}' needs Rows and SeatsPerRow greater than 0.");
         }
 
-        // ---- ownership / visibility ----
+        // --- ownership / visibility ----
 
         private async Task<SeatingTemplate> GetOwnedEntityAsync(int id, int callerId, bool isAdmin)
         {
@@ -262,7 +273,7 @@ namespace EventAPI.Services
             return entity;
         }
 
-        // ---- mapping / (de)serialization ----
+        // --- mapping / (de)serialization ----
 
         private static List<SeatingTemplateZoneDTO> DeserializeZones(string zonesJson) =>
             JsonSerializer.Deserialize<List<SeatingTemplateZoneDTO>>(zonesJson) ?? new List<SeatingTemplateZoneDTO>();

@@ -139,15 +139,14 @@ export default function OfflineConflictModal({
             onClick={fetchConflicts}
             disabled={loading}
           >
-            {loading ? "Loading..." : "Refresh List"}
+            {loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Refresh List"}
           </button>
         </div>
 
         <div className="conflict-list-body">
           {loading && conflicts.length === 0 ? (
             <div className="conflict-empty-state">
-              <div className="spinner"></div>
-              <p>Loading duplicate audit records...</p>
+              <span className="app-loading-spinner" role="status" aria-label="Loading" />
             </div>
           ) : filteredConflicts.length === 0 ? (
             <div className="conflict-empty-state">
@@ -186,8 +185,12 @@ export default function OfflineConflictModal({
                     </span>
                   </div>
 
+                  <div className="conflict-reason-banner">
+                    <strong>Collision Cause:</strong> Duplicate check-in scan registered across different gates or offline terminals within operational shift.
+                  </div>
+
                   {/* Dual Stream Side-by-Side Comparison */}
-                  <div className="dual-scan-comparison" style={{ margin: "14px 0" }}>
+                  <div className="dual-scan-comparison">
                     <div className="scan-stream-card stream-earlier">
                       <div className="stream-badge earlier-badge">
                         <span>Earlier Admission Scan (Scan 1)</span>

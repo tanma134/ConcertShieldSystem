@@ -132,8 +132,7 @@ export default function ViewGateAssignmentPage() {
 
         {loading ? (
           <div className="gate-loading-card">
-            <div className="gate-spinner"></div>
-            <p>Loading gate assignment parameters...</p>
+            <span className="app-loading-spinner" role="status" aria-label="Loading" />
           </div>
         ) : error ? (
           <div className="gate-error-banner">
@@ -193,8 +192,8 @@ export default function ViewGateAssignmentPage() {
                 </div>
                 <div className="card-meta-line">
                   Shift Status:{" "}
-                  <strong style={{ color: "#10b981" }}>
-                    Active / Ready for Check-in
+                  <strong style={{ color: assignment?.isShiftActive !== false ? "#0e9e78" : "#d63a3a" }}>
+                    {assignment?.isShiftActive !== false ? "Active / In Progress" : "Inactive"}
                   </strong>
                 </div>
               </div>
@@ -210,7 +209,7 @@ export default function ViewGateAssignmentPage() {
                 </div>
                 <div className="card-meta-line">
                   Scanned in Shift:{" "}
-                  <strong style={{ color: "#ff2d75" }}>
+                  <strong style={{ color: "#d91a63" }}>
                     {assignment?.totalScannedInShift ?? 0} scans
                   </strong>
                 </div>

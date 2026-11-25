@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EventAPI.Controllers
 {
-    // UC_14.3 / UC_14.4: staff assigned to one concert. Organizer of the concert (or Admin) only.
+    // Quan ly nhan vien ho tro va phan cong soat ve tai concert danh cho Organizer va Admin
     [Route("api/events/{eventId:int}/staff")]
     [Authorize(Policy = "RequireOrganizer")]
     public class EventStaffController : BaseApiController
@@ -17,19 +17,20 @@ namespace EventAPI.Controllers
             _service = service;
         }
 
-        // UC_14.3: GET api/events/{eventId}/staff
+        // Lay danh sach nhan vien duoc phan cong lam viec tai su kien
         [HttpGet]
         public async Task<ActionResult> GetStaff(int eventId)
         {
             try
             {
+                // Luu y: Kiem tra quyen Organizer hoac Admin truoc khi lay danh sach nhan vien
                 var result = await _service.ListAsync(eventId, CurrentUserId, IsAdmin, BearerToken);
                 return Ok(ApiResponseDTO<List<EventStaffDTO>>.SuccessResponse(result));
             }
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        // UC_14.4: GET api/events/{eventId}/staff/candidates?q=an
+        // Tim kiem nhan vien ung vien tu danh ba he thong de phan cong vao su kien
         [HttpGet("candidates")]
         public async Task<ActionResult> GetCandidates(int eventId, [FromQuery] string? q)
         {
@@ -120,6 +121,7 @@ namespace EventAPI.Controllers
         {
             try
             {
+                // Luu y: Xoa quyen soat ve va truy cap cua nhan vien vao su kien nay
                 await _service.UnassignAsync(eventId, staffUserId, CurrentUserId, IsAdmin);
                 return Ok(ApiResponseDTO<object>.SuccessResponse(new { eventId, staffUserId }, "Staff member removed."));
             }

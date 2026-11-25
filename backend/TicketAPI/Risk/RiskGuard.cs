@@ -17,6 +17,9 @@ public interface IRiskGuard
     /// <summary>Gọi ĐẦU action: hỏi AdminAPI user/IP/device này đang bị block thật không.</summary>
     Task<RiskVerdict> PreCheckAsync(HttpContext http, int? userId, CancellationToken ct = default);
 
+    /// <summary>eKYC gate for booking endpoints (see Risk:RequireEkycForPurchase).</summary>
+    RiskVerdict CheckEkycAsync(HttpContext http, string? action = null);
+
     /// <summary>
     /// Gọi SAU khi đã tính xong rule nghiệp vụ: gộp rule bot từ request, gửi sang AdminAPI, đọc quyết định.
     /// Chỉ gửi khi có ít nhất 1 rule khớp (không spam AdminAPI cho request sạch).
@@ -35,6 +38,28 @@ public sealed class RiskGuard : IRiskGuard
     { _client = client; _counters = counters; _cfg = cfg; _logger = logger; }
 
     private bool Enabled => _cfg.GetValue("Risk:Enabled", true);
+
+    /// <summary>
+    /// Business rule: a customer must pass eKYC before buying. The status comes from
+    /// the token issued at log-in, so no extra call is needed per request.
+    /// Controlled by Risk:RequireEkycForPurchase so the rule can be switched off for
+    /// environments without a working VNPT account.
+    /// </summary>
+    public RiskVerdict CheckEkycAsync(HttpContext http, string? action = null)
+    {
+        if (!_cfg.GetValue("Risk:RequireEkycForPurchase", true)) return RiskVerdict.Allow();
+
+        // Staff/Admin/Organizer flows (door scanning, organizer tools) are not purchases.
+        if (http.User.IsInRole("Admin") || http.User.IsInRole("Staff") || http.User.IsInRole("Organizer"))
+            return RiskVerdict.Allow();
+
+        var status = http.User.FindFirst("ekyc_status")?.Value;
+        if (string.Equals(status, "Passed", StringComparison.OrdinalIgnoreCase))
+            return RiskVerdict.Allow();
+
+        return new RiskVerdict(false, 403, "EKYC_REQUIRED",
+            "Please complete identity verification (eKYC) before booking tickets.", null);
+    }
 
     public async Task<RiskVerdict> PreCheckAsync(HttpContext http, int? userId, CancellationToken ct = default)
     {

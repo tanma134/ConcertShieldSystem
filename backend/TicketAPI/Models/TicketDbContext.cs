@@ -37,10 +37,17 @@ public partial class TicketDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        // Khi chạy qua DI, Program.cs là nguồn connection string duy nhất.
-        // Fallback này chỉ phục vụ tooling/scaffolding chạy trực tiếp DbContext.
+        // Khi chay qua DI, Program.cs la nguon connection string duy nhat.
+        // Khong hardcode password hoac connection string trong C#.
         if (!optionsBuilder.IsConfigured)
-            optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=05_ticket_db;Username=postgres;Password=123456");
+        {
+            var fallback = Environment.GetEnvironmentVariable("CONCERTSHIELD_TEST_POSTGRES")
+                ?? Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
+            if (!string.IsNullOrEmpty(fallback))
+            {
+                optionsBuilder.UseNpgsql(fallback);
+            }
+        }
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -238,6 +245,19 @@ public partial class TicketDbContext : DbContext
             entity.HasOne(d => d.Order).WithMany(p => p.Tickets)
                 .HasForeignKey(d => d.OrderId)
                 .HasConstraintName("fk_tickets_order");
+
+            entity.Property(e => e.OrderAttendeeId)
+                .HasColumnName("order_attendee_id");
+
+            entity.HasIndex(e => e.OrderAttendeeId, "uq_tickets_order_attendee")
+                .IsUnique()
+                .HasFilter("(order_attendee_id IS NOT NULL)");
+
+            entity.HasOne(e => e.OrderAttendee)
+                .WithMany(e => e.Tickets)
+                .HasForeignKey(e => e.OrderAttendeeId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("fk_tickets_order_attendee");
         });
 
         modelBuilder.Entity<TicketQrToken>(entity =>

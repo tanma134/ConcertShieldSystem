@@ -2,6 +2,7 @@ import OrganizerShell from "./OrganizerShell";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams, Link } from "react-router-dom";
 import eventApi from "../../api/eventApi";
+import { cleanReason } from "../../utils/format";
 import StepInfo from "./steps/StepInfo";
 import StepImages from "./steps/StepImages";
 import StepTicketsSeating from "./steps/StepTicketsSeating";
@@ -9,7 +10,7 @@ import StepReview from "./steps/StepReview";
 import "./OrganizerWizard.css";
 
 const STEPS = [
-  { n: 1, label: "Info" },
+  { n: 1, label: "Event Info" },
   { n: 2, label: "Images" },
   { n: 3, label: "Tickets & Seating" },
   { n: 4, label: "Review & Submit" },
@@ -77,42 +78,57 @@ export default function CreateEventWizard() {
 
   const canLeaveStep1 = !!eventId;
 
+  const isCancelled = event?.status === "Cancelled";
+  const isPublished = event?.status === "Published";
+
   return (
-    <OrganizerShell title="Concert Setup">
+    <OrganizerShell title="Event Setup">
 
       <div className="tb-container ow-wrap">
         <div className="ow-head">
           <div>
-            <h1>{routeId ? "Edit Event" : "Create New Event"}</h1>
+            <h1>{isCancelled ? "View Cancelled Event" : (routeId ? (isPublished ? "View / Edit Event" : "Edit Event") : "Create New Event")}</h1>
             <p className="ow-sub">
-              Events are always in the <strong>Music</strong> category. You
-              can save a draft at any step and come back later.
+              {isCancelled
+                ? "This event was officially cancelled. All configurations are locked in read-only mode."
+                : "Music Concert. You can save your draft at any step and return later."}
             </p>
           </div>
-          {eventId && <Link to={`/organizer/events/${eventId}/compliance`} className="tb-btn tb-btn-outline">Compliance documents</Link>}
-          <Link to="/organizer/events" className="tb-btn tb-btn-outline">
-            ← My Events
-          </Link>
+          <div className="ow-head-actions" style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+            <Link
+              to="/organizer/events"
+              className="tb-btn tb-btn-outline"
+              style={{ textDecoration: "none" }}
+            >
+              Back to Events
+            </Link>
+          </div>
         </div>
 
+        {isCancelled && (
+          <div className="ow-banner ow-banner-rejected" style={{ background: "#fee2e2", borderColor: "#fca5a5", color: "#991b1b" }}>
+            <strong>This event has been cancelled.</strong>{" "}
+            {event.rejectedReason
+              ? `Reason: ${cleanReason(event.rejectedReason)}`
+              : "Ticket sales have stopped and purchased tickets are in the refund reconciliation process."}
+          </div>
+        )}
         {event?.status === "Rejected" && (
           <div className="ow-banner ow-banner-rejected">
-            <strong>This event was rejected.</strong>{" "}
+            <strong>Event submission was rejected.</strong>{" "}
             {event.rejectedReason
-              ? `Reason: ${event.rejectedReason}`
-              : "Please make changes and submit for review again."}
+              ? `Reason: ${cleanReason(event.rejectedReason)}`
+              : "Please update event details or missing compliance documents and re-submit for review."}
           </div>
         )}
         {event?.status === "Pending" && (
           <div className="ow-banner ow-banner-pending">
-            This event is awaiting admin approval. You can still review the
-            details below, but you cannot edit them until it is approved or
-            rejected.
+            This event is pending platform admin review. You can review all details below, but editing is locked until an approval decision is made.
           </div>
         )}
         {event?.status === "Published" && (
           <div className="ow-banner ow-banner-published">
-            This event has been approved and is now on public sale.
+            This event has been approved and is currently on sale.
           </div>
         )}
 
@@ -142,7 +158,7 @@ export default function CreateEventWizard() {
           </div>
         )}
 
-        {loading && <div className="tb-loading">Loading...</div>}
+        {loading && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
         {!loading && error && <div className="tb-error">{error}</div>}
 
         {!loading && !error && (

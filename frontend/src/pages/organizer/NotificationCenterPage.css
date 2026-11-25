@@ -23,7 +23,7 @@
 .nc-unread-badge {
   font-size: 13px;
   background: rgba(255, 45, 117, 0.15);
-  color: #ff74a4;
+  color: #d63e8c;
   padding: 4px 10px;
   border-radius: 999px;
 }
@@ -37,7 +37,7 @@
   display: flex;
   gap: 12px;
   margin-bottom: 20px;
-  border-bottom: 1px solid #232332;
+  border-bottom: 1px solid #ece0f8;
   padding-bottom: 12px;
 }
 
@@ -53,7 +53,7 @@
 }
 
 .nc-tab.active {
-  background: #1a1a26;
+  background: #f4edf9;
   color: var(--tb-text);
   font-weight: 600;
 }
@@ -69,8 +69,8 @@
   display: flex;
   align-items: flex-start;
   gap: 16px;
-  background: #15151c;
-  border: 1px solid #232332;
+  background: #ffffff;
+  border: 1px solid #ece0f8;
   border-radius: 12px;
   padding: 16px 20px;
   cursor: pointer;
@@ -78,7 +78,7 @@
 }
 
 .nc-card:hover {
-  border-color: #ff2d75;
+  border-color: #d91a63;
   transform: translateY(-1px);
 }
 
@@ -103,7 +103,7 @@
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: #1a1a26;
+  background: #f4edf9;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -147,15 +147,15 @@
 }
 
 .nc-card-delete:hover {
-  color: #f48181;
+  color: #d64545;
   opacity: 1;
 }
 
 .nc-empty {
   text-align: center;
   padding: 60px 20px;
-  background: #15151c;
-  border: 1px solid #232332;
+  background: #ffffff;
+  border: 1px solid #ece0f8;
   border-radius: 14px;
   color: var(--tb-text-muted);
 }

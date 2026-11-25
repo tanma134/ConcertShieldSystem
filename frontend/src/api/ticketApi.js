@@ -75,6 +75,7 @@ const ticketApi = {
 
   getGovernanceEvents: () =>
     axiosClient.get("/tickets/governance/events"),
+    getActiveHoldSession: () => axiosClient.get("/Holds/session/active"),
 };
 
 export default ticketApi;

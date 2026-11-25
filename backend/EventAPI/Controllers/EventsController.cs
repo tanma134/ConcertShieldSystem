@@ -8,13 +8,7 @@ using static EventAPI.DTOs.ConfirmEventSaleDTO;
 
 namespace EventAPI.Controllers
 {
-    /// <summary>
-    /// Concert lifecycle: Draft -> Pending -> Published, plus Pending -> Rejected
-    /// and Rejected -> edit -> Pending.
-    ///
-    /// Every concert is a Music concert (CategoryId = 1); the category cannot be chosen.
-    /// Only an approved Organizer may create and configure a concert.
-    /// </summary>
+    // Quan ly vong doi concert: Draft, Pending, Published, Rejected va Cancelled
     [Route("api/events")]
     public class EventsController : BaseApiController
     {
@@ -38,7 +32,7 @@ namespace EventAPI.Controllers
             _logger = logger;
         }
 
-        /// <summary>Returns assigned events and gates for a staff member.</summary>
+        // Lay danh sach su kien va cong soat ve duoc phan cong cho nhan vien
         [HttpGet("staff/{staffId:int}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetEventsByStaff(int staffId)
@@ -59,7 +53,6 @@ namespace EventAPI.Controllers
         // PUBLIC READS — Published concerts only
         // =====================================================================
 
-        /// <summary>Public list/search/filter. Only Published concerts are returned.</summary>
         [HttpGet]
         [AllowAnonymous]
         public async Task<IActionResult> GetList([FromQuery] EventFilterDTO filter)
@@ -82,7 +75,7 @@ namespace EventAPI.Controllers
             return Ok(ApiResponseDTO<List<EventListDTO>>.SuccessResponse(result));
         }
 
-        /// <summary>Normalizes a slug and checks uniqueness while the user is typing.</summary>
+        // Chuan hoa slug va kiem tra tinh duy nhat trong luc nhap lieu
         [HttpGet("slug-availability")]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> CheckSlugAvailability(
@@ -106,7 +99,7 @@ namespace EventAPI.Controllers
             return await GetList(filter);
         }
 
-        /// <summary>Public concert detail by slug. 404 unless Published.</summary>
+        // Lay thong tin chi tiet concert theo slug danh cho cong chung
         [HttpGet("slug/{slug}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetBySlug(string slug)
@@ -119,7 +112,7 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        /// <summary>Public concert detail by id. 404 unless Published.</summary>
+        // Lay thong tin chi tiet concert theo id danh cho cong chung
         [HttpGet("{id:int}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetById(int id)
@@ -136,7 +129,7 @@ namespace EventAPI.Controllers
         // ORGANIZER — my concerts
         // =====================================================================
 
-        /// <summary>Every concert I own, in any status (Draft included).</summary>
+        // Lay danh sach toan bo concert thuoc so huu cua Organizer hien tai
         [HttpGet("mine")]
         [Authorize(Policy = "RequireCustomer")]
         public async Task<IActionResult> GetMine()
@@ -145,10 +138,7 @@ namespace EventAPI.Controllers
             return Ok(ApiResponseDTO<List<EventListDTO>>.SuccessResponse(result));
         }
 
-        /// <summary>
-        /// Organizer dashboard summary: event counts by status, tickets sold, and
-        /// gross ticket revenue (price * soldQuantity, not adjusted for refunds).
-        /// </summary>
+        // Lay so lieu tong quan dashboard gom so luong concert, ve ban va doanh thu
         [HttpGet("mine/dashboard")]
         [Authorize(Policy = "RequireCustomer")]
         public async Task<IActionResult> GetMyDashboard()
@@ -157,10 +147,7 @@ namespace EventAPI.Controllers
             return Ok(ApiResponseDTO<OrganizerDashboardSummaryDTO>.SuccessResponse(result));
         }
 
-        /// <summary>
-        /// One of my concerts in full (incl. seating chart) regardless of status.
-        /// Use this instead of GET /{id} while the concert is still a Draft.
-        /// </summary>
+        // Lay chi tiet day du concert cua Organizer bao gom ca so do ghe o moi trang thai
         [HttpGet("mine/{id:int}")]
         [Authorize(Policy = "RequireCustomer")]
         public async Task<IActionResult> GetMineById(int id)
@@ -177,19 +164,19 @@ namespace EventAPI.Controllers
         // ORGANIZER — create / update / delete draft
         // =====================================================================
 
-        /// <summary>
-        /// Creates the concert as a Draft for an approved Organizer.
-        /// </summary>
+        // Tao moi concert o trang thai Draft danh cho Organizer
         [HttpPost]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Create([FromBody] CreateEventDTO dto)
         {
+            // Luu y: Validate cu phap du lieu dau vao va kiem tra quyen Organizer
             var validation = await _createValidator.ValidateAsync(dto);
             if (!validation.IsValid)
                 return BadRequest(ApiResponseDTO<object>.FailResponse("Validation failed", validation.Errors.Select(e => e.ErrorMessage).ToList()));
 
             try
             {
+                // Luu y: Tu dong sinh slug duy nhat va khoi tao trang thai Draft
                 var result = await _eventService.CreateAsync(dto, CurrentUserId);
                 return CreatedAtAction(nameof(GetMineById), new { id = result.EventId },
                     ApiResponseDTO<EventResponseDTO>.SuccessResponse(result, "Concert created as Draft"));
@@ -197,29 +184,33 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        /// <summary>Updates a Draft or Rejected concert. Partial — send only what changes.</summary>
+        // Chinh sua thong tin concert o trang thai Draft hoac Rejected
         [HttpPut("{id:int}")]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateEventDTO dto)
         {
+            // Luu y: Validate cac truong thay doi va kiem tra quyen so huu cua Organizer
             var validation = await _updateValidator.ValidateAsync(dto);
             if (!validation.IsValid)
                 return BadRequest(ApiResponseDTO<object>.FailResponse("Validation failed", validation.Errors.Select(e => e.ErrorMessage).ToList()));
 
             try
             {
+                // Luu y: Chi cho phep cap nhat khi concert dang o trang thai Draft hoac Rejected
                 var result = await _eventService.UpdateAsync(id, dto, CurrentUserId, IsAdmin);
                 return Ok(ApiResponseDTO<EventResponseDTO>.SuccessResponse(result, "Concert updated"));
             }
             catch (Exception ex) { return HandleException(ex); }
         }
 
+        // Xoa mem concert o trang thai Draft hoac Rejected
         [HttpDelete("{id:int}")]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Delete(int id)
         {
             try
             {
+                // Luu y: Chi Organizer chu so huu hoac Admin moi duoc xoa mem concert
                 await _eventService.SoftDeleteAsync(id, CurrentUserId, IsAdmin);
                 return Ok(ApiResponseDTO<object>.SuccessResponse(null!, "Concert deleted"));
             }
@@ -238,10 +229,7 @@ namespace EventAPI.Controllers
         // SUBMIT FOR APPROVAL
         // =====================================================================
 
-        /// <summary>
-        /// Dry-run of the publication checks. Returns the same error list Submit
-        /// would produce, so the UI can show what's still missing.
-        /// </summary>
+        // Kiem tra thu cac dieu kien cong bo concert truoc khi thuc su submit
         [HttpGet("{id:int}/validate")]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> ValidateForSubmission(int id)
@@ -256,29 +244,28 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        /// <summary>
-        /// Draft/Rejected -> Pending. Validates all publication data first; on failure
-        /// returns 400 with every missing field listed. Also used to RESUBMIT a
-        /// rejected concert after editing.
-        /// </summary>
+        // Gui yeu cau xet duyet concert de chuyen trang thai sang Pending
         [HttpPost("{id:int}/submit")]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Submit(int id)
         {
             try
             {
+                // Luu y: Kiem tra tat ca thong tin bat buoc truoc khi doi sang Pending
                 var result = await _eventService.SubmitAsync(id, CurrentUserId);
                 return Ok(ApiResponseDTO<EventResponseDTO>.SuccessResponse(result, "Concert submitted for approval (now Pending)"));
             }
             catch (Exception ex) { return HandleException(ex); }
         }
 
+        // Huy concert dang o trang thai Pending hoac da Published
         [HttpPost("{id:int}/cancel")]
         [Authorize(Policy = "RequireOrganizer")]
         public async Task<IActionResult> Cancel(int id)
         {
             try
             {
+                // Luu y: Chi chap nhan huy khi Pending hoac Published va se dong bang ban ve
                 var result = await _eventService.CancelAsync(id, CurrentUserId, IsAdmin);
                 return Ok(ApiResponseDTO<EventResponseDTO>.SuccessResponse(result, "Concert cancelled"));
             }
@@ -289,7 +276,7 @@ namespace EventAPI.Controllers
         // ADMIN — moderation
         // =====================================================================
 
-        /// <summary>Concerts waiting for approval, oldest submission first.</summary>
+        // Lay danh sach concert cho duyet theo thu tu cu nhat truoc
         [HttpGet("pending")]
         [Authorize(Policy = "RequireAdmin")]
         public async Task<IActionResult> GetPending([FromQuery] int page = 1, [FromQuery] int pageSize = 12)
@@ -298,31 +285,24 @@ namespace EventAPI.Controllers
             return Ok(ApiResponseDTO<PagedResultDTO<PendingEventDTO>>.SuccessResponse(result));
         }
 
-        /// <summary>
-        /// All concerts regardless of status, for the Admin "All Events" page.
-        /// Supports the same search/filter/sort/pagination as the public list
-        /// (status, creator/OrganizerId, date range, city), but is never limited
-        /// to Published — the pending queue alone isn't enough for moderation.
-        /// </summary>
+        // Lay danh sach tat ca concert o moi trang thai phuc vu trang quan tri Admin
         [HttpGet("admin")]
         [Authorize(Policy = "RequireAdmin")]
         public async Task<IActionResult> AdminGetAll([FromQuery] EventFilterDTO filter)
         {
             filter.PublishedOnly = false;
+            filter.ExcludeDrafts = true;
             var result = await _eventService.GetFilteredAsync(filter);
             return Ok(ApiResponseDTO<PagedResultDTO<EventListDTO>>.SuccessResponse(result));
         }
 
-        /// <summary>Alias kept for the existing admin UI.</summary>
+        // Endpoint phu ho tro giao dien quan tri Admin cu
         [HttpGet("moderation/queue")]
         [Authorize(Policy = "RequireAdmin")]
         public async Task<IActionResult> ModerationQueue([FromQuery] int page = 1, [FromQuery] int pageSize = 12)
             => await GetPending(page, pageSize);
 
-        /// <summary>
-        /// Full detail of any concert regardless of status, so the Admin can review
-        /// a Pending submission before deciding.
-        /// </summary>
+        // Lay chi tiet concert da submit de Admin xem xet phe duyet
         [HttpGet("admin/{id:int}")]
         [Authorize(Policy = "RequireAdmin")]
         public async Task<IActionResult> AdminGetById(int id)
@@ -330,15 +310,16 @@ namespace EventAPI.Controllers
             try
             {
                 var result = await _eventService.GetByIdAsync(id, incrementView: false, publicOnly: false);
+                if (result.Status == EventStatus.Draft)
+                {
+                    return NotFound(ApiResponseDTO<object>.FailResponse("Event not found or is still in organizer draft."));
+                }
                 return Ok(ApiResponseDTO<EventResponseDTO>.SuccessResponse(result));
             }
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        /// <summary>
-        /// Pending -> Published. Organizer role approval is handled separately by
-        /// the Organizer Request workflow in AuthenticationAPI.
-        /// </summary>
+        // Admin phe duyet concert tu Pending sang Published de bat dau ban ve
         [HttpPost("{id:int}/approve")]
         [Authorize(Policy = "RequireAdmin")]
         public async Task<IActionResult> Approve(int id)
@@ -363,7 +344,7 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        /// <summary>Pending -> Rejected. A reason is mandatory.</summary>
+        // Admin tu choi duyet concert kem ly do bat buoc de Organizer sua lai
         [HttpPost("{id:int}/reject")]
         [Authorize(Policy = "RequireAdmin")]
         public async Task<IActionResult> Reject(int id, [FromBody] RejectEventDTO dto)
@@ -383,7 +364,7 @@ namespace EventAPI.Controllers
         // POSTER / BANNER (Cloudinary)
         // =====================================================================
 
-        /// <summary>Uploads or replaces the poster. Replacing removes the old Cloudinary asset.</summary>
+        // Tai len hoac thay the poster concert tren Cloudinary
         [HttpPost("{id:int}/poster")]
         [Authorize(Policy = "RequireOrganizer")]
         [RequestSizeLimit(10_000_000)]
@@ -416,7 +397,7 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        /// <summary>Uploads or replaces the banner. Replacing removes the old Cloudinary asset.</summary>
+        // Tai len hoac thay the banner concert tren Cloudinary
         [HttpPost("{id:int}/banner")]
         [Authorize(Policy = "RequireOrganizer")]
         [RequestSizeLimit(10_000_000)]

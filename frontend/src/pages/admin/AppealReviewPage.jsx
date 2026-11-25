@@ -48,11 +48,23 @@ export default function AppealReviewPage() {
     try {
       const res = await appealApi.resolve(id, { decision, reviewNote: text });
       const lifted = res.data?.liftedDecisionIds || [];
-      setNotice(
-        decision === "Accept"
-          ? `Appeal accepted. ${lifted.length} block decision(s) lifted${lifted.length ? ` (#${lifted.join(", #")})` : ""}. The customer has been notified.`
-          : "Appeal rejected. The block stays in place and the customer has been notified."
-      );
+      const revoked = res.data?.ticketRevoked;
+      const refundStatus = res.data?.refundStatus;
+      const refundAmount = res.data?.refundAmount;
+
+      if (decision === "Accept") {
+        setNotice(`Appeal accepted. ${lifted.length} block decision(s) lifted${lifted.length ? ` (#${lifted.join(", #")})` : ""}. The customer has been notified.`);
+      } else if (revoked) {
+        const refundText =
+          refundStatus === "Refunded"
+            ? `The ticket was revoked and ${Number(refundAmount || 0).toLocaleString()} VND was refunded.`
+            : refundStatus === "RefundFailed"
+              ? `The ticket was revoked, but the refund failed (${res.data?.refundError || "unknown error"}). Retry it from Returns / Refunds.`
+              : `The ticket was revoked. No refund was due (the ticket had already been used).`;
+        setNotice(`Appeal rejected. ${refundText} The customer has been notified.`);
+      } else {
+        setNotice("Appeal rejected. The block stays in place and the customer has been notified.");
+      }
       setNote("");
       await load();
     } catch (e2) {
@@ -62,7 +74,7 @@ export default function AppealReviewPage() {
     }
   };
 
-  if (loading) return <Shell title="Appeal"><div className="empty-state">Loading...</div></Shell>;
+  if (loading) return <Shell title="Appeal"><div className="empty-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div></Shell>;
   if (!a) {
     return (
       <Shell title="Appeal">
@@ -164,8 +176,9 @@ export default function AppealReviewPage() {
           {pending ? (
             <>
               {madeByMe && (
-                <div className="fr-info fr-info--warn">
-                  <b>You made the original decision.</b> Another Admin must review this appeal.
+                <div className="fr-info">
+                  <b>You also made the original decision.</b> This is recorded as a self-review in the
+                  appeal note and the audit log, so the decision trail stays complete.
                 </div>
               )}
               <div className="fr-field">
@@ -173,11 +186,17 @@ export default function AppealReviewPage() {
                 <div className="fr-radios">
                   <button type="button" className={`fr-radio${decision === "Accept" ? " on" : ""}`} onClick={() => setDecision("Accept")}>
                     <span className="dot" />
-                    <div><b>Accept</b><p>Lift the block. Every block row created by the same event is lifted and the customer is notified.</p></div>
+                    <div><b>Accept</b><p>Lift the block. Every block row created from the same alert is lifted and the customer is notified.</p></div>
                   </button>
                   <button type="button" className={`fr-radio${decision === "Reject" ? " on" : ""}`} onClick={() => setDecision("Reject")}>
                     <span className="dot" />
-                    <div><b>Reject</b><p>Confirmed fraud: keep the block in place until it expires.</p></div>
+                    <div>
+                      <b>Reject</b>
+                      <p>
+                        Confirmed fraud: keep the block. If this is a ticket block, the ticket is revoked and any
+                        unused ticket is refunded in full according to the refund policy.
+                      </p>
+                    </div>
                   </button>
                 </div>
               </div>
@@ -195,7 +214,9 @@ export default function AppealReviewPage() {
 
               <div className="fr-row end">
                 <button type="button" className="admin-button-secondary" onClick={() => navigate("/admin/risk/appeals")}>Cancel</button>
-                <button type="submit" className="admin-button" disabled={busy || madeByMe}>{busy ? "Processing..." : "Resolve appeal"}</button>
+                <button type="submit" className="admin-button" disabled={busy}>
+                  {busy ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Resolve appeal"}
+                </button>
               </div>
             </>
           ) : (

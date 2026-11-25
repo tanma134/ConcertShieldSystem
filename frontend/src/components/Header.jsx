@@ -53,36 +53,59 @@ export default function Header() {
     navigate("/");
   };
 
+  const currentUid = user?.userId ?? user?.id;
+
   const fetchHeaderNotifications = () => {
     // Guests have no bell
     if (!isAuthenticated) return;
-
-    const currentUid = user?.userId ?? user?.id;
 
     notificationApi
       .getNotifications()
       .then((res) => {
         const rawItems = res.data?.items || res.data?.Items || res.data?.data?.items || res.data?.data?.Items || [];
-        let items = rawItems.map((n) => ({
-          notificationId: n.notificationId ?? n.NotificationId ?? n.id ?? 0,
-          title: n.title || n.Title || "",
-          message: n.message || n.Message || n.content || "",
-          category: n.category || n.Category || "event_new",
-          targetUrl: n.targetUrl || n.TargetUrl || "",
-          isRead: n.isRead ?? n.IsRead ?? false,
-          createdAt: n.createdAt || n.CreatedAt,
-        }));
+        // 1. Deduplicate by title + message
+        const seen = new Set();
+        const mapped = [];
+        for (const n of rawItems) {
+          const title = n.title || n.Title || "";
+          const message = n.message || n.Message || n.content || "";
+          const key = `${title}::${message}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
 
-        // Merge locally stored notifications for this user (resilience for cross-tab notifications)
+          // 2. Filter internal staff/admin notifications for customer accounts
+          if (!isStaff) {
+            const lowerTitle = title.toLowerCase();
+            if (
+              lowerTitle.startsWith("staff note on") ||
+              lowerTitle.startsWith("admin note on") ||
+              lowerTitle.startsWith("assigned to case")
+            ) {
+              continue;
+            }
+          }
+
+          mapped.push({
+            notificationId: n.notificationId ?? n.NotificationId ?? n.id ?? 0,
+            title,
+            message,
+            category: n.category || n.Category || "event_new",
+            targetUrl: n.targetUrl || n.TargetUrl || "",
+            isRead: n.isRead ?? n.IsRead ?? false,
+            createdAt: n.createdAt || n.CreatedAt,
+          });
+        }
+
+        // 3. Merge locally stored notifications for this user (resilience for cross-tab notifications)
         if (currentUid) {
           try {
             const userNotifsKey = `cs_user_notifs_${currentUid}`;
             const localSaved = JSON.parse(localStorage.getItem(userNotifsKey) || "[]");
             let localChanged = false;
             for (const item of localSaved) {
-              const matched = items.find((n) => n.title === item.title && n.message === item.message);
+              const matched = mapped.find((n) => n.title === item.title && n.message === item.message);
               if (!matched) {
-                items.unshift(item);
+                mapped.unshift(item);
               } else {
                 if (matched.isRead && !item.isRead) {
                   item.isRead = true;
@@ -98,8 +121,9 @@ export default function Header() {
           } catch (_) {}
         }
 
-        setNotifications(items);
-        setUnreadCount(items.filter((n) => !n.isRead).length);
+        setNotifications(mapped);
+        const actualUnread = mapped.filter((n) => !n.isRead).length;
+        setUnreadCount(actualUnread);
       })
       .catch(() => {
         // Fallback when NotificationAPI is offline or starting up
@@ -225,14 +249,19 @@ export default function Header() {
               />
               <defs>
                 <linearGradient id="tb-shield-grad" x1="3" y1="2" x2="21" y2="22">
-                  <stop offset="0" stopColor="#7c3aed" />
+                  <stop offset="0" stopColor="#a855f7" />
                   <stop offset="0.55" stopColor="#c026d3" />
-                  <stop offset="1" stopColor="#ec4899" />
+                  <stop offset="1" stopColor="#e8439c" />
                 </linearGradient>
               </defs>
             </svg>
           </span>
-          Concert<span>Shield</span>
+          <span className="tb-logo-text">
+            <span className="tb-logo-name">
+              Concert<span>Shield</span>
+            </span>
+            <span className="tb-logo-tagline">Fair Ticketing</span>
+          </span>
         </Link>
 
         <div className="tb-search-wrap" ref={searchRef}>
@@ -268,7 +297,7 @@ export default function Header() {
                 <div className="tb-search-section">
                   <span className="tb-search-section-label">Suggestions</span>
                   {suggestLoading && (
-                    <div className="tb-search-hint">Searching...</div>
+                    <div className="tb-search-hint"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
                   )}
                   {!suggestLoading && suggestions.length === 0 && (
                     <div className="tb-search-hint">No matching events</div>
@@ -358,12 +387,36 @@ export default function Header() {
             </>
           )}
 
-          {/* Notification Bell Dropdown (logged-in Customer, Organizer, and Admin) */}
+          {isAuthenticated && (
+            <Link to="/my-tickets" className="tb-header-link">
+              My Tickets
+            </Link>
+          )}
+
+          {isStaff && (
+            <Link to="/staff/gate-assignment" className="tb-header-link" style={{ color: "#21a87b", fontWeight: 600 }}>
+              Staff Portal
+            </Link>
+          )}
+
+          {isAdmin && (
+            <Link to="/admin" className="tb-header-link">
+              Admin
+            </Link>
+          )}
+
+          {isAuthenticated && (isStaff || isAdmin) && (
+            <Link to={isAdmin ? "/admin/incidents" : "/staff/incidents"} className="tb-header-link">
+              Incidents
+            </Link>
+          )}
+
+          {/* Notification Bell Dropdown (Chỉ icon chuông, đặt bên trái User Account Menu) */}
           {isAuthenticated && (
             <div className="tb-notif-wrap" ref={notifRef}>
               <button
                 type="button"
-                className="tb-header-link tb-notif-btn"
+                className="tb-notif-btn tb-notif-icon-only"
                 aria-haspopup="true"
                 aria-expanded={notifOpen}
                 onClick={() => {
@@ -372,8 +425,12 @@ export default function Header() {
                   if (next) fetchHeaderNotifications();
                 }}
                 title="Notifications"
+                aria-label="Notifications"
               >
-                🔔 Notifications
+                <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
                 {unreadCount > 0 && (
                   <span className="tb-notif-badge">{unreadCount > 99 ? "99+" : unreadCount}</span>
                 )}
@@ -455,8 +512,8 @@ export default function Header() {
                           <button
                             type="button"
                             className="tb-notif-item-delete"
-                            title="Delete notification"
-                            aria-label="Delete notification"
+                            title="Dismiss notification"
+                            aria-label="Dismiss notification"
                             onClick={async (e) => {
                               e.stopPropagation();
                               const targetId = notif.notificationId;
@@ -487,30 +544,6 @@ export default function Header() {
             </div>
           )}
 
-          {isAuthenticated && (
-            <Link to="/my-tickets" className="tb-header-link">
-              My Tickets
-            </Link>
-          )}
-
-          {isStaff && (
-            <Link to="/staff/gate-assignment" className="tb-header-link" style={{ color: "#34d399", fontWeight: 600 }}>
-              Staff Portal
-            </Link>
-          )}
-
-          {isAdmin && (
-            <Link to="/admin" className="tb-header-link">
-              Admin
-            </Link>
-          )}
-
-          {isAuthenticated && (isStaff || isAdmin) && (
-            <Link to={isAdmin ? "/admin/incidents" : "/staff/incidents"} className="tb-header-link">
-              Incidents
-            </Link>
-          )}
-
           <div className="tb-account" ref={accountRef}>
             {isAuthenticated ? (
               <>
@@ -521,7 +554,33 @@ export default function Header() {
                   aria-expanded={menuOpen}
                   onClick={() => setMenuOpen((v) => !v)}
                 >
-                  {user?.fullName || user?.email || "Account"}
+                  {(() => {
+                    const label = user?.fullName || user?.email || "Account";
+                    const initials = label
+                      .split(/\s+/)
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .map((part) => part[0])
+                      .join("")
+                      .toUpperCase();
+                    return (
+                      <>
+                        <span className="tb-account-avatar" aria-hidden="true">
+                          {initials}
+                        </span>
+                        <span className="tb-account-info">
+                          <span className="tb-account-name">{label}</span>
+                          <span className="tb-account-sub">
+                            <svg viewBox="0 0 20 20" width="11" height="11" fill="none">
+                              <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.5" />
+                              <path d="m6.8 10.2 2 2 4.4-4.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            eKYC Verified
+                          </span>
+                        </span>
+                      </>
+                    );
+                  })()}
                   <svg
                     viewBox="0 0 20 20"
                     width="12"

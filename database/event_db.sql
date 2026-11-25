@@ -321,6 +321,13 @@ CREATE TABLE IF NOT EXISTS public.refund_policies
 
 );
 
+CREATE TABLE IF NOT EXISTS public.event_sale_confirmations (
+    order_id integer PRIMARY KEY,
+    event_id integer NOT NULL
+        REFERENCES public.events(event_id),
+    confirmed_at_utc timestamp with time zone NOT NULL DEFAULT now()
+);
+
 CREATE INDEX IF NOT EXISTS ix_refund_policies_event_id ON public.refund_policies(event_id);
 
 CREATE TABLE IF NOT EXISTS public.seat_maps
@@ -1083,3 +1090,9 @@ CREATE TABLE IF NOT EXISTS public.event_gates (
 );
 CREATE INDEX IF NOT EXISTS ix_event_gates_event_id ON public.event_gates(event_id);
 
+	CREATE TABLE IF NOT EXISTS public.event_sale_confirmations (
+    order_id integer PRIMARY KEY,
+    event_id integer NOT NULL
+        REFERENCES public.events(event_id),
+    confirmed_at_utc timestamp with time zone NOT NULL DEFAULT now()
+);

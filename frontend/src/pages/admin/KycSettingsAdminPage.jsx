@@ -67,7 +67,7 @@ export default function KycSettingsAdminPage() {
         </div>
 
         {loading ? (
-          <div className="empty-state">Loading...</div>
+          <div className="empty-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
         ) : (
           <form onSubmit={submit} style={{ padding: "4px 22px 22px" }}>
             <div className="kyc-settings-card">
@@ -133,7 +133,7 @@ export default function KycSettingsAdminPage() {
                 {meta.updatedBy != null ? ` by admin #${meta.updatedBy}` : ""}
               </p>
               <button type="submit" className="admin-button" disabled={saving}>
-                {saving ? "Saving..." : "Save changes"}
+                {saving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Save changes"}
               </button>
             </div>
           </form>

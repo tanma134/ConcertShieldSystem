@@ -71,7 +71,7 @@ export default function VerifyResetOtpPage() {
             </div>
 
             <button className="auth-button" type="submit" disabled={loading}>
-              {loading ? "Verifying..." : "Verify"}
+              {loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Verify"}
             </button>
           </form>
 

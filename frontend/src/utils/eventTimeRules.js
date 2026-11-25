@@ -10,13 +10,21 @@ export function pricingTimeError(rule, ticket, event, now = Date.now()) {
   if (rule.ruleType === 'QuantityBased') return '';
   const from = Date.parse(rule.triggerFrom), to = Date.parse(rule.triggerTo);
   if (!Number.isFinite(from) || !Number.isFinite(to)) return 'Choose both discount start and end date/time.';
-  if (from <= now) return 'Discount start date and time must be later than now.';
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (from < today.getTime()) return 'Discount start date cannot be before today.';
   if (to <= from) return 'Discount end date and time must be after its start.';
   const saleStart = Date.parse(ticket?.salesStartsAt), saleEnd = Date.parse(ticket?.salesEndsAt);
   const concertStart = Date.parse(event?.startsAt);
-  if (Number.isFinite(saleStart) && from < saleStart) return 'Discount cannot start before ticket sales open.';
-  if (Number.isFinite(saleEnd) && to > saleEnd) return 'Discount cannot end after ticket sales close.';
-  if (Number.isFinite(concertStart) && to > concertStart) return 'Discount must end by the concert start time.';
+  if (Number.isFinite(saleStart) && from < saleStart) {
+    return `Discount cannot start before ticket sales open (${new Date(saleStart).toLocaleString()}).`;
+  }
+  if (Number.isFinite(saleEnd) && to > saleEnd) {
+    return `Discount cannot end after ticket sales close (${new Date(saleEnd).toLocaleString()}).`;
+  }
+  if (Number.isFinite(concertStart) && to > concertStart) {
+    return `Discount must end before the concert starts (${new Date(concertStart).toLocaleString()}).`;
+  }
   return '';
 }
 

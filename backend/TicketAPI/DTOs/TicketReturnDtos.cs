@@ -1,6 +1,6 @@
 namespace TicketAPI.DTOs;
 
-// Body of POST api/ticket-returns (UC_9.1).
+// Body of POST api/ticket-returns.
 public class SubmitTicketReturnDto
 {
     public int TicketId { get; set; }
@@ -8,7 +8,7 @@ public class SubmitTicketReturnDto
     public string? Reason { get; set; }
 }
 
-// One return request as shown to the customer (UC_9.2).
+// One return request as shown to the customer.
 public class TicketReturnDto
 {
     public int TicketReturnRequestId { get; set; }

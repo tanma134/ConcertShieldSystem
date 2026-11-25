@@ -27,6 +27,7 @@ namespace EventAPI.Services
             _eventAccessService = eventAccessService;
         }
 
+        // Lay danh sach cac hang ve da cau hinh cua concert
         public async Task<List<TicketTypeResponseDTO>> GetByEventIdAsync(int eventId, int? callerId, bool isAdmin)
         {
             // Draft/Pending/Rejected/Cancelled ticket types are the owner's/Admin's
@@ -37,8 +38,10 @@ namespace EventAPI.Services
             return items.Select(Map).ToList();
         }
 
+        // Tao moi mot hang ve cho concert o trang thai Draft hoac Rejected
         public async Task<TicketTypeResponseDTO> CreateAsync(int eventId, CreateTicketTypeDTO dto, int callerId, bool isAdmin)
         {
+            // Luu y: Kiem tra khong trung ten hang ve va luu thiet lap gioi han MinPerOrder, MaxPerOrder
             var ev = await GetOwnedEventAsync(eventId, callerId, isAdmin);
 
             if (await _ticketTypeRepository.ExistsNameAsync(eventId, dto.TypeName))
@@ -57,8 +60,8 @@ namespace EventAPI.Services
                 MaxPerOrder = dto.MaxPerOrder,
                 ColorCode = dto.ColorCode,
                 SortOrder = dto.SortOrder,
-                SalesStartsAt = dto.SalesStartsAt,
-                SalesEndsAt = dto.SalesEndsAt,
+                SalesStartsAt = EventTime.ToUtc(dto.SalesStartsAt),
+                SalesEndsAt = EventTime.ToUtc(dto.SalesEndsAt),
                 Status = "Active",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -68,14 +71,30 @@ namespace EventAPI.Services
             return Map(created);
         }
 
+        // Cap nhat thong tin hang ve nhu ten, gia, so luong hoac gioi han mua
         public async Task<TicketTypeResponseDTO> UpdateAsync(int ticketTypeId, UpdateTicketTypeDTO dto, int callerId, bool isAdmin)
         {
+            // Luu y: Khi concert da Published chi cho phep sua khung gio mo ban, khoa ten, gia va so luong
             var entity = await _ticketTypeRepository.GetByIdAsync(ticketTypeId)
                 ?? throw new KeyNotFoundException($"TicketType {ticketTypeId} not found.");
 
-            var parentEvent = await GetOwnedEventAsync(entity.EventId, callerId, isAdmin);
+            var parentEvent = await GetOwnedEventAsync(entity.EventId, callerId, isAdmin, allowPublishedSalesWindow: true);
+            var isPublished = string.Equals(EventStatus.Normalize(parentEvent.Status), EventStatus.Published, StringComparison.OrdinalIgnoreCase);
 
-            if (dto.TypeName != null)
+            if (isPublished && !isAdmin)
+            {
+                // When published, ONLY sales window (and description/color) can be adjusted; price/qty/name are locked.
+                if (dto.TypeName != null && !string.Equals(dto.TypeName.Trim(), entity.TypeName, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("Ticket type name cannot be modified once the concert is Published.");
+                if (dto.Price.HasValue && dto.Price.Value != entity.Price)
+                    throw new InvalidOperationException("Ticket price cannot be modified once the concert is Published.");
+                if (dto.OriginalPrice.HasValue && dto.OriginalPrice.Value != entity.OriginalPrice)
+                    throw new InvalidOperationException("Original price cannot be modified once the concert is Published.");
+                if (dto.Quantity.HasValue && dto.Quantity.Value != entity.Quantity)
+                    throw new InvalidOperationException("Ticket quantity cannot be modified once the concert is Published.");
+            }
+
+            if (dto.TypeName != null && !isPublished)
             {
                 if (await _ticketTypeRepository.ExistsNameAsync(entity.EventId, dto.TypeName, ticketTypeId))
                     throw new InvalidOperationException(
@@ -83,9 +102,9 @@ namespace EventAPI.Services
                 entity.TypeName = dto.TypeName.Trim();
             }
             if (dto.Description != null) entity.Description = dto.Description;
-            if (dto.Price.HasValue) entity.Price = dto.Price.Value;
-            if (dto.OriginalPrice.HasValue) entity.OriginalPrice = dto.OriginalPrice;
-            if (dto.Quantity.HasValue && dto.Quantity.Value != entity.Quantity)
+            if (dto.Price.HasValue && !isPublished) entity.Price = dto.Price.Value;
+            if (dto.OriginalPrice.HasValue && !isPublished) entity.OriginalPrice = dto.OriginalPrice;
+            if (dto.Quantity.HasValue && !isPublished && dto.Quantity.Value != entity.Quantity)
             {
                 var placedInLayout = await IsPlacedInLayoutAsync(entity.EventId, entity.TicketTypeId);
 
@@ -100,8 +119,8 @@ namespace EventAPI.Services
             if (dto.ColorCode != null) entity.ColorCode = dto.ColorCode;
             if (dto.SortOrder.HasValue) entity.SortOrder = dto.SortOrder.Value;
             if (dto.Status != null) entity.Status = dto.Status;
-            if (dto.SalesStartsAt.HasValue) entity.SalesStartsAt = dto.SalesStartsAt;
-            if (dto.SalesEndsAt.HasValue) entity.SalesEndsAt = dto.SalesEndsAt;
+            if (dto.SalesStartsAt.HasValue) entity.SalesStartsAt = EventTime.ToUtc(dto.SalesStartsAt);
+            if (dto.SalesEndsAt.HasValue) entity.SalesEndsAt = EventTime.ToUtc(dto.SalesEndsAt);
 
             if (entity.Quantity < entity.SoldQuantity)
                 throw new InvalidOperationException("Quantity cannot be less than the number already sold.");
@@ -117,16 +136,26 @@ namespace EventAPI.Services
                 entity.SalesEndsAt <= entity.SalesStartsAt)
                 throw new InvalidOperationException("SalesEndsAt must be after SalesStartsAt.");
 
-            if (entity.SalesEndsAt.HasValue && parentEvent.EndsAt != default &&
+            if (entity.SalesEndsAt.HasValue && parentEvent.StartsAt != default)
+            {
+                var cutoffTime = parentEvent.StartsAt.AddHours(-1);
+                if (entity.SalesEndsAt > cutoffTime)
+                    throw new InvalidOperationException($"Ticket sales must close at least 1 hour before the concert starts ({cutoffTime:dd/MM/yyyy HH:mm}).");
+            }
+            else if (entity.SalesEndsAt.HasValue && parentEvent.EndsAt != default &&
                 entity.SalesEndsAt > parentEvent.EndsAt)
+            {
                 throw new InvalidOperationException("Ticket sales cannot end after the concert ends.");
+            }
 
             await _ticketTypeRepository.UpdateAsync(entity);
             return Map(entity);
         }
 
+        // Xoa hang ve khoi concert khi chua phat sinh ve ban ra
         public async Task DeleteAsync(int ticketTypeId, int callerId, bool isAdmin)
         {
+            // Luu y: Khong duoc phep xoa neu da co ve duoc ban ra hoac dang gan vao so do ghe
             var entity = await _ticketTypeRepository.GetByIdAsync(ticketTypeId)
                 ?? throw new KeyNotFoundException($"TicketType {ticketTypeId} not found.");
 
@@ -144,14 +173,14 @@ namespace EventAPI.Services
             await _ticketTypeRepository.SoftDeleteAsync(ticketTypeId, callerId);
         }
 
-        /// <summary>True when at least one zone in the concert's layout uses this ticket type.</summary>
+        // Kiem tra xem co vung ghe nao trong so do dang su dung hang ve nay khong
         private async Task<bool> IsPlacedInLayoutAsync(int eventId, int ticketTypeId)
         {
             var map = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: false);
             return map != null && map.SeatZones.Any(z => z.TicketTypeId == ticketTypeId);
         }
 
-        private async Task<Event> GetOwnedEventAsync(int eventId, int callerId, bool isAdmin)
+        private async Task<Event> GetOwnedEventAsync(int eventId, int callerId, bool isAdmin, bool allowPublishedSalesWindow = false)
         {
             var ev = await _eventRepository.GetByIdAsync(eventId)
                 ?? throw new KeyNotFoundException($"Event {eventId} not found.");
@@ -164,9 +193,17 @@ namespace EventAPI.Services
             if (LockedEventStatuses.Contains(status))
                 throw new InvalidOperationException($"Ticket types cannot be modified while the concert is '{status}'.");
 
-            if (!isAdmin && !EventStatus.Editable.Contains(status))
-                throw new InvalidOperationException(
-                    $"Ticket types can only be changed while the concert is Draft or Rejected. Current status: '{status}'.");
+            if (!isAdmin)
+            {
+                if (allowPublishedSalesWindow && status == EventStatus.Published)
+                {
+                    return ev;
+                }
+
+                if (!EventStatus.Editable.Contains(status))
+                    throw new InvalidOperationException(
+                        $"Ticket types can only be changed while the concert is Draft or Rejected. Current status: '{status}'.");
+            }
 
             return ev;
         }

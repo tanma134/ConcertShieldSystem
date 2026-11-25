@@ -37,6 +37,7 @@ namespace EventAPI.Services
             _eventAccessService = eventAccessService;
         }
 
+        // Lay danh sach cac quy tac gia dong ap dung cho mot hang ve
         public async Task<List<PricingRuleResponseDTO>> GetByTicketTypeIdAsync(int ticketTypeId, int? callerId, bool isAdmin)
         {
             var ticketType = await _ticketTypeRepository.GetByIdAsync(ticketTypeId)
@@ -51,9 +52,11 @@ namespace EventAPI.Services
             return items.Select(Map).ToList();
         }
 
+        // Tao quy tac gia dong nhu EarlyBird hoac LastMinute cho hang ve
         public async Task<PricingRuleResponseDTO> CreateAsync(
             int ticketTypeId, CreatePricingRuleDTO dto, int callerId, bool isAdmin)
         {
+            // Luu y: Khi concert da Published chi cho phep quy tac giam gia, khong duoc tang gia ve
             var ticketType = await GetEditableTicketTypeAsync(ticketTypeId, callerId, isAdmin);
 
             var existing = await _pricingRuleRepository.GetByTicketTypeIdAsync(ticketTypeId);
@@ -62,6 +65,7 @@ namespace EventAPI.Services
                     $"A pricing rule named '{dto.RuleName}' already exists for ticket type '{ticketType.TypeName}'.");
 
             ValidateRuleShape(dto.RuleType, dto.AdjustedPrice, dto.DiscountPercent, dto.TriggerFrom, dto.TriggerTo, dto.QuantityThreshold);
+            await EnsureDiscountOnlyIfPublishedAsync(ticketTypeId, dto.AdjustedPrice, dto.DiscountPercent);
             await ValidateScheduleAsync(ticketType, dto.RuleType, dto.TriggerFrom, dto.TriggerTo, true);
 
             var entity = new PricingRule
@@ -71,8 +75,8 @@ namespace EventAPI.Services
                 RuleType = dto.RuleType,
                 AdjustedPrice = dto.AdjustedPrice,
                 DiscountPercent = dto.DiscountPercent,
-                TriggerFrom = dto.TriggerFrom,
-                TriggerTo = dto.TriggerTo,
+                TriggerFrom = EventTime.ToUtc(dto.TriggerFrom),
+                TriggerTo = EventTime.ToUtc(dto.TriggerTo),
                 QuantityThreshold = dto.QuantityThreshold,
                 Priority = dto.Priority,
                 IsActive = dto.IsActive,
@@ -83,9 +87,11 @@ namespace EventAPI.Services
             return Map(created);
         }
 
+        // Cap nhat thong tin quy tac gia dong cua hang ve
         public async Task<PricingRuleResponseDTO> UpdateAsync(
             int pricingRuleId, UpdatePricingRuleDTO dto, int callerId, bool isAdmin)
         {
+            // Luu y: Validate khoang thoi gian ap dung nam trong thoi gian ban ve
             var entity = await _pricingRuleRepository.GetByIdAsync(pricingRuleId)
                 ?? throw new KeyNotFoundException($"Pricing rule {pricingRuleId} not found.");
 
@@ -98,8 +104,8 @@ namespace EventAPI.Services
             if (dto.RuleType != null) entity.RuleType = dto.RuleType;
             if (dto.AdjustedPrice.HasValue) entity.AdjustedPrice = dto.AdjustedPrice;
             if (dto.DiscountPercent.HasValue) entity.DiscountPercent = dto.DiscountPercent;
-            if (dto.TriggerFrom.HasValue) entity.TriggerFrom = dto.TriggerFrom;
-            if (dto.TriggerTo.HasValue) entity.TriggerTo = dto.TriggerTo;
+            if (dto.TriggerFrom.HasValue) entity.TriggerFrom = EventTime.ToUtc(dto.TriggerFrom);
+            if (dto.TriggerTo.HasValue) entity.TriggerTo = EventTime.ToUtc(dto.TriggerTo);
             if (dto.QuantityThreshold.HasValue) entity.QuantityThreshold = dto.QuantityThreshold;
             if (dto.Priority.HasValue) entity.Priority = dto.Priority.Value;
             if (dto.IsActive.HasValue) entity.IsActive = dto.IsActive.Value;
@@ -107,13 +113,16 @@ namespace EventAPI.Services
             ValidateRuleShape(entity.RuleType, entity.AdjustedPrice, entity.DiscountPercent,
                 entity.TriggerFrom, entity.TriggerTo, entity.QuantityThreshold);
 
+            await EnsureDiscountOnlyIfPublishedAsync(entity.TicketTypeId, entity.AdjustedPrice, entity.DiscountPercent);
             await ValidateScheduleAsync(ticketType, entity.RuleType, entity.TriggerFrom, entity.TriggerTo, scheduleChanged);
             await _pricingRuleRepository.UpdateAsync(entity);
             return Map(entity);
         }
 
+        // Xoa quy tac gia dong khoi hang ve
         public async Task DeleteAsync(int pricingRuleId, int callerId, bool isAdmin)
         {
+            // Luu y: Chi Organizer chu so huu hoac Admin moi co quyen xoa quy tac gia
             var entity = await _pricingRuleRepository.GetByIdAsync(pricingRuleId)
                 ?? throw new KeyNotFoundException($"Pricing rule {pricingRuleId} not found.");
 
@@ -123,9 +132,9 @@ namespace EventAPI.Services
 
         // Cross-checks a rule's shape against its declared RuleType so a saved rule
         // can never be ambiguous about when or how it applies:
-        //   - EarlyBird / LastMinute / TimeBased -> needs at least one trigger time.
-        //   - QuantityBased -> needs a positive QuantityThreshold.
-        //   - Every rule needs a price effect: AdjustedPrice and/or DiscountPercent.
+        // EarlyBird / LastMinute / TimeBased -> needs at least one trigger time.
+        // QuantityBased -> needs a positive QuantityThreshold.
+        // Every rule needs a price effect: AdjustedPrice and/or DiscountPercent.
         // FluentValidation (CreatePricingRuleValidator) already covers most of this
         // on Create; it is re-checked here because Update can clear one field
         // without the request going back through the validator.
@@ -154,9 +163,8 @@ namespace EventAPI.Services
         }
 
         // Ownership + status gate, reached through the ticket type's parent event.
-        // Pricing rules are only configurable while the concert is Draft or Rejected
-        // (an Admin may override) — the same rule already applied to ticket types
-        // and refund policies.
+        // Draft / Rejected: full editing. Published: discount-only rules allowed
+        // so organisers can add LastMinute sales to move unsold inventory.
 
         private async Task<TicketType> GetEditableTicketTypeAsync(int ticketTypeId, int callerId, bool isAdmin)
         {
@@ -170,14 +178,34 @@ namespace EventAPI.Services
                 throw new UnauthorizedAccessException("You do not own this concert.");
 
             var status = EventStatus.Normalize(ev.Status);
-            if (!isAdmin && !EventStatus.Editable.Contains(status))
+            if (!isAdmin && !EventStatus.Editable.Contains(status) && status != EventStatus.Published)
                 throw new InvalidOperationException(
-                    $"Pricing rules can only be changed while the concert is Draft or Rejected. Current status: '{status}'.");
+                    $"Pricing rules can only be changed while the concert is Draft, Rejected, or Published. Current status: '{status}'.");
 
             return ticketType;
         }
 
-        // Đọc lịch concert hiện tại trước khi chấp nhận cấu hình giảm giá.
+        // When the event is Published, only discount rules are permitted — the organiser
+        // must not be able to raise ticket prices on customers who already saw them.
+        private async Task EnsureDiscountOnlyIfPublishedAsync(int ticketTypeId, long? adjustedPrice, decimal? discountPercent)
+        {
+            var ticketType = await _ticketTypeRepository.GetByIdAsync(ticketTypeId);
+            if (ticketType == null) return;
+
+            var ev = await _eventRepository.GetByIdAsync(ticketType.EventId);
+            if (ev == null) return;
+
+            var status = EventStatus.Normalize(ev.Status);
+            if (status != EventStatus.Published) return;
+
+            // DiscountPercent is always a discount (0–100%), so that's fine.
+            // AdjustedPrice must be BELOW the ticket's base price.
+            if (adjustedPrice.HasValue && adjustedPrice.Value >= ticketType.Price)
+                throw new InvalidOperationException(
+                    $"Published events only allow discounts. Adjusted price ({adjustedPrice.Value:N0}) must be lower than the base price ({ticketType.Price:N0}).");
+        }
+
+        // Doc lich concert hien tai truoc khi chap nhan cau hinh giam gia
         private async Task ValidateScheduleAsync(TicketType ticket, string type, DateTime? from, DateTime? to, bool requireFuture)
         {
             var ev = await _eventRepository.GetByIdAsync(ticket.EventId)

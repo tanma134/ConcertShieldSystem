@@ -45,8 +45,10 @@ namespace EventAPI.Services
             _governance = governance;
         }
 
+        // Tao moi mot concert o trang thai Draft danh cho Organizer
         public async Task<EventResponseDTO> CreateAsync(CreateEventDTO dto, int organizerId)
         {
+            // Luu y: Tu dong chuan hoa slug va kiem tra tinh duy nhat trong database
             var requestedSlug = SlugHelper.NormalizeSlug(dto.Slug ?? dto.Title);
             if (!SlugHelper.IsValidSlug(requestedSlug, out var slugError))
                 throw new ArgumentException(slugError);
@@ -58,7 +60,7 @@ namespace EventAPI.Services
             var entity = new Event
             {
                 OrganizerId = organizerId,
-                CategoryId = MusicCategoryId, // Music — fixed, customers cannot pick another category
+                CategoryId = MusicCategoryId, // Mac dinh luon la the loai Music (Am nhac)
                 Title = dto.Title,
                 Slug = slug,
                 ShortDescription = dto.ShortDescription,
@@ -68,8 +70,8 @@ namespace EventAPI.Services
                 City = dto.City,
                 Longitude = dto.Longitude,
                 Latitude = dto.Latitude,
-                StartsAt = dto.StartsAt,
-                EndsAt = dto.EndsAt,
+                StartsAt = EventTime.ToUtc(dto.StartsAt, dto.Timezone),
+                EndsAt = EventTime.ToUtc(dto.EndsAt, dto.Timezone),
                 Timezone = string.IsNullOrWhiteSpace(dto.Timezone) ? "SE Asia Standard Time" : dto.Timezone,
                 HasSeatingChart = false,
                 SeatingMode = SeatingMode.GeneralAdmission,
@@ -79,7 +81,7 @@ namespace EventAPI.Services
                 MetaTitle = dto.MetaTitle,
                 MetaDescription = dto.MetaDescription,
                 HoldTimeoutMinutes = dto.HoldTimeoutMinutes.HasValue && dto.HoldTimeoutMinutes.Value > 0 ? dto.HoldTimeoutMinutes.Value : 10,
-                ReEntryPolicy = Common.ReEntryPolicyTypes.Normalize(dto.ReEntryPolicy),
+                ReEntryPolicy = Common.ReEntryPolicyTypes.Normalize(dto.ReEntryPolicy), // rim hieu them common chỗ đó làm j
                 ReEntryDurationMinutes = dto.ReEntryDurationMinutes,
                 Status = EventStatus.Draft, // Creating a concert never grants the Organizer role by itself
                 CreatedBy = organizerId,
@@ -230,14 +232,36 @@ namespace EventAPI.Services
             return entity;
         }
 
+        // Chinh sua thong tin concert o trang thai Draft hoac Rejected
         public async Task<EventResponseDTO> UpdateAsync(int id, UpdateEventDTO dto, int callerId, bool isAdmin)
         {
             var entity = await GetOwnedEntityAsync(id, callerId, isAdmin);
 
+            // Luu y: Chi cho phep chinh sua khi concert o trang thai Draft hoac Rejected
             var currentStatus = EventStatus.Normalize(entity.Status);
             if (!isAdmin && !EventStatus.Editable.Contains(currentStatus))
                 throw new InvalidOperationException(
                     $"Concert cannot be edited while in status '{currentStatus}'. Only Draft or Rejected concerts can be edited.");
+
+            // Su kien da Published thi tuyet doi khong cho sua truc tiep dia diem hoac thoi gian ma phai qua change request
+            if (currentStatus == EventStatus.Published)
+            {
+                var venueChanged = (dto.LocationName != null && dto.LocationName != entity.LocationName)
+                    || (dto.Address != null && dto.Address != entity.Address)
+                    || (dto.City != null && dto.City != entity.City)
+                    || (dto.Longitude.HasValue && dto.Longitude != entity.Longitude)
+                    || (dto.Latitude.HasValue && dto.Latitude != entity.Latitude);
+
+                if (venueChanged)
+                {
+                    throw new GovernanceConflictException("VENUE_CHANGE_NOT_ALLOWED_AFTER_PUBLICATION: Published concerts cannot change venue directly. A change request must be submitted.");
+                }
+
+                if (dto.StartsAt.HasValue || dto.EndsAt.HasValue)
+                {
+                    throw new GovernanceConflictException("SCHEDULE_CHANGE_NOT_ALLOWED_AFTER_PUBLICATION: Published concerts cannot change schedule directly. A Postpone or Reschedule change request must be submitted.");
+                }
+            }
 
             if (dto.Title != null) entity.Title = dto.Title;
             if (dto.Slug != null)
@@ -258,13 +282,12 @@ namespace EventAPI.Services
             if (dto.City != null) entity.City = dto.City;
             if (dto.Longitude.HasValue) entity.Longitude = dto.Longitude;
             if (dto.Latitude.HasValue) entity.Latitude = dto.Latitude;
-            if (dto.StartsAt.HasValue) entity.StartsAt = dto.StartsAt.Value;
-            if (dto.EndsAt.HasValue) entity.EndsAt = dto.EndsAt.Value;
+            if (dto.StartsAt.HasValue) entity.StartsAt = EventTime.ToUtc(dto.StartsAt.Value, dto.Timezone ?? entity.Timezone);
+            if (dto.EndsAt.HasValue) entity.EndsAt = EventTime.ToUtc(dto.EndsAt.Value, dto.Timezone ?? entity.Timezone);
             if (dto.Timezone != null) entity.Timezone = dto.Timezone;
-            // HasSeatingChart is not settable via Update — see the comment on
-            // UpdateEventDTO.HasSeatingChart (removed 21/09/2026). SeatingService is
-            // the single owner of this flag.
+            // HasSeatingChart khong the thay doi qua Update ma do SeatingService quan ly
             if (dto.RequiresVirtualQueue.HasValue) entity.RequiresVirtualQueue = dto.RequiresVirtualQueue.Value;
+            // Luu y: Cau hinh gioi han so ve toi thieu va toi da cho moi tai khoan o cap su kien
             if (dto.MinTicketsPerAccount.HasValue) entity.MinTicketsPerAccount = dto.MinTicketsPerAccount;
             if (dto.MaxTicketsPerAccount.HasValue) entity.MaxTicketsPerAccount = dto.MaxTicketsPerAccount;
             if (dto.MetaTitle != null) entity.MetaTitle = dto.MetaTitle;
@@ -283,9 +306,11 @@ namespace EventAPI.Services
             return MapToResponse(reloaded!);
         }
 
+        // Xoa mem concert o trang thai Draft hoac Rejected
         public async Task SoftDeleteAsync(int id, int callerId, bool isAdmin)
         {
             var entity = await GetOwnedEntityAsync(id, callerId, isAdmin);
+            // Luu y: Khong duoc xoa concert da Published hoac dang cho duyet, thuc hien soft-delete IsDeleted=true
             if (!isAdmin && !EventStatus.Editable.Contains(EventStatus.Normalize(entity.Status)))
                 throw new InvalidOperationException(
                     $"Only Draft or Rejected concerts can be deleted. Current status: '{EventStatus.Normalize(entity.Status)}'.");
@@ -316,17 +341,20 @@ namespace EventAPI.Services
             return await _submissionValidator.ValidateAsync(id);
         }
 
+        // Gui yeu cau xet duyet concert de chuyen tu Draft hoac Rejected sang Pending
         public async Task<EventResponseDTO> SubmitAsync(int id, int callerId)
         {
+            // Luu y: Mo transaction va khoa ban ghi de dam bao toan ven du lieu khi submit
             await using var submissionTransaction = await _context.Database.BeginTransactionAsync();
             var entity = await _governance.GetAsync(id, callerId, false, true, CancellationToken.None);
 
+            // Luu y: Chi cho phep submit khi o trang thai Draft hoac Rejected
             var status = EventStatus.Normalize(entity.Status);
             if (!EventStatus.Submittable.Contains(status))
                 throw new InvalidOperationException(
                     $"Only Draft or Rejected concerts can be submitted. Current status: '{status}'.");
 
-            // Drafts may be incomplete; a submission may not be.
+            // Luu y: Kiem tra bat buoc poster, banner, loai ve va so do ghe truoc khi chuyen trang thai
             var validation = await _submissionValidator.ValidateAsync(id);
             if (!validation.IsValid)
                 throw new SubmissionValidationException(validation);
@@ -392,7 +420,7 @@ namespace EventAPI.Services
             if (status != EventStatus.Pending)
                 throw new InvalidOperationException($"Only Pending concerts can be approved. Current status: '{status}'.");
 
-            // Duyệt đúng phiên bản hồ sơ và cấu hình hiện tại trước khi Published.
+            // Duyet dung phien ban ho so va cau hinh hien tai truoc khi Published
             await _governance.EnsureCompleteAsync(entity, CancellationToken.None);
             if (!GovernanceRules.ComplianceApproved(entity))
                 throw new InvalidOperationException("The current compliance documents must be approved first.");
@@ -410,50 +438,13 @@ namespace EventAPI.Services
             _governance.Queue("Notification", new NotificationMessage(entity.OrganizerId, "Concert approved", $"{entity.Title} has been published.", "event_approved", $"/events/{entity.Slug}"));
             await _eventRepository.UpdateAsync(entity);
             await approvalTransaction.CommitAsync();
-            // UC 20: Real-time In-App Notifications upon Event Approval
+            // Real-time In-App Notifications upon Event Approval
             var approvedEventTitle = entity.Title;
             var approvedEventId = entity.EventId;
             var approvedOrganizerId = entity.OrganizerId;
 
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    const string notifConnStr = "Host=localhost;Port=5432;Database=notification_db;Username=postgres;Password=123456";
-                    await using var conn = new Npgsql.NpgsqlConnection(notifConnStr);
-                    await conn.OpenAsync();
-
-                    // 1. Notification for Customer: Public event announced
-                    await using (var cmdCust = new Npgsql.NpgsqlCommand(@"
-                        INSERT INTO notifications (user_id, title, message, category, target_url, is_read, is_deleted, created_at)
-                        VALUES (0, @title, @msg, 'event_new', @url, false, false, NOW());", conn))
-                    {
-                        cmdCust.Parameters.AddWithValue("title", $"🎵 Sự kiện mới: {approvedEventTitle}");
-                        cmdCust.Parameters.AddWithValue("msg", $"Sự kiện âm nhạc \"{approvedEventTitle}\" vừa được Admin duyệt và chính thức mở bán trên ConcertShield. Hãy đặt vé ngay!");
-                        cmdCust.Parameters.AddWithValue("url", $"/events/{approvedEventId}");
-                        await cmdCust.ExecuteNonQueryAsync();
-                    }
-
-                    // 2. Notification for Organizer: Event approved & published
-                    if (approvedOrganizerId > 0)
-                    {
-                        await using (var cmdOrg = new Npgsql.NpgsqlCommand(@"
-                            INSERT INTO notifications (user_id, title, message, category, target_url, is_read, is_deleted, created_at)
-                            VALUES (@uid, @title, @msg, 'event_approved', @url, false, false, NOW());", conn))
-                        {
-                            cmdOrg.Parameters.AddWithValue("uid", approvedOrganizerId);
-                            cmdOrg.Parameters.AddWithValue("title", $"✅ Sự kiện đã được phê duyệt: {approvedEventTitle}");
-                            cmdOrg.Parameters.AddWithValue("msg", $"Sự kiện \"{approvedEventTitle}\" của bạn đã được Quản trị viên duyệt và công bố công khai trên hệ thống.");
-                            cmdOrg.Parameters.AddWithValue("url", "/organizer/events");
-                            await cmdOrg.ExecuteNonQueryAsync();
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to persist notifications for approved event {EventId}", approvedEventId);
-                }
-            });
+            // Xoa bo hard-code database connection string; thong bao duoc day qua Outbox den NotificationAPI
+            _governance.Queue("Notification", new NotificationMessage(0, $"New Event Announced: {approvedEventTitle}", $"Concert '{approvedEventTitle}' has been approved and is now on sale. Book your tickets now!", "event_new", $"/events/{entity.Slug}"));
 
             var roleGrant = await _roleClient.GrantRoleAsync(
                 entity.OrganizerId, "Organizer", adminBearerToken);
@@ -494,16 +485,33 @@ namespace EventAPI.Services
             return await MapToResponseWithSeatingAsync(reloaded!);
         }
 
+        // Huy su kien concert dang Pending hoac da Published
         public async Task<EventResponseDTO> CancelAsync(int id, int callerId, bool isAdmin)
         {
             var entity = await GetOwnedEntityAsync(id, callerId, isAdmin);
 
+            // Luu y: Chi chap nhan huy su kien neu dang o trang thai Pending hoac Published
             var status = EventStatus.Normalize(entity.Status);
+            if (status == EventStatus.Cancelled)
+            {
+                // Idempotent retry: neu da Cancelled thi tra ve luon khong bao loi
+                var alreadyCancelled = await _eventRepository.GetByIdAsync(id, includeChildren: true);
+                return MapToResponse(alreadyCancelled!);
+            }
+
             if (status != EventStatus.Published && status != EventStatus.Pending)
                 throw new InvalidOperationException($"Only Pending or Published concerts can be cancelled. Current status: '{status}'.");
 
+            // Luu y: Chuyen trang thai sang Cancelled va dong bang ban ve
             entity.Status = EventStatus.Cancelled;
+            entity.SalesFrozen = true;
             entity.UpdatedBy = callerId;
+            entity.UpdatedAt = DateTime.UtcNow;
+
+            // Tao outbox phat su kien huy toi TicketAPI va thong bao cho Organizer/Customer
+            _governance.Queue("CancelEvent", new NotificationMessage(entity.OrganizerId, "Concert cancelled", $"{entity.Title} has been cancelled.", "event_cancelled", $"/organizer/events/{entity.EventId}"));
+            _governance.Queue("ApplyChange", new ApplyChangeMessage(0, id, "Cancel", null, null, entity.ScheduleVersion + 1, "Concert cancelled by " + (isAdmin ? "Admin" : "Organizer"), entity.Title, entity.Slug));
+
             await _eventRepository.UpdateAsync(entity);
 
             if (!isAdmin)
@@ -592,7 +600,7 @@ namespace EventAPI.Services
             return await MapToResponseWithSeatingAsync(reloaded!);
         }
 
-        // ---- Mapping ----
+        // --- Mapping ----
 
         public static EventResponseDTO MapToResponse(Event e) => new()
         {
@@ -702,6 +710,7 @@ namespace EventAPI.Services
             TypeName = t.TypeName,
             Description = t.Description,
             Price = t.Price,
+            EffectivePrice = ResolveEffectivePrice(t),
             OriginalPrice = t.OriginalPrice,
             Quantity = t.Quantity,
             SoldQuantity = t.SoldQuantity,
@@ -715,6 +724,25 @@ namespace EventAPI.Services
             CreatedAt = t.CreatedAt,
             UpdatedAt = t.UpdatedAt
         };
+
+        // Tinh gia dang ap dung theo thoi gian, nguong so luong va uu tien rule.
+        public static long ResolveEffectivePrice(TicketType t)
+        {
+            var now = DateTime.UtcNow;
+            var rule = t.PricingRules
+                .Where(r => r.IsActive
+                    && (!r.TriggerFrom.HasValue || r.TriggerFrom <= now)
+                    && (!r.TriggerTo.HasValue || r.TriggerTo > now)
+                    && (!r.QuantityThreshold.HasValue || t.SoldQuantity < r.QuantityThreshold.Value))
+                .OrderByDescending(r => r.Priority)
+                .ThenByDescending(r => r.CreatedAt)
+                .FirstOrDefault();
+
+            if (rule?.AdjustedPrice is >= 0 and long adjusted) return adjusted;
+            if (rule?.DiscountPercent is decimal discount && discount >= 0 && discount <= 100)
+                return Math.Max(0, (long)Math.Round(t.Price * (1m - discount / 100m), MidpointRounding.AwayFromZero));
+            return t.Price;
+        }
 
         private static EventImageResponseDTO MapImage(EventImage i) => new()
         {
@@ -772,3 +800,4 @@ namespace EventAPI.Services
 
     }
 }
+

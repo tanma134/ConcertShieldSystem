@@ -2,6 +2,7 @@ using EventAPI.Common;
 using EventAPI.DTOs;
 using EventAPI.Models;
 using EventAPI.Repositories;
+using System.Text.Json;
 
 namespace EventAPI.Services
 {
@@ -151,6 +152,17 @@ namespace EventAPI.Services
             var validTicketTypeIds = ticketTypes.Select(t => t.TicketTypeId).ToHashSet();
             var errors = ValidateZones(dto.Zones, validTicketTypeIds);
 
+            foreach (var tt in ticketTypes)
+            {
+                var requestedCap = dto.Zones
+                    .Where(z => z.TicketTypeId == tt.TicketTypeId)
+                    .Sum(DtoCapacity);
+                if (requestedCap > tt.Quantity)
+                {
+                    errors.Add($"Layout allocates {requestedCap} seats to '{tt.TypeName}', which exceeds its declared quota ({tt.Quantity}).");
+                }
+            }
+
             if (errors.Count > 0)
                 throw new ArgumentException(string.Join(" | ", errors));
 
@@ -218,6 +230,33 @@ namespace EventAPI.Services
             if (map.SeatZones.Any(z => string.Equals(z.ZoneName, dto.ZoneName, StringComparison.OrdinalIgnoreCase)))
                 errors.Add($"A zone named '{dto.ZoneName}' already exists on this layout.");
 
+            // Kiem tra hinh dang zone moi khong duoc chong lan voi cac zone da co
+            var newBox = ParseBounds(dto.ShapeJson);
+            if (newBox is { } nb)
+            {
+                foreach (var existingZone in map.SeatZones)
+                {
+                    var existingBox = ParseBounds(existingZone.ShapeJson);
+                    if (existingBox is { } eb && nb.Intersects(eb))
+                    {
+                        errors.Add($"Zone '{dto.ZoneName}' overlaps existing zone '{existingZone.ZoneName}'.");
+                    }
+                }
+            }
+
+            var targetTicket = ticketTypes.FirstOrDefault(t => t.TicketTypeId == dto.TicketTypeId);
+            if (targetTicket != null)
+            {
+                var currentAllocated = map.SeatZones
+                    .Where(z => z.TicketTypeId == dto.TicketTypeId)
+                    .Sum(ZoneCapacity);
+                var newZoneCap = DtoCapacity(dto);
+                if (currentAllocated + newZoneCap > targetTicket.Quantity)
+                {
+                    errors.Add($"Cannot allocate {newZoneCap} seats to '{targetTicket.TypeName}'. Total zone capacity ({currentAllocated + newZoneCap}) would exceed declared quota ({targetTicket.Quantity}).");
+                }
+            }
+
             if (errors.Count > 0)
                 throw new ArgumentException(string.Join(" | ", errors));
 
@@ -248,7 +287,23 @@ namespace EventAPI.Services
             var ticketTypes = await _ticketTypeRepository.GetByEventIdAsync(eventId);
 
             if (dto.ZoneName != null) zone.ZoneName = dto.ZoneName;
-            if (dto.ShapeJson != null) zone.ShapeJson = dto.ShapeJson;
+            if (dto.ShapeJson != null)
+            {
+                var updatedBox = ParseBounds(dto.ShapeJson);
+                if (updatedBox is { } ub)
+                {
+                    var existingMap = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: false);
+                    foreach (var otherZone in existingMap!.SeatZones.Where(z => z.SeatZoneId != seatZoneId))
+                    {
+                        var otherBox = ParseBounds(otherZone.ShapeJson);
+                        if (otherBox is { } ob && ub.Intersects(ob))
+                        {
+                            throw new ArgumentException($"Updated shape for zone '{zone.ZoneName}' overlaps zone '{otherZone.ZoneName}'.");
+                        }
+                    }
+                }
+                zone.ShapeJson = dto.ShapeJson;
+            }
 
             if (dto.ZoneName != null)
             {
@@ -259,7 +314,7 @@ namespace EventAPI.Services
                 zone.ZoneName = dto.ZoneName.Trim();
             }
 
-            // ---- Re-link to a different ticket type ----
+            // --- Re-link to a different ticket type ----
             if (dto.TicketTypeId.HasValue && dto.TicketTypeId.Value != zone.TicketTypeId)
             {
                 if (!ticketTypes.Any(t => t.TicketTypeId == dto.TicketTypeId.Value))
@@ -271,7 +326,7 @@ namespace EventAPI.Services
                 zone.TicketTypeId = dto.TicketTypeId.Value;
             }
 
-            // ---- Resize a standing zone ----
+            // --- Resize a standing zone ----
             if (dto.Capacity.HasValue)
             {
                 if (SeatZoneType.IsSeated(zone.ZoneType))
@@ -293,7 +348,7 @@ namespace EventAPI.Services
                 zone.Capacity = dto.Capacity.Value;
             }
 
-            // ---- Resize/regenerate a numbered grid ----
+            // --- Resize/regenerate a numbered grid ----
             if (dto.Rows.HasValue || dto.SeatsPerRow.HasValue || dto.RowLabelPrefix != null)
             {
                 if (!SeatZoneType.IsSeated(zone.ZoneType))
@@ -355,6 +410,20 @@ namespace EventAPI.Services
             }
             if (remaining != null)
                 await SynchronizeTicketQuantitiesAsync(ticketTypes, remaining);
+        }
+
+        public async Task<SeatingChartResponseDTO> UpdateLayoutAsync(int eventId, string layoutJson, int callerId, bool isAdmin)
+        {
+            await GetEditableEventAsync(eventId, callerId, isAdmin);
+            var map = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: false)
+                ?? throw new KeyNotFoundException($"No seating chart found for event {eventId}.");
+
+            map.LayoutJson = layoutJson;
+            map.UpdatedAt = DateTime.UtcNow;
+            await _seatingRepository.UpdateSeatMapAsync(map);
+
+            var reloaded = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: true);
+            return MapChart(reloaded!, includeSeats: true);
         }
 
         public async Task DeleteAsync(int eventId, int callerId, bool isAdmin)
@@ -456,11 +525,85 @@ namespace EventAPI.Services
                 errors.Add("Zone names must be unique within a layout.");
             }
 
+            // Kiem tra hop le hinh hoc ShapeJson: rectangle hoac polygon
+            foreach (var zone in zones)
+            {
+                var label = string.IsNullOrWhiteSpace(zone.ZoneName) ? "A zone" : $"Zone '{zone.ZoneName}'";
+                if (!string.IsNullOrWhiteSpace(zone.ShapeJson))
+                {
+                    try
+                    {
+                        using var doc = JsonDocument.Parse(zone.ShapeJson);
+                        var root = doc.RootElement;
+                        var hasWidth = root.TryGetProperty("width", out var w) || root.TryGetProperty("w", out w);
+                        var hasHeight = root.TryGetProperty("height", out var h) || root.TryGetProperty("h", out h);
+                        if (root.TryGetProperty("x", out _) && root.TryGetProperty("y", out _) && hasWidth && hasHeight)
+                        {
+                            if (w.GetDouble() <= 0 || h.GetDouble() <= 0)
+                                errors.Add($"{label}: Rectangle width and height must be greater than 0.");
+                        }
+                        else if (root.TryGetProperty("points", out var points) && points.ValueKind == JsonValueKind.Array)
+                        {
+                            if (points.GetArrayLength() < 3)
+                                errors.Add($"{label}: Polygon must have at least 3 vertices.");
+                        }
+                        else
+                        {
+                            errors.Add($"{label}: ShapeJson must represent either a rectangle (x, y, width/w, height/h) or a polygon (points array).");
+                        }
+                    }
+                    catch (JsonException)
+                    {
+                        errors.Add($"{label}: Invalid ShapeJson format.");
+                    }
+                }
+            }
+
+            // Kiem tra bbox cua cac hinh zone de chan cac layout chong lan.
+            var boxes = zones.Select(ParseBounds).ToList();
+            for (var i = 0; i < boxes.Count; i++)
+                for (var j = i + 1; j < boxes.Count; j++)
+                    if (boxes[i] is { } a && boxes[j] is { } b && a.Intersects(b))
+                        errors.Add($"Zone '{zones[i].ZoneName}' overlaps zone '{zones[j].ZoneName}'.");
+
             if (runningSeats > MaxSeatsPerEvent)
                 errors.Add($"Total seats ({runningSeats}) exceeds the {MaxSeatsPerEvent} per-event limit.");
 
             return errors;
         }
+
+        public readonly record struct Bounds(double Left, double Top, double Right, double Bottom)
+        {
+            public bool Intersects(Bounds other) => Left < other.Right && Right > other.Left && Top < other.Bottom && Bottom > other.Top;
+        }
+
+        public static Bounds? ParseBounds(string? shapeJson)
+        {
+            if (string.IsNullOrWhiteSpace(shapeJson)) return null;
+            try
+            {
+                using var doc = JsonDocument.Parse(shapeJson);
+                var root = doc.RootElement;
+                var hasWidth = root.TryGetProperty("width", out var w) || root.TryGetProperty("w", out w);
+                var hasHeight = root.TryGetProperty("height", out var h) || root.TryGetProperty("h", out h);
+                if (root.TryGetProperty("x", out var x) && root.TryGetProperty("y", out var y) && hasWidth && hasHeight)
+                {
+                    var width = w.GetDouble();
+                    var height = h.GetDouble();
+                    if (width <= 0 || height <= 0) return null;
+                    return new Bounds(x.GetDouble(), y.GetDouble(), x.GetDouble() + width, y.GetDouble() + height);
+                }
+                if (root.TryGetProperty("points", out var points) && points.ValueKind == JsonValueKind.Array)
+                {
+                    var values = points.EnumerateArray().Select(p => (p.GetProperty("x").GetDouble(), p.GetProperty("y").GetDouble())).ToList();
+                    return values.Count >= 3 ? new Bounds(values.Min(p => p.Item1), values.Min(p => p.Item2), values.Max(p => p.Item1), values.Max(p => p.Item2)) : null;
+                }
+            }
+            catch (JsonException) { return null; }
+            return null;
+        }
+
+        private static Bounds? ParseBounds(CreateSeatZoneDTO zone) => ParseBounds(zone.ShapeJson);
 
         private static int DtoCapacity(CreateSeatZoneDTO zone)
         {
@@ -476,20 +619,12 @@ namespace EventAPI.Services
                 : zone.Capacity;
         }
 
-        private async Task SynchronizeTicketQuantitiesAsync(List<TicketType> ticketTypes, SeatMap map)
+        private static Task SynchronizeTicketQuantitiesAsync(List<TicketType> ticketTypes, SeatMap map)
         {
-            foreach (var ticketType in ticketTypes)
-            {
-                var capacity = map.SeatZones
-                    .Where(z => z.TicketTypeId == ticketType.TicketTypeId)
-                    .Sum(ZoneCapacity);
-                if (capacity == 0 || capacity == ticketType.Quantity) continue;
-                if (capacity < ticketType.SoldQuantity)
-                    throw new InvalidOperationException(
-                        $"Cannot reduce '{ticketType.TypeName}' below {ticketType.SoldQuantity} sold tickets.");
-                ticketType.Quantity = capacity;
-                await _ticketTypeRepository.UpdateAsync(ticketType);
-            }
+            // TicketType.Quantity is the organizer's declared quota configured in Step 2.
+            // Multiple zones can allocate against this quota (e.g. 2 zones of 250 for a 500 quota).
+            // We do NOT overwrite ticketType.Quantity with zone capacity, preserving the organizer's plan.
+            return Task.CompletedTask;
         }
 
         /// <summary>Seated zones: any non-Available seat. Standing zones: any sold ticket.</summary>
@@ -545,6 +680,13 @@ namespace EventAPI.Services
                 }
             }
 
+            var seen = new HashSet<(int?, int?)>();
+            foreach (var s in seats)
+            {
+                if (!seen.Add((s.XCoordinate, s.YCoordinate)))
+                    throw new InvalidOperationException($"Duplicate seat coordinate ({s.XCoordinate}, {s.YCoordinate}) generated in zone.");
+            }
+
             return seats;
         }
 
@@ -596,7 +738,7 @@ namespace EventAPI.Services
             return ev;
         }
 
-        // ---- Mapping ----
+        // --- Mapping ----
 
         internal static SeatingChartResponseDTO MapChart(SeatMap m, bool includeSeats) => new()
         {

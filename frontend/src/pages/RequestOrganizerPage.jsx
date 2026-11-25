@@ -748,7 +748,7 @@ export default function RequestOrganizerPage() {
               />
 
               <button className="org-button" type="submit" disabled={submitting}>
-                {submitting ? "Submitting..." : "Submit request"}
+                {submitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Submit request"}
               </button>
             </form>
           )}
@@ -760,7 +760,7 @@ export default function RequestOrganizerPage() {
           </h2>
 
           {loadingHistory ? (
-            <p className="org-empty">Loading...</p>
+            <p className="org-empty"><span className="app-loading-spinner" role="status" aria-label="Loading" /></p>
           ) : history.length === 0 ? (
             <p className="org-empty">You haven't submitted any request yet.</p>
           ) : (

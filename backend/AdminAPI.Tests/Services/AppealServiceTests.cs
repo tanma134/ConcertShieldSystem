@@ -3,6 +3,7 @@ using System.Security.Claims;
 using AdminAPI.Controllers;
 using AdminAPI.DTOs;
 using AdminAPI.Models;
+using AdminAPI.Repositories;
 using AdminAPI.Services;
 using AdminAPI.Services.Risks;
 using AdminAPI.Tests.Support;
@@ -18,7 +19,10 @@ namespace AdminAPI.Tests.Services;
 public class AppealServiceTests : DbTestBase
 {
     private const int Staff = 99;
-    private AppealService Sut() => new(Db, Cfg.Object);
+    private readonly Mock<ITicketRiskClient> Tickets = new();
+    private AppealService Sut() => new(new RiskAppealRepository(Db), new RiskDecisionRepository(Db),
+        new FraudAlertRepository(Db), new RiskNotificationRepository(Db), Cfg.Object, Tickets.Object,
+        NullLogger<AppealService>.Instance);
 
     private static SubmitAppealRequest Req(int decisionId = 40, string reason = "I did not do anything wrong, please review.", int files = 0,
         string url = "https://cdn.example.com/proof.jpg", string name = "proof", long size = 1024 * 1024)
@@ -164,13 +168,13 @@ public class AppealServiceTests : DbTestBase
     }
 
     [Fact] // N
-    public async Task UTCID02_Submit_ActiveHold_CreatesPendingAppeal()
+    public async Task UTCID02_Submit_ActiveHold_Throws409()
     {
+        // HOLD means "being reviewed"; there is no block to lift, so no appeal is allowed.
         Decision(40, "HOLD", userId: 7);
-        var r = await Sut().SubmitAppealAsync(Req(), 7);
-        Assert.Equal("Pending", r.Status);
-        Assert.Single(Db.RiskAppeals.ToList());
-        Assert.Equal(1, Db.SaveCalls);
+        await AErr(() => Sut().SubmitAppealAsync(Req(), 7), 409, "Only Block decisions");
+        Assert.Empty(Db.RiskAppeals.ToList());
+        Assert.Equal(0, Db.SaveCalls);
     }
 
     [Fact] // N
@@ -293,6 +297,46 @@ public class AppealServiceTests : DbTestBase
         Assert.Equal(0, Db.SaveCalls);
     }
 
+    [Fact] // N - ticket blocks only get a 24-hour appeal window
+    public async Task UTCID30_GetPublicDecision_TicketBlock_UsesTicketAppealHourWindow()
+    {
+        Config.TicketAppealDeadlineHours = 24;
+        Decision(30, userId: 7, scope: "TICKET", ticketId: 100, notified: DateTime.UtcNow.AddHours(-23));
+        var r = await Sut().GetPublicDecisionAsync(30, 7);
+        Assert.True(r.CanAppeal);
+        Assert.Equal(100, r.TicketId);
+        Assert.NotNull(r.AppealDeadlineAt);
+        var notified = Db.RiskDecisions.Single(d => d.RiskDecisionId == 30).NotifiedAt!.Value;
+        Assert.Equal(notified.AddHours(24), r.AppealDeadlineAt!.Value);
+    }
+
+    [Fact] // A - a ticket block cannot be appealed after 24 hours
+    public async Task UTCID31_Submit_TicketBlock_DeadlinePassed_Throws409()
+    {
+        Config.TicketAppealDeadlineHours = 24;
+        Decision(40, userId: 7, scope: "TICKET", ticketId: 100,
+            expires: DateTime.UtcNow.AddDays(3), notified: DateTime.UtcNow.AddHours(-25));
+        await AErr(() => Sut().SubmitAppealAsync(Req(), 7), 409, "24-hour deadline");
+        Assert.Equal(0, Db.SaveCalls);
+    }
+
+    [Fact] // N - rejecting a ticket appeal revokes the ticket and requests the refund
+    public async Task UTCID32_Resolve_RejectTicketBlock_RevokesAndRefunds()
+    {
+        Decision(30, userId: 7, scope: "TICKET", ticketId: 100);
+        var a = Appeal(50, 30, 7);
+        Tickets.Setup(t => t.RevokeAndRefundAsync(100, 7, 50, Staff, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TicketRiskRevokeResult(true, "Refunded", 500_000, "VNPAY-1", null));
+
+        var r = await Sut().ResolveAppealAsync(50, Res("Reject"), Staff);
+
+        Assert.Equal("Rejected", a.Status);
+        Assert.True(r.TicketRevoked);
+        Assert.Equal("Refunded", r.RefundStatus);
+        Assert.Equal(500_000, r.RefundAmount);
+        Tickets.Verify(t => t.RevokeAndRefundAsync(100, 7, 50, Staff, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     [Fact] // A
     public async Task UTCID17_Submit_DecisionOfAnotherUser_Throws404()
     {
@@ -313,7 +357,7 @@ public class AppealServiceTests : DbTestBase
     public async Task UTCID19_Submit_ChallengeDecision_Throws409()
     {
         Decision(40, "CHALLENGE", userId: 7);
-        await AErr(() => Sut().SubmitAppealAsync(Req(), 7), 409, "Only Block or Hold");
+        await AErr(() => Sut().SubmitAppealAsync(Req(), 7), 409, "Only Block decisions");
         Assert.Equal(0, Db.SaveCalls);
     }
 
@@ -378,8 +422,12 @@ public class AppealServiceTests : DbTestBase
     [Fact] // N
     public async Task UTCID02_Resolve_Accept_AlsoOverturnsRelatedActiveDecisions()
     {
+        // Decisions from the same fraud alert are lifted together; unrelated rows are not.
         var t = DateTime.UtcNow.AddDays(-1);
-        var d1 = Decision(30, userId: 7, created: t); var d2 = Decision(31, userId: 7, created: t, scope: "TICKET", ticketId: 100); Appeal(50, 30, 7);
+        Alert(5, "Open");
+        var d1 = Decision(30, userId: 7, alertId: 5, created: t);
+        var d2 = Decision(31, userId: 7, alertId: 5, created: t, scope: "TICKET", ticketId: 100);
+        Appeal(50, 30, 7);
         var r = await Sut().ResolveAppealAsync(50, Res("Accept"), Staff);
         Assert.Equal("Overturned", d1.Status);
         Assert.Equal("Overturned", d2.Status);
@@ -399,11 +447,27 @@ public class AppealServiceTests : DbTestBase
     }
 
     [Fact] // N
-    public async Task UTCID04_Resolve_Accept_AnotherDecisionStillActive_KeepsAlertStatus()
+    public async Task UTCID04_Resolve_Accept_OnlyTouchesDecisionsOfTheSameAlert()
     {
-        var alert = Alert(5, "Open"); Decision(30, userId: 7, alertId: 5, created: DateTime.UtcNow.AddDays(-2)); Decision(31, userId: 7, alertId: 5, scope: "TICKET", ticketId: 100, created: DateTime.UtcNow.AddHours(-3)); Appeal(50, 30, 7);
+        // Accepting an appeal lifts the appealed decision and every active decision from
+        // the same fraud alert. Decisions belonging to another alert are left untouched.
+        var alert = Alert(5, "Open");
+        var otherAlert = Alert(6, "Open");
+        var appealed = Decision(30, userId: 7, alertId: 5, created: DateTime.UtcNow.AddDays(-2));
+        var ticketBlock = Decision(31, userId: 7, alertId: 5, scope: "TICKET", ticketId: 100, created: DateTime.UtcNow.AddHours(-3));
+        var unrelated = Decision(32, userId: 7, alertId: 6, scope: "TICKET", ticketId: 200, created: DateTime.UtcNow.AddHours(-3));
+        Appeal(50, 30, 7);
+
         await Sut().ResolveAppealAsync(50, Res("Accept"), Staff);
-        Assert.Equal("Open", alert.Status);
+
+        // The ticket from the same alert is released; the one from another alert is not.
+        Tickets.Verify(t => t.UnblockTicketAsync(100, It.IsAny<string>(), Staff, It.IsAny<CancellationToken>()), Times.Once);
+        Tickets.Verify(t => t.UnblockTicketAsync(200, It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.Equal("Overturned", appealed.Status);
+        Assert.Equal("Overturned", ticketBlock.Status);
+        Assert.Equal("Active", unrelated.Status);
+        Assert.Equal("FalsePositive", alert.Status);
+        Assert.Equal("Open", otherAlert.Status);
         Assert.Equal(1, Db.SaveCalls);
     }
 
@@ -494,11 +558,18 @@ public class AppealServiceTests : DbTestBase
     }
 
     [Fact] // A
-    public async Task UTCID15_Resolve_ReviewerMadeTheDecision_Throws400()
+    public async Task UTCID15_Resolve_ReviewerMadeTheDecision_IsAllowedAndFlaggedAsSelfReview()
     {
-        Decision(30, userId: 7, by: "STAFF", decidedBy: Staff); Appeal(50, 30, 7);
-        await AErr(() => Sut().ResolveAppealAsync(50, Res("Accept"), Staff), 400, "You cannot review an appeal");
-        Assert.Equal(0, Db.SaveCalls);
+        // The system has a single Admin: blocking self-review would deadlock every appeal.
+        var d = Decision(30, userId: 7, by: "STAFF", decidedBy: Staff);
+        var a = Appeal(50, 30, 7);
+
+        var r = await Sut().ResolveAppealAsync(50, Res("Accept"), Staff);
+
+        Assert.Equal("Accepted", a.Status);
+        Assert.Equal("Overturned", d.Status);
+        Assert.StartsWith("[SELF-REVIEW]", a.ReviewNote);
+        Assert.Equal(1, Db.SaveCalls);
     }
 
     [Fact] // N

@@ -20,8 +20,16 @@ namespace AuthenticationAPI.Repositories
         Task<RefreshToken?> GetRefreshTokenByHashAsync(string tokenHash);
         Task RevokeRefreshTokenAsync(string tokenHash);
 
+        /// <summary>Revokes every active refresh token of a user (logout everywhere / password change).</summary>
+        Task<int> RevokeAllRefreshTokensAsync(int userId);
+
         Task<List<User>> GetAllAsync();
         Task<User?> GetByPhoneAsync(string phone);
+
+        /// <summary>Email of a user, or null if the user does not exist.</summary>
+        Task<string?> GetEmailByIdAsync(int userId);
+
+        /// <summary>Active accounts that hold the given role, optionally filtered by ids and by name/email text.</summary>
         Task SaveChangesAsync();
     }
 }

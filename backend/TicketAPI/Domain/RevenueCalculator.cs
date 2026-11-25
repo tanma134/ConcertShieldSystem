@@ -41,7 +41,7 @@ public sealed record RevenueSummary(
 
 public sealed record RangeValidation(bool IsValid, string? Error);
 
-// Revenue maths for UC_13. Net revenue = gross - discounts - refunds.
+// Revenue maths for Net revenue = gross - discounts - refunds.
 // Pure functions: the service loads the data, this class only calculates.
 public static class RevenueCalculator
 {

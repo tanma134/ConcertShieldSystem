@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import riskApi from "../../api/riskApi";
 import AdminShell from "./AdminShell";
+import { useAuth } from "../../context/AuthContext";
 import "./fraudRisk.css";
 
 // Bọc mọi nội dung (kể cả loading / lỗi / popup) trong .fr-page để fraudRisk.css được áp dụng
@@ -17,7 +18,7 @@ function errMsg(e, fallback) {
   return e.response?.data?.message || fallback;
 }
 
-// ---- Matched rules: render as a readable list instead of raw JSON ----
+// --- Matched rules: render as a readable list instead of raw JSON ----
 const TITLE_KEYS = ["rule", "ruleName", "rule_name", "name", "ruleCode", "rule_code", "code", "id"];
 const SCORE_KEYS = ["score", "weight", "points", "contribution"];
 const DESC_KEYS = ["description", "reason", "message", "detail", "details"];
@@ -115,11 +116,12 @@ function VerdictPill({ verdict }) {
   return <span className={`kyc-pill ${cls}`}>{verdict}</span>;
 }
 
-// UC_18.2 View Fraud Alert Details, with UC_18.3 Block / UC_18.4 Restore actions
+// View Fraud Alert Details, with  Block /  Restore actions
 // attached directly to the alert for convenience.
 export default function FraudAlertDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
 
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -129,7 +131,7 @@ export default function FraudAlertDetailPage() {
   const [aiLoading, setAiLoading] = useState(false);
 
   const [blockOpen, setBlockOpen] = useState(false);
-  const [blockForm, setBlockForm] = useState({ scope: "ACCOUNT", durationHours: 24, reason: "", userId: "", ticketId: "" });
+  const [blockForm, setBlockForm] = useState({ scope: "ACCOUNT", durationHours: 24, reason: "", userId: "", ticketId: "", ipAddress: "" });
   const [blockSubmitting, setBlockSubmitting] = useState(false);
 
   const [restoreTargetId, setRestoreTargetId] = useState(null);
@@ -170,6 +172,7 @@ export default function FraudAlertDetailPage() {
       reason: "",
       userId: detail?.alert?.userId != null ? String(detail.alert.userId) : "",
       ticketId: detail?.ticketId != null ? String(detail.ticketId) : "",
+      ipAddress: "",
     });
     setBlockOpen(true);
   };
@@ -179,8 +182,11 @@ export default function FraudAlertDetailPage() {
     const reason = blockForm.reason.trim();
     const hours = Number(blockForm.durationHours);
     const isTicket = blockForm.scope === "TICKET";
+    const isIp = blockForm.scope === "IP";
     if (!blockForm.userId.trim()) { setError("Enter the User ID: the customer is notified of the block and can appeal it."); return; }
     if (isTicket && !blockForm.ticketId.trim()) { setError("Enter the Ticket ID to block."); return; }
+    if (isIp && !blockForm.ipAddress.trim()) { setError("Enter the IP address to block."); return; }
+    if (isIp && !/^(\d{1,3}\.){3}\d{1,3}$|:/.test(blockForm.ipAddress.trim())) { setError("Enter a valid IPv4 or IPv6 address."); return; }
     if (!Number.isInteger(hours) || hours < 1 || hours > 720) { setError("Duration must be a whole number of hours between 1 and 720."); return; }
     if (reason.length < 10 || reason.length > 500) { setError("The reason must be 10-500 characters."); return; }
     setBlockSubmitting(true);
@@ -191,11 +197,12 @@ export default function FraudAlertDetailPage() {
         scope: blockForm.scope,
         userId: Number(blockForm.userId),
         ticketId: isTicket ? Number(blockForm.ticketId) : undefined,
+        ipAddress: isIp ? blockForm.ipAddress.trim() : undefined,
         durationHours: hours,
         reason,
       });
       setBlockOpen(false);
-      setNotice("Block created. The customer has been notified and can appeal within 7 days.");
+      setNotice(`Block created. The customer has been notified and can appeal within ${isTicket ? "24 hours" : "7 days"}.`);
       await load();
     } catch (e2) {
       setError(errMsg(e2, "Failed to create block. Please check the information."));
@@ -226,7 +233,7 @@ export default function FraudAlertDetailPage() {
   };
 
   if (loading) {
-    return <Shell title="Fraud Alert Details"><div className="empty-state">Loading...</div></Shell>;
+    return <Shell title="Fraud Alert Details"><div className="empty-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div></Shell>;
   }
   if (!detail) {
     return (
@@ -259,15 +266,17 @@ export default function FraudAlertDetailPage() {
         ← Alert list
       </button>
 
-      {/* UC_18.2 - View Fraud Alert Details */}
+      {/* View Fraud Alert Details */}
       <section className="admin-panel">
         <div className="panel-header">
           <h2>Alert information</h2>
           <div style={{ display: "flex", gap: 8 }}>
             <button type="button" className="admin-button-secondary" onClick={load}>Refresh</button>
-            <button type="button" className="admin-button" onClick={openBlockForAlert}>
-              Block for this alert
-            </button>
+            {isAdmin && (
+              <button type="button" className="admin-button" onClick={openBlockForAlert}>
+                Block for this alert
+              </button>
+            )}
           </div>
         </div>
 
@@ -293,7 +302,7 @@ export default function FraudAlertDetailPage() {
         <div className="panel-header">
           <h2>AI analysis</h2>
           <button type="button" className="admin-button-secondary" onClick={handleGenerateAi} disabled={aiLoading}>
-            {aiLoading ? "Calling AI..." : ai ? "Regenerate summary" : "Generate AI summary"}
+            {aiLoading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : ai ? "Regenerate summary" : "Generate AI summary"}
           </button>
         </div>
 
@@ -320,7 +329,7 @@ export default function FraudAlertDetailPage() {
         )}
       </section>
 
-      {/* UC_18.3 / UC_18.4 - Decisions (blocks) related to this alert */}
+      {/* Decisions (blocks) related to this alert */}
       <section className="admin-panel">
         <div className="panel-header"><h2>Risk Decisions</h2></div>
 
@@ -355,7 +364,7 @@ export default function FraudAlertDetailPage() {
                         <Link className="admin-button-secondary" to={`/admin/risk/decisions/${d.riskDecisionId}`}>
                           Details
                         </Link>
-                        {(d.action === "BLOCK" || d.action === "HOLD") && d.status === "Active" && !d.isShadow && (
+                        {isAdmin && (d.action === "BLOCK" || d.action === "HOLD") && d.status === "Active" && !d.isShadow && (
                           restoreTargetId === d.riskDecisionId ? (
                             <div style={{ display: "flex", gap: 6 }}>
                               <input
@@ -408,8 +417,9 @@ export default function FraudAlertDetailPage() {
               <label>
                 Scope
                 <select value={blockForm.scope} onChange={(e) => setBlockForm((f) => ({ ...f, scope: e.target.value }))}>
-                  <option value="ACCOUNT">ACCOUNT (end all sessions, lock account)</option>
+                  <option value="ACCOUNT">ACCOUNT (block transactions, keep login)</option>
                   <option value="TICKET">TICKET (ticket cannot be used for entry)</option>
+                  <option value="IP">IP (block every request from this address)</option>
                 </select>
               </label>
               <label>
@@ -427,6 +437,16 @@ export default function FraudAlertDetailPage() {
                     inputMode="numeric"
                     value={blockForm.ticketId}
                     onChange={(e) => setBlockForm((f) => ({ ...f, ticketId: e.target.value }))}
+                  />
+                </label>
+              )}
+              {blockForm.scope === "IP" && (
+                <label>
+                  IP address
+                  <input
+                    value={blockForm.ipAddress}
+                    onChange={(e) => setBlockForm((f) => ({ ...f, ipAddress: e.target.value }))}
+                    placeholder="203.0.113.9"
                   />
                 </label>
               )}
@@ -450,13 +470,14 @@ export default function FraudAlertDetailPage() {
               </label>
             </div>
             <p className="kyc-admin-note" style={{ marginTop: 12 }}>
-              Only an Admin can block manually, and you cannot block your own account. The customer is notified and can appeal within 7 days.
+              Only an Admin can block manually, and you cannot block your own account. Ticket blocks give the customer 24 hours to appeal;
+              account and IP blocks give 7 days. An IP block affects every account behind that address.
               If an appeal is already pending for this alert, the alert stays open until it is resolved.
             </p>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 16 }}>
               <button type="button" className="admin-button-secondary" onClick={() => setBlockOpen(false)}>Cancel</button>
               <button type="submit" className="admin-button" disabled={blockSubmitting}>
-                {blockSubmitting ? "Processing..." : "Confirm block"}
+                {blockSubmitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm block"}
               </button>
             </div>
           </form>

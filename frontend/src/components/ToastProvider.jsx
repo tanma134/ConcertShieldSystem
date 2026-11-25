@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import "./ToastProvider.css";
 
 // Thông báo ngắn (thành công / lỗi / thông tin) hiển thị ở góc phải màn hình.
@@ -6,7 +6,7 @@ import "./ToastProvider.css";
 // cho phản hồi tức thì của thao tác người dùng vừa làm (lưu, lỗi nhập liệu...).
 const ToastContext = createContext(null);
 
-const DURATION_MS = { success: 3500, info: 4000, error: 6000 };
+const DURATION_MS = { success: 3500, info: 4000, error: 6000, warning: 5000 };
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
@@ -36,9 +36,11 @@ export function ToastProvider({ children }) {
       success: (message) => push("success", message),
       error: (message) => push("error", message),
       info: (message) => push("info", message),
+      warning: (message) => push("warning", message),
       showSuccess: (message) => push("success", message),
       showError: (message) => push("error", message),
       showInfo: (message) => push("info", message),
+      showWarning: (message) => push("warning", message),
     }),
     [push]
   );
@@ -68,16 +70,34 @@ export function useToast() {
 }
 
 // Thay thế trực tiếp cho `useState("")` của state lỗi: vẫn trả về [error, setError]
-// như cũ (banner đỏ trong trang không đổi) nhưng mỗi lỗi mới còn hiện thêm một toast.
-export function useToastedError() {
+// như cũ (banner đỏ trong trang không đổi) nhưng mỗi lỗi mới còn hiện thêm một toast,
+// đồng thời tự động xóa banner sau một khoảng thời gian (mặc định 8s) để không bị kẹt thông báo.
+export function useToastedError(autoDismissMs = 8000) {
   const toast = useToast();
   const [error, setErrorState] = useState("");
+  const timerRef = useRef(null);
+
   const setError = useCallback(
     (message) => {
       setErrorState(message);
-      if (message) toast.error(message);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (message) {
+        toast.error(message);
+        if (autoDismissMs > 0) {
+          timerRef.current = setTimeout(() => {
+            setErrorState("");
+          }, autoDismissMs);
+        }
+      }
     },
-    [toast]
+    [toast, autoDismissMs]
   );
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
   return [error, setError];
 }

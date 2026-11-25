@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AdminAPI.Controllers
 {
-    /// <summary>UC_18.11 Configure Risk Policy Parameters (Admin). Risk Engine đọc lại cấu hình sau tối đa 60 giây.</summary>
+    /// <summary>Configure Risk Policy Parameters (Admin). Risk Engine đọc lại cấu hình sau tối đa 60 giây.</summary>
     [ApiController]
     [Route("api/admin/risk/policy")]
     [Authorize(Policy = "CanReviewFraud")]

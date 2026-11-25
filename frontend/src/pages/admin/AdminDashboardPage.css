@@ -1,20 +1,20 @@
 /* Admin theme: dùng chung palette "đen tím hồng" (--tb-*) với phần
  * landing/organizer để khu admin không còn bị lệch tông sáng/hồng nhạt. */
 :root {
-  --admin-bg: var(--tb-bg, #0a0812);
-  --admin-surface: var(--tb-surface, #171223);
-  --admin-surface-2: var(--tb-surface-2, #1e1830);
-  --admin-ink: var(--tb-text, #f5f3fb);
-  --admin-muted: var(--tb-text-muted, #a89db8);
-  --admin-line: var(--tb-border, #2a2340);
-  --admin-accent: var(--tb-pink, #ec4899);
+  --admin-bg: var(--tb-bg, #faf5ff);
+  --admin-surface: var(--tb-surface, #ffffff);
+  --admin-surface-2: var(--tb-surface-2, #f8f2fd);
+  --admin-ink: var(--tb-text, #221d33);
+  --admin-muted: var(--tb-text-muted, #7a7392);
+  --admin-line: var(--tb-border, #e4daef);
+  --admin-accent: var(--tb-pink, #e8439c);
   --admin-accent-dark: var(--tb-primary, #c026d3);
   --admin-accent-soft: rgba(255, 111, 181, 0.18);
-  --admin-danger: #ff9a9a;
+  --admin-danger: #d94040;
   --admin-danger-soft: rgba(248, 113, 113, 0.12);
-  --admin-success: #6ee7a0;
+  --admin-success: #3ecb79;
   --admin-success-soft: rgba(74, 222, 128, 0.12);
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 .admin-shell {
@@ -35,20 +35,20 @@
   padding: 25px 15px 18px;/* Admin theme: dùng chung palette "đen tím hồng" (--tb-*) với phần
  * landing/organizer để khu admin không còn bị lệch tông sáng/hồng nhạt. */
 :root {
-  --admin-bg: var(--tb-bg, #0a0812);
-  --admin-surface: var(--tb-surface, #171223);
-  --admin-surface-2: var(--tb-surface-2, #1e1830);
-  --admin-ink: var(--tb-text, #f5f3fb);
-  --admin-muted: var(--tb-text-muted, #a89db8);
-  --admin-line: var(--tb-border, #2a2340);
-  --admin-accent: var(--tb-pink, #ec4899);
+  --admin-bg: var(--tb-bg, #faf5ff);
+  --admin-surface: var(--tb-surface, #ffffff);
+  --admin-surface-2: var(--tb-surface-2, #f8f2fd);
+  --admin-ink: var(--tb-text, #221d33);
+  --admin-muted: var(--tb-text-muted, #7a7392);
+  --admin-line: var(--tb-border, #e4daef);
+  --admin-accent: var(--tb-pink, #e8439c);
   --admin-accent-dark: var(--tb-primary, #c026d3);
   --admin-accent-soft: rgba(255, 111, 181, 0.18);
-  --admin-danger: #ff9a9a;
+  --admin-danger: #d94040;
   --admin-danger-soft: rgba(248, 113, 113, 0.12);
-  --admin-success: #6ee7a0;
+  --admin-success: #3ecb79;
   --admin-success-soft: rgba(74, 222, 128, 0.12);
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 .admin-shell {
@@ -96,8 +96,8 @@
   display: grid;
   place-items: center;
   border-radius: 9px;
-  background: linear-gradient(135deg, #7c3aed 0%, #c026d3 55%, #d61f6e 100%);
-  color: #fff;
+  background: linear-gradient(135deg, #9333ea 0%, #c026d3 55%, #c2185b 100%);
+  color: #ffffff;
   font-size: 12px;
   font-weight: 800;
   box-shadow: 0 5px 12px rgba(192, 38, 211, 0.35);
@@ -214,7 +214,7 @@
   background: var(--admin-surface);
   border: 1px solid var(--admin-line);
   border-radius: 8px;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 3px 12px rgba(80,50,120,0.15);
 }
 
 .summary-card .label {
@@ -242,7 +242,7 @@
   background: var(--admin-surface);
   border: 1px solid var(--admin-line);
   border-radius: 8px;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 3px 12px rgba(80,50,120,0.15);
 }
 
 .panel-header {
@@ -365,7 +365,7 @@
 }
 
 .role-pill.muted {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(148,110,200,0.13);
   color: var(--admin-muted);
 }
 
@@ -398,8 +398,8 @@
 }
 
 .admin-button {
-  background: linear-gradient(135deg, #7c3aed 0%, #c026d3 55%, #d61f6e 100%);
-  color: #fff;
+  background: linear-gradient(135deg, #9333ea 0%, #c026d3 55%, #c2185b 100%);
+  color: #ffffff;
   box-shadow: 0 6px 16px rgba(192, 38, 211, 0.35);
 }
 
@@ -473,7 +473,7 @@
   border: 1px solid var(--admin-line);
   border-radius: 9px;
   background: var(--admin-surface);
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 18px 45px rgba(80,50,120,0.22);
 }
 
 .modal-card.small { max-width: 410px; }
@@ -668,7 +668,7 @@
   padding: 1px 7px;
   border-radius: 999px;
   background: var(--admin-accent);
-  color: #fff;
+  color: #3c3552;
   font-size: 11px;
   font-weight: 700;
   line-height: 18px;
@@ -777,8 +777,8 @@
   display: grid;
   place-items: center;
   border-radius: 9px;
-  background: linear-gradient(135deg, #7c3aed 0%, #c026d3 55%, #d61f6e 100%);
-  color: #fff;
+  background: linear-gradient(135deg, #9333ea 0%, #c026d3 55%, #c2185b 100%);
+  color: #ffffff;
   font-size: 12px;
   font-weight: 800;
   box-shadow: 0 5px 12px rgba(192, 38, 211, 0.35);
@@ -895,7 +895,7 @@
   background: var(--admin-surface);
   border: 1px solid var(--admin-line);
   border-radius: 8px;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 3px 12px rgba(80,50,120,0.15);
 }
 
 .summary-card .label {
@@ -923,7 +923,7 @@
   background: var(--admin-surface);
   border: 1px solid var(--admin-line);
   border-radius: 8px;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 3px 12px rgba(80,50,120,0.15);
 }
 
 .panel-header {
@@ -1046,7 +1046,7 @@
 }
 
 .role-pill.muted {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(148,110,200,0.13);
   color: var(--admin-muted);
 }
 
@@ -1079,8 +1079,8 @@
 }
 
 .admin-button {
-  background: linear-gradient(135deg, #7c3aed 0%, #c026d3 55%, #d61f6e 100%);
-  color: #fff;
+  background: linear-gradient(135deg, #9333ea 0%, #c026d3 55%, #c2185b 100%);
+  color: #ffffff;
   box-shadow: 0 6px 16px rgba(192, 38, 211, 0.35);
 }
 
@@ -1154,7 +1154,7 @@
   border: 1px solid var(--admin-line);
   border-radius: 9px;
   background: var(--admin-surface);
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 18px 45px rgba(80,50,120,0.22);
 }
 
 .modal-card.small { max-width: 410px; }
@@ -1349,7 +1349,7 @@
   padding: 1px 7px;
   border-radius: 999px;
   background: var(--admin-accent);
-  color: #fff;
+  color: #3c3552;
   font-size: 11px;
   font-weight: 700;
   line-height: 18px;

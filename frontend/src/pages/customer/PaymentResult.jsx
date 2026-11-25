@@ -90,12 +90,8 @@ export default function PaymentResult() {
 
   if (loading) {
     return (
-      <main className="payment-result-page">
-        <section className="payment-result-card">
-          <div className="payment-result-spinner" />
-          <h1>Checking your payment</h1>
-          <p>Please wait while we retrieve your order status.</p>
-        </section>
+      <main className="payment-result-page" aria-live="polite">
+        <span className="app-loading-spinner" role="status" aria-label="Loading" />
       </main>
     );
   }
@@ -119,7 +115,7 @@ export default function PaymentResult() {
 
           <div className="payment-result-actions">
             <Link to="/" className="payment-result-button">
-              Back to events
+              Back to home
             </Link>
           </div>
         </section>

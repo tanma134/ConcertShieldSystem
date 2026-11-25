@@ -9,6 +9,7 @@ namespace TicketAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Customer")]
     public class TicketsController : TicketApiControllerBase
     {
         private readonly ITicketService _ticketService;
@@ -31,7 +32,7 @@ namespace TicketAPI.Controllers
                 return Unauthorized(new
                 {
                     success = false,
-                    message = "Token không hợp lệ."
+                    message = "Invalid token."
                 });
             }
 
@@ -73,7 +74,7 @@ namespace TicketAPI.Controllers
                 return Unauthorized(new
                 {
                     success = false,
-                    message = "Token không hợp lệ."
+                    message = "Invalid token."
                 });
             }
 

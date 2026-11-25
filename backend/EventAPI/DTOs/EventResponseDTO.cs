@@ -114,6 +114,10 @@ namespace EventAPI.DTOs
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public bool PublishedOnly { get; set; } = false;
 
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public bool ExcludeDrafts { get; set; } = false;
+
         public string SortBy { get; set; } = "CreatedAt";
         public string SortOrder { get; set; } = "desc";
         public int Page { get; set; } = 1;

@@ -1,24 +1,40 @@
+/* Event card — light surface, violet hover glow */
 .tb-card {
   display: block;
-  background: var(--tb-surface);
-  border: 1px solid var(--tb-border);
-  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid var(--tb-border, #ece0f8);
+  border-radius: 20px;
   overflow: hidden;
-  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  box-shadow: 0 4px 16px -12px rgba(76, 45, 120, 0.35);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .tb-card:hover {
-  transform: translateY(-4px);
-  border-color: var(--tb-primary-2);
-  box-shadow: 0 16px 32px -16px rgba(124, 58, 237, 0.5);
+  transform: translateY(-5px);
+  border-color: #d7bdf0;
+  box-shadow: 0 24px 46px -24px rgba(124, 58, 237, 0.45);
 }
 
 .tb-card-img {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 11;
-  background: var(--tb-surface-2);
+  background: linear-gradient(135deg, #f3e8ff, #fce7f3);
   overflow: hidden;
+}
+
+.tb-card-img::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 55%, rgba(18, 10, 32, 0.35));
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+
+.tb-card:hover .tb-card-img::after {
+  opacity: 1;
 }
 
 .tb-card-img img {
@@ -26,47 +42,54 @@
   height: 100%;
   object-fit: cover;
   display: block;
-  transition: transform 0.35s ease;
+  transition: transform 0.4s cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 
 .tb-card:hover .tb-card-img img {
-  transform: scale(1.05);
+  transform: scale(1.06);
 }
 
 .tb-card-hot {
   position: absolute;
   top: 10px;
   left: 10px;
-  background: linear-gradient(135deg, #f97316, #d61f6e);
-  color: #fff;
+  z-index: 2;
+  background: linear-gradient(100deg, #ec4899, #d91a63);
+  color: #ffffff;
   font-size: 11px;
-  font-weight: 700;
-  padding: 4px 9px;
+  font-weight: 800;
+  padding: 5px 10px;
   border-radius: 999px;
   letter-spacing: 0.02em;
+  box-shadow: 0 6px 16px -8px rgba(217, 26, 99, 0.9);
 }
 
 .tb-card-body {
-  padding: 14px 16px 16px;
+  padding: 15px 17px 17px;
 }
 
 .tb-card-tag {
   display: inline-block;
   font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--tb-pink);
-  margin-bottom: 6px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #c026d3;
+  background: rgba(192, 38, 211, 0.08);
+  padding: 3px 9px;
+  border-radius: 999px;
+  margin-bottom: 8px;
 }
 
 .tb-card-title {
   margin: 0 0 10px;
   font-size: 15px;
   line-height: 1.35;
-  font-weight: 600;
-  color: var(--tb-text);
+  font-weight: 700;
+  color: #1d1730;
   display: -webkit-box;
   -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
   min-height: 2.7em;
 }
@@ -74,8 +97,8 @@
 .tb-card-meta {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: 10px;
+  gap: 5px;
+  margin-bottom: 12px;
 }
 
 .tb-card-date,
@@ -83,8 +106,14 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--tb-text-muted);
+  color: #6b6284;
   font-size: 12.5px;
+}
+
+.tb-card-date svg,
+.tb-card-loc svg {
+  color: #a855f7;
+  flex-shrink: 0;
 }
 
 .tb-card-loc span {
@@ -94,7 +123,7 @@
 }
 
 .tb-card-price {
-  color: var(--tb-price);
-  font-weight: 700;
-  font-size: 14px;
+  color: #7e22ce;
+  font-weight: 800;
+  font-size: 14.5px;
 }

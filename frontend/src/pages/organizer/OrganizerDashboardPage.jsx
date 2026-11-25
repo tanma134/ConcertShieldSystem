@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import OrganizerShell from "./OrganizerShell";
 import { useAuth } from "../../context/AuthContext";
@@ -30,6 +30,7 @@ export default function OrganizerDashboardPage() {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
 
   useEffect(() => {
     let cancelled = false;
@@ -43,22 +44,36 @@ export default function OrganizerDashboardPage() {
         // EventAPI owns event configuration, while paid orders/tickets live in TicketAPI.
         // Merge TicketAPI report totals so the outer dashboard and the event revenue page
         // always show the same sold-ticket/revenue numbers.
-        const mergedEvents = await Promise.all((base.events || []).map(async (ev) => {
-          try {
-            const report = await reportApi.getRevenue(ev.eventId, {});
-            const data = report.data?.data;
-            const totals = data?.summary || data;
-            return totals ? { ...ev, soldTickets: totals.ticketsSold ?? 0, revenue: totals.grossRevenue ?? 0 } : ev;
-          } catch {
-            return ev;
-          }
-        }));
+        const mergedEvents = await Promise.all(
+          (base.events || []).map(async (ev) => {
+            try {
+              const report = await reportApi.getRevenue(ev.eventId, {});
+              const data = report.data?.data;
+              const totals = data?.summary || data;
+              return totals
+                ? {
+                    ...ev,
+                    soldTickets: totals.ticketsSold ?? 0,
+                    revenue: totals.grossRevenue ?? 0,
+                  }
+                : ev;
+            } catch {
+              return ev;
+            }
+          })
+        );
 
         const merged = {
           ...base,
           events: mergedEvents,
-          totalTicketsSold: mergedEvents.reduce((sum, ev) => sum + (ev.soldTickets || 0), 0),
-          totalRevenue: mergedEvents.reduce((sum, ev) => sum + (ev.revenue || 0), 0),
+          totalTicketsSold: mergedEvents.reduce(
+            (sum, ev) => sum + (ev.soldTickets || 0),
+            0
+          ),
+          totalRevenue: mergedEvents.reduce(
+            (sum, ev) => sum + (ev.revenue || 0),
+            0
+          ),
         };
         if (!cancelled) setSummary(merged);
       })
@@ -73,11 +88,15 @@ export default function OrganizerDashboardPage() {
     };
   }, []);
 
-  const events = summary?.events || [];
+  const allEvents = summary?.events || [];
+
+  const filteredEvents = useMemo(() => {
+    if (statusFilter === "ALL") return allEvents;
+    return allEvents.filter((ev) => ev.status === statusFilter);
+  }, [allEvents, statusFilter]);
 
   return (
     <OrganizerShell title="Organizer Dashboard">
-
       <div className="tb-container od-wrap">
         <div className="od-head">
           <div>
@@ -86,11 +105,8 @@ export default function OrganizerDashboardPage() {
           </div>
           {isOrganizer && (
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-              <Link to="/organizer/checkin" className="tb-btn tb-btn-outline">
-                📋 Check-in Staff
-              </Link>
               <Link to="/organizer/vouchers" className="tb-btn tb-btn-outline">
-                🎟️ Manage Vouchers
+                Voucher Management
               </Link>
               <Link to="/organizer/events/new" className="tb-btn tb-btn-primary">
                 + Create New Event
@@ -107,72 +123,147 @@ export default function OrganizerDashboardPage() {
           </div>
         )}
 
-        {loading && <div className="tb-loading">Loading...</div>}
+        {loading && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
         {!loading && error && <div className="tb-error">{error}</div>}
 
         {!loading && !error && summary && (
           <>
+            {/* Stat Cards */}
             <div className="od-cards">
               <div className="od-card">
-                <span className="od-card-label">Total events</span>
+                <span className="od-card-label">Total Events</span>
                 <span className="od-card-value">{summary.totalEvents ?? 0}</span>
               </div>
               <div className="od-card">
-                <span className="od-card-label">On sale</span>
-                <span className="od-card-value">{summary.publishedEvents ?? 0}</span>
+                <span className="od-card-label">On Sale</span>
+                <span className="od-card-value">
+                  {summary.publishedEvents ?? 0}
+                </span>
               </div>
               <div className="od-card">
-                <span className="od-card-label">Tickets sold</span>
-                <span className="od-card-value">{summary.totalTicketsSold ?? 0}</span>
+                <span className="od-card-label">Tickets Sold</span>
+                <span className="od-card-value">
+                  {summary.totalTicketsSold ?? 0}
+                </span>
               </div>
               <div className="od-card od-card-highlight">
-                <span className="od-card-label">Revenue (gross)</span>
-                <span className="od-card-value">{formatPrice(summary.totalRevenue ?? 0)}</span>
+                <span className="od-card-label">Gross Revenue</span>
+                <span className="od-card-value">
+                  {formatPrice(summary.totalRevenue ?? 0)}
+                </span>
               </div>
             </div>
 
-            <div className="od-status-strip">
-              <span>Draft: {summary.draftEvents ?? 0}</span>
-              <span>Pending: {summary.pendingEvents ?? 0}</span>
-              <span>Rejected: {summary.rejectedEvents ?? 0}</span>
-              <span>Cancelled: {summary.cancelledEvents ?? 0}</span>
+            {/* Status Filter Tabs */}
+            <div className="od-filter-tabs">
+              <button
+                type="button"
+                className={`od-filter-tab ${statusFilter === "ALL" ? "active" : ""}`}
+                onClick={() => setStatusFilter("ALL")}
+              >
+                All Events
+                <span className="od-tab-count">({allEvents.length})</span>
+              </button>
+              <button
+                type="button"
+                className={`od-filter-tab ${statusFilter === "Published" ? "active" : ""}`}
+                onClick={() => setStatusFilter("Published")}
+              >
+                On Sale
+                <span className="od-tab-count">
+                  ({summary.publishedEvents ?? 0})
+                </span>
+              </button>
+              <button
+                type="button"
+                className={`od-filter-tab ${statusFilter === "Pending" ? "active" : ""}`}
+                onClick={() => setStatusFilter("Pending")}
+              >
+                Pending Review
+                <span className="od-tab-count">
+                  ({summary.pendingEvents ?? 0})
+                </span>
+              </button>
+              <button
+                type="button"
+                className={`od-filter-tab ${statusFilter === "Draft" ? "active" : ""}`}
+                onClick={() => setStatusFilter("Draft")}
+              >
+                Draft
+                <span className="od-tab-count">
+                  ({summary.draftEvents ?? 0})
+                </span>
+              </button>
+              <button
+                type="button"
+                className={`od-filter-tab ${statusFilter === "Rejected" ? "active" : ""}`}
+                onClick={() => setStatusFilter("Rejected")}
+              >
+                Rejected
+                <span className="od-tab-count">
+                  ({summary.rejectedEvents ?? 0})
+                </span>
+              </button>
+              <button
+                type="button"
+                className={`od-filter-tab ${statusFilter === "Cancelled" ? "active" : ""}`}
+                onClick={() => setStatusFilter("Cancelled")}
+              >
+                Cancelled
+                <span className="od-tab-count">
+                  ({summary.cancelledEvents ?? 0})
+                </span>
+              </button>
             </div>
 
+            {/* Section Head */}
             <div className="od-section-head">
-              <h2>Your events</h2>
-              <Link to="/organizer/events" className="ow-hint od-view-all">
+              <h2>Your Events ({filteredEvents.length})</h2>
+              <Link to="/organizer/events" className="od-view-all">
                 View as cards →
               </Link>
             </div>
 
-            {events.length === 0 && (
-              <div className="tb-empty">
-                You haven't created any events yet.{" "}
-                <Link to="/organizer/events/new">Create your first event</Link>
+            {filteredEvents.length === 0 ? (
+              <div className="tb-empty" style={{ margin: "20px 0" }}>
+                {statusFilter === "ALL"
+                  ? "You haven't created any events yet."
+                  : `No events in "${STATUS_LABELS[statusFilter] || statusFilter}" status.`}{" "}
+                {statusFilter === "ALL" && (
+                  <Link to="/organizer/events/new">Create your first event</Link>
+                )}
               </div>
-            )}
-
-            {events.length > 0 && (
+            ) : (
               <div className="od-table-wrap">
-                <table className="ow-table">
+                <table className="od-table">
                   <thead>
                     <tr>
-                      <th>Event</th>
-                      <th>Status</th>
-                      <th>Starts</th>
-                      <th>Tickets sold</th>
-                      <th>Revenue</th>
-                      <th></th>
+                      <th style={{ width: "26%" }}>Event</th>
+                      <th style={{ width: "10%" }}>Status</th>
+                      <th style={{ width: "13%" }}>Starts</th>
+                      <th style={{ width: "11%" }}>Tickets Sold</th>
+                      <th style={{ width: "12%" }}>Revenue</th>
+                      <th style={{ width: "28%", textAlign: "right" }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {events.map((ev) => (
+                    {filteredEvents.map((ev) => (
                       <tr key={ev.eventId}>
                         <td>
-                          <div className="ow-td-title">{ev.title}</div>
+                          <Link
+                            to={`/organizer/events/${ev.eventId}/edit`}
+                            className="od-event-title"
+                            title={ev.title}
+                          >
+                            {ev.title}
+                          </Link>
                         </td>
                         <td>
-                          <span className={"mc-status " + (STATUS_CLASS[ev.status] || "")}>
+                          <span
+                            className={
+                              "mc-status-pill " + (STATUS_CLASS[ev.status] || "")
+                            }
+                          >
                             {STATUS_LABELS[ev.status] || ev.status}
                           </span>
                         </td>
@@ -180,23 +271,58 @@ export default function OrganizerDashboardPage() {
                         <td>
                           {ev.soldTickets ?? 0} / {ev.totalTickets ?? 0}
                         </td>
-                        <td>{formatPrice(ev.revenue ?? 0)}</td>
+                        <td style={{ fontWeight: 600 }}>
+                          {formatPrice(ev.revenue ?? 0)}
+                        </td>
                         <td>
-                          <Link to={`/organizer/events/${ev.eventId}/edit`} className="ow-link">
-                            Manage
-                          </Link>
-                          {ev.status === "Published" && (
-                            <>
-                              {" · "}
-                              <Link to={`/organizer/events/${ev.eventId}/revenue`} className="ow-link">
-                                Revenue
+                          <div className="od-action-group">
+                            {ev.status === "Published" ? (
+                              <>
+                                <Link
+                                  to={`/organizer/events/${ev.eventId}/changes`}
+                                  className="od-action-btn od-action-btn-primary"
+                                  title="Submit Event Change Request - Reschedule, Postpone, or Cancel"
+                                >
+                                  Change Request
+                                </Link>
+                                <Link
+                                  to={`/organizer/events/${ev.eventId}/edit`}
+                                  className="od-action-btn"
+                                  title="View event configuration"
+                                >
+                                  View
+                                </Link>
+                                <Link
+                                  to={`/organizer/events/${ev.eventId}/revenue`}
+                                  className="od-action-btn"
+                                >
+                                  Revenue
+                                </Link>
+                                <Link
+                                  to={`/organizer/events/${ev.eventId}/staff`}
+                                  className="od-action-btn"
+                                >
+                                  Staff
+                                </Link>
+                              </>
+                            ) : ["Draft", "Rejected"].includes(ev.status) ? (
+                              <Link
+                                to={`/organizer/events/${ev.eventId}/edit`}
+                                className="od-action-btn od-action-btn-primary"
+                                title="Edit Concert Information"
+                              >
+                                Edit
                               </Link>
-                              {" · "}
-                              <Link to={`/organizer/events/${ev.eventId}/staff`} className="ow-link">
-                                Check-in &amp; staff
+                            ) : (
+                              <Link
+                                to={`/organizer/events/${ev.eventId}/edit`}
+                                className="od-action-btn"
+                                title="View event details"
+                              >
+                                View
                               </Link>
-                            </>
-                          )}
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -207,7 +333,6 @@ export default function OrganizerDashboardPage() {
           </>
         )}
       </div>
-
-      </OrganizerShell>
+    </OrganizerShell>
   );
 }

@@ -22,7 +22,7 @@ const NEXT = { front: "back", back: "selfie", selfie: "review" };
  * ---------------------------------------------------------------- */
 function ConsentStep({ state, error, consent, agreed, notice, onAgree, onRetry, onNext }) {
   if (state === "loading") {
-    return <p className="kyc-muted">Loading content...</p>;
+    return <p className="kyc-muted"><span className="app-loading-spinner" role="status" aria-label="Loading" /></p>;
   }
 
   if (state === "error") {
@@ -157,7 +157,7 @@ function ReviewStep({ shots, submitting, error, onRetake, onSubmit }) {
       {error && <div className="kyc-alert kyc-alert--error" role="alert">{error}</div>}
 
       <button type="button" className="kyc-button kyc-button--primary" disabled={submitting} onClick={onSubmit}>
-        {submitting ? "Verifying..." : "Submit for verification"}
+        {submitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Submit for verification"}
       </button>
     </>
   );

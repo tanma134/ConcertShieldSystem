@@ -14,6 +14,8 @@ namespace AdminAPI.DTOs
  public DateTime CreatedAt { get; set; }
  public bool CanAppeal { get; set; }
  public string? CannotAppealReason { get; set; }
+ public DateTime? AppealDeadlineAt { get; set; }
+ public int? TicketId { get; set; }
  public int? ExistingAppealId { get; set; }
  public string? ExistingAppealStatus { get; set; }
  }
@@ -55,6 +57,15 @@ namespace AdminAPI.DTOs
  /// <summary>Ch? có khi Admin resolve : các quy?t ð?nh block ð? ðý?c g? khi ch?p nh?n kháng ngh?.</summary>
  [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
  public List<int>? LiftedDecisionIds { get; set; }
+
+ /// <summary>Only set when a rejected ticket appeal revoked the ticket.</summary>
+ public bool? TicketRevoked { get; set; }
+
+ /// <summary>Refunded | RefundFailed | NotRefundable | None.</summary>
+ public string? RefundStatus { get; set; }
+ public long? RefundAmount { get; set; }
+ public string? RefundReference { get; set; }
+ public string? RefundError { get; set; }
  }
 
 

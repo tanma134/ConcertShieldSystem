@@ -116,7 +116,7 @@ function isWithinShift(startStr, endStr) {
 }
 
 export const offlineCheckinDb = {
-  // UC_14.5: Save downloaded ticket package into IndexedDB
+  // Save downloaded ticket package into IndexedDB
   async saveOfflinePackage(eventId, packageData) {
     const db = await openDb();
     const eventIdNum = Number(eventId);

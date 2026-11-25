@@ -361,3 +361,18 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Scratch & temporary scripts
+scratch/
+*.docx
+~$*.docx
+
+# Database temporary dumps & backups
+database/backups_pre_recreate/
+database/schema_dumps/
+*.sql.bak
+*.dmp
+
+# Public uploads
+frontend/public/uploads/*
+!frontend/public/uploads/.gitkeep

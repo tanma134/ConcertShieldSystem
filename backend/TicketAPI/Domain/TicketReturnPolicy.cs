@@ -20,7 +20,7 @@ public sealed record TicketReturnFacts(
 // Result of validating the free-text reason typed by the customer.
 public sealed record ReasonValidation(bool IsValid, string Reason, string? Error);
 
-// Business rules for UC_9 (ticket return). Pure functions: no database, no clock.
+// Business rules for (ticket return). Pure functions: no database, no clock.
 public static class TicketReturnPolicy
 {
     // Returns close this many hours before the event starts.

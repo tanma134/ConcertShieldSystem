@@ -86,7 +86,7 @@ export default function StaffCheckinTerminalPage() {
     successRate: 100,
   });
 
-  // UC_14.5 & UC_14.6: Offline Check-in Mode State
+  // Offline Check-in Mode State
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [isNetworkOnline, setIsNetworkOnline] = useState(navigator.onLine);
   const [offlinePackageMeta, setOfflinePackageMeta] = useState(null);
@@ -176,7 +176,7 @@ export default function StaffCheckinTerminalPage() {
     };
   }, [currentEventId]);
 
-  // UC_14.5: Always auto-preload and keep offline ticket package ready in IndexedDB
+  // Always auto-preload and keep offline ticket package ready in IndexedDB
   const autoPreloadOfflinePackage = async (evtId) => {
     setDownloadingPackage(true);
     try {
@@ -225,7 +225,7 @@ export default function StaffCheckinTerminalPage() {
     }
   };
 
-  // UC_14.5: Manual re-download / refresh offline ticket package if desired
+  // Manual re-download / refresh offline ticket package if desired
   const handleDownloadOfflinePackage = async () => {
     setDownloadingPackage(true);
     try {
@@ -256,7 +256,7 @@ export default function StaffCheckinTerminalPage() {
     }
   };
 
-  // UC_14.6: Sync Offline Scans to Backend (Supports both manual click & automatic background sync)
+  // Sync Offline Scans to Backend (Supports both manual click & automatic background sync)
   const handleSyncOfflineScans = async (isSilent = false) => {
     if (syncingOfflineRef.current) return;
     if (!navigator.onLine) {
@@ -361,7 +361,7 @@ export default function StaffCheckinTerminalPage() {
     } catch (e) {}
   };
 
-  // UC_14.5: Execute Offline Scan against local IndexedDB
+  // Execute Offline Scan against local IndexedDB
   const executeOfflineScan = async (rawCode, isAutoFallback = false) => {
     try {
       const offlineResult = await offlineCheckinDb.verifyOfflineTicket(
@@ -433,7 +433,7 @@ export default function StaffCheckinTerminalPage() {
       setScanning(true);
       setScanResult(null);
 
-      // UC_14.5: If in offline mode OR device has no internet connection, verify locally immediately
+      // If in offline mode OR device has no internet connection, verify locally immediately
       if (isOfflineMode || !navigator.onLine) {
         await executeOfflineScan(payload, false);
         return;
@@ -994,7 +994,7 @@ export default function StaffCheckinTerminalPage() {
             <span>Camera Active</span>
           </div>
 
-          {/* UC_14.5: Offline Mode Toggle */}
+          {/* Offline Mode Toggle */}
           <button
             type="button"
             className={`btn-mode-toggle ${isOfflineMode ? "mode-offline" : "mode-online"}`}
@@ -1009,7 +1009,7 @@ export default function StaffCheckinTerminalPage() {
             {isOfflineMode ? "Offline Mode" : "Online Mode"}
           </button>
 
-          {/* UC_14.6: Compact Auto-Sync Indicator in Header */}
+          {/* Compact Auto-Sync Indicator in Header */}
           {offlineQueueCount > 0 && (
             <button
               type="button"
@@ -1018,7 +1018,7 @@ export default function StaffCheckinTerminalPage() {
               disabled={syncingOffline}
               title="Pending offline scans waiting for sync."
             >
-              {syncingOffline ? "Syncing..." : `Pending Sync (${offlineQueueCount})`}
+              {syncingOffline ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : `Pending Sync (${offlineQueueCount})`}
             </button>
           )}
 
@@ -1279,7 +1279,7 @@ export default function StaffCheckinTerminalPage() {
                   <div className={`scanner-frame ${autoScannedFlash ? "detected" : ""}`}></div>
                   {isCooldownActive ? (
                     <div className="cooldown-overlay-banner">
-                      Pausing 2s to verify scan...
+                      <span className="app-loading-spinner" role="status" aria-label="Loading" />
                     </div>
                   ) : (
                     <p className="scanner-hint">Point attendee QR code at camera to scan automatically</p>
@@ -1354,6 +1354,7 @@ export default function StaffCheckinTerminalPage() {
                 <thead>
                   <tr>
                     <th>Time</th>
+                    <th>Ticket Code</th>
                     <th>Attendee</th>
                     <th>Ticket Type</th>
                     <th>Gate</th>
@@ -1364,24 +1365,27 @@ export default function StaffCheckinTerminalPage() {
                 <tbody>
                   {scanFeed.length === 0 ? (
                     <tr>
-                      <td colSpan="6" style={{ textAlign: "center", padding: "2rem", color: "#64748b" }}>
+                      <td colSpan="7" style={{ textAlign: "center", padding: "2rem", color: "#6b6480" }}>
                         No admissions recorded yet for this shift.
                       </td>
                     </tr>
                   ) : (
                     scanFeed.slice(0, 10).map((item, idx) => (
                       <tr key={item.scanId || idx}>
-                        <td style={{ color: "#94a3b8", fontFamily: "monospace" }}>
+                        <td style={{ color: "#7a7392", fontFamily: "monospace" }}>
                           {new Date(item.scannedAt).toLocaleTimeString()}
                         </td>
                         <td>
-                          <strong style={{ color: "#f8fafc" }}>{item.customerName || "N/A"}</strong>
+                          <strong style={{ color: "#1e1b2e", fontFamily: "monospace" }}>{item.ticketCode}</strong>
                         </td>
                         <td>
-                          <span style={{ color: "#38bdf8", fontWeight: 600 }}>{item.zoneName || "General Admission"}</span>
+                          <strong style={{ color: "#1e1b2e" }}>{item.customerName || "N/A"}</strong>
                         </td>
                         <td>
-                          <span style={{ color: "#94a3b8" }}>{item.gateName || gateAssignment?.gateName || "Gate A"}</span>
+                          <span style={{ color: "#2fa4e0", fontWeight: 600 }}>{item.zoneName || "General Admission"}</span>
+                        </td>
+                        <td>
+                          <span style={{ color: "#7a7392" }}>{item.gateName || gateAssignment?.gateName || "Gate A"}</span>
                         </td>
                         <td>
                           <span className="method-tag-dark">{item.scanMethod || "Dynamic QR"}</span>
@@ -1452,15 +1456,15 @@ export default function StaffCheckinTerminalPage() {
                     onClick={() => searchTicketsByCccd(manualForm.cccdNumber)}
                     disabled={searchingManualTickets || !manualForm.cccdNumber.trim()}
                   >
-                    {searchingManualTickets ? "Searching..." : "Lookup Tickets by CCCD"}
+                    {searchingManualTickets ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Tìm vé theo CCCD"}
                   </button>
                 </div>
               </div>
 
               {/* Real-time DB lookup results for this CCCD */}
               {searchingManualTickets && (
-                <div className="cccd-box-full" style={{ color: "#38bdf8", padding: "0.5rem 0", fontStyle: "italic" }}>
-                  Searching ticket database...
+                <div className="cccd-box-full" style={{ color: "#2fa4e0", padding: "0.5rem 0", fontStyle: "italic" }}>
+                  Đang tra cứu vé từ cơ sở dữ liệu...
                 </div>
               )}
 
@@ -1472,8 +1476,8 @@ export default function StaffCheckinTerminalPage() {
 
               {manualLookupTickets.length > 0 && (
                 <div className="cccd-box-full manual-tickets-preview-box" style={{ margin: "0.5rem 0" }}>
-                  <label style={{ fontSize: "0.875rem", color: "#94a3b8", display: "block", marginBottom: "0.5rem" }}>
-                    Tickets found in database ({manualLookupTickets.length}) - Select ticket to check in:
+                  <label style={{ fontSize: "0.875rem", color: "#7a7392", display: "block", marginBottom: "0.5rem" }}>
+                    Vé tìm thấy trong Database ({manualLookupTickets.length} vé) - Chọn vé cần check-in:
                   </label>
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                     {manualLookupTickets.map((t) => {
@@ -1495,7 +1499,7 @@ export default function StaffCheckinTerminalPage() {
                             padding: "0.75rem 1rem",
                             borderRadius: "8px",
                             background: isSelected ? "rgba(255, 45, 117, 0.15)" : "rgba(30, 41, 59, 0.7)",
-                            border: isSelected ? "2px solid #ff2d75" : "1px solid #334155",
+                            border: isSelected ? "2px solid #d91a63" : "1px solid #dcd3e8",
                             cursor: isAvailable ? "pointer" : "not-allowed",
                             opacity: isAvailable ? 1 : 0.65,
                             transition: "all 0.2s ease",
@@ -1511,14 +1515,15 @@ export default function StaffCheckinTerminalPage() {
                                 setSelectedManualTicket(t);
                                 setManualForm((prev) => ({ ...prev, ticketCode: t.ticketCode }));
                               }}
-                              style={{ accentColor: "#ff2d75", width: "18px", height: "18px", cursor: isAvailable ? "pointer" : "default" }}
+                              style={{ accentColor: "#d91a63", width: "18px", height: "18px", cursor: isAvailable ? "pointer" : "default" }}
                             />
                             <div>
                               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-                                <strong style={{ color: "#f8fafc", fontSize: "0.95rem" }}>{t.customerName || "Attendee"}</strong>
+                                <span className="t-code-badge" style={{ fontSize: "0.85rem" }}>{t.ticketCode}</span>
+                                <strong style={{ color: "#1e1b2e" }}>{t.customerName || "Khán giả"}</strong>
                               </div>
-                              <div style={{ fontSize: "0.8rem", color: "#94a3b8", marginTop: "0.2rem" }}>
-                                Zone: <span style={{ color: "#fbbf24" }}>{t.zoneName}</span> • Seat: {t.seatNumber || "General"}
+                              <div style={{ fontSize: "0.8rem", color: "#7a7392", marginTop: "0.2rem" }}>
+                                Khu vực: <span style={{ color: "#d99a16" }}>{t.zoneName}</span> • Ghế: {t.seatNumber || "General"}
                               </div>
                             </div>
                           </div>
@@ -1583,7 +1588,7 @@ export default function StaffCheckinTerminalPage() {
                   className="btn-validate-ticket-pink"
                   disabled={!manualForm.cccdVerified || !manualForm.cccdNumber.trim() || (!selectedManualTicket && !manualForm.ticketCode.trim()) || scanning}
                 >
-                  {scanning ? "Processing..." : "Confirm Ticket Check-in"}
+                  {scanning ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Xác nhận Check-in Vé"}
                 </button>
               </div>
             </form>
@@ -1673,7 +1678,7 @@ export default function StaffCheckinTerminalPage() {
                   className="btn-lookup-pink"
                   disabled={searchingLookup || !lookupSearch.queryValue.trim()}
                 >
-                  {searchingLookup ? "Searching..." : "Search Ticket"}
+                  {searchingLookup ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Search Ticket"}
                 </button>
               </div>
             </form>
@@ -1691,9 +1696,9 @@ export default function StaffCheckinTerminalPage() {
                       <div>
                         <h3>{lookupResults.tickets[0]?.customerName || "Nguyen Thanh"}</h3>
                         <div className="attendee-meta-pills">
-                          <span>Phone: <strong style={{ color: "#fbbf24" }}>{lookupResults.tickets[0]?.maskedPhone}</strong></span>
-                          <span>CCCD: <strong style={{ color: "#fbbf24" }}>{lookupResults.tickets[0]?.maskedCccd}</strong></span>
-                          <span>Order: <strong style={{ color: "#ff2d75" }}>{lookupResults.tickets[0]?.orderId || "#AC-1847"}</strong></span>
+                          <span>Phone: <strong style={{ color: "#d99a16" }}>{lookupResults.tickets[0]?.maskedPhone}</strong></span>
+                          <span>CCCD: <strong style={{ color: "#d99a16" }}>{lookupResults.tickets[0]?.maskedCccd}</strong></span>
+                          <span>Order: <strong style={{ color: "#d91a63" }}>{lookupResults.tickets[0]?.orderId || "#AC-1847"}</strong></span>
                         </div>
                       </div>
                     </div>
@@ -1809,6 +1814,7 @@ export default function StaffCheckinTerminalPage() {
                 <thead>
                   <tr>
                     <th>Time</th>
+                    <th>Ticket Code</th>
                     <th>Attendee Name</th>
                     <th>Ticket Type</th>
                     <th>Order ID</th>
@@ -1819,27 +1825,30 @@ export default function StaffCheckinTerminalPage() {
                 <tbody>
                   {scanFeed.length === 0 ? (
                     <tr>
-                      <td colSpan="6" style={{ textAlign: "center", padding: "2rem", color: "#64748b" }}>
+                      <td colSpan="7" style={{ textAlign: "center", padding: "2rem", color: "#6b6480" }}>
                         No scan records found matching this filter.
                       </td>
                     </tr>
                   ) : (
                     scanFeed.map((item, idx) => (
                       <tr key={item.scanId || idx}>
-                        <td style={{ color: "#94a3b8", fontFamily: "monospace" }}>
+                        <td style={{ color: "#7a7392", fontFamily: "monospace" }}>
                           {new Date(item.scannedAt).toLocaleTimeString()}
                         </td>
                         <td>
-                          <strong style={{ color: "#f8fafc" }}>{item.customerName || "N/A"}</strong>
+                          <strong style={{ color: "#1e1b2e", fontFamily: "monospace" }}>{item.ticketCode}</strong>
                         </td>
                         <td>
-                          <span style={{ color: "#38bdf8", fontWeight: 600 }}>{item.zoneName || "Standard Admission"}</span>
+                          <strong style={{ color: "#1e1b2e" }}>{item.customerName || "N/A"}</strong>
                         </td>
-                        <td style={{ color: "#94a3b8", fontFamily: "monospace" }}>
+                        <td>
+                          <span style={{ color: "#2fa4e0", fontWeight: 600 }}>{item.zoneName || "General Admission"}</span>
+                        </td>
+                        <td>
                           {item.orderId ? `#${item.orderId}` : "N/A"}
                         </td>
                         <td>
-                          <span style={{ color: "#94a3b8" }}>{item.gateName || gateAssignment?.gateName || "Gate A"}</span>
+                          <span style={{ color: "#7a7392" }}>{item.gateName || gateAssignment?.gateName || "Gate A"}</span>
                         </td>
                         <td>
                           <span className={`status-badge-pill ${item.status?.toLowerCase()}`}>
@@ -1860,44 +1869,44 @@ export default function StaffCheckinTerminalPage() {
         </div>
       )}
 
-      {/* TAB 5: Offline Admission Mode & Edge Sync (UC 14.5, 14.6, 14.7) */}
+      {/* TAB 5: Offline Admission Mode & Edge Sync */}
       {activeTab === "OFFLINE" && (
         <div className="terminal-offline-tab">
           <div className="card-offline-control">
             <div className="offline-card-header">
               <h2>Offline Check-in Mode & Edge Sync</h2>
               <p className="card-subtext">
-                UC_14.5, UC_14.6, UC_14.7: Edge admission redundancy allows gates to verify tickets without cloud internet connection using IndexedDB cached packages.
+                Edge admission redundancy allows gates to verify tickets without cloud internet connection using IndexedDB cached packages.
               </p>
             </div>
 
             <div className="offline-status-grid">
               <div className="offline-info-card">
                 <span className="offline-card-title">Network Connectivity</span>
-                <strong style={{ fontSize: "1.3rem", color: isNetworkOnline ? "#10b981" : "#ef4444" }}>
+                <strong style={{ fontSize: "1.3rem", color: isNetworkOnline ? "#0e9e78" : "#d63a3a" }}>
                   {isNetworkOnline ? "Online (Server Reachable)" : "Offline (Network Disconnected)"}
                 </strong>
-                <p style={{ margin: "0.5rem 0 0", color: "#94a3b8", fontSize: "0.85rem" }}>
-                  Current Mode: <strong style={{ color: isOfflineMode ? "#f59e0b" : "#10b981" }}>{isOfflineMode ? "Offline Verification Active" : "Cloud Online"}</strong>
+                <p style={{ margin: "0.5rem 0 0", color: "#7a7392", fontSize: "0.85rem" }}>
+                  Current Mode: <strong style={{ color: isOfflineMode ? "#d98f14" : "#0e9e78" }}>{isOfflineMode ? "Offline Verification Active" : "Cloud Online"}</strong>
                 </p>
               </div>
 
               <div className="offline-info-card">
                 <span className="offline-card-title">Cached Offline Package</span>
-                <strong style={{ fontSize: "1.3rem", color: offlinePackageMeta ? "#ff2d75" : "#94a3b8" }}>
+                <strong style={{ fontSize: "1.3rem", color: offlinePackageMeta ? "#d91a63" : "#7a7392" }}>
                   {offlinePackageMeta ? `${offlinePackageMeta.totalTickets || 3} Preloaded Tickets` : "No Package Loaded"}
                 </strong>
-                <p style={{ margin: "0.5rem 0 0", color: "#94a3b8", fontSize: "0.85rem" }}>
+                <p style={{ margin: "0.5rem 0 0", color: "#7a7392", fontSize: "0.85rem" }}>
                   Event: <strong>{offlinePackageMeta?.eventTitle || "Assigned Concert"}</strong>
                 </p>
               </div>
 
               <div className="offline-info-card">
                 <span className="offline-card-title">Pending Sync Queue</span>
-                <strong style={{ fontSize: "1.3rem", color: offlineQueueCount > 0 ? "#fbbf24" : "#10b981" }}>
+                <strong style={{ fontSize: "1.3rem", color: offlineQueueCount > 0 ? "#d99a16" : "#0e9e78" }}>
                   {offlineQueueCount} Scans Waiting
                 </strong>
-                <p style={{ margin: "0.5rem 0 0", color: "#94a3b8", fontSize: "0.85rem" }}>
+                <p style={{ margin: "0.5rem 0 0", color: "#7a7392", fontSize: "0.85rem" }}>
                   Stored safely in local IndexedDB until connection restores.
                 </p>
               </div>
@@ -1910,7 +1919,7 @@ export default function StaffCheckinTerminalPage() {
                 onClick={handleDownloadOfflinePackage}
                 disabled={downloadingPackage}
               >
-                {downloadingPackage ? "Preloading..." : "Download / Refresh Offline Package"}
+                {downloadingPackage ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Download / Refresh Offline Package"}
               </button>
 
               <button
@@ -1919,7 +1928,7 @@ export default function StaffCheckinTerminalPage() {
                 onClick={() => handleSyncOfflineScans(false)}
                 disabled={syncingOffline || offlineQueueCount === 0}
               >
-                {syncingOffline ? "Synchronizing..." : `Synchronize Scans to Server (${offlineQueueCount})`}
+                {syncingOffline ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : `Synchronize Scans to Server (${offlineQueueCount})`}
               </button>
 
               <button
@@ -1982,7 +1991,7 @@ export default function StaffCheckinTerminalPage() {
                     <strong>{terminalDialog.syncDetails.alreadyUsedCount} tickets</strong>
                   </div>
                   {terminalDialog.syncDetails.conflictCount > 0 && (
-                    <div className="sync-stat-row" style={{ color: "#f87171", fontWeight: 700 }}>
+                    <div className="sync-stat-row" style={{ color: "#d64545", fontWeight: 700 }}>
                       <span>Duplicate scan conflicts detected:</span>
                       <strong>{terminalDialog.syncDetails.conflictCount} tickets</strong>
                     </div>
@@ -2000,7 +2009,7 @@ export default function StaffCheckinTerminalPage() {
                 <button
                   type="button"
                   className="btn btn-dialog-action"
-                  style={{ background: "#d97706", borderColor: "#b45309", color: "#fff", marginRight: "10px" }}
+                  style={{ background: "#c06a0a", borderColor: "#b45309", color: "#fff", marginRight: "10px" }}
                   onClick={() => {
                     setTerminalDialog(null);
                     setShowConflictModal(true);

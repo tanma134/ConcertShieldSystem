@@ -8,16 +8,16 @@ import Footer from "../../components/Footer";
 import { useToast } from "../../components/ToastProvider";
 
 const ZONE_PALETTE = [
-  "#f59e0b",
-  "#14b8a6",
+  "#d98f14",
+  "#14a89a",
   "#a855f7",
   "#3b82f6",
-  "#ef4444",
-  "#22c55e",
-  "#ec4899",
-  "#84cc16",
-  "#06b6d4",
-  "#f97316",
+  "#d63a3a",
+  "#1eaa55",
+  "#e8439c",
+  "#78b014",
+  "#1da8c8",
+  "#e06a1a",
 ];
 
 const formatPrice = (price) =>
@@ -44,8 +44,32 @@ function parseShape(shapeJson) {
   }
 }
 
-function getZonePosition(shapeJson) {
-  const shape = parseShape(shapeJson);
+function autoRectangle(index, total) {
+  const cols = Math.min(4, Math.max(total, 1));
+  const col = index % cols;
+  const row = Math.floor(index / cols);
+  const w = 90 / cols - 3;
+  return { type: "rectangle", x: 5 + col * (90 / cols), y: 28 + row * 22, w, h: 16, rot: 0 };
+}
+
+function getZonePosition(shapeJson, index = 0, total = 1) {
+  let shape = parseShape(shapeJson);
+
+  // If no valid shape found in shapeJson, fallback to autoRectangle so zones don't pile up at (0, 0)
+  const hasPolygon =
+    shape?.type === "polygon" &&
+    Array.isArray(shape.points) &&
+    shape.points.length > 2;
+  const hasRect =
+    shape &&
+    typeof shape.x === "number" &&
+    typeof shape.y === "number" &&
+    typeof shape.w === "number" &&
+    typeof shape.h === "number";
+
+  if (!hasPolygon && !hasRect) {
+    shape = autoRectangle(index, total);
+  }
 
   if (
     shape.type === "polygon" &&
@@ -78,12 +102,43 @@ function getZonePosition(shapeJson) {
     };
   }
 
+  const left = Math.max(0, Math.min(Number(shape.x) || 0, 99));
+  const top = Math.max(0, Math.min(Number(shape.y) || 0, 99));
+  const width = Math.max(1, Math.min(Number(shape.w) || 20, 100 - left));
+  const height = Math.max(1, Math.min(Number(shape.h) || 16, 100 - top));
+
   return {
-    left: `${Number(shape.x) || 0}%`,
-    top: `${Number(shape.y) || 0}%`,
-    width: `${Number(shape.w) || 20}%`,
-    height: `${Number(shape.h) || 18}%`,
+    left: `${left}%`,
+    top: `${top}%`,
+    width: `${width}%`,
+    height: `${height}%`,
     transform: `rotate(${Number(shape.rot) || 0}deg)`,
+  };
+}
+
+function getSeatCanvasMinimums(zones) {
+  const minimumSeatPitch = 8;
+  let minHeight = 520;
+
+  zones.forEach((zone, index) => {
+    const seats = zone.seats ?? [];
+    if (seats.length === 0) return;
+
+    const position = getZonePosition(zone.shapeJson, index, zones.length);
+    const heightPercent = Number.parseFloat(position.height) || 16;
+    const rows = Math.max(
+      1,
+      ...seats.map((seat) => Number(seat.yCoordinate) || 1)
+    );
+
+    minHeight = Math.max(
+      minHeight,
+      (rows * minimumSeatPitch) / ((78 * heightPercent) / 10000)
+    );
+  });
+
+  return {
+    minHeight: Math.ceil(minHeight),
   };
 }
 
@@ -107,6 +162,8 @@ export default function SelectTicketPage() {
   const [zoneQuantities, setZoneQuantities] = useState({});
   const [selectedSeatIds, setSelectedSeatIds] = useState([]);
   const [seatDetails, setSeatDetails] = useState(null);
+  const [seatMapZoom, setSeatMapZoom] = useState(1);
+  const [zoneMapZoom, setZoneMapZoom] = useState(1);
 
   const [activeZone, setActiveZone] = useState(null);
   const [zoneDraftQuantity, setZoneDraftQuantity] = useState(0);
@@ -197,6 +254,10 @@ export default function SelectTicketPage() {
 
   const ticketTypes = event?.ticketTypes ?? [];
   const zones = event?.seatingChart?.zones ?? [];
+  const seatCanvasMinimums = useMemo(
+    () => getSeatCanvasMinimums(zones),
+    [zones]
+  );
   const seatingMode =
     event?.seatingMode ||
     event?.seatingChart?.seatingMode ||
@@ -221,6 +282,37 @@ export default function SelectTicketPage() {
       (Number(ticketTypeId) || 0) % ZONE_PALETTE.length;
 
     return ticket?.colorCode || ZONE_PALETTE[paletteIndex];
+  }
+
+  function getTicketSalesStatus(ticket) {
+    if (!ticket) return { isOnSale: true };
+    const now = Date.now();
+    if (ticket.salesStartsAt) {
+      const start = new Date(ticket.salesStartsAt).getTime();
+      if (start > now) {
+        const d = new Date(start);
+        const pad = (n) => String(n).padStart(2, "0");
+        const dateStr = `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        return {
+          isOnSale: false,
+          isUpcoming: true,
+          label: `Opens ${dateStr}`,
+          fullLabel: `Opens at ${d.toLocaleString()}`,
+        };
+      }
+    }
+    if (ticket.salesEndsAt) {
+      const end = new Date(ticket.salesEndsAt).getTime();
+      if (end <= now) {
+        return {
+          isOnSale: false,
+          isClosed: true,
+          label: "Sales closed",
+          fullLabel: "Sales closed",
+        };
+      }
+    }
+    return { isOnSale: true };
   }
 
   function getTicketAvailable(ticket) {
@@ -354,6 +446,8 @@ export default function SelectTicketPage() {
 
   function getZoneMax(zone) {
     const ticket = getTicket(zone.ticketTypeId);
+    const status = getTicketSalesStatus(ticket);
+    if (!status.isOnSale) return 0;
 
     return Math.min(
       getZoneAvailable(zone),
@@ -363,6 +457,9 @@ export default function SelectTicketPage() {
   }
 
   function getTicketMax(ticket) {
+    const status = getTicketSalesStatus(ticket);
+    if (!status.isOnSale) return 0;
+
     return Math.min(
       getTicketAvailable(ticket),
       Number(ticket?.maxPerOrder || maxPerAccount),
@@ -379,7 +476,7 @@ export default function SelectTicketPage() {
       existingZoneId &&
       Number(existingZoneId) !== Number(zone.seatZoneId)
     ) {
-      window.alert("Please select tickets from only one zone at a time.");
+      toast.warning("Please select tickets from only one zone at a time.");
       return;
     }
 
@@ -452,14 +549,14 @@ export default function SelectTicketPage() {
       ).length;
 
     if (selectedForType >= getTicketMax(ticket)) {
-      window.alert(
+      toast.warning(
         `The limit for ${ticket?.typeName || zone.zoneName} is ${getTicketMax(ticket)} ticket(s).`
       );
       return;
     }
 
     if (selectedSeatIds.length >= maxPerAccount) {
-      window.alert(
+      toast.warning(
         `You can select up to ${maxPerAccount} ticket(s) per order.`
       );
       return;
@@ -550,6 +647,16 @@ export default function SelectTicketPage() {
       navigate(`/checkout/question-form/${encodeURIComponent(holdId)}`);
     } catch (err) {
       const body = err.response?.data;
+
+      // The API sends a machine-readable code for risk / eKYC rejections.
+      // Send the customer to the page where they can fix the cause instead of
+      // leaving them on a seat picker they cannot complete.
+      if (body?.code === "EKYC_REQUIRED") {
+        toast.error(body.message || "Please complete identity verification before booking.");
+        navigate("/kyc");
+        return;
+      }
+
       const message =
         typeof body === "string"
           ? body
@@ -580,28 +687,9 @@ export default function SelectTicketPage() {
 
   if (loading) {
     return (
-      <>
-        <Header />
-
-        <main className="ticket-loading-page" aria-live="polite">
-          <section className="ticket-loading-card">
-            <div className="ticket-loading-spinner" aria-hidden="true">
-              <span />
-            </div>
-
-            <h2>Preparing your event</h2>
-            <p>Loading ticket types and seating information...</p>
-
-            <div className="ticket-loading-skeleton" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-            </div>
-          </section>
-        </main>
-
-        <Footer />
-      </>
+      <main className="ticket-loading-page" aria-live="polite">
+        <span className="app-loading-spinner" role="status" aria-label="Loading" />
+      </main>
     );
   }
 
@@ -660,13 +748,49 @@ export default function SelectTicketPage() {
           {isStandingZones && (
             <>
               <div className="tb-zone-map-wrapper">
-                <div className="tb-zone-map">
+                <div className="tb-zone-map-controls" aria-label="Zone map zoom controls">
+                  <button
+                    type="button"
+                    aria-label="Zoom out"
+                    disabled={zoneMapZoom <= 0.5}
+                    onClick={() => setZoneMapZoom((zoom) => Math.max(0.5, Number((zoom - 0.25).toFixed(2))))}
+                  >
+                    -
+                  </button>
+                  <button
+                    type="button"
+                    className="tb-zone-map-zoom-level"
+                    aria-label="Reset zone map zoom"
+                    onClick={() => setZoneMapZoom(1)}
+                  >
+                    {Math.round(zoneMapZoom * 100)}%
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Zoom in"
+                    disabled={zoneMapZoom >= 2.5}
+                    onClick={() => setZoneMapZoom((zoom) => Math.min(2.5, Number((zoom + 0.25).toFixed(2))))}
+                  >
+                    +
+                  </button>
+                </div>
+                <div className={`tb-zone-map${zoneMapZoom > 1 ? " is-zoomed" : ""}`}>
+                  <div
+                    className="tb-zone-map-scene"
+                    style={{
+                      width: `${zoneMapZoom * 100}%`,
+                      height: `${zoneMapZoom * 100}%`,
+                    }}
+                  >
                   <div className="tb-map-stage">STAGE</div>
 
-                  {zones.map((zone) => {
+                  {zones.map((zone, index) => {
                     const ticket = getTicket(zone.ticketTypeId);
                     const color = getTicketColor(zone.ticketTypeId);
-                    const soldOut = getZoneAvailable(zone) <= 0;
+                    const salesStatus = getTicketSalesStatus(ticket);
+                    const notOnSale = !salesStatus.isOnSale;
+                    const availableTickets = getZoneAvailable(zone);
+                    const soldOut = availableTickets <= 0;
                     const quantity = Number(
                       zoneQuantities[zone.seatZoneId] || 0
                     );
@@ -677,26 +801,22 @@ export default function SelectTicketPage() {
                         key={zone.seatZoneId}
                         className={`tb-zone ${
                           quantity > 0 ? "tb-zone-selected" : ""
-                        } ${soldOut ? "tb-zone-sold-out" : ""}`}
+                        } ${soldOut ? "tb-zone-sold-out" : ""} ${notOnSale ? "tb-zone-locked" : ""}`}
                         style={{
-                          ...getZonePosition(zone.shapeJson),
-                          "--zone-color": soldOut ? "#71717a" : color,
+                          ...getZonePosition(zone.shapeJson, index, zones.length),
+                          "--zone-color": soldOut || notOnSale ? "#94a3b8" : color,
                         }}
-                        disabled={soldOut}
+                        disabled={soldOut || notOnSale}
+                        title={notOnSale ? `${zone.zoneName} (${salesStatus.fullLabel})` : undefined}
                         onClick={() => openZonePicker(zone)}
                       >
-                        <span className="tb-zone-name">{zone.zoneName}</span>
-                        <span className="tb-zone-price">
-                          {soldOut ? "Sold out" : formatPrice(ticket?.price)}
+                        <span className="tb-zone-remaining">
+                          {availableTickets} {availableTickets === 1 ? "ticket" : "tickets"} left
                         </span>
-                        {quantity > 0 && (
-                          <span className="tb-zone-selected-count">
-                            {quantity} selected
-                          </span>
-                        )}
                       </button>
                     );
                   })}
+                  </div>
                 </div>
               </div>
 
@@ -707,11 +827,45 @@ export default function SelectTicketPage() {
           )}
 
           {isReservedSeating && (
-            <div className="tb-seat-map">
-              <div className="tb-seat-canvas">
+            <>
+            <div className="tb-seat-map-wrapper">
+            <div className="tb-seat-map-controls" aria-label="Seat map zoom controls">
+              <button
+                type="button"
+                aria-label="Zoom out"
+                disabled={seatMapZoom <= 0.5}
+                onClick={() => setSeatMapZoom((zoom) => Math.max(0.5, Number((zoom - 0.25).toFixed(2))))}
+              >
+                -
+              </button>
+              <button
+                type="button"
+                className="tb-seat-map-zoom-level"
+                aria-label="Reset seat map zoom"
+                onClick={() => setSeatMapZoom(1)}
+              >
+                {Math.round(seatMapZoom * 100)}%
+              </button>
+              <button
+                type="button"
+                aria-label="Zoom in"
+                disabled={seatMapZoom >= 2.5}
+                onClick={() => setSeatMapZoom((zoom) => Math.min(2.5, Number((zoom + 0.25).toFixed(2))))}
+              >
+                +
+              </button>
+            </div>
+            <div className={`tb-seat-map${seatMapZoom > 1 ? " is-zoomed" : ""}`}>
+              <div
+                className="tb-seat-canvas"
+                style={{
+                  width: `${seatMapZoom * 100}%`,
+                  minHeight: `${seatCanvasMinimums.minHeight * seatMapZoom}px`,
+                }}
+              >
                 <div className="tb-seat-stage">STAGE</div>
 
-                {zones.map((zone) => {
+                {zones.map((zone, index) => {
                   const color = getTicketColor(zone.ticketTypeId);
                   const seats = zone.seats ?? [];
                   const columns = Math.max(
@@ -726,35 +880,72 @@ export default function SelectTicketPage() {
                       Number(seat.yCoordinate || 1)
                     )
                   );
+                  const columnCoordinates = [...new Set(
+                    seats.map((seat) => Number(seat.xCoordinate) || 1)
+                  )].sort((a, b) => a - b);
+                  const rowLabels = [...new Map(
+                    seats.map((seat) => [
+                      Number(seat.yCoordinate) || 1,
+                      seat.rowLabel || String(Number(seat.yCoordinate) || 1),
+                    ])
+                  ).entries()].sort(([rowA], [rowB]) => rowA - rowB);
+                  const zonePosition = getZonePosition(
+                    zone.shapeJson,
+                    index,
+                    zones.length
+                  );
+                  const originalTop = Number.parseFloat(zonePosition.top) || 0;
 
                   return (
                     <section
                       key={zone.seatZoneId}
                       className="tb-seat-zone"
                       style={{
-                        ...getZonePosition(zone.shapeJson),
+                        ...zonePosition,
+                        top: `${Math.min(originalTop, Math.max(22, originalTop - 8))}%`,
                         "--zone-color": color,
                         "--seat-columns": columns,
                         "--seat-rows": rows,
                       }}
                     >
-                      <div className="tb-seat-zone-title">
-                        {zone.zoneName}
-                      </div>
+                      <div className="tb-seat-zone-title" aria-hidden="true" />
 
                       <div
                         className="tb-seat-grid"
-                        style={{
-                          gridTemplateColumns: `repeat(${columns}, minmax(12px, 1fr))`,
-                          gridTemplateRows: `repeat(${rows}, minmax(12px, 1fr))`,
-                        }}
                       >
+                        {columnCoordinates.map((column) => (
+                          <span
+                            key={`${zone.seatZoneId}-column-${column}`}
+                            className="tb-seat-coordinate-label is-column"
+                            style={{
+                              left: `${1.5 + ((column - 0.5) * 97) / columns}%`,
+                            }}
+                            aria-hidden="true"
+                          >
+                            {column}
+                          </span>
+                        ))}
+                        {rowLabels.map(([row, label]) => (
+                          <span
+                            key={`${zone.seatZoneId}-row-${row}`}
+                            className="tb-seat-coordinate-label is-row"
+                            style={{
+                              top: `${20 + ((row - 0.5) * 78) / rows}%`,
+                            }}
+                            aria-hidden="true"
+                          >
+                            {label}
+                          </span>
+                        ))}
                         {seats.map((seat) => {
                           const seatId = Number(seat.seatId);
                           const sold = bookedSeatIds.includes(seatId);
                           const held = heldSeatIds.includes(seatId);
                           const selected =
                             selectedSeatIds.includes(seatId);
+                          const zoneTicket = getTicket(zone.ticketTypeId);
+                          const zoneSalesStatus = getTicketSalesStatus(zoneTicket);
+                          const notOnSale = !zoneSalesStatus.isOnSale;
 
                           const statusClass = sold
                             ? "is-sold"
@@ -762,7 +953,9 @@ export default function SelectTicketPage() {
                               ? "is-held"
                               : selected
                                 ? "is-selected"
-                                : "is-available";
+                                : notOnSale
+                                  ? "is-locked"
+                                  : "is-available";
 
                           const statusText = sold
                             ? "sold"
@@ -770,7 +963,9 @@ export default function SelectTicketPage() {
                               ? "on hold"
                               : selected
                                 ? "selected"
-                                : "available";
+                                : notOnSale
+                                  ? zoneSalesStatus.label
+                                  : "available";
 
                           return (
                             <button
@@ -778,16 +973,16 @@ export default function SelectTicketPage() {
                               key={seatId}
                               className={`tb-seat-dot ${statusClass}`}
                               style={{
-                                gridColumn:
-                                  Number(seat.xCoordinate) || 1,
-                                gridRow: Number(seat.yCoordinate) || 1,
+                                left: `${1.5 + (((Number(seat.xCoordinate) || 1) - 0.5) * 97) / columns}%`,
+                                top: `${20 + (((Number(seat.yCoordinate) || 1) - 0.5) * 78) / rows}%`,
                                 "--zone-color": color,
                               }}
-                              title={`Row ${seat.rowLabel}, Seat ${seat.seatNumber} — ${statusText}`}
+                              title={`Row ${seat.rowLabel}, Seat ${seat.seatNumber} - ${statusText}`}
                               aria-label={`Row ${seat.rowLabel}, Seat ${seat.seatNumber}, ${statusText}`}
                               disabled={
                                 sold ||
                                 held ||
+                                notOnSale ||
                                 Boolean(availabilityError) ||
                                 isHolding
                               }
@@ -801,6 +996,8 @@ export default function SelectTicketPage() {
                 })}
               </div>
             </div>
+            </div>
+            </>
           )}
 
           {!isStandingZones && !isReservedSeating && (
@@ -809,16 +1006,24 @@ export default function SelectTicketPage() {
                 const quantity = Number(
                   ticketQuantities[ticket.ticketTypeId] || 0
                 );
+                const salesStatus = getTicketSalesStatus(ticket);
+                const notOnSale = !salesStatus.isOnSale;
                 const available = getTicketAvailable(ticket);
                 const max = getTicketMax(ticket);
 
                 return (
-                  <div className="tb-ticket-row" key={ticket.ticketTypeId}>
+                  <div className={`tb-ticket-row ${notOnSale ? "is-not-on-sale" : ""}`} key={ticket.ticketTypeId}>
                     <div className="tb-ticket-info">
                       <div className="tb-ticket-name">{ticket.typeName}</div>
-                      <div className="tb-ticket-avail">
-                        {available} ticket(s) available
-                      </div>
+                      {notOnSale ? (
+                        <div className="tb-ticket-avail" style={{ color: salesStatus.isUpcoming ? "#d97706" : "#dc2626", fontWeight: 600 }}>
+                          {salesStatus.label}
+                        </div>
+                      ) : (
+                        <div className="tb-ticket-avail">
+                          {available} ticket(s) available
+                        </div>
+                      )}
                     </div>
 
                     <div className="tb-ticket-price">
@@ -831,7 +1036,7 @@ export default function SelectTicketPage() {
                         onClick={() =>
                           updateTicketQuantity(ticket, quantity - 1)
                         }
-                        disabled={quantity <= 0}
+                        disabled={notOnSale || quantity <= 0}
                       >
                         −
                       </button>
@@ -840,6 +1045,7 @@ export default function SelectTicketPage() {
                         min="0"
                         max={max}
                         value={quantity}
+                        disabled={notOnSale}
                         onChange={(e) =>
                           updateTicketQuantity(
                             ticket,
@@ -852,7 +1058,7 @@ export default function SelectTicketPage() {
                         onClick={() =>
                           updateTicketQuantity(ticket, quantity + 1)
                         }
-                        disabled={quantity >= max}
+                        disabled={notOnSale || quantity >= max}
                       >
                         +
                       </button>
@@ -869,11 +1075,9 @@ export default function SelectTicketPage() {
             <h3 className="tb-card-title">Event information</h3>
             <div className="tb-event-name">{event.title}</div>
             <div className="tb-meta-item">
-              <span>📅</span>
               {formatEventTime(event.startsAt)}
             </div>
             <div className="tb-meta-item">
-              <span>📍</span>
               {[event.locationName, event.city].filter(Boolean).join(", ") ||
                 "Location to be announced"}
             </div>
@@ -881,6 +1085,25 @@ export default function SelectTicketPage() {
               <span>🎟</span>
               Maximum {maxPerAccount} ticket(s) per order
             </div>
+            {event.startsAt && new Date(event.startsAt).getTime() - Date.now() < 24 * 3600 * 1000 && (
+              <div
+                style={{
+                  marginTop: "12px",
+                  padding: "10px 12px",
+                  borderRadius: "8px",
+                  background: "#fffbeb",
+                  border: "1px solid #fef3c7",
+                  color: "#92400e",
+                  fontSize: "12px",
+                  lineHeight: 1.4,
+                }}
+              >
+                <strong>⚠️ Final Sale Policy:</strong>
+                <p style={{ margin: "4px 0 0 0" }}>
+                  This event starts within the next 24 hours. Tickets purchased are non-refundable under the organizer's policy.
+                </p>
+              </div>
+            )}
           </section>
 
           {zones.length > 0 && (
@@ -984,7 +1207,7 @@ export default function SelectTicketPage() {
                 (isReservedSeating && Boolean(availabilityError))
               }
             >
-              {isHolding ? "Reserving..." : "Continue"}
+              {isHolding ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Continue"}
             </button>
           </section>
         </aside>
@@ -1054,7 +1277,7 @@ export default function SelectTicketPage() {
                 disabled={zoneDraftQuantity <= 0 || isHolding}
                 onClick={confirmZoneSelection}
               >
-                {isHolding ? "Reserving..." : "Continue"}
+                {isHolding ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Continue"}
               </button>
             </div>
           </div>
@@ -1090,11 +1313,11 @@ export default function SelectTicketPage() {
             <dl className="tb-seat-details-list">
               <div>
                 <dt>Row</dt>
-                <dd>{seatDetails.seat.rowLabel || "—"}</dd>
+                <dd>{seatDetails.seat.rowLabel || "-"}</dd>
               </div>
               <div>
                 <dt>Seat</dt>
-                <dd>{seatDetails.seat.seatNumber || "—"}</dd>
+                <dd>{seatDetails.seat.seatNumber || "-"}</dd>
               </div>
               <div>
                 <dt>Status</dt>
@@ -1113,7 +1336,7 @@ export default function SelectTicketPage() {
                 <dd>
                   {seatDetails.zone.ticketTypeName ||
                     getTicket(seatDetails.zone.ticketTypeId)?.typeName ||
-                    "—"}
+                    "-"}
                 </dd>
               </div>
               <div>

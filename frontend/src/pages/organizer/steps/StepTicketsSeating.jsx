@@ -18,10 +18,13 @@ export default function StepTicketsSeating({
   onBack,
   onNext,
   forceEditable = false,
+  readOnly: explicitReadOnly,
   only = null,
   standalone = false,
 }) {
-  const readOnly = !forceEditable && event && !["Draft", "Rejected"].includes(event.status);
+  const readOnly = explicitReadOnly !== undefined
+    ? explicitReadOnly
+    : (!forceEditable && event && !["Draft", "Rejected"].includes(event.status));
 
   const [ticketTypes, setTicketTypes] = useState([]);
   const [chart, setChart] = useState(null); // null = general admission
@@ -71,13 +74,37 @@ export default function StepTicketsSeating({
         </div>
       )}
 
-      {error && <div className="ow-error">{error}</div>}
-      {loading && <div className="tb-loading">Loading...</div>}
+      {error && (
+        <div className="ow-error" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => setError("")}
+            style={{
+              background: "none",
+              border: "none",
+              color: "inherit",
+              cursor: "pointer",
+              fontWeight: "bold",
+              fontSize: "18px",
+              lineHeight: "1",
+              padding: "2px 8px",
+              marginLeft: "12px",
+              opacity: 0.85,
+            }}
+            title="Đóng thông báo"
+          >
+            ×
+          </button>
+        </div>
+      )}
+      {loading && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
 
       {!loading && (
         <>
           {(!only || only === "tickets") && <TicketTypesSection
             eventId={eventId}
+            event={event}
             ticketTypes={ticketTypes}
             chart={chart}
             hasLayout={hasLayout}
@@ -111,13 +138,13 @@ export default function StepTicketsSeating({
 
       {!standalone && <div className="ow-actions">
         <button type="button" className="tb-btn tb-btn-outline" onClick={onBack}>
-          ← Back
+          Back
         </button>
         <button type="button" className="tb-btn tb-btn-outline" onClick={handleSaveDraft}>
-          💾 Save draft
+          Save draft
         </button>
         <button type="button" className="tb-btn tb-btn-primary" onClick={onNext}>
-          Next →
+          Next
         </button>
       </div>}
     </div>
@@ -136,11 +163,40 @@ const emptyPricingRule = {
 };
 
 function DynamicPricingSection({ ticketTypes, event, readOnly }) {
+  const isPublished = event?.status === "Published";
+  const canManagePricing = !readOnly || isPublished;
   const [rules, setRules] = useState([]);
   const [form, setForm] = useState(emptyPricingRule);
   const [showForm, setShowForm] = useState(false);
+  const [editingRuleId, setEditingRuleId] = useState(null);
   const [error, setError] = useToastedError();
   const [saving, setSaving] = useState(false);
+
+  const selectedTicket = useMemo(
+    () => ticketTypes.find((t) => t.ticketTypeId === Number(form.ticketTypeId)),
+    [ticketTypes, form.ticketTypeId]
+  );
+
+  const ruleMinStart = useMemo(() => {
+    const nowMin = nextLocalMinute();
+    if (!selectedTicket?.salesStartsAt) return nowMin;
+    const ticketStart = formatDateTimeLocal(selectedTicket.salesStartsAt);
+    return ticketStart > nowMin ? ticketStart : nowMin;
+  }, [selectedTicket]);
+
+  const ruleMaxEnd = useMemo(() => {
+    const candidates = [];
+    if (selectedTicket?.salesEndsAt) {
+      const t = new Date(selectedTicket.salesEndsAt).getTime();
+      if (!isNaN(t)) candidates.push(t);
+    }
+    if (event?.startsAt) {
+      const t = new Date(event.startsAt).getTime();
+      if (!isNaN(t)) candidates.push(t);
+    }
+    if (candidates.length === 0) return undefined;
+    return formatDateTimeLocal(Math.min(...candidates));
+  }, [selectedTicket, event?.startsAt]);
 
   const loadRules = async () => {
     if (!ticketTypes.length) { setRules([]); return; }
@@ -152,28 +208,101 @@ function DynamicPricingSection({ ticketTypes, event, readOnly }) {
 
   useEffect(() => { loadRules(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [ticketTypes]);
 
+  const startEditRule = (r) => {
+    setEditingRuleId(r.pricingRuleId);
+    const ticket = ticketTypes.find((t) => t.ticketTypeId === r.ticketTypeId);
+    let from = r.triggerFrom ? formatDateTimeLocal(r.triggerFrom) : "";
+    let to = r.triggerTo ? formatDateTimeLocal(r.triggerTo) : "";
+
+    const nowMin = nextLocalMinute();
+    const tMin = ticket?.salesStartsAt ? formatDateTimeLocal(ticket.salesStartsAt) : nowMin;
+    const minStart = tMin > nowMin ? tMin : nowMin;
+
+    const cands = [];
+    if (ticket?.salesEndsAt) {
+      const t = new Date(ticket.salesEndsAt).getTime();
+      if (!isNaN(t)) cands.push(t);
+    }
+    if (event?.startsAt) {
+      const t = new Date(event.startsAt).getTime();
+      if (!isNaN(t)) cands.push(t);
+    }
+    const maxEnd = cands.length ? formatDateTimeLocal(Math.min(...cands)) : "";
+
+    // Auto-clamp if previously set times are outside valid bounds
+    if (from && from < minStart) {
+      from = minStart;
+    }
+    if (to && maxEnd && to > maxEnd) {
+      to = maxEnd;
+    }
+    if (from && to && to <= from) {
+      const fromTime = new Date(from).getTime();
+      const oneHourLater = formatDateTimeLocal(fromTime + 60 * 60 * 1000);
+      to = maxEnd && oneHourLater > maxEnd ? maxEnd : oneHourLater;
+    }
+
+    setForm({
+      ticketTypeId: String(r.ticketTypeId),
+      ruleName: r.ruleName || "",
+      ruleType: r.ruleType || "EarlyBird",
+      adjustmentMode: r.adjustedPrice != null ? "price" : "discount",
+      adjustedPrice: r.adjustedPrice != null ? String(r.adjustedPrice) : "",
+      discountPercent: r.discountPercent != null ? String(r.discountPercent) : "",
+      triggerFrom: from,
+      triggerTo: to,
+      quantityThreshold: r.quantityThreshold != null ? String(r.quantityThreshold) : "",
+      priority: r.priority || 0,
+    });
+    setError("");
+    setShowForm(true);
+  };
+
+  const cancelEditRule = () => {
+    setForm(emptyPricingRule);
+    setEditingRuleId(null);
+    setShowForm(false);
+    setError("");
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     if (!form.ticketTypeId || !form.ruleName.trim()) { setError("Ticket type and rule name are required."); return; }
     if (form.adjustmentMode === "price" && form.adjustedPrice === "") { setError("Enter the adjusted price."); return; }
     if (form.adjustmentMode === "discount" && form.discountPercent === "") { setError("Enter the discount percentage."); return; }
+    if (isPublished && form.adjustmentMode === "price" && selectedTicket && Number(form.adjustedPrice) >= selectedTicket.price) {
+      setError(`Published events only allow discounts. Adjusted price must be lower than base price (${formatPrice(selectedTicket.price)}).`);
+      return;
+    }
     if (form.ruleType === "QuantityBased" && (!form.quantityThreshold || Number(form.quantityThreshold) <= 0)) { setError("Quantity Based rules require a sold-ticket threshold."); return; }
     const selectedTicket = ticketTypes.find(t => t.ticketTypeId === Number(form.ticketTypeId));
     const timeError = pricingTimeError(form, selectedTicket, event);
     if (timeError) { setError(timeError); return; }
     setSaving(true); setError("");
     try {
-      await pricingRuleApi.create({
-        ticketTypeId: Number(form.ticketTypeId), ruleName: form.ruleName.trim(), ruleType: form.ruleType,
+      const payload = {
+        ruleName: form.ruleName.trim(),
+        ruleType: form.ruleType,
         adjustedPrice: form.adjustmentMode === "price" ? Number(form.adjustedPrice) : null,
         discountPercent: form.adjustmentMode === "discount" ? Number(form.discountPercent) : null,
         triggerFrom: form.ruleType !== "QuantityBased" && form.triggerFrom ? new Date(form.triggerFrom).toISOString() : null,
         triggerTo: form.ruleType !== "QuantityBased" && form.triggerTo ? new Date(form.triggerTo).toISOString() : null,
         quantityThreshold: form.quantityThreshold === "" ? null : Number(form.quantityThreshold),
-        priority: Number(form.priority) || 0, isActive: true,
-      });
-      setForm(emptyPricingRule); setShowForm(false); await loadRules();
-    } catch (err) { setError(err.response?.data?.message || "Could not create the pricing rule."); }
+        priority: Number(form.priority) || 0,
+        isActive: true,
+      };
+
+      if (editingRuleId) {
+        await pricingRuleApi.update(editingRuleId, payload);
+      } else {
+        await pricingRuleApi.create({
+          ticketTypeId: Number(form.ticketTypeId),
+          ...payload,
+        });
+      }
+      cancelEditRule();
+      await loadRules();
+    } catch (err) { setError(err.response?.data?.message || `Could not ${editingRuleId ? "update" : "create"} the pricing rule.`); }
     finally { setSaving(false); }
   };
 
@@ -183,21 +312,264 @@ function DynamicPricingSection({ ticketTypes, event, readOnly }) {
   };
 
   return <section className="ow-section">
-    <div className="ow-section-head"><h3>Dynamic Pricing Rules</h3>{!readOnly && <button type="button" className="tb-btn tb-btn-outline ow-btn-sm" onClick={() => setShowForm((v) => !v)}>{showForm ? "Close" : "+ Add pricing rule"}</button>}</div>
+    <div className="ow-section-head">
+      <h3>Dynamic Pricing Rules</h3>
+      {canManagePricing && (
+        <button
+          type="button"
+          className="tb-btn tb-btn-outline ow-btn-sm"
+          onClick={() => (showForm ? cancelEditRule() : setShowForm(true))}
+        >
+          {showForm ? "Close" : "+ Add pricing rule"}
+        </button>
+      )}
+    </div>
     {error && <div className="ow-error">{error}</div>}
     {!rules.length && <div className="ow-empty-row">No dynamic pricing rules yet.</div>}
-    {!!rules.length && <table className="ow-table"><thead><tr><th>Rule</th><th>Ticket</th><th>Type</th><th>Adjustment</th><th>Discount period</th>{!readOnly && <th></th>}</tr></thead><tbody>{rules.map((r) => <tr key={r.pricingRuleId}><td>{r.ruleName}</td><td>{ticketTypes.find((t) => t.ticketTypeId === r.ticketTypeId)?.typeName}</td><td>{r.ruleType}</td><td>{r.adjustedPrice != null ? formatPrice(r.adjustedPrice) : `${r.discountPercent}% off`}</td><td>{r.ruleType === "QuantityBased" ? "Quantity threshold" : `${r.triggerFrom ? new Date(r.triggerFrom).toLocaleString() : "—"} → ${r.triggerTo ? new Date(r.triggerTo).toLocaleString() : "—"}`}</td>{!readOnly && <td><button type="button" className="ow-link-danger" onClick={() => remove(r.pricingRuleId)}>Delete</button></td>}</tr>)}</tbody></table>}
-    {!readOnly && showForm && <form className="ow-inline-form" onSubmit={submit}><div className="ow-grid">
-      <label className="ow-field"><span>Ticket class *</span><select value={form.ticketTypeId} onChange={(e) => setForm({ ...form, ticketTypeId: e.target.value })}><option value="">-- Select --</option>{ticketTypes.map((t) => <option key={t.ticketTypeId} value={t.ticketTypeId}>{t.typeName}</option>)}</select></label>
-      <label className="ow-field"><span>Rule name *</span><input value={form.ruleName} onChange={(e) => setForm({ ...form, ruleName: e.target.value })} /></label>
-      <label className="ow-field"><span>Rule type *</span><select value={form.ruleType} onChange={(e) => setForm({ ...form, ruleType: e.target.value })}><option>EarlyBird</option><option>LastMinute</option><option>TimeBased</option><option>QuantityBased</option></select></label>
-      <label className="ow-field"><span>Adjustment method *</span><select value={form.adjustmentMode} onChange={(e) => setForm({ ...form, adjustmentMode: e.target.value })}><option value="discount">Discount percentage</option><option value="price">Fixed adjusted price</option></select></label>
-      {form.adjustmentMode === "price" ? <label className="ow-field"><span>Adjusted price *</span><input type="number" min="0" value={form.adjustedPrice} onChange={(e) => setForm({ ...form, adjustedPrice: e.target.value })} /></label> : <label className="ow-field"><span>Discount % *</span><input type="number" min="0" max="100" value={form.discountPercent} onChange={(e) => setForm({ ...form, discountPercent: e.target.value })} /></label>}
-      {form.ruleType === "QuantityBased" ? <label className="ow-field"><span>Sold-ticket threshold *</span><input type="number" min="1" value={form.quantityThreshold} onChange={(e) => setForm({ ...form, quantityThreshold: e.target.value })} /></label> : <>
-        <label className="ow-field"><span>Discount starts · date & time *</span><input type="datetime-local" required step="60" min={nextLocalMinute()} value={form.triggerFrom} onChange={(e) => setForm({ ...form, triggerFrom: e.target.value })} /></label>
-        <label className="ow-field"><span>Discount ends · date & time *</span><input type="datetime-local" required step="60" min={form.triggerFrom ? nextLocalMinute(Date.parse(form.triggerFrom)) : nextLocalMinute()} value={form.triggerTo} onChange={(e) => setForm({ ...form, triggerTo: e.target.value })} /></label></>}
-    </div><button type="submit" className="tb-btn tb-btn-primary ow-btn-sm" disabled={saving}>{saving ? "Saving..." : "Add rule"}</button></form>}
+    {!!rules.length && (
+      <table className="ow-table">
+        <thead>
+          <tr>
+            <th>Rule</th>
+            <th>Ticket</th>
+            <th>Type</th>
+            <th>Adjustment</th>
+            <th>Discount period</th>
+            {canManagePricing && <th></th>}
+          </tr>
+        </thead>
+        <tbody>
+          {rules.map((r) => (
+            <tr key={r.pricingRuleId}>
+              <td>{r.ruleName}</td>
+              <td>{ticketTypes.find((t) => t.ticketTypeId === r.ticketTypeId)?.typeName}</td>
+              <td>{r.ruleType}</td>
+              <td>{r.adjustedPrice != null ? formatPrice(r.adjustedPrice) : `${r.discountPercent}% off`}</td>
+              <td>{r.ruleType === "QuantityBased" ? "Quantity threshold" : `${r.triggerFrom ? new Date(r.triggerFrom).toLocaleString() : "—"} → ${r.triggerTo ? new Date(r.triggerTo).toLocaleString() : "—"}`}</td>
+              {canManagePricing && (
+                <td>
+                  <div className="ow-action-cell">
+                    <button
+                      type="button"
+                      className="ow-link"
+                      onClick={() => startEditRule(r)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="ow-link-danger"
+                      onClick={() => remove(r.pricingRuleId)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+    {canManagePricing && showForm && (
+      <form className="ow-inline-form" onSubmit={submit}>
+        <div className="ow-grid">
+          {isPublished && (
+            <div className="ow-span-2" style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: "8px", padding: "10px 14px", color: "#1e40af", fontSize: "12.5px" }}>
+              <strong>Concert is Published:</strong> You can add or adjust discount promotions (Early Bird, Flash Sale, Last Minute) to boost ticket sales. Ticket price increases are disabled for public events.
+            </div>
+          )}
+          {selectedTicket && (
+            <div className="ow-span-2" style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "8px", padding: "10px 14px", color: "#166534", fontSize: "12.5px" }}>
+              <strong>Ticket sales window ({selectedTicket.typeName}):</strong>{" "}
+              {selectedTicket.salesStartsAt ? new Date(selectedTicket.salesStartsAt).toLocaleString() : "Immediately upon publish"}{" "}
+              → {selectedTicket.salesEndsAt ? new Date(selectedTicket.salesEndsAt).toLocaleString() : (event?.startsAt ? `Showtime (${new Date(event.startsAt).toLocaleString()})` : "Showtime")}.
+              <br />
+              <strong>Allowed discount window:</strong>{" "}
+              From <strong>{ruleMinStart ? new Date(ruleMinStart).toLocaleString() : "now"}</strong>{" "}
+              until <strong>{ruleMaxEnd ? new Date(ruleMaxEnd).toLocaleString() : "showtime"}</strong> (dynamically restricted within ticket sales and before concert start).
+            </div>
+          )}
+          <label className="ow-field">
+            <span>Ticket class *</span>
+            <select
+              value={form.ticketTypeId}
+              disabled={!!editingRuleId}
+              onChange={(e) => {
+                const nextId = e.target.value;
+                const ticket = ticketTypes.find(t => t.ticketTypeId === Number(nextId));
+                let nextFrom = form.triggerFrom;
+                let nextTo = form.triggerTo;
+                if (ticket) {
+                  const nowMin = nextLocalMinute();
+                  const tMin = ticket.salesStartsAt ? formatDateTimeLocal(ticket.salesStartsAt) : nowMin;
+                  const minStart = tMin > nowMin ? tMin : nowMin;
+                  const cands = [];
+                  if (ticket.salesEndsAt) cands.push(new Date(ticket.salesEndsAt).getTime());
+                  if (event?.startsAt) cands.push(new Date(event.startsAt).getTime());
+                  const maxEnd = cands.length ? formatDateTimeLocal(Math.min(...cands)) : "";
+                  if (!nextFrom || nextFrom < minStart) nextFrom = minStart;
+                  if (maxEnd && (!nextTo || nextTo > maxEnd || nextTo <= nextFrom)) {
+                    const fromTime = new Date(nextFrom).getTime();
+                    const oneHourLater = formatDateTimeLocal(fromTime + 60 * 60 * 1000);
+                    nextTo = maxEnd && oneHourLater > maxEnd ? maxEnd : oneHourLater;
+                  }
+                }
+                setForm({ ...form, ticketTypeId: nextId, triggerFrom: nextFrom, triggerTo: nextTo });
+              }}
+            >
+              <option value="">-- Select --</option>
+              {ticketTypes.map((t) => (
+                <option key={t.ticketTypeId} value={t.ticketTypeId}>
+                  {t.typeName}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="ow-field">
+            <span>Rule name *</span>
+            <input
+              value={form.ruleName}
+              onChange={(e) => setForm({ ...form, ruleName: e.target.value })}
+            />
+          </label>
+          <label className="ow-field">
+            <span>Rule type *</span>
+            <select
+              value={form.ruleType}
+              onChange={(e) => setForm({ ...form, ruleType: e.target.value })}
+            >
+              <option>EarlyBird</option>
+              <option>LastMinute</option>
+              <option>TimeBased</option>
+              <option>QuantityBased</option>
+            </select>
+          </label>
+          <label className="ow-field">
+            <span>Adjustment method *</span>
+            <select
+              value={form.adjustmentMode}
+              onChange={(e) => setForm({ ...form, adjustmentMode: e.target.value })}
+            >
+              <option value="discount">Discount percentage</option>
+              <option value="price">Fixed adjusted price</option>
+            </select>
+          </label>
+          {form.adjustmentMode === "price" ? (
+            <label className="ow-field">
+              <span>Adjusted price *</span>
+              <input
+                type="number"
+                min="0"
+                value={form.adjustedPrice}
+                onChange={(e) => setForm({ ...form, adjustedPrice: e.target.value })}
+              />
+            </label>
+          ) : (
+            <label className="ow-field">
+              <span>Discount % *</span>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={form.discountPercent}
+                onChange={(e) => setForm({ ...form, discountPercent: e.target.value })}
+              />
+            </label>
+          )}
+          {form.ruleType === "QuantityBased" ? (
+            <label className="ow-field">
+              <span>Sold-ticket threshold *</span>
+              <input
+                type="number"
+                min="1"
+                value={form.quantityThreshold}
+                onChange={(e) => setForm({ ...form, quantityThreshold: e.target.value })}
+              />
+            </label>
+          ) : (
+            <>
+              <label className="ow-field">
+                <span>Discount starts · date & time *</span>
+                <input
+                  type="datetime-local"
+                  required
+                  step="60"
+                  min={ruleMinStart}
+                  max={ruleMaxEnd}
+                  value={form.triggerFrom}
+                  onChange={(e) => {
+                    const nextFrom = e.target.value;
+                    let nextTo = form.triggerTo;
+                    if (nextTo && nextTo <= nextFrom) {
+                      const fromTime = new Date(nextFrom).getTime();
+                      const oneHourLater = formatDateTimeLocal(fromTime + 60 * 60 * 1000);
+                      nextTo = ruleMaxEnd && oneHourLater > ruleMaxEnd ? ruleMaxEnd : oneHourLater;
+                    }
+                    setForm({ ...form, triggerFrom: nextFrom, triggerTo: nextTo });
+                  }}
+                />
+                {ruleMinStart && (
+                  <span style={{ fontSize: "11.5px", color: "#64748b", marginTop: "3px" }}>
+                    Earliest: <strong>{new Date(ruleMinStart).toLocaleString()}</strong>
+                  </span>
+                )}
+              </label>
+              <label className="ow-field">
+                <span>Discount ends · date & time *</span>
+                <input
+                  type="datetime-local"
+                  required
+                  step="60"
+                  min={form.triggerFrom ? nextLocalMinute(Date.parse(form.triggerFrom)) : ruleMinStart}
+                  max={ruleMaxEnd}
+                  value={form.triggerTo}
+                  onChange={(e) => setForm({ ...form, triggerTo: e.target.value })}
+                />
+                {ruleMaxEnd && (
+                  <span style={{ fontSize: "11.5px", color: "#64748b", marginTop: "3px" }}>
+                    Latest: <strong>{new Date(ruleMaxEnd).toLocaleString()}</strong> {selectedTicket?.salesEndsAt ? "(Sales close)" : "(Concert start)"}
+                  </span>
+                )}
+              </label>
+            </>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
+          <button
+            type="submit"
+            className="tb-btn tb-btn-primary ow-btn-sm"
+            disabled={saving}
+          >
+            {saving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : editingRuleId ? "Save changes" : "Add rule"}
+          </button>
+          {editingRuleId && (
+            <button
+              type="button"
+              className="tb-btn tb-btn-outline ow-btn-sm"
+              onClick={cancelEditRule}
+            >
+              Cancel
+            </button>
+          )}
+        </div>
+      </form>
+    )}
   </section>;
+}
+
+function startOfTodayLocal() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T00:00`;
+}
+
+function formatDateTimeLocal(isoString) {
+  if (!isoString) return "";
+  const d = new Date(isoString);
+  if (isNaN(d.getTime())) return "";
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 // =============================================================================
@@ -212,14 +584,45 @@ const emptyTicket = {
   quantity: "",
   minPerOrder: 1,
   maxPerOrder: 10,
+  salesStartsAt: "",
+  salesEndsAt: "",
 };
 
-function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, onChanged }) {
-  const [form, setForm] = useState(emptyTicket);
+function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, readOnly, onChanged }) {
+  const accountMax = event?.maxTicketsPerAccount ? Number(event.maxTicketsPerAccount) : null;
+  const isPublished = event?.status === "Published";
+  const canEditSales = !readOnly || isPublished;
+
+  const getInitialForm = () => ({
+    typeName: "",
+    description: "",
+    price: "",
+    originalPrice: "",
+    quantity: "",
+    minPerOrder: 1,
+    maxPerOrder: accountMax || 10,
+    salesStartsAt: "",
+    salesEndsAt: "",
+  });
+
+  const [form, setForm] = useState(getInitialForm);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null); // null = adding, else TicketTypeId being edited
   const [saving, setSaving] = useState(false);
   const [error, setError] = useToastedError();
+
+  // Quick batch & phased set sales window for ticket types
+  const [showBatchSale, setShowBatchSale] = useState(false);
+  const [batchSaleStart, setBatchSaleStart] = useState("");
+  const [batchSaleEnd, setBatchSaleEnd] = useState("");
+  const [batchSelectedIds, setBatchSelectedIds] = useState([]);
+  const [batchSaving, setBatchSaving] = useState(false);
+
+  const twoHoursBeforeShow = useMemo(() => {
+    if (!event?.startsAt) return "";
+    const t = new Date(event.startsAt).getTime() - 2 * 60 * 60 * 1000;
+    return t > Date.now() ? formatDateTimeLocal(t) : "";
+  }, [event?.startsAt]);
   // Which fields the user has actually interacted with — a field's error
   // only renders once it's touched (or a submit attempt was made), instead
   // of showing every error the moment the form opens.
@@ -244,8 +647,10 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
       price: t.price ?? "",
       originalPrice: t.originalPrice ?? "",
       quantity: t.quantity ?? "",
-      minPerOrder: t.minPerOrder ?? 1,
-      maxPerOrder: t.maxPerOrder ?? 10,
+      minPerOrder: 1,
+      maxPerOrder: t.maxPerOrder ?? (accountMax || 10),
+      salesStartsAt: formatDateTimeLocal(t.salesStartsAt),
+      salesEndsAt: formatDateTimeLocal(t.salesEndsAt),
     });
     setError("");
     setTouched({});
@@ -254,7 +659,7 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
 
   const cancelEdit = () => {
     setEditingId(null);
-    setForm(emptyTicket);
+    setForm(getInitialForm());
     setShowForm(false);
     setError("");
     setTouched({});
@@ -304,17 +709,32 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
     if (form.quantity === "") errors.quantity = "Please enter a ticket quantity.";
     else if (Number(form.quantity) <= 0) errors.quantity = "Quantity must be greater than 0.";
 
-    if (form.minPerOrder === "" || Number(form.minPerOrder) < 1) {
-      errors.minPerOrder = "Min per order must be at least 1.";
-    }
     if (form.maxPerOrder === "" || Number(form.maxPerOrder) < 1) {
       errors.maxPerOrder = "Max per order must be at least 1.";
-    } else if (Number(form.maxPerOrder) < Number(form.minPerOrder)) {
-      errors.maxPerOrder = "Max per order must be at least Min per order.";
+    } else if (accountMax != null && Number(form.maxPerOrder) > accountMax) {
+      errors.maxPerOrder = `Max per order cannot exceed event account limit (${accountMax} tickets).`;
+    }
+
+    if (form.salesStartsAt) {
+      const startTime = new Date(form.salesStartsAt).getTime();
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      if (startTime < todayStart.getTime()) {
+        errors.salesStartsAt = "Sales start date cannot be before today.";
+      } else if (event?.startsAt && startTime >= new Date(event.startsAt).getTime()) {
+        errors.salesStartsAt = "Sales must start before the concert starts.";
+      }
+    }
+
+    if (form.salesStartsAt && form.salesEndsAt && new Date(form.salesEndsAt) <= new Date(form.salesStartsAt)) {
+      errors.salesEndsAt = "Sales end time must be after sales start time.";
+    }
+    if (form.salesEndsAt && event?.endsAt && new Date(form.salesEndsAt) > new Date(event.endsAt)) {
+      errors.salesEndsAt = "Ticket sales cannot end after the concert ends.";
     }
 
     return errors;
-  }, [form, duplicateName]);
+  }, [form, duplicateName, accountMax, event]);
 
   const hasBlockingErrors = Object.keys(fieldErrors).length > 0;
 
@@ -327,8 +747,9 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
       price: true,
       originalPrice: true,
       quantity: true,
-      minPerOrder: true,
       maxPerOrder: true,
+      salesStartsAt: true,
+      salesEndsAt: true,
     });
     if (hasBlockingErrors) {
       return;
@@ -343,8 +764,10 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
         price: Number(form.price) || 0,
         originalPrice: form.originalPrice === "" ? null : Number(form.originalPrice),
         quantity: Number(form.quantity),
-        minPerOrder: Number(form.minPerOrder) || 1,
+        minPerOrder: 1,
         maxPerOrder: Number(form.maxPerOrder) || 10,
+        salesStartsAt: form.salesStartsAt ? new Date(form.salesStartsAt).toISOString() : null,
+        salesEndsAt: form.salesEndsAt ? new Date(form.salesEndsAt).toISOString() : null,
       };
 
       if (editingId) {
@@ -361,8 +784,8 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
       const apiErrors = err.response?.data?.errors;
       setError(
         (apiErrors && apiErrors.join(" ")) ||
-          err.response?.data?.message ||
-          `Could not ${editingId ? "update" : "add"} the ticket type.`
+        err.response?.data?.message ||
+        `Could not ${editingId ? "update" : "add"} the ticket type.`
       );
     } finally {
       setSaving(false);
@@ -379,20 +802,182 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
     }
   };
 
+  const openBatchSale = () => {
+    if (!showBatchSale) {
+      setBatchSelectedIds(ticketTypes.map((t) => t.ticketTypeId));
+      if (!batchSaleEnd && twoHoursBeforeShow) {
+        setBatchSaleEnd(twoHoursBeforeShow);
+      }
+    }
+    setShowBatchSale((v) => !v);
+  };
+
+  const applyBatchSalesWindow = async () => {
+    if (!batchSaleStart || batchSelectedIds.length === 0) return;
+    setBatchSaving(true);
+    setError("");
+    try {
+      const payloadStart = new Date(batchSaleStart).toISOString();
+      const payloadEnd = batchSaleEnd ? new Date(batchSaleEnd).toISOString() : null;
+      const targets = ticketTypes.filter((t) => batchSelectedIds.includes(t.ticketTypeId));
+      await Promise.all(
+        targets.map((t) =>
+          ticketTypeApi.update(t.ticketTypeId, {
+            ...t,
+            salesStartsAt: payloadStart,
+            salesEndsAt: payloadEnd,
+          })
+        )
+      );
+      setShowBatchSale(false);
+      await onChanged();
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not batch update sales window for selected ticket types.");
+    } finally {
+      setBatchSaving(false);
+    }
+  };
+
   return (
     <section className="ow-section">
       <div className="ow-section-head">
         <h3>Ticket Types</h3>
-        {!readOnly && (
-          <button
-            type="button"
-            className="tb-btn tb-btn-outline ow-btn-sm"
-            onClick={() => (showForm ? cancelEdit() : setShowForm(true))}
-          >
-            {showForm ? "Close" : "+ Add ticket type"}
-          </button>
-        )}
+        <div style={{ display: "flex", gap: "8px" }}>
+          {canEditSales && ticketTypes.length > 0 && (
+            <button
+              type="button"
+              className="tb-btn tb-btn-outline ow-btn-sm"
+              style={{ borderColor: "#a855f7", color: "#7e22ce" }}
+              onClick={openBatchSale}
+            >
+              {showBatchSale ? "Close sales phase" : "Schedule sales phase"}
+            </button>
+          )}
+          {!readOnly && (
+            <button
+              type="button"
+              className="tb-btn tb-btn-outline ow-btn-sm"
+              onClick={() => (showForm ? cancelEdit() : setShowForm(true))}
+            >
+              {showForm ? "Close" : "Add ticket type"}
+            </button>
+          )}
+        </div>
       </div>
+
+      {canEditSales && showBatchSale && (
+        <div style={{ background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: "10px", padding: "16px", marginBottom: "18px" }}>
+          <div style={{ fontWeight: 600, color: "#1e293b", marginBottom: "8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span>Schedule sales window ({batchSelectedIds.length}/{ticketTypes.length} tickets selected)</span>
+            {twoHoursBeforeShow && (
+              <button
+                type="button"
+                className="ow-shape-pill"
+                style={{ fontSize: "11px", borderColor: "#6366f1", color: "#4f46e5" }}
+                onClick={() => setBatchSaleEnd(twoHoursBeforeShow)}
+              >
+                Auto-close 2h before show
+              </button>
+            )}
+          </div>
+
+          {/* Phased sales selection pills */}
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", marginBottom: "14px", padding: "8px 12px", background: "#f1f5f9", borderRadius: "8px" }}>
+            <span style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Tickets in this phase:</span>
+            <button
+              type="button"
+              className="ow-shape-pill"
+              style={{ fontSize: "11px", padding: "2px 8px" }}
+              onClick={() =>
+                setBatchSelectedIds(
+                  batchSelectedIds.length === ticketTypes.length
+                    ? []
+                    : ticketTypes.map((t) => t.ticketTypeId)
+                )
+              }
+            >
+              {batchSelectedIds.length === ticketTypes.length ? "Deselect all" : "Select all"}
+            </button>
+            {ticketTypes.map((t) => {
+              const selected = batchSelectedIds.includes(t.ticketTypeId);
+              return (
+                <label
+                  key={t.ticketTypeId}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    fontSize: "12px",
+                    background: selected ? "#ede9fe" : "#ffffff",
+                    borderColor: selected ? "#a855f7" : "#cbd5e1",
+                    borderWidth: "1px",
+                    borderStyle: "solid",
+                    color: selected ? "#581c87" : "#334155",
+                    fontWeight: selected ? 600 : 400,
+                    borderRadius: "16px",
+                    padding: "3px 10px",
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    onChange={(e) => {
+                      if (e.target.checked) setBatchSelectedIds([...batchSelectedIds, t.ticketTypeId]);
+                      else setBatchSelectedIds(batchSelectedIds.filter((id) => id !== t.ticketTypeId));
+                    }}
+                  />
+                  <span>{t.typeName}</span>
+                </label>
+              );
+            })}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "12px", alignItems: "end" }}>
+            <label className="ow-field" style={{ margin: 0 }}>
+              <span>Sales starts at *</span>
+              <input
+                type="datetime-local"
+                min={startOfTodayLocal()}
+                max={twoHoursBeforeShow || (event?.startsAt ? formatDateTimeLocal(event.startsAt) : undefined)}
+                value={batchSaleStart}
+                onChange={(e) => setBatchSaleStart(e.target.value)}
+              />
+            </label>
+            <label className="ow-field" style={{ margin: 0 }}>
+              <span>Sales ends at (closes before concert)</span>
+              <input
+                type="datetime-local"
+                min={batchSaleStart || startOfTodayLocal()}
+                max={twoHoursBeforeShow || (event?.startsAt ? formatDateTimeLocal(event.startsAt) : undefined)}
+                value={batchSaleEnd}
+                onChange={(e) => setBatchSaleEnd(e.target.value)}
+              />
+            </label>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button
+                type="button"
+                className="tb-btn tb-btn-primary ow-btn-sm"
+                disabled={batchSaving || !batchSaleStart || batchSelectedIds.length === 0}
+                onClick={applyBatchSalesWindow}
+              >
+                {batchSaving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : `Apply to ${batchSelectedIds.length} tickets`}
+              </button>
+              <button
+                type="button"
+                className="tb-btn tb-btn-outline ow-btn-sm"
+                onClick={() => setShowBatchSale(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+          <span className="ow-hint" style={{ marginTop: "8px", display: "block", color: "#64748b" }}>
+            To sell tickets in separate phases (e.g. Day 11 vs Day 12), select tickets for Phase 1 and apply, then select the remaining tickets for Phase 2. Ticket sales safely close 2 hours before showtime.
+          </span>
+        </div>
+      )}
 
       {hasLayout && (
         <p className="ow-hint">
@@ -401,7 +986,30 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
         </p>
       )}
 
-      {error && <div className="ow-error">{error}</div>}
+      {error && (
+        <div className="ow-error" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => setError("")}
+            style={{
+              background: "none",
+              border: "none",
+              color: "inherit",
+              cursor: "pointer",
+              fontWeight: "bold",
+              fontSize: "18px",
+              lineHeight: "1",
+              padding: "2px 8px",
+              marginLeft: "12px",
+              opacity: 0.85,
+            }}
+            title="Đóng thông báo"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {ticketTypes.length === 0 && (
         <div className="ow-empty-row">No ticket types yet.</div>
@@ -414,25 +1022,22 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
               <th>Name</th>
               <th>Price</th>
               <th>Quantity</th>
-              {hasLayout && <th>Assigned to zones</th>}
-              {hasLayout && <th>Remaining</th>}
-              <th>Sold</th>
-              <th>Per-order limit</th>
-              {!readOnly && <th></th>}
+              <th>Max / order</th>
+              {(canEditSales || !readOnly) && <th></th>}
             </tr>
           </thead>
           <tbody>
-            {ticketTypes.map((t) => {
-              const assigned = (chart?.zones || [])
-                .filter((z) => z.ticketTypeId === t.ticketTypeId)
-                .reduce((sum, z) => sum + (z.capacity || z.totalSeats || 0), 0);
-              const remaining = t.quantity - assigned;
-              return (
+            {ticketTypes.map((t) => (
               <tr key={t.ticketTypeId}>
                 <td>
                   <div className="ow-td-title">{t.typeName}</div>
                   {t.description && (
                     <div className="ow-td-sub">{t.description}</div>
+                  )}
+                  {t.salesStartsAt && (
+                    <div className="ow-td-sub" style={{ color: "#7e22ce", fontSize: "11.5px", marginTop: "3px", fontWeight: 500 }}>
+                      Sales window: {new Date(t.salesStartsAt).toLocaleString()} {t.salesEndsAt ? `→ ${new Date(t.salesEndsAt).toLocaleString()}` : "→ Showtime"}
+                    </div>
                   )}
                 </td>
                 <td>
@@ -442,45 +1047,44 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
                   )}
                 </td>
                 <td>{t.quantity}</td>
-                {hasLayout && <td>{assigned}</td>}
-                {hasLayout && (
-                  <td className={remaining === 0 ? "ow-capacity-ok" : "ow-capacity-warning"}>
-                    {remaining === 0 ? "✓ 0" : remaining}
-                  </td>
-                )}
-                <td>{t.soldQuantity}</td>
                 <td>
-                  {t.minPerOrder}–{t.maxPerOrder}
+                  {t.maxPerOrder ?? "—"}
                 </td>
-                {!readOnly && (
+                {(canEditSales || !readOnly) && (
                   <td>
-                    <button
-                      type="button"
-                      className="ow-link"
-                      onClick={() => startEdit(t)}
-                    >
-                      Edit
-                    </button>
-                    {t.soldQuantity === 0 && (
+                    <div className="ow-action-cell">
                       <button
                         type="button"
-                        className="ow-link-danger"
-                        onClick={() => handleDelete(t.ticketTypeId)}
+                        className="ow-link"
+                        onClick={() => startEdit(t)}
                       >
-                        Delete
+                        {isPublished ? "Adjust sales window" : "Edit"}
                       </button>
-                    )}
+                      {t.soldQuantity === 0 && (
+                        <button
+                          type="button"
+                          className="ow-link-danger"
+                          onClick={() => handleDelete(t.ticketTypeId)}
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
                   </td>
                 )}
               </tr>
-              );
-            })}
+            ))}
           </tbody>
         </table>
       )}
 
-      {!readOnly && showForm && (
+      {(canEditSales || !readOnly) && showForm && (
         <form className="ow-inline-form" onSubmit={handleAdd}>
+          {isPublished && (
+            <div style={{ background: "#f5f3ff", border: "1px solid #ddd6fe", borderRadius: "8px", padding: "10px 14px", marginBottom: "14px", color: "#6b21a8", fontSize: "12.5px" }}>
+              <strong>Concert is Published:</strong> Ticket price, quantity, and name are locked. You can adjust the sales window (start/end dates) below.
+            </div>
+          )}
           <div className="ow-grid">
             <label className="ow-field">
               <span>Ticket type name *</span>
@@ -489,6 +1093,7 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
                 value={form.typeName}
                 onChange={handleChange}
                 onBlur={handleBlur}
+                disabled={isPublished}
                 placeholder="e.g. VIP"
                 maxLength={100}
                 aria-invalid={!!(touched.typeName && fieldErrors.typeName)}
@@ -506,6 +1111,7 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
                 value={form.price}
                 onChange={handleChange}
                 onBlur={handleBlur}
+                disabled={isPublished}
                 aria-invalid={!!(touched.price && fieldErrors.price)}
               />
               {touched.price && fieldErrors.price && (
@@ -521,6 +1127,7 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
                 value={form.originalPrice}
                 onChange={handleChange}
                 onBlur={handleBlur}
+                disabled={isPublished}
                 aria-invalid={!!(touched.originalPrice && fieldErrors.originalPrice)}
               />
               {touched.originalPrice && fieldErrors.originalPrice && (
@@ -536,7 +1143,7 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
                 value={form.quantity}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                disabled={isEditingPlacedTicketType}
+                disabled={isPublished || isEditingPlacedTicketType}
                 aria-invalid={!!(touched.quantity && fieldErrors.quantity)}
               />
               {touched.quantity && fieldErrors.quantity && (
@@ -544,22 +1151,7 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
               )}
             </label>
             <label className="ow-field">
-              <span>Min per order</span>
-              <input
-                type="number"
-                min={1}
-                name="minPerOrder"
-                value={form.minPerOrder}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                aria-invalid={!!(touched.minPerOrder && fieldErrors.minPerOrder)}
-              />
-              {touched.minPerOrder && fieldErrors.minPerOrder && (
-                <span className="ow-field-error">{fieldErrors.minPerOrder}</span>
-              )}
-            </label>
-            <label className="ow-field">
-              <span>Max per order</span>
+              <span>Max per order *</span>
               <input
                 type="number"
                 min={1}
@@ -567,10 +1159,17 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
                 value={form.maxPerOrder}
                 onChange={handleChange}
                 onBlur={handleBlur}
+                disabled={isPublished}
+                placeholder="e.g. 4"
                 aria-invalid={!!(touched.maxPerOrder && fieldErrors.maxPerOrder)}
               />
               {touched.maxPerOrder && fieldErrors.maxPerOrder && (
                 <span className="ow-field-error">{fieldErrors.maxPerOrder}</span>
+              )}
+              {accountMax != null && (
+                <span className="ow-hint" style={{ color: "#7e22ce", fontWeight: 600 }}>
+                  Event account ceiling: max {accountMax} tickets / account.
+                </span>
               )}
             </label>
             <label className="ow-field ow-span-2">
@@ -579,8 +1178,56 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
                 name="description"
                 value={form.description}
                 onChange={handleChange}
+                disabled={isPublished}
                 maxLength={500}
+                placeholder="e.g. VIP standing near stage with sound & light experience"
               />
+            </label>
+            <label className="ow-field">
+              <span>Sales starts at (optional)</span>
+              <input
+                type="datetime-local"
+                name="salesStartsAt"
+                value={form.salesStartsAt}
+                min={startOfTodayLocal()}
+                max={event?.startsAt ? formatDateTimeLocal(event.startsAt) : undefined}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                aria-invalid={!!(touched.salesStartsAt && fieldErrors.salesStartsAt)}
+              />
+              {touched.salesStartsAt && fieldErrors.salesStartsAt && (
+                <span className="ow-field-error">{fieldErrors.salesStartsAt}</span>
+              )}
+              <span className="ow-hint">Leave blank to open sales immediately upon publishing.</span>
+            </label>
+            <label className="ow-field">
+              <span>Sales ends at (optional)</span>
+              <input
+                type="datetime-local"
+                name="salesEndsAt"
+                value={form.salesEndsAt}
+                min={form.salesStartsAt || startOfTodayLocal()}
+                max={twoHoursBeforeShow || (event?.endsAt ? formatDateTimeLocal(event.endsAt) : undefined)}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                aria-invalid={!!(touched.salesEndsAt && fieldErrors.salesEndsAt)}
+              />
+              {touched.salesEndsAt && fieldErrors.salesEndsAt && (
+                <span className="ow-field-error">{fieldErrors.salesEndsAt}</span>
+              )}
+              <span className="ow-hint">
+                {twoHoursBeforeShow ? (
+                  <button
+                    type="button"
+                    style={{ background: "none", border: "none", color: "#6366f1", padding: 0, cursor: "pointer", textDecoration: "underline", fontSize: "11px" }}
+                    onClick={() => setForm((f) => ({ ...f, salesEndsAt: twoHoursBeforeShow }))}
+                  >
+                    Auto-close 2h before show
+                  </button>
+                ) : (
+                  "Leave blank to keep sales open until concert starts."
+                )}
+              </span>
             </label>
           </div>
           <div className="ow-form-actions">
@@ -589,7 +1236,7 @@ function TicketTypesSection({ eventId, ticketTypes, chart, hasLayout, readOnly, 
               className="tb-btn tb-btn-primary ow-btn-sm"
               disabled={saving || hasBlockingErrors}
             >
-              {saving ? "Saving..." : editingId ? "Save changes" : "Add ticket type"}
+              {saving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : editingId ? "Save changes" : "Add ticket type"}
             </button>
             {editingId && (
               <button
@@ -658,16 +1305,40 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
     ? Math.max(Number(form.rows) || 0, 0) * Math.max(Number(form.seatsPerRow) || 0, 0)
     : Math.max(Number(form.capacity) || 0, 0);
 
+  // Other zones already mapped to this ticket type (excluding the one being edited):
+  const otherZonesCapacity = useMemo(() => {
+    return (chart?.zones || [])
+      .filter((z) => z.ticketTypeId === Number(form.ticketTypeId) && z.seatZoneId !== editingZoneId)
+      .reduce((sum, z) => sum + Number(z.capacity ?? z.totalSeats ?? z.seats?.length ?? 0), 0);
+  }, [chart, form.ticketTypeId, editingZoneId]);
+
+  const totalAssignedForTicket = otherZonesCapacity + enteredCapacity;
+  const isExceedingTicketQuota = selectedTicket && totalAssignedForTicket > selectedTicket.quantity;
+
   // Dynamic, per-field validation: recomputed on every keystroke so each
   // field can show its own message as soon as it's touched, instead of
   // waiting for submit and surfacing a single generic banner.
   const fieldErrors = useMemo(() => {
     const errors = {};
-    if (!form.zoneName.trim()) errors.zoneName = "Please enter a zone name.";
+    const trimmedName = (form.zoneName || "").trim();
+    if (!trimmedName) {
+      errors.zoneName = "Please enter a zone name.";
+    } else {
+      const isDuplicate = (chart?.zones || []).some(
+        (z) =>
+          z.seatZoneId !== editingZoneId &&
+          z.zoneName.trim().toLowerCase() === trimmedName.toLowerCase()
+      );
+      if (isDuplicate) {
+        errors.zoneName = `Zone name '${trimmedName}' is already in use. Please enter a unique name.`;
+      }
+    }
     if (!form.ticketTypeId) errors.ticketTypeId = "Please select a ticket type for this zone.";
     if (form.zoneType === "Standing") {
       if (form.capacity === "" || Number(form.capacity) <= 0) {
         errors.capacity = "Capacity must be greater than 0.";
+      } else if (isExceedingTicketQuota) {
+        errors.capacity = `Total zone capacity (${totalAssignedForTicket.toLocaleString()}) exceeds ticket quota (${selectedTicket.quantity.toLocaleString()}) for '${selectedTicket.typeName}'.`;
       }
     } else {
       if (form.rows === "" || Number(form.rows) <= 0) {
@@ -676,9 +1347,12 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
       if (form.seatsPerRow === "" || Number(form.seatsPerRow) <= 0) {
         errors.seatsPerRow = "Seats per row must be greater than 0.";
       }
+      if (isExceedingTicketQuota) {
+        errors.seatsPerRow = `Total calculated seats (${totalAssignedForTicket.toLocaleString()}) exceeds ticket quota (${selectedTicket.quantity.toLocaleString()}) for '${selectedTicket.typeName}'.`;
+      }
     }
     return errors;
-  }, [form]);
+  }, [form, selectedTicket, isExceedingTicketQuota, totalAssignedForTicket, chart?.zones, editingZoneId]);
 
   const hasBlockingErrors = Object.keys(fieldErrors).length > 0;
 
@@ -748,7 +1422,14 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
       rows: true,
       seatsPerRow: true,
     });
-    if (hasBlockingErrors) {
+    if (hasBlockingErrors || isExceedingTicketQuota) {
+      if (fieldErrors.zoneName) {
+        setError(fieldErrors.zoneName);
+      } else if (isExceedingTicketQuota) {
+        setError(
+          `Cannot save zone: Total capacity (${totalAssignedForTicket.toLocaleString()}) exceeds the quota for ticket type '${selectedTicket?.typeName}' (${selectedTicket?.quantity.toLocaleString()}). Please reduce the capacity.`
+        );
+      }
       return;
     }
 
@@ -780,8 +1461,8 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
           ticketTypeId: zoneDto.ticketTypeId,
           ...(zoneDto.zoneType === "Seated"
             ? (seatedShapeChanged
-                ? { rows: zoneDto.rows, seatsPerRow: zoneDto.seatsPerRow, rowLabelPrefix: zoneDto.rowLabelPrefix }
-                : {})
+              ? { rows: zoneDto.rows, seatsPerRow: zoneDto.seatsPerRow, rowLabelPrefix: zoneDto.rowLabelPrefix }
+              : {})
             : { capacity: zoneDto.capacity }),
         });
       } else if (!chart) {
@@ -820,12 +1501,36 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
   // EventAPI đã dùng jsonb nên không cần đổi schema khi thêm loại hình mới.
   const handleZoneShapeChange = async (seatZoneId, shape) => {
     try {
+      const payloadShape = { ...shape };
+      if (payloadShape.w !== undefined && payloadShape.width === undefined) payloadShape.width = payloadShape.w;
+      if (payloadShape.h !== undefined && payloadShape.height === undefined) payloadShape.height = payloadShape.h;
       await seatingApi.updateZone(seatZoneId, {
-        shapeJson: JSON.stringify(shape),
+        shapeJson: JSON.stringify(payloadShape),
       });
+      setError("");
       await onSilentRefresh();
     } catch (err) {
       setError(err.response?.data?.message || "Could not save the zone shape.");
+    }
+  };
+
+  const handleLayoutChange = async (newLayout) => {
+    if (readOnly) return;
+    try {
+      await seatingApi.updateLayout(eventId, newLayout);
+      setChart((prev) =>
+        prev
+          ? {
+            ...prev,
+            layoutJson:
+              typeof newLayout === "string"
+                ? newLayout
+                : JSON.stringify(newLayout),
+          }
+          : prev
+      );
+    } catch (err) {
+      console.warn("Could not save layout metadata:", err);
     }
   };
 
@@ -844,7 +1549,30 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
         (headcount only) in the same chart.
       </p>
 
-      {error && <div className="ow-error">{error}</div>}
+      {error && (
+        <div className="ow-error" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => setError("")}
+            style={{
+              background: "none",
+              border: "none",
+              color: "inherit",
+              cursor: "pointer",
+              fontWeight: "bold",
+              fontSize: "18px",
+              lineHeight: "1",
+              padding: "2px 8px",
+              marginLeft: "12px",
+              opacity: 0.85,
+            }}
+            title="Đóng thông báo"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       <div className="ow-mode-toggle">
         <button
@@ -894,7 +1622,9 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
                 zones={chart.zones}
                 ticketTypes={ticketTypes}
                 readOnly={readOnly}
+                layoutJson={chart.layoutJson}
                 onZoneShapeChange={handleZoneShapeChange}
+                onLayoutChange={handleLayoutChange}
               />
             </>
           )}
@@ -943,16 +1673,18 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
                       </td>
                       {!readOnly && (
                         <td>
-                          <button type="button" className="ow-link" onClick={() => startEditZone(z)}>
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            className="ow-link-danger"
-                            onClick={() => handleDeleteZone(z.seatZoneId)}
-                          >
-                            Delete
-                          </button>
+                          <div className="ow-action-cell">
+                            <button type="button" className="ow-link" onClick={() => startEditZone(z)}>
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="ow-link-danger"
+                              onClick={() => handleDeleteZone(z.seatZoneId)}
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </td>
                       )}
                     </tr>
@@ -1001,10 +1733,13 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
                         onBlur={handleBlur}
                         placeholder="e.g. VIP Stand"
                         maxLength={100}
-                        aria-invalid={!!(touched.zoneName && fieldErrors.zoneName)}
+                        aria-invalid={!!(fieldErrors.zoneName && (touched.zoneName || form.zoneName.trim().length > 0))}
+                        className={fieldErrors.zoneName && (touched.zoneName || form.zoneName.trim().length > 0) ? "is-invalid" : ""}
                       />
-                      {touched.zoneName && fieldErrors.zoneName && (
-                        <span className="ow-field-error">{fieldErrors.zoneName}</span>
+                      {fieldErrors.zoneName && (touched.zoneName || form.zoneName.trim().length > 0) && (
+                        <span className="ow-field-error">
+                          {fieldErrors.zoneName}
+                        </span>
                       )}
                     </label>
 
@@ -1120,7 +1855,15 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
                     )}
                   </div>
 
-                  <div className="ow-hint">Calculated zone capacity: {enteredCapacity}. This is the source of truth for ticket quantity.</div>
+                  {isExceedingTicketQuota ? (
+                    <div className="ow-error" style={{ margin: "10px 0" }}>
+                      <strong>Quota Exceeded:</strong> Total capacity for <strong>{selectedTicket.typeName}</strong> would be <strong>{totalAssignedForTicket.toLocaleString()}</strong>, which exceeds the configured ticket quota of <strong>{selectedTicket.quantity.toLocaleString()}</strong>. Please reduce the capacity or increase the ticket quota in Step 3.
+                    </div>
+                  ) : (
+                    <div className="ow-hint" style={{ margin: "8px 0" }}>
+                      Calculated zone capacity: <strong>{enteredCapacity.toLocaleString()}</strong> {selectedTicket ? `(Total assigned: ${totalAssignedForTicket.toLocaleString()} / ${selectedTicket.quantity.toLocaleString()} quota)` : ""}.
+                    </div>
+                  )}
 
                   {form.zoneType === "Seated" && (
                     <SeatGridPreview
@@ -1144,9 +1887,9 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
                     <button
                       type="submit"
                       className="tb-btn tb-btn-primary ow-btn-sm"
-                      disabled={saving || hasBlockingErrors}
+                      disabled={saving || hasBlockingErrors || isExceedingTicketQuota}
                     >
-                      {saving ? "Saving..." : editingZoneId ? "Save zone" : "Add zone"}
+                      {saving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : editingZoneId ? "Save zone" : "Add zone"}
                     </button>
                   </div>
                 </form>
@@ -1160,7 +1903,7 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
 }
 
 // =============================================================================
-// Seating templates (UC_26.2 Apply Seating Template / UC_26.3 Save as Template)
+// Seating templates ( Apply Seating Template /  Save as Template)
 // =============================================================================
 
 /**
@@ -1184,7 +1927,7 @@ function SeatingTemplateBar({ eventId, chart, ticketTypes, onChanged }) {
             className="tb-btn tb-btn-outline ow-btn-sm"
             onClick={() => setPickerOpen((v) => !v)}
           >
-            {pickerOpen ? "Close template picker" : "📐 Use a saved template"}
+            {pickerOpen ? "Close template picker" : "Use a saved template"}
           </button>
         )}
         {hasZones && (
@@ -1193,7 +1936,7 @@ function SeatingTemplateBar({ eventId, chart, ticketTypes, onChanged }) {
             className="tb-btn tb-btn-outline ow-btn-sm"
             onClick={() => setSaveOpen((v) => !v)}
           >
-            {saveOpen ? "Close" : "💾 Save this layout as a template"}
+            {saveOpen ? "Close" : "Save this layout as a template"}
           </button>
         )}
       </div>
@@ -1267,16 +2010,49 @@ function TemplatePicker({ eventId, ticketTypes, onApplied }) {
 
   const handleApply = async () => {
     if (!selected) return;
-    const zoneMappings = selected.zones.map((_, index) => ({ zoneIndex: index,
-      ...mappings[index], ticketTypeId: Number(mappings[index]?.ticketTypeId) || 0,
-      rows: Number(mappings[index]?.rows) || 1,
-      seatsPerRow: Number(mappings[index]?.seatsPerRow) || 1,
-      capacity: Number(mappings[index]?.capacity) || 1,
-    }));
+    const zoneMappings = selected.zones.map((_, index) => {
+      let shapeJson = mappings[index]?.shapeJson;
+      if (shapeJson) {
+        try {
+          const parsed = typeof shapeJson === "string" ? JSON.parse(shapeJson) : { ...shapeJson };
+          if (parsed && typeof parsed === "object") {
+            if (parsed.w !== undefined && parsed.width === undefined) parsed.width = parsed.w;
+            if (parsed.h !== undefined && parsed.height === undefined) parsed.height = parsed.h;
+            shapeJson = JSON.stringify(parsed);
+          }
+        } catch (_) { }
+      }
+      return {
+        zoneIndex: index,
+        ...mappings[index],
+        shapeJson,
+        ticketTypeId: Number(mappings[index]?.ticketTypeId) || 0,
+        rows: Number(mappings[index]?.rows) || 1,
+        seatsPerRow: Number(mappings[index]?.seatsPerRow) || 1,
+        capacity: Number(mappings[index]?.capacity) || 1,
+      };
+    });
 
     if (zoneMappings.some((m) => !m.ticketTypeId)) {
       setError("Map every zone to a ticket type before applying the template.");
       return;
+    }
+
+    // Validate that no zone capacity exceeds the mapped ticket type's quota
+    for (const m of zoneMappings) {
+      const tt = ticketTypes.find((t) => t.ticketTypeId === m.ticketTypeId);
+      if (tt) {
+        const cap =
+          m.zoneType === "Seated"
+            ? (Number(m.rows) || 1) * (Number(m.seatsPerRow) || 1)
+            : Number(m.capacity) || 1;
+        if (cap > tt.quantity) {
+          setError(
+            `Cannot apply template: Zone "${m.zoneName || "Zone"}" capacity (${cap.toLocaleString()}) exceeds ticket quota for "${tt.typeName}" (${tt.quantity.toLocaleString()}). Please reduce the capacity or increase the ticket quota first.`
+          );
+          return;
+        }
+      }
     }
 
     setApplying(true);
@@ -1290,19 +2066,70 @@ function TemplatePicker({ eventId, ticketTypes, onApplied }) {
       const apiErrors = err.response?.data?.errors;
       setError(
         (apiErrors && apiErrors.join(" ")) ||
-          err.response?.data?.message ||
-          "Could not apply the template."
+        err.response?.data?.message ||
+        "Could not apply the template."
       );
     } finally {
       setApplying(false);
     }
   };
 
-  if (loading) return <div className="tb-loading">Loading templates...</div>;
+  const anyQuotaExceeded = selected?.zones?.some((_, index) => {
+    const selectedTt = ticketTypes.find(
+      (tt) => String(tt.ticketTypeId) === String(mappings[index]?.ticketTypeId)
+    );
+    if (!selectedTt) return false;
+    const currentCap =
+      mappings[index]?.zoneType === "Seated"
+        ? (Number(mappings[index]?.rows) || 1) * (Number(mappings[index]?.seatsPerRow) || 1)
+        : Number(mappings[index]?.capacity) || 1;
+    return currentCap > selectedTt.quantity;
+  });
+
+  const duplicateNamesList = useMemo(() => {
+    if (!selected?.zones) return new Set();
+    const counts = {};
+    selected.zones.forEach((_, idx) => {
+      const name = (mappings[idx]?.zoneName || "").trim().toLowerCase();
+      if (name) counts[name] = (counts[name] || 0) + 1;
+    });
+    const dupes = new Set();
+    Object.entries(counts).forEach(([name, count]) => {
+      if (count > 1) dupes.add(name);
+    });
+    return dupes;
+  }, [selected?.zones, mappings]);
+
+  const hasDuplicateTemplateZoneNames = duplicateNamesList.size > 0;
+
+  if (loading) return <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>;
 
   return (
     <div className="ow-template-picker">
-      {error && <div className="ow-error">{error}</div>}
+      {error && (
+        <div className="ow-error" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => setError("")}
+            style={{
+              background: "none",
+              border: "none",
+              color: "inherit",
+              cursor: "pointer",
+              fontWeight: "bold",
+              fontSize: "18px",
+              lineHeight: "1",
+              padding: "2px 8px",
+              marginLeft: "12px",
+              opacity: 0.85,
+            }}
+            title="Đóng thông báo"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {!selected && (
         <>
@@ -1353,53 +2180,165 @@ function TemplatePicker({ eventId, ticketTypes, onApplied }) {
             </div>
           )}
 
+          {anyQuotaExceeded && (
+            <div className="ow-error" style={{ marginBottom: "12px" }}>
+              One or more zones exceed their mapped ticket type quota. Please reduce zone capacity or increase the ticket quantity.
+            </div>
+          )}
+
           <table className="ow-table">
             <thead>
               <tr>
-                <th>Zone name</th>
-                <th>Type</th>
-                <th>Rows / Capacity</th>
-                <th>Ticket type *</th>
+                <th style={{ width: "24%" }}>Zone name</th>
+                <th style={{ width: "20%" }}>Type</th>
+                <th style={{ width: "28%" }}>Rows / Capacity</th>
+                <th style={{ width: "28%" }}>Ticket type *</th>
               </tr>
             </thead>
             <tbody>
-              {selected.zones.map((z, index) => (
-                <tr key={index}>
-                  <td><input value={mappings[index]?.zoneName || ""} onChange={(e) => setMappings((m) => ({ ...m, [index]: { ...m[index], zoneName: e.target.value } }))} /></td>
-                  <td>
-                    <span
-                      className={
-                        "ow-zone-badge " +
-                        (z.zoneType === "Seated" ? "ow-zone-seated" : "ow-zone-standing")
-                      }
-                    >
-                      {mappings[index]?.zoneType === "Seated" ? "Seated" : "Standing"}
-                    </span>
-                    <select value={mappings[index]?.zoneType || z.zoneType} onChange={(e) => setMappings((m) => ({ ...m, [index]: { ...m[index], zoneType: e.target.value } }))}>
-                      <option value="Seated">Seated</option><option value="Standing">Standing</option>
-                    </select>
-                  </td>
-                  <td>{mappings[index]?.zoneType === "Seated" ? <div className="ow-template-dimensions">
-                    <input type="number" min="1" aria-label="Rows" value={mappings[index]?.rows || 1} onChange={(e) => setMappings((m) => ({ ...m, [index]: { ...m[index], rows: e.target.value } }))} />
-                    <span>×</span><input type="number" min="1" aria-label="Seats per row" value={mappings[index]?.seatsPerRow || 1} onChange={(e) => setMappings((m) => ({ ...m, [index]: { ...m[index], seatsPerRow: e.target.value } }))} />
-                  </div> : <input type="number" min="1" aria-label="Capacity" value={mappings[index]?.capacity || 1} onChange={(e) => setMappings((m) => ({ ...m, [index]: { ...m[index], capacity: e.target.value } }))} />}</td>
-                  <td>
-                    <select
-                      value={mappings[index]?.ticketTypeId || ""}
-                      onChange={(e) =>
-                        setMappings((m) => ({ ...m, [index]: { ...m[index], ticketTypeId: e.target.value } }))
-                      }
-                    >
-                      <option value="">-- Select ticket type --</option>
-                      {ticketTypes.map((tt) => (
-                        <option key={tt.ticketTypeId} value={tt.ticketTypeId}>
-                          {tt.typeName}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                </tr>
-              ))}
+              {selected.zones.map((z, index) => {
+                const selectedTt = ticketTypes.find(
+                  (tt) => String(tt.ticketTypeId) === String(mappings[index]?.ticketTypeId)
+                );
+                const currentCap =
+                  mappings[index]?.zoneType === "Seated"
+                    ? (Number(mappings[index]?.rows) || 1) * (Number(mappings[index]?.seatsPerRow) || 1)
+                    : Number(mappings[index]?.capacity) || 1;
+                const isQuotaExceeded = selectedTt && currentCap > selectedTt.quantity;
+
+                const currentZoneNameTrim = (mappings[index]?.zoneName || "").trim().toLowerCase();
+                const isNameDuplicate = !!currentZoneNameTrim && duplicateNamesList.has(currentZoneNameTrim);
+
+                return (
+                  <tr key={index} className={isQuotaExceeded || isNameDuplicate ? "ow-tr-warning" : ""}>
+                    <td>
+                      <input
+                        className={`ow-template-input ${isNameDuplicate ? "is-invalid" : ""}`}
+                        placeholder="Zone name (e.g. Zone A)"
+                        value={mappings[index]?.zoneName || ""}
+                        onChange={(e) =>
+                          setMappings((m) => ({
+                            ...m,
+                            [index]: { ...m[index], zoneName: e.target.value },
+                          }))
+                        }
+                      />
+                      {isNameDuplicate && (
+                        <div className="ow-field-error" style={{ marginTop: "4px" }}>
+                          Duplicate zone name
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <select
+                        className={`ow-template-select ow-template-type-select ${mappings[index]?.zoneType === "Seated"
+                          ? "is-seated"
+                          : "is-standing"
+                          }`}
+                        value={mappings[index]?.zoneType || z.zoneType}
+                        onChange={(e) =>
+                          setMappings((m) => ({
+                            ...m,
+                            [index]: { ...m[index], zoneType: e.target.value },
+                          }))
+                        }
+                      >
+                        <option value="Seated">Seated</option>
+                        <option value="Standing">Standing</option>
+                      </select>
+                    </td>
+                    <td>
+                      {mappings[index]?.zoneType === "Seated" ? (
+                        <div>
+                          <div className="ow-template-dimensions">
+                            <input
+                              type="number"
+                              min="1"
+                              className={`ow-template-dim-input ${isQuotaExceeded ? "is-invalid" : ""}`}
+                              aria-label="Rows"
+                              title="Number of rows"
+                              value={mappings[index]?.rows || 1}
+                              onChange={(e) =>
+                                setMappings((m) => ({
+                                  ...m,
+                                  [index]: { ...m[index], rows: e.target.value },
+                                }))
+                              }
+                            />
+                            <span className="ow-dim-separator">×</span>
+                            <input
+                              type="number"
+                              min="1"
+                              className={`ow-template-dim-input ${isQuotaExceeded ? "is-invalid" : ""}`}
+                              aria-label="Seats per row"
+                              title="Seats per row"
+                              value={mappings[index]?.seatsPerRow || 1}
+                              onChange={(e) =>
+                                setMappings((m) => ({
+                                  ...m,
+                                  [index]: { ...m[index], seatsPerRow: e.target.value },
+                                }))
+                              }
+                            />
+                            <span className="ow-dim-total">
+                              (= {currentCap.toLocaleString()} seats)
+                            </span>
+                          </div>
+                          {isQuotaExceeded && (
+                            <div className="ow-field-error" style={{ marginTop: "4px" }}>
+                              Exceeds quota ({currentCap.toLocaleString()} &gt; {selectedTt.quantity.toLocaleString()})
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="ow-template-dimensions">
+                            <input
+                              type="number"
+                              min="1"
+                              className={`ow-template-dim-input ow-template-capacity-input ${isQuotaExceeded ? "is-invalid" : ""}`}
+                              aria-label="Capacity"
+                              placeholder="Capacity"
+                              value={mappings[index]?.capacity || 1}
+                              onChange={(e) =>
+                                setMappings((m) => ({
+                                  ...m,
+                                  [index]: { ...m[index], capacity: e.target.value },
+                                }))
+                              }
+                            />
+                            <span className="ow-dim-total">people</span>
+                          </div>
+                          {isQuotaExceeded && (
+                            <div className="ow-field-error" style={{ marginTop: "4px" }}>
+                              Exceeds quota ({currentCap.toLocaleString()} &gt; {selectedTt.quantity.toLocaleString()})
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <select
+                        className={`ow-template-select ${isQuotaExceeded ? "is-invalid" : ""}`}
+                        value={mappings[index]?.ticketTypeId || ""}
+                        onChange={(e) =>
+                          setMappings((m) => ({
+                            ...m,
+                            [index]: { ...m[index], ticketTypeId: e.target.value },
+                          }))
+                        }
+                      >
+                        <option value="">-- Select ticket type --</option>
+                        {ticketTypes.map((tt) => (
+                          <option key={tt.ticketTypeId} value={tt.ticketTypeId}>
+                            {tt.typeName} ({tt.quantity.toLocaleString()} quota)
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
 
@@ -1415,9 +2354,9 @@ function TemplatePicker({ eventId, ticketTypes, onApplied }) {
               type="button"
               className="tb-btn tb-btn-primary ow-btn-sm"
               onClick={handleApply}
-              disabled={applying || ticketTypes.length === 0}
+              disabled={applying || ticketTypes.length === 0 || anyQuotaExceeded || hasDuplicateTemplateZoneNames}
             >
-              {applying ? "Applying..." : "Apply template"}
+              {applying ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Apply template"}
             </button>
           </div>
         </div>
@@ -1462,7 +2401,30 @@ function SaveAsTemplateForm({ eventId, onSaved }) {
 
   return (
     <form className="ow-inline-form" onSubmit={handleSave}>
-      {error && <div className="ow-error">{error}</div>}
+      {error && (
+        <div className="ow-error" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => setError("")}
+            style={{
+              background: "none",
+              border: "none",
+              color: "inherit",
+              cursor: "pointer",
+              fontWeight: "bold",
+              fontSize: "18px",
+              lineHeight: "1",
+              padding: "2px 8px",
+              marginLeft: "12px",
+              opacity: 0.85,
+            }}
+            title="Đóng thông báo"
+          >
+            ×
+          </button>
+        </div>
+      )}
       {success && <div className="ow-banner ow-banner-pending">{success}</div>}
       <div className="ow-grid">
         <label className="ow-field ow-span-2">
@@ -1488,7 +2450,7 @@ function SaveAsTemplateForm({ eventId, onSaved }) {
         className="tb-btn tb-btn-primary ow-btn-sm"
         disabled={saving}
       >
-        {saving ? "Saving..." : "Save as template"}
+        {saving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Save as template"}
       </button>
     </form>
   );
@@ -1515,9 +2477,11 @@ function RefundPolicySection({ eventId, refundPolicies, readOnly, onChanged }) {
 
   const startEdit = (policy) => {
     setEditingId(policy.refundPolicyId);
-    setForm({ policyName: policy.policyName, description: policy.description || "",
+    setForm({
+      policyName: policy.policyName, description: policy.description || "",
       deadlineBeforeEventHours: policy.deadlineBeforeEventHours, refundPercent: policy.refundPercent,
-      requiresOrganizerApproval: !!policy.requiresOrganizerApproval });
+      requiresOrganizerApproval: !!policy.requiresOrganizerApproval
+    });
     setShowForm(true); setError("");
   };
 
@@ -1557,8 +2521,8 @@ function RefundPolicySection({ eventId, refundPolicies, readOnly, onChanged }) {
       const apiErrors = err.response?.data?.errors;
       setError(
         (apiErrors && apiErrors.join(" ")) ||
-          err.response?.data?.message ||
-          "Could not add the refund policy."
+        err.response?.data?.message ||
+        "Could not add the refund policy."
       );
     } finally {
       setSaving(false);
@@ -1592,7 +2556,30 @@ function RefundPolicySection({ eventId, refundPolicies, readOnly, onChanged }) {
 
       <p className="ow-hint">At least one policy is required before submitting for review.</p>
 
-      {error && <div className="ow-error">{error}</div>}
+      {error && (
+        <div className="ow-error" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => setError("")}
+            style={{
+              background: "none",
+              border: "none",
+              color: "inherit",
+              cursor: "pointer",
+              fontWeight: "bold",
+              fontSize: "18px",
+              lineHeight: "1",
+              padding: "2px 8px",
+              marginLeft: "12px",
+              opacity: 0.85,
+            }}
+            title="Đóng thông báo"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {refundPolicies.length === 0 && (
         <div className="ow-empty-row">No refund policies yet.</div>
@@ -1619,14 +2606,16 @@ function RefundPolicySection({ eventId, refundPolicies, readOnly, onChanged }) {
                 <td>{p.deadlineBeforeEventHours} hours before</td>
                 {!readOnly && (
                   <td>
-                    <button type="button" className="ow-link" onClick={() => startEdit(p)}>Edit</button>
-                    <button
-                      type="button"
-                      className="ow-link-danger"
-                      onClick={() => handleDelete(p.refundPolicyId)}
-                    >
-                      Delete
-                    </button>
+                    <div className="ow-action-cell">
+                      <button type="button" className="ow-link" onClick={() => startEdit(p)}>Edit</button>
+                      <button
+                        type="button"
+                        className="ow-link-danger"
+                        onClick={() => handleDelete(p.refundPolicyId)}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 )}
               </tr>
@@ -1693,7 +2682,7 @@ function RefundPolicySection({ eventId, refundPolicies, readOnly, onChanged }) {
             className="tb-btn tb-btn-primary ow-btn-sm"
             disabled={saving}
           >
-            {saving ? "Saving..." : editingId ? "Save policy" : "Add policy"}
+            {saving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : editingId ? "Save policy" : "Add policy"}
           </button>
         </form>
       )}

@@ -1,22 +1,31 @@
-
-
 -- =================================================================
--- NOTIFICATION DELIVERY KEYS
+-- NOTIFICATION DATABASE SCHEMA (notification_db)
 -- =================================================================
--- CHẠY TRONG notification_db
--- Chạy MỘT LẦN, an toàn khi chạy lại (CREATE/ALTER ... IF NOT EXISTS).
+-- Phục vụ NotificationAPI (UC thông báo hệ thống, thông báo rủi ro, v.v.)
+-- Chạy MỘT LẦN, an toàn khi chạy lại (CREATE TABLE / INDEX IF NOT EXISTS).
 
-
--- ---------- 010 notification keys ----------
--- Chạy trong notification_db, không chạy ở EventDB/TicketDB.
 BEGIN;
-CREATE TABLE IF NOT EXISTS notifications (
- notification_id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
- user_id integer NOT NULL, title varchar(255) NOT NULL, message text NOT NULL,
- category varchar(50) NOT NULL DEFAULT 'event_new', target_url varchar(500),
- is_read boolean NOT NULL DEFAULT false, read_at timestamptz,
- is_deleted boolean NOT NULL DEFAULT false, created_at timestamptz NOT NULL DEFAULT now()
+
+CREATE TABLE IF NOT EXISTS public.notifications (
+    notification_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id         INTEGER NOT NULL,
+    title           VARCHAR(255) NOT NULL,
+    message         TEXT NOT NULL,
+    category        VARCHAR(50) NOT NULL DEFAULT 'event_new',
+    target_url      VARCHAR(500) NULL,
+    is_read         BOOLEAN NOT NULL DEFAULT false,
+    read_at         TIMESTAMPTZ NULL,
+    is_deleted      BOOLEAN NOT NULL DEFAULT false,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    delivery_key    VARCHAR(200) NULL
 );
-ALTER TABLE notifications ADD COLUMN IF NOT EXISTS delivery_key varchar(200);
-CREATE UNIQUE INDEX IF NOT EXISTS uq_notification_delivery_key ON notifications(delivery_key) WHERE delivery_key IS NOT NULL;
+
+-- Chỉ mục tối ưu truy vấn thông báo người dùng
+CREATE INDEX IF NOT EXISTS ix_notifications_user_deleted_created 
+    ON public.notifications(user_id, is_deleted, created_at DESC);
+
+-- Unique index chặn duplicate notification (Idempotency)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_notification_delivery_key 
+    ON public.notifications(delivery_key) WHERE delivery_key IS NOT NULL;
+
 COMMIT;

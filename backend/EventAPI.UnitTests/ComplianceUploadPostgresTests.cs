@@ -15,7 +15,7 @@ public class ComplianceUploadPostgresTests
         public Task DeleteAsync(string id,CancellationToken ct)=>Task.CompletedTask;
     }
     private static IFormFile Pdf(string name="permit.pdf",string mime="application/pdf",string content="%PDF-1.7\nfixture") => new FormFile(new MemoryStream(System.Text.Encoding.UTF8.GetBytes(content)),0,System.Text.Encoding.UTF8.GetByteCount(content),"file",name){Headers=new HeaderDictionary(),ContentType=mime};
-    private static GovernanceService Service(EventFlowFixture f,Assets assets)=>new(f.Context,assets,null!,new ConfigurationBuilder().Build());
+    private static GovernanceService Service(EventFlowFixture f,Assets assets)=>new(new EventAPI.Repositories.GovernanceRepository(f.Context),assets,null!,new ConfigurationBuilder().Build());
     [PostgresFact] public async Task UploadCreatesVersionAndKeepsPriorDocuments()
     {using var f=new EventFlowFixture();var ev=await f.Events.CreateAsync(EventFlowFixture.ValidEvent(),10);var s=Service(f,new Assets());await s.UploadAsync(ev.EventId,10,"EventPermit",Pdf(),default);await s.UploadAsync(ev.EventId,10,"SafetyPlan",Pdf("safety.pdf"),default);f.Context.ChangeTracker.Clear();Assert.Equal(2,(await f.Context.Events.FindAsync(ev.EventId))!.ComplianceVersion);Assert.Equal(1,await f.Context.Set<ComplianceDocument>().CountAsync(x=>x.Version==1));Assert.Equal(2,await f.Context.Set<ComplianceDocument>().CountAsync(x=>x.Version==2));}
     [PostgresFact] public async Task WrongOwnerNeverCallsCloudinary()

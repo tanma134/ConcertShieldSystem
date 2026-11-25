@@ -87,7 +87,7 @@ export default function SubmitAppealPage() {
       <Banner error={error} notice={notice} onClearError={() => setError("")} onClearNotice={() => setNotice("")} />
 
       {loading ? (
-        <div className="empty-state">Loading...</div>
+        <div className="empty-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
       ) : !d ? null : (
         <section className="admin-panel">
           <div className="panel-header">
@@ -98,7 +98,10 @@ export default function SubmitAppealPage() {
             <div className="fr-info">
               {dash(d.reasonPublic)}
               <br />
-              Applies to: {dash(d.scope)} · Since {fmt(d.createdAt)}{d.expiresAt ? ` · Until ${fmt(d.expiresAt)}` : ""}
+              Applies to: {dash(d.scope)}
+              {d.ticketId != null ? ` · Ticket #${d.ticketId}` : ""} · Since {fmt(d.createdAt)}
+              {d.expiresAt ? ` · Until ${fmt(d.expiresAt)}` : ""}
+              {d.appealDeadlineAt ? ` · Appeal by ${fmt(d.appealDeadlineAt)}` : ""}
             </div>
 
             {sent ? (
@@ -145,12 +148,13 @@ export default function SubmitAppealPage() {
                 </div>
 
                 <div className="fr-info fr-info--warn">
-                  You can send <b>one appeal per decision</b>, within 7 days of the notice. A reviewer answers within 48 hours.
+                  You can send <b>one appeal per decision</b>, within {d.scope === "TICKET" ? "24 hours" : "7 days"} of the notice.
+                  A reviewer answers within 48 hours.
                 </div>
 
                 <div className="fr-row end">
                   <button type="button" className="admin-button-secondary" onClick={() => navigate(-1)}>Cancel</button>
-                  <button type="submit" className="admin-button" disabled={busy}>{busy ? "Sending..." : "Submit appeal"}</button>
+                  <button type="submit" className="admin-button" disabled={busy}>{busy ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Submit appeal"}</button>
                 </div>
               </>
             )}

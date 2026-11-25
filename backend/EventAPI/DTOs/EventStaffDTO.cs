@@ -58,7 +58,7 @@ namespace EventAPI.DTOs
         public int AssignedBy { get; set; }
     }
 
-    // One Staff account the organizer can pick from (UC_14.4).
+    // One Staff account the organizer can pick from.
     public class StaffCandidateDTO
     {
         public int UserId { get; set; }

@@ -7,10 +7,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AdminAPI.Controllers
 {
-    /// <summary>UC_18.8 View Fraud Case List, UC_18.9 Assign Fraud Case to Analyst, UC_18.10 Resolve Fraud Case.</summary>
+    /// <summary>UC_18.8 View Fraud Case List, UC_18.9 Assign Fraud Case to Staff, UC_18.10 Resolve Fraud Case.</summary>
     [ApiController]
     [Route("api/admin/fraud-cases")]
-    [Authorize(Policy = "CanReviewFraud")]
+    [Authorize(Policy = "CanReviewFraudCases")]
     public class FraudCaseAdminController : ControllerBase
     {
         private readonly IFraudCaseService _service;
@@ -26,10 +26,22 @@ namespace AdminAPI.Controllers
         // GET api/admin/fraud-cases?status=Open&unassigned=true&page=1
         [HttpGet]
         public Task<IActionResult> List([FromQuery] FraudCaseQuery query) =>
-            Run(async () => Ok(await _service.SearchAsync(query)));
+            Run(async () =>
+            {
+                // BR-236: Staff only see the cases assigned to them. The filter from the
+                // query string is overwritten, so a Staff caller cannot widen the scope.
+                if (User.IsInRole("Staff") && !User.IsInRole("Admin"))
+                {
+                    query.AssignedTo = GetCurrentUserId();
+                    query.Unassigned = null;
+                }
 
-        // POST api/admin/fraud-cases/5/assign
+                return Ok(await _service.SearchAsync(query));
+            });
+
+        // POST api/admin/fraud-cases/5/assign  (Admin only: assigns the case to a Staff member)
         [HttpPost("{id:int}/assign")]
+        [Authorize(Roles = "Admin")]
         public Task<IActionResult> Assign(int id, [FromBody] AssignFraudCaseRequest req) =>
             Run(async () =>
             {
@@ -40,8 +52,21 @@ namespace AdminAPI.Controllers
                 return Ok(r);
             });
 
-        // POST api/admin/fraud-cases/5/resolve
+        // POST api/admin/fraud-cases/5/recommend  (assigned Staff submits a proposal)
+        [HttpPost("{id:int}/recommend")]
+        public Task<IActionResult> Recommend(int id, [FromBody] RecommendFraudCaseRequest req) =>
+            Run(async () =>
+            {
+                var actor = GetCurrentUserId();
+                var r = await _service.RecommendAsync(id, req.Outcome, req.Note, actor);
+                await WriteAuditAsync("FRAUD_CASE_RECOMMENDED", r, actor,
+                    new { req.Outcome, req.Note });
+                return Ok(r);
+            });
+
+        // POST api/admin/fraud-cases/5/resolve  (Admin only: final decision)
         [HttpPost("{id:int}/resolve")]
+        [Authorize(Roles = "Admin")]
         public Task<IActionResult> Resolve(int id, [FromBody] ResolveFraudCaseRequest req) =>
             Run(async () =>
             {

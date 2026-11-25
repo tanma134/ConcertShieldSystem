@@ -33,7 +33,7 @@ namespace NotificationAPI.Controllers
         }
 
         /// <summary>
-        /// UC_22 View Notifications: Get user's notification list and unread badge count.
+        /// View Notifications: Get user's notification list and unread badge count.
         /// If user is authenticated, returns their notifications + broadcast. If not, returns broadcast (UserId = 0).
         /// </summary>
         [HttpGet]
@@ -53,7 +53,7 @@ namespace NotificationAPI.Controllers
         }
 
         /// <summary>
-        /// UC_22.1 Mark Single Notification as Read.
+        /// Mark Single Notification as Read.
         /// </summary>
         [HttpPut("{id}/read")]
         [Authorize]
@@ -87,7 +87,7 @@ namespace NotificationAPI.Controllers
         }
 
         /// <summary>
-        /// UC_22.1 Mark All Notifications as Read.
+        /// Mark All Notifications as Read.
         /// </summary>
         [HttpPut("read-all")]
         [Authorize]

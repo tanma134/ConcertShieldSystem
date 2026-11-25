@@ -153,7 +153,7 @@ export default function EventDetailPage() {
     <div className="tb-app">
       <Header />
 
-      {loading && <div className="tb-loading">Loading event...</div>}
+      {loading && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
       {!loading && error && <div className="tb-error">{error}</div>}
 
       {!loading && !error && event && (
@@ -162,7 +162,11 @@ export default function EventDetailPage() {
             <img
               className="tb-detail-banner-img"
               src={gallery[activeImg] || event.bannerUrl || event.posterUrl}
-              alt={event.title}
+              alt=""
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='400' viewBox='0 0 1200 400'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%234a154b'/%3E%3Cstop offset='100%25' stop-color='%231e1035'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100%25' height='100%25' fill='url(%23g)'/%3E%3C/svg%3E";
+              }}
             />
             <div className="tb-detail-banner-overlay" />
             <div className="tb-container tb-detail-banner-content">
@@ -186,7 +190,15 @@ export default function EventDetailPage() {
                   }
                   onClick={() => setActiveImg(idx)}
                 >
-                  <img src={url} alt={`${event.title} ${idx + 1}`} />
+                  <img
+                    src={url}
+                    alt=""
+                    onError={(e) => {
+                      if (e.currentTarget.parentElement) {
+                        e.currentTarget.parentElement.style.display = 'none';
+                      }
+                    }}
+                  />
                 </button>
               ))}
             </div>
@@ -264,6 +276,28 @@ export default function EventDetailPage() {
                 </section>
               )}
 
+              <section className="tb-detail-section">
+                <h2>Admission &amp; Re-entry Policies</h2>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginTop: '10px' }}>
+                  <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Seat Hold Timeout</div>
+                    <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
+                      Seats are held for <strong>{event.holdTimeoutMinutes || 10} minutes</strong> during checkout before auto-release.
+                    </div>
+                  </div>
+                  <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Re-entry Policy</div>
+                    <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
+                      {event.reEntryPolicy === 'TimeLimited'
+                        ? `Time-limited: Attendees can exit and re-enter within ${event.reEntryDurationMinutes || 30} minutes.`
+                        : event.reEntryPolicy === 'Unlimited'
+                        ? 'Unlimited: Attendees may exit and re-enter freely during the event.'
+                        : 'No Re-entry: Once scanned in, leaving the venue terminates admission.'}
+                    </div>
+                  </div>
+                </div>
+              </section>
+
               <ReviewSection eventId={event.eventId} />
             </div>
 
@@ -332,7 +366,7 @@ export default function EventDetailPage() {
                 </div>
 
                 <button type="button" className="tb-btn tb-btn-outline tb-wishlist-btn" onClick={toggleWishlist} disabled={wishlistLoading}>
-                  {wishlistLoading ? "Updating..." : isWishlisted ? "♥ Wishlisted" : "♡ Add to Wishlist"}
+                  {wishlistLoading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : isWishlisted ? "♥ Wishlisted" : "♡ Add to Wishlist"}
                 </button>
                 {wishlistError && <div className="tb-buy-blocked">{wishlistError}</div>}
 
@@ -352,9 +386,9 @@ export default function EventDetailPage() {
           {(relatedLoading || related.length > 0) && (
             <section className="tb-container tb-list-section">
               <div className="tb-list-header">
-                <h2>🎟️ Other Events On Sale</h2>
+                <h2>Other Events On Sale</h2>
               </div>
-              {relatedLoading && <div className="tb-loading">Loading...</div>}
+              {relatedLoading && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
               {!relatedLoading && related.length > 0 && (
                 <div className="tb-grid tb-grid-3">
                   {related.map((ev) => (

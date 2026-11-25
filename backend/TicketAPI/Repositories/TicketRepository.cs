@@ -86,7 +86,7 @@ namespace TicketAPI.Repositories
                 .FirstOrDefaultAsync();
 
             if (ticket == null)
-                throw new KeyNotFoundException("Không tìm thấy vé.");
+                throw new KeyNotFoundException("Ticket not found.");
 
             var qrTokens = await _context.TicketQrTokens
                 .Where(token => token.TicketId == ticketId)
@@ -95,13 +95,13 @@ namespace TicketAPI.Repositories
             if (ticket.CheckedInAt.HasValue ||
                 qrTokens.Any(token => token.IsUsed))
             {
-                throw new InvalidOperationException("Không thể thu hồi vé đã check-in.");
+                throw new InvalidOperationException("A checked-in ticket cannot be revoked.");
             }
 
             if (ticket.Status != TicketStatuses.Active)
             {
                 throw new InvalidOperationException(
-                    "Chỉ có thể thu hồi vé đang ở trạng thái Active.");
+                    "Only Active tickets can be revoked.");
             }
 
             var now = DateTime.UtcNow;
@@ -165,6 +165,7 @@ namespace TicketAPI.Repositories
                 .AsNoTracking()
                 .Include(ticket => ticket.Order)
                     .ThenInclude(order => order.OrderDetails)
+                .Include(ticket => ticket.TicketQrTokens)
                 .Where(ticket => !ticket.IsDeleted && !ticket.Order.IsDeleted);
 
             if (query.TicketId.HasValue)
@@ -210,6 +211,7 @@ namespace TicketAPI.Repositories
                 .AsNoTracking()
                 .Include(ticket => ticket.Order)
                     .ThenInclude(order => order.OrderDetails)
+                .Include(ticket => ticket.TicketQrTokens)
                 .FirstOrDefaultAsync(ticket =>
                     ticket.TicketId == ticketId &&
                     !ticket.IsDeleted &&

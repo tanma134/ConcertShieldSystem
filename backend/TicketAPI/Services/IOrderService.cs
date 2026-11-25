@@ -30,5 +30,8 @@ namespace TicketAPI.Services
             int eventId,
             string? bearerToken,
             OrganizerOrderQueryDto query);
+
+        Task ExpirePendingOrdersAsync();
+        Task CancelPendingOrderAsync(int orderId);
     }
 }

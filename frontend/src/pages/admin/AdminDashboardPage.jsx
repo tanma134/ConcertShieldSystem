@@ -88,10 +88,10 @@ export default function AdminDashboardPage() {
 
   const stats = [
     { label: "Total Users", value: totalUsers, color: "#3b82f6" },
-    { label: "Active Users", value: activeUsers, color: "#10b981" },
+    { label: "Active Users", value: activeUsers, color: "#0e9e78" },
     { label: "Total Roles", value: totalRoles, color: "#8b5cf6" },
     { label: "System Vouchers", value: totalVouchers, color: "#ec4899" },
-    { label: "Admins", value: adminCount, color: "#f59e0b" },
+    { label: "Admins", value: adminCount, color: "#d98f14" },
   ];
 
   return (
@@ -163,7 +163,7 @@ export default function AdminDashboardPage() {
             >
               <span className="stat-label">{stat.label}</span>
               <span className="stat-value">
-                {loading ? "..." : stat.value ?? "—"}
+                {loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : stat.value ?? "—"}
               </span>
             </div>
           ))}

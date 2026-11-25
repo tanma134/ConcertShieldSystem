@@ -58,6 +58,7 @@ public sealed class RiskConfig
 
     public int AlertSlaHours { get; set; } = 2;
     public int AppealDeadlineDays { get; set; } = 7;
+    public int TicketAppealDeadlineHours { get; set; } = 24;
     public int AppealSlaHours { get; set; } = 48;
     public int AppealMaxEvidenceFiles { get; set; } = 5;
     public int AppealMaxEvidenceMb { get; set; } = 5;
@@ -71,6 +72,26 @@ public sealed class RiskConfig
     public List<string> ParseWarnings { get; } = new();
 
     public bool IsShadow => string.Equals(Mode, "SHADOW", StringComparison.OrdinalIgnoreCase);
+
+    // Appeal windows differ by scope: a blocked ticket can only be appealed for a short
+    // window (24h by default), while account/IP blocks keep the normal multi-day window.
+    public bool IsTicketScope(string? scope) =>
+        string.Equals(scope, "TICKET", StringComparison.OrdinalIgnoreCase);
+
+    public DateTime AppealDueAt(string? scope, DateTime noticeAt) =>
+        IsTicketScope(scope) ? noticeAt.AddHours(TicketAppealDeadlineHours) : noticeAt.AddDays(AppealDeadlineDays);
+
+    public string AppealWindowText(string? scope) =>
+        IsTicketScope(scope)
+            ? $"{TicketAppealDeadlineHours} hour{(TicketAppealDeadlineHours == 1 ? "" : "s")}"
+            : $"{AppealDeadlineDays} day{(AppealDeadlineDays == 1 ? "" : "s")}";
+
+    // "7-day" / "24-hour", for messages such as "the 7-day deadline has passed".
+    public string AppealWindowAdjective(string? scope) =>
+        IsTicketScope(scope)
+            ? $"{TicketAppealDeadlineHours}-hour"
+            : $"{AppealDeadlineDays}-day";
+
 
     public IEnumerable<KeyValuePair<string, RiskRuleConfig>> EnabledRules(string type) =>
         Rules.Where(r => r.Value.Enabled && string.Equals(r.Value.Type, type, StringComparison.OrdinalIgnoreCase));
@@ -116,6 +137,7 @@ public sealed class RiskConfig
                 case "risk.trust.restore_days": cfg.TrustRestoreDays = Int(cfg, key, value, cfg.TrustRestoreDays); break;
                 case "risk.alert.sla_hours": cfg.AlertSlaHours = Int(cfg, key, value, cfg.AlertSlaHours); break;
                 case "risk.appeal.deadline_days": cfg.AppealDeadlineDays = Int(cfg, key, value, cfg.AppealDeadlineDays); break;
+                case "risk.appeal.ticket_deadline_hours": cfg.TicketAppealDeadlineHours = Int(cfg, key, value, cfg.TicketAppealDeadlineHours); break;
                 case "risk.appeal.sla_hours": cfg.AppealSlaHours = Int(cfg, key, value, cfg.AppealSlaHours); break;
                 case "risk.appeal.max_evidence_files": cfg.AppealMaxEvidenceFiles = Int(cfg, key, value, cfg.AppealMaxEvidenceFiles); break;
                 case "risk.appeal.max_evidence_mb": cfg.AppealMaxEvidenceMb = Int(cfg, key, value, cfg.AppealMaxEvidenceMb); break;

@@ -9,7 +9,7 @@ namespace AuthenticationAPI.DTOs
         [MaxLength(256, ErrorMessage = "Email must not exceed 256 characters")]
         public string Email { get; set; } = string.Empty;
         [Required(ErrorMessage = "Password is required")]
-        [StringLength(72, MinimumLength = 6, ErrorMessage = "Password must be between 6 and 72 characters")]
+        [StringLength(72, MinimumLength = 8, ErrorMessage = "Password must be between 8 and 72 characters")]
         public string Password { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Full name is required")]

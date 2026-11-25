@@ -24,7 +24,7 @@ const PlusIcon = () => (
 
 // Format helper
 const formatDate = (dateStr) => {
-  if (!dateStr) return "—";
+  if (!dateStr) return "â€”";
   const d = new Date(dateStr);
   return d.toLocaleString("en-US", {
     year: "numeric",
@@ -83,8 +83,8 @@ export default function SupportCaseListPage() {
   const stats = useMemo(() => {
     const total = cases.length;
     const open = cases.filter((c) => c.status === "Open" || c.status === "Assigned").length;
-    const critical = cases.filter((c) => c.priority === "Critical" && c.status !== "Closed").length;
-    const resolved = cases.filter((c) => c.status === "Resolved" || c.status === "Closed").length;
+    const critical = cases.filter((c) => c.priority === "Critical" && !["Closed", "Resolved", "Dismissed"].includes(c.status)).length;
+    const resolved = cases.filter((c) => ["Resolved", "Closed", "Dismissed"].includes(c.status)).length;
     return { total, open, critical, resolved };
   }, [cases]);
 
@@ -98,6 +98,8 @@ export default function SupportCaseListPage() {
         return <span className="sc-status-badge sc-status-resolved">Resolved</span>;
       case "Closed":
         return <span className="sc-status-badge sc-status-closed">Closed</span>;
+      case "Dismissed":
+        return <span className="sc-status-badge sc-status-closed">Dismissed</span>;
       default:
         return <span className="sc-status-badge">{status}</span>;
     }
@@ -109,12 +111,12 @@ export default function SupportCaseListPage() {
   };
 
   return (
-    <Shell title="Customer Support Cases & Disputes">
+    <Shell title="Customer Support Cases">
       <div className="sc-container">
         {/* Header */}
         <div className="sc-header">
           <div className="sc-header-title">
-            <span className="sc-badge-pill">Support & Dispute Center</span>
+            <span className="sc-badge-pill">Customer Support Center</span>
             <h1>Customer Support Cases</h1>
             <p>
               {isAdminPath
@@ -142,15 +144,15 @@ export default function SupportCaseListPage() {
           </div>
           <div className="sc-stat-card">
             <span className="sc-stat-label">Pending / In Progress</span>
-            <span className="sc-stat-value" style={{ color: "#fbbf24" }}>{stats.open}</span>
+            <span className="sc-stat-value" style={{ color: "#d99a16" }}>{stats.open}</span>
           </div>
           <div className="sc-stat-card">
             <span className="sc-stat-label">Critical Priority</span>
-            <span className="sc-stat-value" style={{ color: "#f87171" }}>{stats.critical}</span>
+            <span className="sc-stat-value" style={{ color: "#d64545" }}>{stats.critical}</span>
           </div>
           <div className="sc-stat-card">
             <span className="sc-stat-label">Resolved / Closed</span>
-            <span className="sc-stat-value" style={{ color: "#34d399" }}>{stats.resolved}</span>
+            <span className="sc-stat-value" style={{ color: "#21a87b" }}>{stats.resolved}</span>
           </div>
         </div>
 
@@ -178,6 +180,7 @@ export default function SupportCaseListPage() {
             <option value="InProgress">In Progress</option>
             <option value="Resolved">Resolved</option>
             <option value="Closed">Closed</option>
+            <option value="Dismissed">Dismissed</option>
           </select>
 
           <select
@@ -197,8 +200,9 @@ export default function SupportCaseListPage() {
         <div className="sc-table-wrap">
           {loading ? (
             <div style={{ padding: "40px", textAlign: "center", color: "var(--sc-text-secondary)" }}>
-              Loading support cases...
-            </div>
+              <span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
+
+
           ) : cases.length === 0 ? (
             <div style={{ padding: "40px", textAlign: "center", color: "var(--sc-text-secondary)" }}>
               No support cases found matching the criteria.
@@ -225,14 +229,14 @@ export default function SupportCaseListPage() {
                       <span className="sc-case-number">{c.caseNumber}</span>
                     </td>
                     <td style={{ maxWidth: "260px" }}>
-                      <strong style={{ color: "#f3f4f6" }}>{c.title}</strong>
+                      <strong style={{ color: "#1d1730", fontWeight: 700 }}>{c.title}</strong>
                     </td>
                     <td>
-                      <div>{c.customerName}</div>
-                      <small style={{ color: "var(--sc-text-muted)" }}>{c.customerEmail}</small>
+                      <div style={{ fontWeight: 600, color: "#1d1730" }}>{c.customerName}</div>
+                      <small style={{ color: "#5c5474" }}>{c.customerEmail}</small>
                     </td>
                     <td>
-                      <span style={{ fontSize: "12px", color: "var(--sc-text-secondary)" }}>
+                      <span style={{ fontSize: "12px", color: "#4a4260", fontWeight: 500 }}>
                         {c.category}
                       </span>
                     </td>
@@ -240,7 +244,7 @@ export default function SupportCaseListPage() {
                     <td>{getStatusBadge(c.status)}</td>
                     <td>
                       {c.assignedStaffName ? (
-                        <span style={{ color: "#93c5fd", fontWeight: 500 }}>
+                        <span style={{ color: "#1d4ed8", fontWeight: 600 }}>
                           {c.assignedStaffName}
                         </span>
                       ) : (
@@ -272,3 +276,4 @@ export default function SupportCaseListPage() {
     </Shell>
   );
 }
+

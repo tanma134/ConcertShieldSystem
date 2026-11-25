@@ -56,7 +56,8 @@ public sealed class EventFlowFixture : IDisposable
 
         var validator = new EventSubmissionValidator(eventRepo, ticketRepo, refundRepo, seatingRepo, Context, config);
 
-        Governance = new GovernanceService(Context, new FakeAssets(), new EmptyHttpFactory(), config);
+        var govRepo = new GovernanceRepository(Context);
+        Governance = new GovernanceService(govRepo, new FakeAssets(), new EmptyHttpFactory(), config);
         Events = new EventService(eventRepo, ticketRepo, seatingRepo, validator,
             new FakeRoleClient(), new FakeCloudinary(), Context, NullLogger<EventService>.Instance, Governance);
         Access = new EventAccessService(eventRepo);

@@ -1,6 +1,6 @@
-using Microsoft.EntityFrameworkCore;
 using PaymentAPI.Data;
 using PaymentAPI.Models;
+using PaymentAPI.Repositories;
 
 namespace PaymentAPI.Risk;
 
@@ -20,13 +20,18 @@ public sealed class PaymentRiskService : IPaymentRiskService
     private const int FailedThreshold = 3;
     private static readonly TimeSpan Window = TimeSpan.FromMinutes(10);
 
-    private readonly PaymentDbContext _db;
+    private readonly IPaymentTransactionRepository _transactions;
     private readonly IRiskClient _client;
     private readonly IConfiguration _cfg;
     private readonly ILogger<PaymentRiskService> _logger;
 
+    [Microsoft.Extensions.DependencyInjection.ActivatorUtilitiesConstructor]
+    public PaymentRiskService(IPaymentTransactionRepository transactions, IRiskClient client, IConfiguration cfg, ILogger<PaymentRiskService> logger)
+    { _transactions = transactions; _client = client; _cfg = cfg; _logger = logger; }
+
     public PaymentRiskService(PaymentDbContext db, IRiskClient client, IConfiguration cfg, ILogger<PaymentRiskService> logger)
-    { _db = db; _client = client; _cfg = cfg; _logger = logger; }
+        : this(new PaymentTransactionRepository(db), client, cfg, logger)
+    { }
 
     public async Task OnPaymentFailedAsync(PaymentTransaction tx, CancellationToken ct = default)
     {
@@ -35,8 +40,7 @@ public sealed class PaymentRiskService : IPaymentRiskService
             if (!_cfg.GetValue("Risk:Enabled", true) || tx.UserId == null) return;
 
             var since = DateTime.UtcNow - Window;
-            var failed = await _db.PaymentTransactions.AsNoTracking().CountAsync(t =>
-                t.UserId == tx.UserId && t.Status == "Failed" && t.RespondedAt != null && t.RespondedAt >= since, ct);
+            var failed = await _transactions.CountFailedSinceAsync(tx.UserId.Value, since);
             if (failed < FailedThreshold) return;
 
             var evt = new RiskEvent
@@ -51,8 +55,6 @@ public sealed class PaymentRiskService : IPaymentRiskService
             evt.FraudRules.Add(new RuleHit("FRD_P01", 1, $"{failed} failed payments in 10 minutes"));
             if (tx.DeviceFp == null) evt.SignalsMissing.Add("device_fp");
 
-            // Đây là callback từ VNPay (không có người dùng đợi) nên chỉ ghi nhận.
-            // Việc chặn thật xảy ra lần sau khi user giữ vé/tạo đơn (PreCheckAsync ở TicketAPI).
             await _client.IngestAsync(evt, ct);
         }
         catch (Exception ex)

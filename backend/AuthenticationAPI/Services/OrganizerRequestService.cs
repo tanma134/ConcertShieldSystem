@@ -25,18 +25,22 @@ namespace AuthenticationAPI.Services
         private const string StatusApproved = "Approved";
         private const string StatusRejected = "Rejected";
 
+        private readonly Microsoft.Extensions.Configuration.IConfiguration? _configuration;
+
         public OrganizerRequestService(
             IOrganizerRequestRepository requestRepository,
             IUserRepository userRepository,
             IDocumentStorageService documentStorageService,
             IEmailService emailService,
-            ILogger<OrganizerRequestService> logger)
+            ILogger<OrganizerRequestService> logger,
+            Microsoft.Extensions.Configuration.IConfiguration? configuration = null)
         {
             _requestRepository = requestRepository;
             _userRepository = userRepository;
             _documentStorageService = documentStorageService;
             _emailService = emailService;
             _logger = logger;
+            _configuration = configuration;
         }
 
         public async Task<OrganizerRequestResponseDTO> CreateRequestAsync(int userId, CreateOrganizerRequestDTO dto)
@@ -305,7 +309,12 @@ namespace AuthenticationAPI.Services
                     // 1. Direct persistence to notification_db
                     try
                     {
-                        using var conn = new Npgsql.NpgsqlConnection("Host=localhost;Port=5432;Database=notification_db;Username=postgres;Password=123456");
+                        var notifConnStr = _configuration?.GetConnectionString("NotificationConnection")
+                            ?? _configuration?.GetConnectionString("NotificationDb")
+                            ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_NOTIFICATION_POSTGRES")
+                            ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TEST_POSTGRES");
+                        if (string.IsNullOrWhiteSpace(notifConnStr)) return;
+                        using var conn = new Npgsql.NpgsqlConnection(notifConnStr);
                         await conn.OpenAsync();
                         using var cmd = new Npgsql.NpgsqlCommand(
                             "INSERT INTO notifications (user_id, title, message, category, target_url, is_read, created_at, is_deleted) VALUES (@uid, @title, @msg, @cat, @url, false, NOW(), false);", conn);

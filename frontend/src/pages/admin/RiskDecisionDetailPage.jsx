@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import appealApi from "../../api/appealApi";
 import riskApi from "../../api/riskApi";
+import { useAuth } from "../../context/AuthContext";
 import { Shell, Banner, Chips, fmt, dash, errMsg, levelPill, statusPill } from "./frCommon";
 
 const MIN_REASON = 10;
@@ -21,6 +22,7 @@ function groupRows(v) {
 // View Risk Decision Details (Admin) — GET api/risk/decisions/{id}
 // Decisions are immutable records: this page never edits scores or rules, it only restores.
 export default function RiskDecisionDetailPage() {
+  const { isAdmin } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -77,7 +79,7 @@ export default function RiskDecisionDetailPage() {
     }
   };
 
-  if (loading) return <Shell title="Risk Decision"><div className="empty-state">Loading...</div></Shell>;
+  if (loading) return <Shell title="Risk Decision"><div className="empty-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div></Shell>;
   if (!d) {
     return (
       <Shell title="Risk Decision">
@@ -87,7 +89,7 @@ export default function RiskDecisionDetailPage() {
     );
   }
 
-  const canRestore = (d.action === "BLOCK" || d.action === "HOLD") && d.status === "Active" && !d.isShadow;
+  const canRestore = isAdmin && (d.action === "BLOCK" || d.action === "HOLD") && d.status === "Active" && !d.isShadow;
   const groups = groupRows(d.scoreByGroup);
   const decidedBy = d.decidedByType === "STAFF" ? `Admin #${d.decidedBy}` : "the risk engine";
 
@@ -129,7 +131,7 @@ export default function RiskDecisionDetailPage() {
             <div className="fr-row end">
               <button type="button" className="admin-button-secondary" onClick={() => setRestoreOpen(false)}>Cancel</button>
               <button type="button" className="admin-button" disabled={busy} onClick={restore}>
-                {busy ? "Processing..." : "Confirm restore"}
+                {busy ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm restore"}
               </button>
             </div>
           </div>

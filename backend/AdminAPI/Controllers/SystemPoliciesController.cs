@@ -1,74 +1,34 @@
-using System;
-using System.Collections.Generic;
 using System.Security.Claims;
-using System.Threading.Tasks;
+using AdminAPI.DTOs;
 using AdminAPI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Npgsql;
 
 namespace AdminAPI.Controllers
 {
     // ==========================================
     // NHÓM 2: GOVERNANCE, POLICY VERSIONING & COMPLIANCE
-    // UC_11.1 - View Policy Version History (Actor: Admin)
-    // UC_11.2 - Create New Policy Version (Actor: Admin)
+    // View Policy Version History (Actor: Admin)
+    // Create New Policy Version (Actor: Admin)
     // ==========================================
-
-    public class PolicyVersionDTO
-    {
-        public int PolicyId { get; set; }
-        public int VersionId => PolicyId;
-        public string Category { get; set; } = string.Empty;
-        public string VersionCode { get; set; } = string.Empty;
-        public int VersionNumber { get; set; }
-        public string Title { get; set; } = string.Empty;
-        public string Scope { get; set; } = string.Empty;
-        public string ChangeSummary { get; set; } = string.Empty;
-        public string Content { get; set; } = string.Empty;
-        public decimal PlatformFeePercent { get; set; } = 5.0m;
-        public int PayoutDays { get; set; } = 7;
-        public string Status { get; set; } = "Active"; // Active, Archived
-        public DateTime EffectiveDate { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public int CreatedByAdminId { get; set; }
-        public string CreatedByAdminName { get; set; } = "Platform Administrator";
-    }
-
-    public class CreatePolicyVersionRequestDTO
-    {
-        public string Category { get; set; } = "PRICE_TICKETING";
-        public string Title { get; set; } = string.Empty;
-        public string Scope { get; set; } = "All Platform Attendees & Event Organizers";
-        public string ChangeSummary { get; set; } = string.Empty;
-        public string Content { get; set; } = string.Empty;
-        public decimal? PlatformFeePercent { get; set; } = 5.0m;
-        public int? PayoutDays { get; set; } = 7;
-        public DateTime? EffectiveDate { get; set; }
-    }
 
     [ApiController]
     [Route("api/admin/policies")]
     [Authorize(Roles = "Admin")]
     public class SystemPoliciesController : ControllerBase
     {
+        private readonly ISystemPolicyService _service;
         private readonly IAuditLogService _auditLog;
-        private readonly IConfiguration _configuration;
         private readonly ILogger<SystemPoliciesController> _logger;
-        private readonly string _connectionString;
 
         public SystemPoliciesController(
+            ISystemPolicyService service,
             IAuditLogService auditLog,
-            IConfiguration configuration,
             ILogger<SystemPoliciesController> logger)
         {
+            _service = service;
             _auditLog = auditLog;
-            _configuration = configuration;
             _logger = logger;
-            _connectionString = _configuration.GetConnectionString("DefaultConnection")
-                ?? "Host=localhost;Port=5432;Database=admin_db;Username=postgres;Password=123456";
         }
 
         private int GetCurrentAdminId()
@@ -86,72 +46,30 @@ namespace AdminAPI.Controllers
         }
 
         /// <summary>
-        /// UC_11.1: View Policy Version History (Category: PRICE_TICKETING, REFUND_CANCELLATION, VIRTUAL_QUEUE, RISK_ANTI_FRAUD, TERMS_OF_SERVICE)
-        /// Directly queried from system_policies table in admin_db.
+        /// View Policy Version History (Category: PRICE_TICKETING, REFUND_CANCELLATION, VIRTUAL_QUEUE, RISK_ANTI_FRAUD, TERMS_OF_SERVICE)
         /// </summary>
         [HttpGet("history")]
         public async Task<IActionResult> GetPolicyHistory([FromQuery] string? category = "PRICE_TICKETING")
         {
-            category = NormalizeCategory(category);
-            var items = new List<PolicyVersionDTO>();
-
             try
             {
-                using var conn = new NpgsqlConnection(_connectionString);
-                await conn.OpenAsync();
-
-                var sql = @"
-                    SELECT policy_id, category, version_code, version_number, title, scope, change_summary, content, 
-                           platform_fee_percent, payout_days,
-                           status, effective_date, created_at, created_by_admin_id, created_by_admin_name
-                    FROM system_policies
-                    WHERE category = @cat
-                    ORDER BY version_number DESC, created_at DESC;";
-
-                using var cmd = new NpgsqlCommand(sql, conn);
-                cmd.Parameters.AddWithValue("cat", category);
-
-                using var reader = await cmd.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
+                var items = await _service.GetHistoryAsync(category);
+                return Ok(new
                 {
-                    items.Add(new PolicyVersionDTO
-                    {
-                        PolicyId = Convert.ToInt32(reader["policy_id"]),
-                        Category = Convert.ToString(reader["category"]) ?? category,
-                        VersionCode = Convert.ToString(reader["version_code"]) ?? "",
-                        VersionNumber = Convert.ToInt32(reader["version_number"]),
-                        Title = Convert.ToString(reader["title"]) ?? "",
-                        Scope = Convert.ToString(reader["scope"]) ?? "",
-                        ChangeSummary = Convert.ToString(reader["change_summary"]) ?? "",
-                        Content = Convert.ToString(reader["content"]) ?? "",
-                        PlatformFeePercent = reader["platform_fee_percent"] != DBNull.Value ? Convert.ToDecimal(reader["platform_fee_percent"]) : 5.0m,
-                        PayoutDays = reader["payout_days"] != DBNull.Value ? Convert.ToInt32(reader["payout_days"]) : 7,
-                        Status = Convert.ToString(reader["status"]) ?? "Active",
-                        EffectiveDate = Convert.ToDateTime(reader["effective_date"]),
-                        CreatedAt = Convert.ToDateTime(reader["created_at"]),
-                        CreatedByAdminId = Convert.ToInt32(reader["created_by_admin_id"]),
-                        CreatedByAdminName = Convert.ToString(reader["created_by_admin_name"]) ?? "Platform Administrator"
-                    });
-                }
+                    success = true,
+                    category = SystemPolicyService.NormalizeCategory(category),
+                    totalVersions = items.Count,
+                    data = items
+                });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to load policy history for category {Category} from admin_db", category);
-                return StatusCode(500, new { success = false, message = "Could not load policy version history from database." });
+                return StatusCode(500, new { success = false, message = "Không thể tải lịch sử chính sách từ cơ sở dữ liệu." });
             }
-
-            return Ok(new
-            {
-                success = true,
-                category,
-                totalVersions = items.Count,
-                data = items
-            });
         }
 
-        /// <summary>
-        /// Get Active Policy Document for each Category from database (Public for registration & login policy review).
-        /// </summary>
+        // Lay danh sach cac ban ghi chinh sach dang co hieu luc theo tung danh muc danh cho moi nguoi dung
         [AllowAnonymous]
         [HttpGet("active")]
         public async Task<IActionResult> GetActivePolicies()
@@ -160,50 +78,15 @@ namespace AdminAPI.Controllers
 
             try
             {
-                using var conn = new NpgsqlConnection(_connectionString);
-                await conn.OpenAsync();
-
-                var sql = @"
-                    SELECT DISTINCT ON (category) 
-                           policy_id, category, version_code, version_number, title, scope, change_summary, content, 
-                           platform_fee_percent, payout_days,
-                           status, effective_date, created_at, created_by_admin_id, created_by_admin_name
-                    FROM system_policies
-                    WHERE LOWER(status) = 'active'
-                    ORDER BY category, version_number DESC, policy_id DESC;";
-
-                using var cmd = new NpgsqlCommand(sql, conn);
-                using var reader = await cmd.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
-                {
-                    var cat = Convert.ToString(reader["category"]) ?? "";
-                    activePolicies[cat] = new PolicyVersionDTO
-                    {
-                        PolicyId = Convert.ToInt32(reader["policy_id"]),
-                        Category = cat,
-                        VersionCode = Convert.ToString(reader["version_code"]) ?? "",
-                        VersionNumber = Convert.ToInt32(reader["version_number"]),
-                        Title = Convert.ToString(reader["title"]) ?? "",
-                        Scope = Convert.ToString(reader["scope"]) ?? "",
-                        ChangeSummary = Convert.ToString(reader["change_summary"]) ?? "",
-                        Content = Convert.ToString(reader["content"]) ?? "",
-                        PlatformFeePercent = reader["platform_fee_percent"] != DBNull.Value ? Convert.ToDecimal(reader["platform_fee_percent"]) : 5.0m,
-                        PayoutDays = reader["payout_days"] != DBNull.Value ? Convert.ToInt32(reader["payout_days"]) : 7,
-                        Status = "Active",
-                        EffectiveDate = Convert.ToDateTime(reader["effective_date"]),
-                        CreatedAt = Convert.ToDateTime(reader["created_at"]),
-                        CreatedByAdminId = Convert.ToInt32(reader["created_by_admin_id"]),
-                        CreatedByAdminName = Convert.ToString(reader["created_by_admin_name"]) ?? "Platform Administrator"
-                    };
-                }
+                activePolicies = await _service.GetActiveAsync();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to load active policies from admin_db");
             }
 
-            var pricingPolicy = activePolicies.ContainsKey("PRICE_TICKETING") ? activePolicies["PRICE_TICKETING"]
-                              : activePolicies.Values.FirstOrDefault();
+            var pricingPolicy = activePolicies.GetValueOrDefault("PRICE_TICKETING")
+                ?? activePolicies.Values.FirstOrDefault();
 
             return Ok(new
             {
@@ -229,41 +112,9 @@ namespace AdminAPI.Controllers
         {
             try
             {
-                using var conn = new NpgsqlConnection(_connectionString);
-                await conn.OpenAsync();
-
-                var sql = @"
-                    SELECT policy_id, category, version_code, version_number, title, scope, change_summary, content, 
-                           platform_fee_percent, payout_days, effective_date, created_at
-                    FROM system_policies
-                    WHERE category = 'PRICE_TICKETING' AND LOWER(status) = 'active'
-                    ORDER BY version_number DESC, policy_id DESC
-                    LIMIT 1;";
-
-                using var cmd = new NpgsqlCommand(sql, conn);
-                using var reader = await cmd.ExecuteReaderAsync();
-                if (await reader.ReadAsync())
-                {
-                    return Ok(new
-                    {
-                        success = true,
-                        data = new
-                        {
-                            policyId = Convert.ToInt32(reader["policy_id"]),
-                            category = Convert.ToString(reader["category"]),
-                            versionCode = Convert.ToString(reader["version_code"]),
-                            versionNumber = Convert.ToInt32(reader["version_number"]),
-                            title = Convert.ToString(reader["title"]),
-                            scope = Convert.ToString(reader["scope"]),
-                            changeSummary = Convert.ToString(reader["change_summary"]),
-                            content = Convert.ToString(reader["content"]),
-                            platformFeePercent = reader["platform_fee_percent"] != DBNull.Value ? Convert.ToDecimal(reader["platform_fee_percent"]) : 5.0m,
-                            payoutDays = reader["payout_days"] != DBNull.Value ? Convert.ToInt32(reader["payout_days"]) : 7,
-                            effectiveDate = Convert.ToDateTime(reader["effective_date"]),
-                            createdAt = Convert.ToDateTime(reader["created_at"])
-                        }
-                    });
-                }
+                var policies = await _service.GetActiveAsync();
+                if (policies.TryGetValue("PRICE_TICKETING", out var policy))
+                    return Ok(new { success = true, data = policy });
 
                 return Ok(new
                 {
@@ -292,21 +143,18 @@ namespace AdminAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// UC_11.2: Create / Publish New Policy Version (Actor: Admin)
-        /// Archives previous active versions and inserts new active policy document into admin_db.
-        /// </summary>
+        // Ban hanh phien ban chinh sach he thong moi va luu tru phien ban cu
         [HttpPost("create")]
         public async Task<IActionResult> CreatePolicyVersion([FromBody] CreatePolicyVersionRequestDTO request)
         {
             if (string.IsNullOrWhiteSpace(request.Title))
-                return BadRequest(new { success = false, message = "Policy document title is required." });
+                return BadRequest(new { success = false, message = "Tiêu đề văn bản chính sách không được để trống." });
 
             if (string.IsNullOrWhiteSpace(request.ChangeSummary))
-                return BadRequest(new { success = false, message = "Enactment justification / change summary is required." });
+                return BadRequest(new { success = false, message = "Lý do ban hành và tóm tắt nội dung thay đổi là bắt buộc." });
 
             if (string.IsNullOrWhiteSpace(request.Content))
-                return BadRequest(new { success = false, message = "Full policy terms and content cannot be empty." });
+                return BadRequest(new { success = false, message = "Toàn văn nội dung chính sách không được để trống." });
 
             var feePercent = request.PlatformFeePercent ?? 5.0m;
             if (feePercent < 0 || feePercent > 100)
@@ -321,105 +169,14 @@ namespace AdminAPI.Controllers
                 return BadRequest(new { success = false, message = "Effective start date cannot be earlier than today." });
             }
 
-            var category = NormalizeCategory(request.Category);
             var adminId = GetCurrentAdminId();
             var adminName = GetCurrentAdminName();
-            var effectiveDate = request.EffectiveDate ?? DateTime.UtcNow;
 
             PolicyVersionDTO newPolicy;
 
             try
             {
-                using var conn = new NpgsqlConnection(_connectionString);
-                await conn.OpenAsync();
-                using var tx = await conn.BeginTransactionAsync();
-
-                // 1. Determine next version number
-                var maxVerSql = "SELECT COALESCE(MAX(version_number), 0) FROM system_policies WHERE category = @cat;";
-                int nextVer;
-                using (var cmd = new NpgsqlCommand(maxVerSql, conn, tx))
-                {
-                    cmd.Parameters.AddWithValue("cat", category);
-                    nextVer = Convert.ToInt32(await cmd.ExecuteScalarAsync()) + 1;
-                }
-
-                // 2. Archive previous active versions for this category
-                var archiveSql = "UPDATE system_policies SET status = 'Archived' WHERE category = @cat AND LOWER(status) = 'active';";
-                using (var cmd = new NpgsqlCommand(archiveSql, conn, tx))
-                {
-                    cmd.Parameters.AddWithValue("cat", category);
-                    await cmd.ExecuteNonQueryAsync();
-                }
-
-                // 3. Generate version code (e.g. POL-PRICE-V2.0)
-                var prefix = category switch
-                {
-                    "PRICE_TICKETING" => "PRICE",
-                    "REFUND_CANCELLATION" => "REFUND",
-                    "VIRTUAL_QUEUE" => "QUEUE",
-                    "RISK_ANTI_FRAUD" => "RISK",
-                    _ => "TOS"
-                };
-                var versionCode = $"POL-{prefix}-V{nextVer}.0";
-
-                // 4. Insert new policy version
-                var insertSql = @"
-                    INSERT INTO system_policies (category, version_code, version_number, title, scope, change_summary, content, 
-                                                platform_fee_percent, payout_days,
-                                                status, effective_date, created_at, created_by_admin_id, created_by_admin_name)
-                    VALUES (@cat, @code, @num, @title, @scope, @sum, @content, @fee, @payout, 'Active', @eff, NOW(), @aid, @aname)
-                    RETURNING policy_id, created_at;";
-
-                int newPolicyId;
-                DateTime createdAt;
-
-                using (var cmd = new NpgsqlCommand(insertSql, conn, tx))
-                {
-                    cmd.Parameters.AddWithValue("cat", category);
-                    cmd.Parameters.AddWithValue("code", versionCode);
-                    cmd.Parameters.AddWithValue("num", nextVer);
-                    cmd.Parameters.AddWithValue("title", request.Title.Trim());
-                    cmd.Parameters.AddWithValue("scope", string.IsNullOrWhiteSpace(request.Scope) ? "All Platform Attendees & Event Organizers" : request.Scope.Trim());
-                    cmd.Parameters.AddWithValue("sum", request.ChangeSummary.Trim());
-                    cmd.Parameters.AddWithValue("content", request.Content.Trim());
-                    cmd.Parameters.AddWithValue("fee", feePercent);
-                    cmd.Parameters.AddWithValue("payout", payoutDays);
-                    cmd.Parameters.AddWithValue("eff", effectiveDate);
-                    cmd.Parameters.AddWithValue("aid", adminId);
-                    cmd.Parameters.AddWithValue("aname", adminName);
-
-                    using var reader = await cmd.ExecuteReaderAsync();
-                    if (await reader.ReadAsync())
-                    {
-                        newPolicyId = Convert.ToInt32(reader["policy_id"]);
-                        createdAt = Convert.ToDateTime(reader["created_at"]);
-                    }
-                    else
-                    {
-                        throw new InvalidOperationException("Failed to insert policy version into database.");
-                    }
-                }
-
-                await tx.CommitAsync();
-
-                newPolicy = new PolicyVersionDTO
-                {
-                    PolicyId = newPolicyId,
-                    Category = category,
-                    VersionCode = versionCode,
-                    VersionNumber = nextVer,
-                    Title = request.Title.Trim(),
-                    Scope = string.IsNullOrWhiteSpace(request.Scope) ? "All Platform Attendees & Event Organizers" : request.Scope.Trim(),
-                    ChangeSummary = request.ChangeSummary.Trim(),
-                    Content = request.Content.Trim(),
-                    PlatformFeePercent = feePercent,
-                    PayoutDays = payoutDays,
-                    Status = "Active",
-                    EffectiveDate = effectiveDate,
-                    CreatedAt = createdAt,
-                    CreatedByAdminId = adminId,
-                    CreatedByAdminName = adminName
-                };
+                newPolicy = await _service.CreateAsync(request, adminId, adminName);
 
                 // Audit Log to AuditLogs table in database
                 await _auditLog.LogAsync(
@@ -427,48 +184,36 @@ namespace AdminAPI.Controllers
                     actorType: "ADMIN",
                     action: "POLICY_PUBLISHED",
                     entityType: "SystemPolicy",
-                    entityId: newPolicyId.ToString(),
+                    entityId: newPolicy.PolicyId.ToString(),
                     oldValue: null,
                     newValue: new
                     {
-                        category,
-                        versionCode,
-                        versionNumber = nextVer,
-                        title = newPolicy.Title,
-                        scope = newPolicy.Scope,
-                        platformFeePercent = feePercent,
-                        payoutDays,
-                        effectiveDate,
-                        notes = $"Enacted new policy version {versionCode}: {newPolicy.Title} (Fee: {feePercent}%, Payout: {payoutDays} days)"
+                        newPolicy.Category,
+                        newPolicy.VersionCode,
+                        newPolicy.VersionNumber,
+                        newPolicy.Title,
+                        newPolicy.Scope,
+                        newPolicy.EffectiveDate,
+                        newPolicy.PlatformFeePercent,
+                        newPolicy.PayoutDays,
+                        notes = $"Ban hành chính sách mới {newPolicy.VersionCode}: {newPolicy.Title} (Lý do: {newPolicy.ChangeSummary})"
                     }
                 );
 
-                _logger.LogInformation("Policy version {VersionCode} published by Admin {AdminName} in admin_db. Fee: {Fee}%, Payout: {Payout} days", versionCode, adminName, feePercent, payoutDays);
+                _logger.LogInformation("Policy version {VersionCode} published by Admin {AdminName} in admin_db", newPolicy.VersionCode, adminName);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to create policy version in admin_db for category {Category}", category);
-                return StatusCode(500, new { success = false, message = "Server error while saving policy to database: " + ex.Message });
+                _logger.LogError(ex, "Failed to create policy version in admin_db for category {Category}", request.Category);
+                return StatusCode(500, new { success = false, message = "Lỗi máy chủ khi lưu chính sách vào cơ sở dữ liệu: " + ex.Message });
             }
 
             return Ok(new
             {
                 success = true,
-                message = $"Successfully published new policy version {newPolicy.VersionCode}!",
+                message = $"Ban hành thành công phiên bản chính sách mới {newPolicy.VersionCode}!",
                 data = newPolicy
             });
-        }
-
-        private static string NormalizeCategory(string? raw)
-        {
-            if (string.IsNullOrWhiteSpace(raw)) return "PRICE_TICKETING";
-            var upper = raw.Trim().ToUpperInvariant();
-            if (upper.Contains("PRICE")) return "PRICE_TICKETING";
-            if (upper.Contains("REFUND")) return "REFUND_CANCELLATION";
-            if (upper.Contains("QUEUE")) return "VIRTUAL_QUEUE";
-            if (upper.Contains("RISK")) return "RISK_ANTI_FRAUD";
-            if (upper.Contains("TERMS") || upper.Contains("TOS")) return "TERMS_OF_SERVICE";
-            return "PRICE_TICKETING";
         }
     }
 }

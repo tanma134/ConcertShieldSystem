@@ -127,11 +127,11 @@ const PaperclipIcon = () => (
 /**
  * IncidentDetailPage
  * Unified command hub for Concert Incident Management:
- *   - UC_16.1: View on-site incident details
- *   - UC_16.2: Attach additional evidence (photos, video, audio, PDF to Cloudinary)
- *   - UC_16.3: Update incident details & log progress notes
- *   - UC_16.4: Escalate incident to Admin
- *   - UC_16.5: View resolution report & Admin finalize resolution
+ * - View on-site incident details
+ * - Attach additional evidence (photos, video, audio, PDF to Cloudinary)
+ * - Update incident details & log progress notes
+ * - Escalate incident to Admin
+ * - View resolution report & Admin finalize resolution
  */
 export default function IncidentDetailPage() {
   const { id } = useParams();
@@ -145,13 +145,13 @@ export default function IncidentDetailPage() {
   const [resolution, setResolution] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Modal State: UC_16.2 Upload Evidence
+  // Modal State:  Upload Evidence
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadFile, setUploadFile] = useState(null);
   const [uploadCaption, setUploadCaption] = useState("");
   const [isUploading, setIsUploading] = useState(false);
 
-  // Modal State: UC_16.3 Update Incident
+  // Modal State:  Update Incident
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState({
     title: "",
@@ -164,12 +164,12 @@ export default function IncidentDetailPage() {
   });
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Modal State: UC_16.4 Escalate to Admin
+  // Modal State:  Escalate to Admin
   const [showEscalateModal, setShowEscalateModal] = useState(false);
   const [escalateReason, setEscalateReason] = useState("");
   const [isEscalating, setIsEscalating] = useState(false);
 
-  // Modal State: UC_16.5 Resolve Incident (Admin Action)
+  // Modal State:  Resolve Incident (Admin Action)
   const [showResolveModal, setShowResolveModal] = useState(false);
   const [resolveForm, setResolveForm] = useState({
     resolutionSummary: "",
@@ -374,8 +374,7 @@ export default function IncidentDetailPage() {
             <div className="inc-empty-icon">
               <ClockIcon />
             </div>
-            <div className="inc-empty-title">Loading incident #{id}...</div>
-            <div className="inc-empty-desc">Synchronizing dossier from Incident Command Center...</div>
+            <div className="inc-empty-title"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
           </div>
         </div>
       </Shell>
@@ -387,7 +386,7 @@ export default function IncidentDetailPage() {
       <Shell title="Incident Dossier">
         <div className="inc-container">
           <div className="inc-empty-state">
-            <div className="inc-empty-icon" style={{ color: "#ef4444" }}>
+            <div className="inc-empty-icon" style={{ color: "#d63a3a" }}>
               <AlertTriangleIcon />
             </div>
             <div className="inc-empty-title">Incident #{id} Not Found</div>
@@ -468,10 +467,10 @@ export default function IncidentDetailPage() {
               <div
                 style={{
                   fontSize: "12px",
-                  fontWeight: 600,
-                  color: "#fca5a5",
-                  background: "#2d1519",
-                  border: "1px solid #7f1d1d",
+                  fontWeight: 700,
+                  color: "#991b1b",
+                  background: "#fef2f2",
+                  border: "1px solid #fecaca",
                   borderRadius: "6px",
                   padding: "6px 12px",
                   display: "inline-flex",
@@ -484,7 +483,7 @@ export default function IncidentDetailPage() {
           </div>
         </div>
 
-        {/* Escalation Banner (UC_16.4) */}
+        {/* Escalation Banner */}
         {incident.isEscalated && (
           <div className="inc-escalation-banner" style={{ marginBottom: "20px" }}>
             <div className="inc-escalation-content">
@@ -509,7 +508,7 @@ export default function IncidentDetailPage() {
           </div>
         )}
 
-        {/* Resolution Banner (UC_16.5) */}
+        {/* Resolution Banner */}
         {isResolvedOrClosed && (
           <div className="inc-resolution-card" style={{ marginBottom: "20px" }}>
             <div className="inc-resolution-header">
@@ -517,7 +516,7 @@ export default function IncidentDetailPage() {
                 <h3>Incident Resolution Documentation</h3>
                 <div className="inc-resolution-meta">
                   Resolved By:{" "}
-                  <strong style={{ color: "#fff" }}>
+                  <strong style={{ color: "#065f46" }}>
                     {incident.resolvedByName || resolution?.resolvedByName || "System Administrator"}
                   </strong>
                   {" • "}
@@ -590,7 +589,7 @@ export default function IncidentDetailPage() {
                   <div className="inc-info-label">
                     Venue Location
                   </div>
-                  <div className="inc-info-val" style={{ color: "#fcd34d" }}>
+                  <div className="inc-info-val" style={{ color: "#92400e", fontWeight: 600 }}>
                     {incident.location}
                   </div>
                 </div>
@@ -625,22 +624,24 @@ export default function IncidentDetailPage() {
               </div>
             </div>
 
-            {/* Evidence Gallery (UC_16.2) */}
+            {/* Evidence Gallery */}
             <div className="inc-card">
               <div className="inc-card-title">
                 <div className="inc-card-title-left">
                   <span>Attached Evidence Vault</span>
-                  <span style={{ fontSize: "11px", background: "#374151", color: "#e5e7eb", padding: "2px 8px", borderRadius: "4px", fontWeight: 600 }}>
+                  <span style={{ fontSize: "11px", background: "#d8d0e6", color: "#4a4458", padding: "2px 8px", borderRadius: "4px", fontWeight: 600 }}>
                     {evidences.length} {evidences.length === 1 ? "file" : "files"}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  className="inc-btn inc-btn-primary inc-btn-sm"
-                  onClick={() => setShowUploadModal(true)}
-                >
-                  Upload Evidence
-                </button>
+                {!isResolvedOrClosed && (
+                  <button
+                    type="button"
+                    className="inc-btn inc-btn-primary inc-btn-sm"
+                    onClick={() => setShowUploadModal(true)}
+                  >
+                    Upload Evidence
+                  </button>
+                )}
               </div>
 
               {evidences.length === 0 ? (
@@ -649,13 +650,15 @@ export default function IncidentDetailPage() {
                   <p className="inc-empty-desc">
                     Attach photos, video recordings, audio dispatches, or witness statements directly to this incident report.
                   </p>
-                  <button
-                    type="button"
-                    className="inc-btn inc-btn-secondary inc-btn-sm"
-                    onClick={() => setShowUploadModal(true)}
-                  >
-                    Attach Files
-                  </button>
+                  {!isResolvedOrClosed && (
+                    <button
+                      type="button"
+                      className="inc-btn inc-btn-secondary inc-btn-sm"
+                      onClick={() => setShowUploadModal(true)}
+                    >
+                      Attach Files
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="inc-evidence-grid">
@@ -724,14 +727,16 @@ export default function IncidentDetailPage() {
                           >
                             Inspect
                           </a>
-                          <button
-                            type="button"
-                            className="inc-btn inc-btn-danger inc-btn-sm"
-                            title="Delete evidence"
-                            onClick={() => handleDeleteEvidence(ev.id)}
-                          >
-                            Delete
-                          </button>
+                          {!isResolvedOrClosed && (
+                            <button
+                              type="button"
+                              className="inc-btn inc-btn-danger inc-btn-sm"
+                              title="Delete evidence"
+                              onClick={() => handleDeleteEvidence(ev.id)}
+                            >
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
@@ -778,7 +783,7 @@ export default function IncidentDetailPage() {
                             })}
                           </span>
                         </div>
-                        <div style={{ fontSize: "11px", fontWeight: 700, color: "#818cf8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "4px" }}>
+                        <div style={{ fontSize: "11px", fontWeight: 700, color: "#4f46e5", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "4px" }}>
                           {item.actionType}
                           {item.newStatus && ` ➔ ${item.newStatus}`}
                         </div>
@@ -792,7 +797,7 @@ export default function IncidentDetailPage() {
           </div>
         </div>
 
-        {/* MODAL: UC_16.2 Upload Evidence */}
+        {/* MODAL:  Upload Evidence */}
         {showUploadModal && (
           <div className="inc-modal-overlay">
             <div className="inc-modal-content">
@@ -849,7 +854,7 @@ export default function IncidentDetailPage() {
                     className="inc-btn inc-btn-primary"
                     disabled={isUploading}
                   >
-                    {isUploading ? "Uploading to Cloudinary..." : "Upload Evidence"}
+                    {isUploading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Upload Evidence"}
                   </button>
                 </div>
               </form>
@@ -857,7 +862,7 @@ export default function IncidentDetailPage() {
           </div>
         )}
 
-        {/* MODAL: UC_16.3 Update Incident */}
+        {/* MODAL:  Update Incident */}
         {showEditModal && (
           <div className="inc-modal-overlay">
             <div className="inc-modal-content">
@@ -998,7 +1003,7 @@ export default function IncidentDetailPage() {
                     className="inc-btn inc-btn-primary"
                     disabled={isUpdating}
                   >
-                    {isUpdating ? "Saving..." : "Save Updates"}
+                    {isUpdating ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Save Updates"}
                   </button>
                 </div>
               </form>
@@ -1006,7 +1011,7 @@ export default function IncidentDetailPage() {
           </div>
         )}
 
-        {/* MODAL: UC_16.4 Escalate to Admin */}
+        {/* MODAL:  Escalate to Admin */}
         {showEscalateModal && (
           <div className="inc-modal-overlay">
             <div className="inc-modal-content">
@@ -1024,17 +1029,18 @@ export default function IncidentDetailPage() {
                 <div className="inc-modal-body">
                   <div
                     style={{
-                      background: "#2d1519",
-                      border: "1px solid #7f1d1d",
+                      background: "#fef2f2",
+                      border: "1px solid #fecaca",
                       borderRadius: "6px",
                       padding: "12px 14px",
                       marginBottom: "16px",
-                      color: "#fecdd3",
+                      color: "#991b1b",
                       fontSize: "13px",
                       lineHeight: "1.5",
+                      fontWeight: 500,
                     }}
                   >
-                    <strong style={{ color: "#fda4af" }}>Notice:</strong> Escalating notifies administration and requests intervention for this incident.
+                    <strong style={{ color: "#7f1d1d" }}>Notice:</strong> Escalating notifies administration and requests intervention for this incident.
                   </div>
 
                   <div className="inc-form-group">
@@ -1065,7 +1071,7 @@ export default function IncidentDetailPage() {
                     className="inc-btn inc-btn-danger"
                     disabled={isEscalating}
                   >
-                    {isEscalating ? "Escalating..." : "Confirm Escalation"}
+                    {isEscalating ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm Escalation"}
                   </button>
                 </div>
               </form>
@@ -1073,7 +1079,7 @@ export default function IncidentDetailPage() {
           </div>
         )}
 
-        {/* MODAL: UC_16.5 Resolve Incident */}
+        {/* MODAL:  Resolve Incident */}
         {showResolveModal && (
           <div className="inc-modal-overlay">
             <div className="inc-modal-content">
@@ -1091,12 +1097,12 @@ export default function IncidentDetailPage() {
                 <div className="inc-modal-body">
                   <div
                     style={{
-                      background: "#11261d",
-                      border: "1px solid #059669",
+                      background: "#d3f5e7",
+                      border: "1px solid #0e9e78",
                       borderRadius: "6px",
                       padding: "12px 14px",
                       marginBottom: "16px",
-                      color: "#a7f3d0",
+                      color: "#0b6b52",
                       fontSize: "13px",
                       lineHeight: "1.5",
                     }}
@@ -1150,7 +1156,7 @@ export default function IncidentDetailPage() {
                     className="inc-btn inc-btn-success"
                     disabled={isResolving}
                   >
-                    {isResolving ? "Submitting..." : "Confirm Resolution"}
+                    {isResolving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm Resolution"}
                   </button>
                 </div>
               </form>

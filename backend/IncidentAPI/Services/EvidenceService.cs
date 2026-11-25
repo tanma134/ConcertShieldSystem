@@ -1,25 +1,31 @@
 using IncidentAPI.Data;
 using IncidentAPI.DTOs;
 using IncidentAPI.Models;
-using Microsoft.EntityFrameworkCore;
+using IncidentAPI.Repositories;
 using Microsoft.AspNetCore.Http;
 
 namespace IncidentAPI.Services;
 
 public class EvidenceService : IEvidenceService
 {
-    private readonly IncidentDbContext _db;
+    private readonly IIncidentRepository _incidentRepository;
     private readonly ICloudinaryService _cloudinary;
     private readonly ILogger<EvidenceService> _logger;
 
     private const string CloudinaryFolder = "concert-shield/incidents/evidence";
     private const int MaxEvidencesPerIncident = 30;
 
-    public EvidenceService(IncidentDbContext db, ICloudinaryService cloudinary, ILogger<EvidenceService> logger)
+    [Microsoft.Extensions.DependencyInjection.ActivatorUtilitiesConstructor]
+    public EvidenceService(IIncidentRepository incidentRepository, ICloudinaryService cloudinary, ILogger<EvidenceService> logger)
     {
-        _db = db;
+        _incidentRepository = incidentRepository;
         _cloudinary = cloudinary;
         _logger = logger;
+    }
+
+    public EvidenceService(IncidentDbContext db, ICloudinaryService cloudinary, ILogger<EvidenceService> logger)
+        : this(new IncidentRepository(db), cloudinary, logger)
+    {
     }
 
     public async Task<IncidentEvidenceDto> UploadEvidenceAsync(
@@ -31,12 +37,10 @@ public class EvidenceService : IEvidenceService
         bool isAdmin,
         CancellationToken ct = default)
     {
-        var incident = await _db.Incidents
-            .FirstOrDefaultAsync(i => i.Id == incidentId, ct)
+        var incident = await _incidentRepository.GetIncidentByIdAsync(incidentId, ct)
             ?? throw new IncidentServiceException(404, $"Incident #{incidentId} not found.");
 
-        var currentCount = await _db.IncidentEvidences
-            .CountAsync(e => e.IncidentId == incidentId, ct);
+        var currentCount = await _incidentRepository.CountEvidenceByIncidentIdAsync(incidentId, ct);
         if (currentCount >= MaxEvidencesPerIncident)
             throw new IncidentServiceException(400, $"This incident has reached the maximum of {MaxEvidencesPerIncident} evidence files.");
 
@@ -63,9 +67,9 @@ public class EvidenceService : IEvidenceService
             UploadedAt = DateTime.UtcNow
         };
 
-        _db.IncidentEvidences.Add(evidence);
+        await _incidentRepository.AddEvidenceAsync(evidence, ct);
 
-        // Ghi nhận nhật ký đính kèm bằng chứng (UC_16.3)
+        // Ghi nhận nhật ký đính kèm bằng chứng
         var update = new IncidentUpdate
         {
             IncidentId = incidentId,
@@ -77,9 +81,9 @@ public class EvidenceService : IEvidenceService
             NewStatus = incident.Status,
             CreatedAt = DateTime.UtcNow
         };
-        _db.IncidentUpdates.Add(update);
+        await _incidentRepository.AddIncidentUpdateAsync(update, ct);
 
-        await _db.SaveChangesAsync(ct);
+        await _incidentRepository.SaveChangesAsync(ct);
 
         return new IncidentEvidenceDto
         {
@@ -100,33 +104,31 @@ public class EvidenceService : IEvidenceService
 
     public async Task<List<IncidentEvidenceDto>> GetEvidencesAsync(int incidentId, CancellationToken ct = default)
     {
-        return await _db.IncidentEvidences
-            .AsNoTracking()
-            .Where(e => e.IncidentId == incidentId)
-            .OrderByDescending(e => e.UploadedAt)
-            .Select(e => new IncidentEvidenceDto
-            {
-                Id = e.Id,
-                IncidentId = e.IncidentId,
-                FileUrl = e.FileUrl,
-                PublicId = e.PublicId,
-                FileName = e.FileName,
-                FileType = e.FileType,
-                FileSize = e.FileSize,
-                MimeType = e.MimeType,
-                Caption = e.Caption,
-                UploadedById = e.UploadedById,
-                UploadedByName = e.UploadedByName,
-                UploadedAt = e.UploadedAt
-            })
-            .ToListAsync(ct);
+        var evidences = await _incidentRepository.GetEvidenceListAsync(incidentId, ct);
+        return evidences.Select(e => new IncidentEvidenceDto
+        {
+            Id = e.Id,
+            IncidentId = e.IncidentId,
+            FileUrl = e.FileUrl,
+            PublicId = e.PublicId,
+            FileName = e.FileName,
+            FileType = e.FileType,
+            FileSize = e.FileSize,
+            MimeType = e.MimeType,
+            Caption = e.Caption,
+            UploadedById = e.UploadedById,
+            UploadedByName = e.UploadedByName,
+            UploadedAt = e.UploadedAt
+        }).ToList();
     }
 
     public async Task DeleteEvidenceAsync(int incidentId, int evidenceId, int requestingUserId, bool isAdmin, CancellationToken ct = default)
     {
-        var evidence = await _db.IncidentEvidences
-            .FirstOrDefaultAsync(e => e.Id == evidenceId && e.IncidentId == incidentId, ct)
+        var evidence = await _incidentRepository.GetEvidenceByIdAsync(evidenceId, ct)
             ?? throw new IncidentServiceException(404, "Evidence not found.");
+
+        if (evidence.IncidentId != incidentId)
+            throw new IncidentServiceException(404, "Evidence not found.");
 
         if (!isAdmin && evidence.UploadedById != requestingUserId)
             throw new IncidentServiceException(403, "You do not have permission to delete this evidence.");
@@ -141,7 +143,7 @@ public class EvidenceService : IEvidenceService
             _logger.LogWarning(ex, "Failed to delete file from Cloudinary {PublicId}", evidence.PublicId);
         }
 
-        _db.IncidentEvidences.Remove(evidence);
+        await _incidentRepository.RemoveEvidenceAsync(evidence, ct);
 
         var update = new IncidentUpdate
         {
@@ -152,8 +154,8 @@ public class EvidenceService : IEvidenceService
             Note = $"Evidence removed: {evidence.FileName}",
             CreatedAt = DateTime.UtcNow
         };
-        _db.IncidentUpdates.Add(update);
+        await _incidentRepository.AddIncidentUpdateAsync(update, ct);
 
-        await _db.SaveChangesAsync(ct);
+        await _incidentRepository.SaveChangesAsync(ct);
     }
 }

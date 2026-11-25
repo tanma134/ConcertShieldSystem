@@ -14,9 +14,9 @@ namespace TicketAPI.Services
     public class TicketService : ITicketService
     {
         private readonly ITicketRepository _ticketRepository;
-        private readonly IEventApiClient _eventApiClient;
+        private readonly IEventApiClient? _eventApiClient;
 
-        public TicketService(ITicketRepository ticketRepository, IEventApiClient eventApiClient)
+        public TicketService(ITicketRepository ticketRepository, IEventApiClient? eventApiClient = null)
         {
             _ticketRepository = ticketRepository;
             _eventApiClient = eventApiClient;
@@ -92,7 +92,9 @@ namespace TicketAPI.Services
             {
                 try
                 {
-                    var gates = await _eventApiClient.GetEventGatesAsync(eid);
+                    var gates = _eventApiClient == null
+                        ? new List<EventGateDto>()
+                        : await _eventApiClient.GetEventGatesAsync(eid);
                     gateMap[eid] = gates;
                 }
                 catch
@@ -150,7 +152,8 @@ namespace TicketAPI.Services
             List<EventGateDto>? gates = null;
             try
             {
-                gates = await _eventApiClient.GetEventGatesAsync(ticket.EventId);
+                if (_eventApiClient != null)
+                    gates = await _eventApiClient.GetEventGatesAsync(ticket.EventId);
             }
             catch
             {
@@ -196,34 +199,34 @@ namespace TicketAPI.Services
             string reason)
         {
             if (ticketId <= 0)
-                throw new ArgumentException("Ticket ID không hợp lệ.");
+                throw new ArgumentException("Invalid ticket ID.");
 
             if (adminUserId <= 0)
-                throw new ArgumentException("Admin ID không hợp lệ.");
+                throw new ArgumentException("Invalid admin ID.");
 
             var normalizedReason = reason?.Trim();
 
             if (string.IsNullOrWhiteSpace(normalizedReason))
-                throw new ArgumentException("Vui lòng nhập lý do thu hồi vé.");
+                throw new ArgumentException("Please provide a reason for revoking the ticket.");
 
             if (normalizedReason.Length > 500)
-                throw new ArgumentException("Lý do thu hồi không được vượt quá 500 ký tự.");
+                throw new ArgumentException("The revocation reason cannot exceed 500 characters.");
 
             var ticket = await _ticketRepository.GetTicketForAdminRevokeAsync(ticketId);
 
             if (ticket == null)
-                throw new KeyNotFoundException("Không tìm thấy vé.");
+                throw new KeyNotFoundException("Ticket not found.");
 
             if (ticket.CheckedInAt.HasValue ||
                 ticket.TicketQrTokens.Any(token => token.IsUsed))
             {
-                throw new InvalidOperationException("Không thể thu hồi vé đã check-in.");
+                throw new InvalidOperationException("A checked-in ticket cannot be revoked.");
             }
 
             if (ticket.Status != TicketStatuses.Active)
             {
                 throw new InvalidOperationException(
-                    "Chỉ có thể thu hồi vé đang ở trạng thái Active.");
+                    "Only Active tickets can be revoked.");
             }
 
             await _ticketRepository.RevokeTicketAsync(
@@ -311,7 +314,9 @@ namespace TicketAPI.Services
                         detail.TicketTypeId == ticket.TicketTypeId)
                     ?.UnitPrice,
                 GateName = ResolveGateName(ticket, null),
-                GateId = ResolveGateName(ticket, null)
+                GateId = ResolveGateName(ticket, null),
+                HasOwner = ticket.OwnerUserId.HasValue || !string.IsNullOrWhiteSpace(ticket.OwnerName),
+                HasQrToken = ticket.TicketQrTokens.Any(token => !token.IsRevoked)
             };
         }
     }

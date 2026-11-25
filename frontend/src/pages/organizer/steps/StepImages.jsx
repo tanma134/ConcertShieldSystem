@@ -146,25 +146,29 @@ export default function StepImages({
 
   return (
     <div className="ow-step-body">
-      <h2>2. Images</h2>
+      <h2>2. Event Images</h2>
 
       {readOnly && (
         <div className="ow-banner ow-banner-pending">
-          This event is in <strong>{event.status}</strong> status, so images
-          can't be changed.
+          Event is currently <strong>{event.status}</strong>; image updates are locked.
         </div>
       )}
 
       {error && <div className="ow-error">{error}</div>}
 
-      <div className="ow-image-grid">
+      <div className="ow-image-grid" style={{ alignItems: "start" }}>
         <div className="ow-image-card">
-          <h3>Poster (portrait)</h3>
-          <p className="ow-hint">Shown on the event card and homepage.</p>
+          <h3>Event Poster (Portrait)</h3>
+          <p className="ow-hint">Displayed on event cards, tickets, and search discovery.</p>
           {event?.posterUrl ? (
-            <img className="ow-image-preview ow-poster" src={event.posterUrl} alt="Poster" />
+            <img
+              className="ow-image-preview ow-poster"
+              src={event.posterUrl}
+              alt="Poster"
+              style={{ maxHeight: "360px", width: "auto", maxWidth: "100%", margin: "0 auto 10px", display: "block" }}
+            />
           ) : (
-            <div className="ow-image-placeholder ow-poster">No poster yet</div>
+            <div className="ow-image-placeholder ow-poster" style={{ maxHeight: "360px" }}>No poster uploaded</div>
           )}
           <div className="ow-image-actions">
             <input
@@ -178,7 +182,7 @@ export default function StepImages({
             />
             <label htmlFor="poster-input" className="tb-btn tb-btn-outline">
               {uploading.poster
-                ? "Uploading..."
+                ? <span className="app-loading-spinner" role="status" aria-label="Loading" />
                 : event?.posterUrl
                 ? "Replace poster"
                 : "Upload poster"}
@@ -196,12 +200,12 @@ export default function StepImages({
         </div>
 
         <div className="ow-image-card">
-          <h3>Banner (landscape)</h3>
-          <p className="ow-hint">Large cover image at the top of the detail page.</p>
+          <h3>Cover Banner (Landscape)</h3>
+          <p className="ow-hint">Hero banner across the top of the concert details page.</p>
           {event?.bannerUrl ? (
             <img className="ow-image-preview ow-banner" src={event.bannerUrl} alt="Banner" />
           ) : (
-            <div className="ow-image-placeholder ow-banner">No banner yet</div>
+            <div className="ow-image-placeholder ow-banner">No banner uploaded</div>
           )}
           <div className="ow-image-actions">
             <input
@@ -215,7 +219,7 @@ export default function StepImages({
             />
             <label htmlFor="banner-input" className="tb-btn tb-btn-outline">
               {uploading.banner
-                ? "Uploading..."
+                ? <span className="app-loading-spinner" role="status" aria-label="Loading" />
                 : event?.bannerUrl
                 ? "Replace banner"
                 : "Upload banner"}
@@ -233,20 +237,37 @@ export default function StepImages({
         </div>
       </div>
 
-      <div className="ow-gallery-section">
-        <h3>Photo gallery</h3>
-        <p className="ow-hint">Up to 20 photos. The first photo automatically becomes the main image.</p>
+      <div className="ow-gallery-section" style={{ marginTop: "16px" }}>
+        <h3>Event Photo Gallery</h3>
+        <p className="ow-hint">Up to 20 images of the venue, artists, and past performances. First photo is automatically set as main.</p>
+
+        {gallery.length === 0 && (
+          <div
+            style={{
+              padding: "24px 16px",
+              textAlign: "center",
+              background: "var(--tb-surface-2)",
+              borderRadius: "10px",
+              color: "var(--tb-text-muted)",
+              fontSize: "13px",
+              border: "1px dashed var(--tb-border)",
+              margin: "12px 0 16px 0",
+            }}
+          >
+            No photos uploaded to gallery yet.
+          </div>
+        )}
 
         <div className="ow-gallery-grid">
           {gallery.map((img) => (
             <div key={img.imageId} className="ow-gallery-item">
               <img src={img.imageUrl} alt="" />
-              {img.isMain && <span className="ow-gallery-badge">Main photo</span>}
+              {img.isMain && <span className="ow-gallery-badge">Cover</span>}
               {!readOnly && (
                 <div className="ow-gallery-item-actions">
                   {!img.isMain && (
                     <button type="button" onClick={() => handleSetMain(img.imageId)}>
-                      Set as main
+                      Set as cover
                     </button>
                   )}
                   <button
@@ -274,7 +295,7 @@ export default function StepImages({
                 className="ow-file-input"
               />
               <label htmlFor="gallery-input">
-                {uploading.gallery ? "Uploading..." : "+ Add photos"}
+                {uploading.gallery ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Add photos"}
               </label>
             </div>
           )}
@@ -283,13 +304,13 @@ export default function StepImages({
 
       <div className="ow-actions">
         <button type="button" className="tb-btn tb-btn-outline" onClick={onBack}>
-          ← Back
+          Back
         </button>
         <button type="button" className="tb-btn tb-btn-outline" onClick={handleSaveDraft}>
-          💾 Save draft
+          Save Draft
         </button>
         <button type="button" className="tb-btn tb-btn-primary" onClick={onNext}>
-          Next →
+          Continue
         </button>
       </div>
     </div>

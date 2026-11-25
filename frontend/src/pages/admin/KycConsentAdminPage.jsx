@@ -112,7 +112,7 @@ function CreateModal({ onClose, onDone, setError }) {
           </div>
           <div className="modal-footer">
             <button type="button" className="admin-button-secondary" onClick={onClose} disabled={saving}>Cancel</button>
-            <button type="submit" className="admin-button" disabled={saving}>{saving ? "Saving..." : "Create"}</button>
+            <button type="submit" className="admin-button" disabled={saving}>{saving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Create"}</button>
           </div>
         </form>
       </div>
@@ -186,7 +186,7 @@ export default function KycConsentAdminPage() {
         </div>
 
         {loading ? (
-          <div className="empty-state">Loading...</div>
+          <div className="empty-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
         ) : versions.length === 0 ? (
           <div className="empty-state">No consent versions yet.</div>
         ) : (
@@ -239,7 +239,7 @@ export default function KycConsentAdminPage() {
               <button type="button" className="icon-button" onClick={() => setModal(null)}>x</button>
             </div>
             <div className="modal-body" style={{ maxHeight: "65vh", overflowY: "auto" }}>
-              {modal.data ? <ConsentPreview data={modal.data} /> : <div className="empty-state">Loading...</div>}
+              {modal.data ? <ConsentPreview data={modal.data} /> : <div className="empty-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
             </div>
             <div className="modal-footer">
               <button type="button" className="admin-button-secondary" onClick={() => setModal(null)}>Close</button>
@@ -264,7 +264,7 @@ export default function KycConsentAdminPage() {
             <div className="modal-footer">
               <button type="button" className="admin-button-secondary" onClick={() => setModal(null)} disabled={busy}>Cancel</button>
               <button type="button" className={`admin-button ${modal.type === "delete" ? "danger" : ""}`} onClick={confirm} disabled={busy}>
-                {busy ? "Working..." : "Confirm"}
+                {busy ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm"}
               </button>
             </div>
           </div>

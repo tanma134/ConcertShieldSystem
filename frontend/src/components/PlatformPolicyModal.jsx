@@ -87,7 +87,7 @@ export default function PlatformPolicyModal({ isOpen, onClose, onAgree }) {
 
           {loading ? (
             <div style={{ textAlign: "center", padding: "24px", color: "#94a3b8" }}>
-              Loading platform policy details directly from database...
+              <span className="app-loading-spinner" role="status" aria-label="Loading" />
             </div>
           ) : (
             <div className="policy-category-block" style={{ padding: "18px", borderRadius: "10px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
@@ -174,7 +174,12 @@ export default function PlatformPolicyModal({ isOpen, onClose, onAgree }) {
         </div>
 
         <div className="policy-modal-footer">
-          <button className="policy-btn-close" onClick={onClose}>
+          <button
+            type="button"
+            className="tb-btn tb-btn-outline"
+            onClick={onClose}
+            style={{ padding: "8px 16px", fontSize: "0.85rem", color: "#7a7392", borderColor: "#dcd3e8" }}
+          >
             Close
           </button>
           <button

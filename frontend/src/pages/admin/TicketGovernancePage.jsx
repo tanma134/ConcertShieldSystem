@@ -322,7 +322,7 @@ export default function TicketGovernancePage() {
             <div className="stat-info">
               <span className="stat-label">Total Revoked Tickets</span>
               <strong className="stat-val">
-                {loadingStats ? "..." : stats.totalRevokedTickets.toLocaleString()}
+                {loadingStats ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : stats.totalRevokedTickets.toLocaleString()}
               </strong>
               <span className="stat-sub">System-wide invalidations</span>
             </div>
@@ -332,7 +332,7 @@ export default function TicketGovernancePage() {
             <div className="stat-info">
               <span className="stat-label">Bulk Event Disruptions</span>
               <strong className="stat-val">
-                {loadingStats ? "..." : stats.totalBulkEvents}
+                {loadingStats ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : stats.totalBulkEvents}
               </strong>
               <span className="stat-sub">Reconciliation audit records</span>
             </div>
@@ -342,7 +342,7 @@ export default function TicketGovernancePage() {
             <div className="stat-info">
               <span className="stat-label">Reissued Tickets</span>
               <strong className="stat-val">
-                {loadingStats ? "..." : stats.totalReissuedTickets}
+                {loadingStats ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : stats.totalReissuedTickets}
               </strong>
               <span className="stat-sub">1-to-1 traceability: Old to New</span>
             </div>
@@ -388,7 +388,7 @@ export default function TicketGovernancePage() {
           </button>
         </div>
 
-        {/* TAB 1: BULK REVOKE (UC_8.7) */}
+        {/* TAB 1: BULK REVOKE */}
         {activeTab === "BULK_REVOKE" && (
           <div className="gov-tab-content">
             <div className="gov-bulk-layout">
@@ -458,33 +458,35 @@ export default function TicketGovernancePage() {
                         <span>Status: <strong>{selectedEventObj.status}</strong></span>
                       </div>
 
-                      {/* Prominent Warning Box */}
+                      {/* Prominent warning box for tickets to be revoked */}
                       <div className="gov-warning-box-prominent" style={{
-                        marginTop: "12px",
-                        padding: "16px",
-                        backgroundColor: "#fff8e6",
-                        border: "1.5px solid #ffd591",
-                        borderRadius: "8px"
+                        marginTop: "14px",
+                        padding: "18px",
+                        backgroundColor: "#fef2f2",
+                        border: "1.5px solid #fecaca",
+                        borderRadius: "10px"
                       }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-                          <strong style={{ fontSize: "1rem", color: "#d46b08" }}>
-                            EVENT STATUS: {selectedEventObj.status.toUpperCase()}
+                          <strong style={{ fontSize: "15px", color: "#991b1b" }}>
+                            WARNING: EVENT TICKETS PENDING BULK REVOCATION ({selectedEventObj.status.toUpperCase()})
                           </strong>
                         </div>
-                        <p style={{ margin: "4px 0 10px 0", fontSize: "0.9rem", color: "#595959" }}>
-                          Event <strong>"{selectedEventObj.title}"</strong> has been approved for cancellation or rescheduling. Executing bulk revocation will immediately invalidate all active tickets, revoke gate access credentials, and notify ticket owners.
+                        <p style={{ margin: "6px 0 12px 0", fontSize: "13.5px", color: "#7f1d1d", lineHeight: 1.5 }}>
+                          Event <strong>"{selectedEventObj.title}"</strong> is undergoing event disruption / reschedule processing. Executing bulk revocation will immediately invalidate all active tickets, flush gate validation cache (Redis), and trigger refund / reconciliation procedures.
                         </p>
                         <div style={{
-                          display: "inline-block",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "8px",
                           padding: "8px 16px",
-                          backgroundColor: "#fff1f0",
-                          border: "1.5px solid #ffa39e",
-                          borderRadius: "6px",
-                          color: "#cf1322",
-                          fontWeight: "bold",
-                          fontSize: "1.05rem"
+                          backgroundColor: "#ffffff",
+                          border: "1.5px solid #f87171",
+                          borderRadius: "8px",
+                          color: "#dc2626",
+                          fontWeight: "800",
+                          fontSize: "14px"
                         }}>
-                          Total Active Tickets to Invalidate: {Number(selectedEventObj.activeTicketsCount).toLocaleString()} tickets
+                          <span>Total Tickets to be Revoked: <strong>{Number(selectedEventObj.activeTicketsCount).toLocaleString()} tickets</strong></span>
                         </div>
                       </div>
                     </>
@@ -498,14 +500,14 @@ export default function TicketGovernancePage() {
                   <textarea
                     className="form-control"
                     rows={3}
-                    placeholder="Enter revocation justification reason..."
+                    placeholder='Mandatory revocation reason (e.g., "Event cancelled due to storm weather per Official Notice #12", "Postponed to next month per approved change request CR-12")...'
                     value={reasonNote}
                     onChange={(e) => setReasonNote(e.target.value)}
                     disabled={submittingBulk}
                   />
                   {!reasonNote.trim() && (
-                    <small style={{ color: "#cf1322", display: "block", marginTop: "6px", fontWeight: "500" }}>
-                      * Audit justification reason is required to confirm bulk revocation.
+                    <small style={{ color: "#dc2626", display: "block", marginTop: "6px", fontWeight: "600" }}>
+                      * Revocation reason (Audit Justification) is required before confirming.
                     </small>
                   )}
                 </div>
@@ -520,7 +522,7 @@ export default function TicketGovernancePage() {
                     />
                     <span>
                       <strong>Trigger automated in-app notification to all ticket holders</strong>
-                      <small className="help-text">Sends notification directly to customer accounts holding tickets for this event.</small>
+                      <small className="help-text">Automatically dispatches notifications to each ticket owner's account.</small>
                     </span>
                   </label>
                 </div>
@@ -542,8 +544,8 @@ export default function TicketGovernancePage() {
                       if (!reasonNote.trim()) {
                         setNoticeDialog({
                           type: "WARNING",
-                          title: "Audit Reason Required",
-                          message: "Please enter detailed justification notes for the reconciliation audit record.",
+                          title: "Revocation Reason Required",
+                          message: "Revocation reason is required (e.g. 'Show postponed due to weather') before confirmation.",
                         });
                         return;
                       }
@@ -553,6 +555,43 @@ export default function TicketGovernancePage() {
                     Confirm & Execute Bulk Revocation
                   </button>
                 </div>
+              </div>
+
+              {/* Reconciliation Records History Panel */}
+              <div className="gov-card gov-reconcile-card">
+                <div className="gov-card-header">
+                  <h3>Reconciliation Records (Audit Trail)</h3>
+                  <p className="gov-card-desc">
+                    Historical event-level bulk revocation logs recorded for financial reconciliation and compliance auditing.
+                  </p>
+                </div>
+
+                {loadingReconciliations ? (
+                  <div className="loading-spinner-box"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
+                ) : reconciliations.length === 0 ? (
+                  <div className="empty-state">No bulk revocation reconciliation records found.</div>
+                ) : (
+                  <div className="reconcile-list">
+                    {reconciliations.map((r) => (
+                      <div key={r.reconciliationId} className="reconcile-item">
+                        <div className="reconcile-top">
+                          <span className="reconcile-id">Record #{r.reconciliationId}</span>
+                          <span className={`badge-reason ${r.reasonType}`}>
+                            {r.reasonType === "EVENT_CANCELLED" ? "CANCELLED" : "POSTPONED"}
+                          </span>
+                          <span className="badge-refund-status">{r.refundStatus}</span>
+                        </div>
+                        <h4 className="reconcile-title">{r.eventTitle}</h4>
+                        <div className="reconcile-meta">
+                          <span>Admin: <strong>{r.adminName}</strong></span>
+                          <span>Revoked Tickets: <strong>{r.totalTicketsRevoked} tickets</strong></span>
+                          <span>Date: <strong>{new Date(r.createdAt).toLocaleString("en-US")}</strong></span>
+                        </div>
+                        <p className="reconcile-note">"{r.notes}"</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -584,10 +623,10 @@ export default function TicketGovernancePage() {
                           <strong>INSTANTLY INVALIDATES</strong> ticket QR identifiers across Gate Validation Cache (Redis) to block entry at all terminals.
                         </li>
                         <li>
-                          Creates an immutable system reconciliation audit record and delivers in-app alerts directly to ticket holders.
+                          Generates system reconciliation audit records and dispatches notifications directly to all ticket holders.
                         </li>
                       </ul>
-                      <p className="text-danger fw-bold">
+                      <p className="text-danger fw-bold" style={{ margin: 0, fontWeight: 700 }}>
                         This action cannot be undone directly. Are you sure you wish to proceed?
                       </p>
                     </div>
@@ -613,7 +652,7 @@ export default function TicketGovernancePage() {
                       onClick={handleBulkRevokeSubmit}
                       disabled={submittingBulk}
                     >
-                      {submittingBulk ? "Processing atomic transaction..." : "I Confirm & Revoke All Tickets"}
+                      {submittingBulk ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "I Confirm & Revoke All Tickets"}
                     </button>
                   </div>
                 </div>
@@ -622,7 +661,7 @@ export default function TicketGovernancePage() {
           </div>
         )}
 
-        {/* TAB 2: REVOCATION HISTORY (UC_8.8) */}
+        {/* TAB 2: REVOCATION HISTORY */}
         {activeTab === "REVOCATION_HISTORY" && (
           <div className="gov-tab-content">
             <div className="gov-card">
@@ -700,7 +739,7 @@ export default function TicketGovernancePage() {
 
               {/* Revocations Table */}
               {loadingRevocations ? (
-                <div className="loading-spinner-box">Loading revocation records...</div>
+                <div className="loading-spinner-box"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
               ) : revocations.length === 0 ? (
                 <div className="empty-state">No revoked tickets match the selected filters.</div>
               ) : (
@@ -790,7 +829,7 @@ export default function TicketGovernancePage() {
           </div>
         )}
 
-        {/* TAB 3: REISSUE HISTORY (UC_8.10) */}
+        {/* TAB 3: REISSUE HISTORY */}
         {activeTab === "REISSUE_HISTORY" && (
           <div className="gov-tab-content">
             <div className="gov-card">
@@ -851,7 +890,7 @@ export default function TicketGovernancePage() {
 
               {/* Reissue Table */}
               {loadingReissues ? (
-                <div className="loading-spinner-box">Loading reissue history records...</div>
+                <div className="loading-spinner-box"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
               ) : reissues.length === 0 ? (
                 <div className="empty-state">No ticket reissue records match the selected filters.</div>
               ) : (
@@ -880,7 +919,7 @@ export default function TicketGovernancePage() {
                               <span className="badge-revoked-tag">Revoked</span>
                             </div>
                           </td>
-                          <td className="arrow-cell">to</td>
+                          <td className="arrow-cell">➔</td>
                           <td>
                             <div className="ticket-trace-box new-ticket">
                               <span className="trace-label">NEW TICKET</span>
@@ -1006,7 +1045,7 @@ export default function TicketGovernancePage() {
                 <div className="modal-summary-table">
                   <div>
                     <span>Reconciliation Record ID:</span>
-                    <strong>{successResultModal.reconciliationId}</strong>
+                    <strong>#{successResultModal.reconciliationId}</strong>
                   </div>
                   <div>
                     <span>Total Tickets Revoked:</span>

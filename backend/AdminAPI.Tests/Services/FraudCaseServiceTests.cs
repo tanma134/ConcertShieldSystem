@@ -3,6 +3,7 @@ using System.Security.Claims;
 using AdminAPI.Controllers;
 using AdminAPI.DTOs;
 using AdminAPI.Models;
+using AdminAPI.Repositories;
 using AdminAPI.Services;
 using AdminAPI.Services.Risks;
 using AdminAPI.Tests.Support;
@@ -19,7 +20,8 @@ public class FraudCaseServiceTests : DbTestBase
 {
     private const int Staff = 99;
     private const string Note = "Confirmed after reviewing the order history";
-    private FraudCaseService Sut() => new(Db, Cfg.Object);
+    private FraudCaseService Sut() => new(new FraudAlertRepository(Db), new RiskDecisionRepository(Db),
+        new RiskAppealRepository(Db), Cfg.Object);
 
     // ===== Function8_FraudCaseList =====
 
@@ -388,18 +390,51 @@ public class FraudCaseServiceTests : DbTestBase
     }
 
     [Fact] // A
-    public async Task UTCID16_Resolve_CaseNotAssigned_Throws409()
+    public async Task UTCID16_Resolve_CaseNotAssigned_IsAllowed()
     {
-        Alert(10, "Open", assignedTo: null);
-        await Err(() => Sut().ResolveAsync(10, "Confirmed", Note, 5), 409, "The case must be assigned");
-        Assert.Equal(0, Db.SaveCalls);
+        // A single-Admin deployment must be able to close an obvious false positive
+        // without first assigning it to someone.
+        var a = Alert(10, "Open", assignedTo: null);
+        var r = await Sut().ResolveAsync(10, "FalsePositive", Note, 5);
+        Assert.Equal("FalsePositive", a.Status);
+        Assert.Equal(5, r.ReviewedBy);
+        Assert.Equal(1, Db.SaveCalls);
+    }
+
+    [Fact] // N - the assigned Staff member records a recommendation for the Admin
+    public async Task UTCID16b_Recommend_AssignedStaff_StoresRecommendationAndKeepsCaseInReview()
+    {
+        var a = Alert(10, "InReview", assignedTo: 5);
+        var r = await Sut().RecommendAsync(10, "FalsePositive", "Customer order history looks normal", 5);
+        Assert.Equal("InReview", a.Status);
+        Assert.Equal("FalsePositive", a.RecommendedOutcome);
+        Assert.Equal(5, a.RecommendedBy);
+        Assert.Equal("Customer order history looks normal", a.Recommendation);
+        Assert.Equal("FalsePositive", r.RecommendedOutcome);
+        Assert.Equal(1, Db.SaveCalls);
+    }
+
+    [Fact] // N - an Admin can resolve a case assigned to Staff and the recommendation is kept
+    public async Task UTCID16c_Resolve_AdminOnStaffRecommendation_ClosesCase()
+    {
+        var a = Alert(10, "InReview", assignedTo: 5);
+        a.Recommendation = "Looks like a false positive";
+        a.RecommendedOutcome = "FalsePositive";
+        a.RecommendedBy = 5;
+        a.RecommendedAt = DateTime.UtcNow.AddHours(-1);
+        Db.SaveChanges();
+
+        var r = await Sut().ResolveAsync(10, "FalsePositive", "Agreed with the reviewer", 9);
+        Assert.Equal("FalsePositive", a.Status);
+        Assert.Equal(9, a.ReviewedBy);
+        Assert.Equal("FalsePositive", r.RecommendedOutcome);
     }
 
     [Fact] // A
-    public async Task UTCID17_Resolve_ActorIsNotTheAssignedAnalyst_Throws403()
+    public async Task UTCID17_Recommend_ActorIsNotTheAssignedStaff_Throws403()
     {
         Alert(10, "InReview", assignedTo: 6);
-        await Err(() => Sut().ResolveAsync(10, "Confirmed", Note, 5), 403, "Only the assigned analyst");
+        await Err(() => Sut().RecommendAsync(10, "Confirmed", Note, 5), 403, "Only the assigned Staff member");
         Assert.Equal(0, Db.SaveCalls);
     }
 

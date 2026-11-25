@@ -37,6 +37,12 @@ namespace TicketAPI.UnitTests
 
         public Task<IReadOnlyList<int>> GetReturnReviewEventIdsAsync(int staffUserId) =>
             Task.FromResult<IReadOnlyList<int>>(new List<int>());
+
+        public Task<List<EventSelectionDTO>> GetDisruptedEventsForGovernanceAsync() =>
+            Task.FromResult(new List<EventSelectionDTO>());
+
+        public Task<List<EventGateDto>> GetEventGatesAsync(int eventId) =>
+            Task.FromResult(new List<EventGateDto>());
     }
 
     public class CheckinServiceTests

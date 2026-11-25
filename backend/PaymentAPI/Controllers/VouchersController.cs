@@ -20,9 +20,8 @@ namespace PaymentAPI.Controllers
             _voucherService = voucherService;
         }
 
-        /// <summary>
-        /// Tạo Voucher mới (Admin tạo SYSTEM/ORGANIZER/EVENT; Organizer tạo ORGANIZER/EVENT).
-        /// </summary>
+        // Tao voucher giam gia moi danh cho Admin va Organizer
+        [Authorize(Roles = "Organizer,Admin")]
         [HttpPost]
         public async Task<IActionResult> CreateVoucher([FromBody] CreateVoucherDTO dto)
         {
@@ -37,11 +36,8 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Lấy danh sách Voucher có phân trang và bộ lọc.
-        /// Role Admin: Thấy toàn bộ voucher.
-        /// Role Organizer: Chỉ thấy voucher do mình tạo hoặc sở hữu.
-        /// </summary>
+        // Lay danh sach voucher co phan trang va bo loc danh cho Admin va Organizer
+        [Authorize(Roles = "Organizer,Admin")]
         [HttpGet]
         public async Task<IActionResult> GetVouchers(
             [FromQuery] int page = 1,
@@ -72,9 +68,8 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Xem chi tiết Voucher theo ID.
-        /// </summary>
+        // Xem thong tin chi tiet voucher theo ma dinh danh danh cho Admin va Organizer
+        [Authorize(Roles = "Organizer,Admin")]
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetVoucherById(int id)
         {
@@ -89,9 +84,8 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Xem lịch sử đơn hàng đã sử dụng Voucher (Audit Log).
-        /// </summary>
+        // Xem lich su cac don hang da su dung voucher danh cho Admin va Organizer
+        [Authorize(Roles = "Organizer,Admin")]
         [HttpGet("{id:int}/usages")]
         public async Task<IActionResult> GetVoucherUsages(int id)
         {
@@ -106,9 +100,8 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Bật/Tắt trạng thái hoạt động của Voucher (is_active).
-        /// </summary>
+        // Bat hoac tat trang thai kich hoat cua voucher danh cho Admin va Organizer
+        [Authorize(Roles = "Organizer,Admin")]
         [HttpPatch("{id:int}/status")]
         public async Task<IActionResult> UpdateVoucherStatus(int id, [FromBody] UpdateVoucherStatusDTO? dto)
         {
@@ -135,9 +128,8 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Cập nhật thông tin Voucher (UC_44 / UC_44.2).
-        /// </summary>
+        // Cap nhat thong tin voucher he thong hoac voucher cua ban to chuc
+        [Authorize(Roles = "Organizer,Admin")]
         [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateVoucher(int id, [FromBody] UpdateVoucherDTO dto)
         {
@@ -152,9 +144,8 @@ namespace PaymentAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Xóa mềm Voucher (is_deleted = true).
-        /// </summary>
+        // Xoa mem voucher khoi he thong bang cach danh dau IsDeleted
+        [Authorize(Roles = "Organizer,Admin")]
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteVoucher(int id)
         {
@@ -169,6 +160,7 @@ namespace PaymentAPI.Controllers
             }
         }
 
+        [Authorize(Roles = "Customer")]
         [HttpGet("available")]
         public async Task<IActionResult> GetAvailableForUser([FromQuery(Name = "event_id")] int eventId)
         {
@@ -186,6 +178,7 @@ namespace PaymentAPI.Controllers
             }
         }
 
+        [Authorize(Roles = "Customer")]
         [HttpPost("apply")]
         public async Task<IActionResult> ApplyVoucher(
             [FromBody] ApplyVoucherRequestDTO request)
