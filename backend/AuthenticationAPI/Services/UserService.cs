@@ -13,6 +13,9 @@ namespace AuthenticationAPI.Services
             _userRepository = userRepository;
         }
 
+        public Task<int> RevokeAllSessionsAsync(int userId) =>
+            _userRepository.RevokeAllRefreshTokensAsync(userId);
+
         public async Task<List<UserDTO>> GetUsersAsync()
         {
             var users = await _userRepository.GetAllAsync();

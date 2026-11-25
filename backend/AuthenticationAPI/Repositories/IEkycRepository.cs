@@ -7,20 +7,41 @@ namespace AuthenticationAPI.Repositories
         Task<int> CreateAsync(EkycVerification record);
 
         /// <summary>
-        /// Lýu record. N?u truy?n userEkycStatus th? c?p nh?t luôn User.EkycStatus trong cùng 1 l?n SaveChanges
-        /// (không bao gi? h? c?p user ðang ? tr?ng thái "Passed").
+        /// Saves the record. When userEkycStatus is given, User.EkycStatus is updated in the same
+        /// SaveChanges (a user already "Passed" is never downgraded).
+        /// Throws <see cref="DuplicateRecordException"/> when a unique index (e.g. one CCCD per account) is violated.
         /// </summary>
         Task UpdateAsync(EkycVerification record, string? userEkycStatus = null);
 
+        /// <summary>Persists changes made to records that were loaded by this repository (tracked).</summary>
+        Task SaveChangesAsync(CancellationToken ct = default);
+
         Task<EkycVerification?> GetByIdAsync(int ekycId);
 
-        /// <summary>Record m?i nh?t c?a user có tr?ng thái Passed ho?c ManualReview (null n?u chýa có).</summary>
+        /// <summary>Latest record of the user with status Passed or ManualReview (null if none).</summary>
         Task<EkycVerification?> GetActiveByUserAsync(int userId);
 
-        /// <summary>CCCD (theo hash) ð? ðý?c tài kho?n KHÁC xác th?c/ðang ch? duy?t chýa.</summary>
+        /// <summary>The user's N most recent records (newest first), used to count consecutive failures.</summary>
+        Task<List<EkycVerification>> GetRecentByUserAsync(int userId, int take);
+
+        /// <summary>All records of a user, read-only.</summary>
+        Task<List<EkycVerification>> GetAllByUserAsync(int userId);
+
+        /// <summary>Has this CCCD (by hash) been verified / is it awaiting review on ANOTHER account?</summary>
         Task<bool> IsCccdUsedByAnotherUserAsync(string cccdHash, int userId);
 
-        /// <summary>N record m?i nh?t c?a user (m?i nh?t trý?c), dùng ð? ð?m s? l?n th?t b?i liên ti?p .</summary>
-        Task<List<EkycVerification>> GetRecentByUserAsync(int userId, int take);
+        /// <summary>Has this CCCD (by hash) been verified (Passed) on ANOTHER account?</summary>
+        Task<bool> IsCccdVerifiedByAnotherUserAsync(string cccdHash, int userId);
+
+        /// <summary>Records that still hold data to delete (tracked, so they can be modified and saved).</summary>
+        Task<List<EkycVerification>> GetDeletableByUserAsync(int userId, bool keepDocumentHash);
+
+        Task<bool> HasDeletableAsync(int userId, bool keepDocumentHash);
+
+        /// <summary>Requests waiting for manual review, oldest first.</summary>
+        Task<(List<EkycVerification> Items, int Total)> GetManualReviewPageAsync(int page, int pageSize);
+
+        /// <summary>Records whose data has passed the retention period (tracked).</summary>
+        Task<List<EkycVerification>> GetPurgeCandidatesAsync(DateTime cutoffUtc, int batchSize, CancellationToken ct = default);
     }
 }

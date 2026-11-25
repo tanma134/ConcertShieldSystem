@@ -1,19 +1,9 @@
 using System.Net.Http.Json;
-using AdminAPI.Data;
 using AdminAPI.Models;
-using Microsoft.EntityFrameworkCore;
+using AdminAPI.Repositories;
 
 namespace AdminAPI.Services.Risks;
 
-/// <summary>
-/// Delivers pending rows of risk_notification to NotificationAPI, and closes
-/// temporary blocks whose ExpiresAt has passed.
-///
-/// Both jobs exist because every risk decision writes a notification row and a
-/// block expires on a wall-clock deadline; without a worker those rows stay
-/// "pending" forever and the customer is never told anything.
-/// Runs every 30 seconds; safe to run multiple instances (delivery is keyed).
-/// </summary>
 public sealed class RiskMaintenanceWorker : BackgroundService
 {
     private static readonly TimeSpan Interval = TimeSpan.FromSeconds(30);
@@ -58,16 +48,12 @@ public sealed class RiskMaintenanceWorker : BackgroundService
     private async Task ExpireBlocksAsync(CancellationToken ct)
     {
         using var scope = _scopes.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AdminDbContext>();
+        var decisions = scope.ServiceProvider.GetRequiredService<IRiskDecisionRepository>();
+        var notifications = scope.ServiceProvider.GetRequiredService<IRiskNotificationRepository>();
         var tickets = scope.ServiceProvider.GetService<ITicketRiskClient>();
         var now = DateTime.UtcNow;
 
-        var expired = await db.RiskDecisions
-            .Where(d => d.Action == "BLOCK" && d.Status == "Active" && !d.IsShadow
-                        && d.ExpiresAt != null && d.ExpiresAt <= now)
-            .OrderBy(d => d.ExpiresAt)
-            .Take(BatchSize)
-            .ToListAsync(ct);
+        var expired = await decisions.GetExpiredBlocksAsync(now, BatchSize, ct);
 
         if (expired.Count == 0) return;
 
@@ -77,10 +63,7 @@ public sealed class RiskMaintenanceWorker : BackgroundService
                      .GroupBy(d => d.TicketId!.Value))
         {
             // Only lift the ticket if no other active ticket block remains.
-            var stillBlocked = await db.RiskDecisions.AsNoTracking().AnyAsync(x =>
-                x.TicketId == group.Key && x.Scope == "TICKET" && x.Action == "BLOCK"
-                && x.Status == "Active" && !x.IsShadow
-                && x.ExpiresAt != null && x.ExpiresAt > now, ct);
+            var stillBlocked = await decisions.HasUnexpiredTicketBlockAsync(group.Key, now, ct);
             if (stillBlocked || tickets == null) continue;
 
             try
@@ -104,9 +87,9 @@ public sealed class RiskMaintenanceWorker : BackgroundService
         }
 
         foreach (var d in expired.Where(d => d.Status == "Expired" && d.UserId.HasValue))
-            db.RiskNotifications.Add(RiskSupport.ExpiryNotice(d, now));
+            await notifications.AddAsync(RiskSupport.ExpiryNotice(d, now), ct);
 
-        await db.SaveChangesAsync(ct);
+        await decisions.SaveChangesAsync(ct);
         _logger.LogInformation("Expired {Count} risk block(s)", expired.Count);
     }
 
@@ -114,14 +97,10 @@ public sealed class RiskMaintenanceWorker : BackgroundService
     private async Task DeliverNotificationsAsync(CancellationToken ct)
     {
         using var scope = _scopes.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AdminDbContext>();
+        var notifications = scope.ServiceProvider.GetRequiredService<IRiskNotificationRepository>();
         var client = _http.CreateClient("RiskNotificationDelivery");
 
-        var pending = await db.RiskNotifications
-            .Where(n => n.DeliveredAt == null)
-            .OrderBy(n => n.RiskNotificationId)
-            .Take(BatchSize)
-            .ToListAsync(ct);
+        var pending = await notifications.GetPendingAsync(BatchSize, ct);
 
         if (pending.Count == 0) return;
 
@@ -161,6 +140,6 @@ public sealed class RiskMaintenanceWorker : BackgroundService
             }
         }
 
-        await db.SaveChangesAsync(ct);
+        await notifications.SaveChangesAsync(ct);
     }
 }

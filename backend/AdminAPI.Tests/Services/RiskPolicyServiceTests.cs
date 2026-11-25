@@ -3,6 +3,7 @@ using System.Security.Claims;
 using AdminAPI.Controllers;
 using AdminAPI.DTOs;
 using AdminAPI.Models;
+using AdminAPI.Repositories;
 using AdminAPI.Services;
 using AdminAPI.Services.Risks;
 using AdminAPI.Tests.Support;
@@ -18,7 +19,7 @@ namespace AdminAPI.Tests.Services;
 public class RiskPolicyServiceTests : DbTestBase
 {
     private const string Reason = "Raise the medium threshold after review";
-    private RiskPolicyService Sut() => new(Db, Cfg.Object);
+    private RiskPolicyService Sut() => new(new SystemParameterRepository(Db), Cfg.Object);
 
     private static string RuleJson(int score) => "{\"type\":\"Bot\",\"group\":\"bot\",\"window_sec\":60,\"threshold\":5,\"score\":" + score + "}";
 

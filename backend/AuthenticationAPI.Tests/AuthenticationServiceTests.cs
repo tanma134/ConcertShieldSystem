@@ -1,6 +1,7 @@
 using AuthenticationAPI.DTOs;
 using AuthenticationAPI.Models;
 using AuthenticationAPI.Repositories;
+using AuthenticationAPI.Risk;
 using AuthenticationAPI.Services;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
@@ -20,6 +21,7 @@ public class AuthenticationServiceTests
     private readonly Mock<IUserRepository> _repo = new();
     private readonly Mock<IEmailService> _email = new();
     private readonly Mock<IAuditLogClient> _audit = new();
+    private readonly Mock<IRiskClient> _risk = new();
     private readonly IMemoryCache _cache = new MemoryCache(new MemoryCacheOptions());
     private readonly AuthenticationService _svc;
 
@@ -36,8 +38,13 @@ public class AuthenticationServiceTests
             })
             .Build();
 
+        // No active block by default; individual tests override this.
+        _risk.Setup(r => r.CheckBlockAsync(It.IsAny<int?>(), It.IsAny<string?>(), It.IsAny<string?>(),
+                It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new BlockCheckResult { Blocked = false });
+
         _svc = new AuthenticationService(_repo.Object, _email.Object, config, _cache,
-            NullLogger<AuthenticationService>.Instance, _audit.Object);
+            NullLogger<AuthenticationService>.Instance, _audit.Object, _risk.Object);
     }
 
     private User ActiveUser(int id = 5, string email = "user@example.com") => new()

@@ -1,6 +1,6 @@
-﻿using AdminAPI.Data;
-using AdminAPI.DTOs;
+﻿using AdminAPI.DTOs;
 using AdminAPI.Models;
+using AdminAPI.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace AdminAPI.Services.Risks;
@@ -11,13 +11,16 @@ public sealed class FraudCaseService : IFraudCaseService
     private static readonly string[] OpenStatuses = { "Open", "InReview" };
     private const int MinNoteLength = 10;
 
-    private readonly AdminDbContext _db;
+    private readonly IFraudAlertRepository _alerts;
+    private readonly IRiskDecisionRepository _decisions;
+    private readonly IRiskAppealRepository _appeals;
     private readonly IRiskConfigProvider _config;
     private readonly IStaffDirectoryClient? _staff;
 
-    public FraudCaseService(AdminDbContext db, IRiskConfigProvider config, IStaffDirectoryClient? staff = null)
+    public FraudCaseService(IFraudAlertRepository alerts, IRiskDecisionRepository decisions,
+        IRiskAppealRepository appeals, IRiskConfigProvider config, IStaffDirectoryClient? staff = null)
     {
-        _db = db; _config = config; _staff = staff;
+        _alerts = alerts; _decisions = decisions; _appeals = appeals; _config = config; _staff = staff;
     }
 
     public async Task<PagedResult<FraudCaseListItemDto>> SearchAsync(FraudCaseQuery qy)
@@ -31,31 +34,15 @@ public sealed class FraudCaseService : IFraudCaseService
         if (qy.From.HasValue && qy.To.HasValue && Utc(qy.From.Value) > Utc(qy.To.Value))
             throw new RiskServiceException(400, "From must be less than or equal to To.");
 
-        var q = _db.FraudAlerts.AsNoTracking().AsQueryable();
-        if (!string.IsNullOrWhiteSpace(qy.Status)) q = q.Where(a => a.Status == qy.Status);
-        if (!string.IsNullOrWhiteSpace(qy.RiskLevel)) q = q.Where(a => a.RiskLevel == qy.RiskLevel);
-        if (!string.IsNullOrWhiteSpace(qy.AlertType)) q = q.Where(a => a.AlertType == qy.AlertType);
-        if (qy.UserId.HasValue) q = q.Where(a => a.UserId == qy.UserId);
-        if (qy.AssignedTo.HasValue) q = q.Where(a => a.AssignedTo == qy.AssignedTo);
-        if (qy.Unassigned == true) q = q.Where(a => a.AssignedTo == null && OpenStatuses.Contains(a.Status));
-        if (qy.OverdueOnly == true)
-            q = q.Where(a => OpenStatuses.Contains(a.Status)
-                             && (a.RiskLevel == "High" || a.RiskLevel == "Critical") && a.CreatedAt < slaCutoff);
-        if (qy.From.HasValue) { var f = Utc(qy.From.Value); q = q.Where(a => a.CreatedAt >= f); }
-        if (qy.To.HasValue) { var t = Utc(qy.To.Value); q = q.Where(a => a.CreatedAt <= t); }
+        int? keywordId = null;
         if (!string.IsNullOrWhiteSpace(qy.Keyword))
         {
             if (!int.TryParse(qy.Keyword.Trim(), out var n))
                 throw new RiskServiceException(400, "Keyword must be a numeric case, user, order or ticket id.");
-            q = q.Where(a => a.FraudAlertId == n || a.UserId == n || a.OrderId == n || a.TicketId == n);
+            keywordId = n;
         }
 
-        var total = await q.CountAsync();
-        q = string.Equals(qy.SortBy, "riskScore", StringComparison.OrdinalIgnoreCase)
-            ? (qy.Desc ? q.OrderByDescending(a => a.RiskScore).ThenByDescending(a => a.CreatedAt)
-                       : q.OrderBy(a => a.RiskScore).ThenByDescending(a => a.CreatedAt))
-            : (qy.Desc ? q.OrderByDescending(a => a.CreatedAt) : q.OrderBy(a => a.CreatedAt));
-        var rows = await q.Skip((page - 1) * size).Take(size).ToListAsync();
+        var (rows, total) = await _alerts.SearchCasesAsync(qy, slaCutoff, keywordId, page, size);
 
         return new PagedResult<FraudCaseListItemDto>
         {
@@ -91,7 +78,7 @@ public sealed class FraudCaseService : IFraudCaseService
     public async Task<FraudCaseResultDto> AssignAsync(int caseId, int analystId, int actorId)
     {
         if (analystId <= 0) throw new RiskServiceException(400, "AnalystId is invalid.");
-        var a = await _db.FraudAlerts.FirstOrDefaultAsync(x => x.FraudAlertId == caseId)
+        var a = await _alerts.GetForUpdateAsync(caseId)
                 ?? throw new RiskServiceException(404, "Fraud case not found.");
         if (!OpenStatuses.Contains(a.Status))
             throw new RiskServiceException(409, $"The case is in status {a.Status} and can no longer be assigned.");
@@ -131,26 +118,17 @@ public sealed class FraudCaseService : IFraudCaseService
             _ => throw new RiskServiceException(400, "Outcome must be Confirmed, FalsePositive or Dismissed.")
         };
 
-        var a = await _db.FraudAlerts.FirstOrDefaultAsync(x => x.FraudAlertId == caseId)
+        var a = await _alerts.GetForUpdateAsync(caseId)
                 ?? throw new RiskServiceException(404, "Fraud case not found.");
         if (!OpenStatuses.Contains(a.Status))
             throw new RiskServiceException(409, $"The case is already {a.Status}.");
-        // Assigning first is recommended but not required: with a single Admin, an
-        // obvious false positive must be closeable without a make-work assignment.
-        // When the case was assigned, the Staff recommendation is kept for the trail.
-        // Only an Admin reaches this method (controller policy). Staff submit a
-        // recommendation; the final decision stays with an Admin.
-        if (await RiskSupport.HasPendingAppealAsync(_db, caseId))
+        if (await _appeals.HasPendingForAlertAsync(caseId))
             throw new RiskServiceException(409, "The case has a pending appeal. Resolve the appeal first.");
 
-        // FalsePositive/Dismissed nghĩa là "không có gian lận" -> không được còn biện pháp đang áp dụng lên user.
         if (status != "Resolved")
         {
             var nowUtc = DateTime.UtcNow;
-            var stillEnforced = await _db.RiskDecisions.AsNoTracking().AnyAsync(d =>
-                d.FraudAlertId == caseId && d.Status == "Active" && !d.IsShadow
-                && (d.Action == "BLOCK" || d.Action == "HOLD")
-                && (d.ExpiresAt == null || d.ExpiresAt > nowUtc));
+            var stillEnforced = await _decisions.HasActiveRestrictionForAlertAsync(caseId, nowUtc);
             if (stillEnforced)
                 throw new RiskServiceException(409,
                     $"Cannot close as {status} while a Block/Hold decision is still active. Restore it first.");
@@ -167,8 +145,6 @@ public sealed class FraudCaseService : IFraudCaseService
         return Result(a, prevStatus, prevAssignee);
     }
 
-    // Staff review: the assigned Staff member proposes an outcome and a note.
-    // The case stays InReview until an Admin resolves it.
     public async Task<FraudCaseResultDto> RecommendAsync(int caseId, string outcome, string note, int actorId)
     {
         note = (note ?? "").Trim();
@@ -183,7 +159,7 @@ public sealed class FraudCaseService : IFraudCaseService
             _ => throw new RiskServiceException(400, "Outcome must be Confirmed, FalsePositive or Dismissed.")
         };
 
-        var a = await _db.FraudAlerts.FirstOrDefaultAsync(x => x.FraudAlertId == caseId)
+        var a = await _alerts.GetForUpdateAsync(caseId)
                 ?? throw new RiskServiceException(404, "Fraud case not found.");
 
         if (a.Status != "InReview")
@@ -225,7 +201,7 @@ public sealed class FraudCaseService : IFraudCaseService
 
     private async Task SaveAsync()
     {
-        try { await _db.SaveChangesAsync(); }
+        try { await _alerts.SaveChangesAsync(); }
         catch (DbUpdateConcurrencyException)
         {
             throw new RiskServiceException(409, "The data was just updated by someone else. Please reload and try again.");

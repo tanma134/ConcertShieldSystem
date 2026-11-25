@@ -3,6 +3,7 @@ using System.Security.Claims;
 using AdminAPI.Controllers;
 using AdminAPI.DTOs;
 using AdminAPI.Models;
+using AdminAPI.Repositories;
 using AdminAPI.Services;
 using AdminAPI.Services.Risks;
 using AdminAPI.Tests.Support;
@@ -18,7 +19,7 @@ namespace AdminAPI.Tests.Services;
 public class AuditLogServiceTests : DbTestBase
 {
     private static readonly DateTime From = new(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc);
-    private AuditLogService Sut() => new(Db);
+    private AuditLogService Sut() => new(new AuditLogRepository(Db));
 
     private AuditLog Log(int id, DateTime? created = null, int? userId = 7, string actor = "admin", string action = "LOGIN",
         string entity = "User", string? entityId = "1", string? ip = "203.0.113.9", string? oldV = null, string? newV = null)

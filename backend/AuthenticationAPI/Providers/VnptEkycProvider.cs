@@ -19,15 +19,11 @@ namespace AuthenticationAPI.Providers
         public string TokenKey { get; set; } = "";
         public string MacAddress { get; set; } = "AUTH-API-SERVER";
 
-        // Ti li?u nh d?u crop_param l b?t bu?c cho /ai/v1/ocr/id
-        // ?nh d?ng "<crop trn>,<crop d?i>", v d? "0.14,0.3"
+   
         public string CropParam { get; set; } = "0.14,0.3";
 
-        // Khng c?n dng:  lun t? ch?i gi?y t? h?t h?n. Gi? l?i ? appsettings c? khng l?i.
         public bool RejectExpiredCard { get; set; } = true;
 
-        // true: OCR t?ng m?t qua /ai/v1/ocr/id/front v /ai/v1/ocr/id/back (bi?t chnh xc m?t no l?i,
-        // v khng dng crop_param). false: 1 l?n g?i /ai/v1/ocr/id cho c? 2 m?t.
         public bool SplitOcr { get; set; } = false;
     }
 
@@ -49,7 +45,6 @@ namespace AuthenticationAPI.Providers
                 var o = sp.GetRequiredService<IOptions<VnptEkycOptions>>().Value;
                 client.BaseAddress = new Uri(o.BaseUrl);
                 client.Timeout = TimeSpan.FromSeconds(60);
-                // Portal VNPT hi?n th? token d?ng "bearer eyJ..." -> b? ti?n t? ? khng thnh "Bearer bearer eyJ..."
                 var accessToken = o.AccessToken.Trim();
                 if (accessToken.StartsWith("bearer ", StringComparison.OrdinalIgnoreCase))
                     accessToken = accessToken.Substring(7).Trim();
@@ -73,13 +68,8 @@ namespace AuthenticationAPI.Providers
         private readonly VnptEkycOptions _options;
         private readonly ILogger<VnptEkycProvider> _logger;
 
-        // Ti li?u yu c?u client_session theo c php:
-        // <IOS/ANDROID>_<model>_<OS/API>_<Device/Simulator>_<SDK version>_<Device id>_<Time stamp>
-        // N?u app mobile g?i ?c session th?t ln backend th? nn dng gi tr?  thay cho chu?i ny.
         private readonly string _clientSession =
             $"ANDROID_backend_28_Device_1.0.0_{Guid.NewGuid():N}_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
-
-        // Cache hash theo n?i dung ?nh: ?nh m?t tr?c dng cho OCR + compare nhng ch? upload 1 l?n
         private readonly Dictionary<string, string> _hashCache = new();
 
         public VnptEkycProvider(HttpClient http, IOptions<VnptEkycOptions> options, ILogger<VnptEkycProvider> logger)
@@ -88,10 +78,6 @@ namespace AuthenticationAPI.Providers
             _options = options.Value;
             _logger = logger;
         }
-
-        // --------------------------------------------------------------
-        // Ki?m tra gi?y t? th?t/gi? (#3) + OCR (#6)
-        // --------------------------------------------------------------
         public async Task<OcrResult> ExtractIdCardInfoAsync(Stream front, Stream back)
         {
             try
@@ -102,13 +88,12 @@ namespace AuthenticationAPI.Providers
                 var frontHash = await GetHashAsync(front, "front.jpg");
                 var backHash = await GetHashAsync(back, "back.jpg");
 
-                // 1) /ai/v1/card/liveness (body theo ti li?u ch? c img + client_session)
                 var cardLive = (await PostAiAsync("/ai/v1/card/liveness",
                     new() { ["img"] = frontHash }, includeToken: false)).GetProperty("object");
 
                 if (!IsSuccess(cardLive, "liveness")
-                    || GetBool(cardLive, "fake_liveness")     // gi?y t? b? ch?p l?i
-                    || GetBool(cardLive, "face_swapping"))    // gi?y t? b? dn/thay ?nh
+                    || GetBool(cardLive, "fake_liveness")     
+                    || GetBool(cardLive, "face_swapping"))   
                 {
                     return Fail("Gi?y t? khng h?p l? ho?c nghi ng? gi? m?o"
                                 + (GetString(cardLive, "liveness_msg") is { } m ? $" ({m})" : ""));
@@ -116,16 +101,13 @@ namespace AuthenticationAPI.Providers
 
                 if (_options.SplitOcr)
                     return await ExtractSplitAsync(frontHash, backHash);
-
-                // 2) /ai/v1/ocr/id
                 var ocrBody = new Dictionary<string, object?>
                 {
                     ["img_front"] = frontHash,
                     ["img_back"] = backHash,
-                    ["type"] = -1,                       // CMT c?/m?i, CCCD
+                    ["type"] = -1,                      
                     ["validate_postcode"] = true
                 };
-                // "0,0" = khng crop. ?nh ? ch?p st gi?y t? th? KHNG nn crop m?nh (vd 0.14,0.3)
                 if (!string.IsNullOrWhiteSpace(_options.CropParam))
                     ocrBody["crop_param"] = _options.CropParam;
 
@@ -152,8 +134,6 @@ namespace AuthenticationAPI.Providers
                 return Fail(ToUserMessage(ex));
             }
         }
-
-        // OCR tch t?ng m?t: bo l?i chnh xc m?t no khng ?t
         private async Task<OcrResult> ExtractSplitAsync(string frontHash, string backHash)
         {
             JsonElement frontObj, backObj;
@@ -194,8 +174,6 @@ namespace AuthenticationAPI.Providers
             var backWarn = GetStringList(backObj, "warning_msg");
             if (backWarn.Count > 0)
                 return Fail("?nh m?t sau cha ?t: " + string.Join(", ", backWarn));
-
-            // G?p 2 object thnh 1 ? dng l?i ValidateOcr (c?n c? msg v msg_back)
             var merged = new JsonObject();
             foreach (var p in frontObj.EnumerateObject()) merged[p.Name] = JsonNode.Parse(p.Value.GetRawText());
             foreach (var p in backObj.EnumerateObject()) merged[p.Name] = JsonNode.Parse(p.Value.GetRawText());

@@ -3,6 +3,7 @@ using System.Security.Claims;
 using AdminAPI.Controllers;
 using AdminAPI.DTOs;
 using AdminAPI.Models;
+using AdminAPI.Repositories;
 using AdminAPI.Services;
 using AdminAPI.Services.Risks;
 using AdminAPI.Tests.Support;
@@ -19,7 +20,8 @@ public class AppealServiceTests : DbTestBase
 {
     private const int Staff = 99;
     private readonly Mock<ITicketRiskClient> Tickets = new();
-    private AppealService Sut() => new(Db, Cfg.Object, Tickets.Object,
+    private AppealService Sut() => new(new RiskAppealRepository(Db), new RiskDecisionRepository(Db),
+        new FraudAlertRepository(Db), new RiskNotificationRepository(Db), Cfg.Object, Tickets.Object,
         NullLogger<AppealService>.Instance);
 
     private static SubmitAppealRequest Req(int decisionId = 40, string reason = "I did not do anything wrong, please review.", int files = 0,

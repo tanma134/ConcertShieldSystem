@@ -3,6 +3,7 @@ using System.Security.Claims;
 using AdminAPI.Controllers;
 using AdminAPI.DTOs;
 using AdminAPI.Models;
+using AdminAPI.Repositories;
 using AdminAPI.Services;
 using AdminAPI.Services.Risks;
 using AdminAPI.Tests.Support;
@@ -19,7 +20,8 @@ public class FraudCaseServiceTests : DbTestBase
 {
     private const int Staff = 99;
     private const string Note = "Confirmed after reviewing the order history";
-    private FraudCaseService Sut() => new(Db, Cfg.Object);
+    private FraudCaseService Sut() => new(new FraudAlertRepository(Db), new RiskDecisionRepository(Db),
+        new RiskAppealRepository(Db), Cfg.Object);
 
     // ===== Function8_FraudCaseList =====
 

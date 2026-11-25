@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
 import authApi from "../api/authApi";
 import { useAuth } from "../context/AuthContext";
@@ -8,9 +8,17 @@ import "../styles/auth.css";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login } = useAuth();
   const [form, setForm] = useState({ email: "", password: "" });
-  const [error, setError] = useState("");
+  // BR-112: a session ended by a risk block lands here with the reason in the URL,
+  // so the message explains the block instead of a generic "session expired".
+  const [error, setError] = useState(() =>
+    searchParams.get("reason") === "account-blocked"
+      ? searchParams.get("msg") ||
+        "Your account is temporarily restricted due to unusual activity."
+      : ""
+  );
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [showPolicyModal, setShowPolicyModal] = useState(false);

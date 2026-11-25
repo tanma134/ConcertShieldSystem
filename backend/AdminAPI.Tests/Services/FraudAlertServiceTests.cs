@@ -3,6 +3,7 @@ using System.Security.Claims;
 using AdminAPI.Controllers;
 using AdminAPI.DTOs;
 using AdminAPI.Models;
+using AdminAPI.Repositories;
 using AdminAPI.Services;
 using AdminAPI.Services.Risks;
 using AdminAPI.Tests.Support;
@@ -34,7 +35,9 @@ public class FraudAlertServiceTests : DbTestBase
             .ReturnsAsync((int id, CancellationToken _) => new AccountInfo(id, true, new[] { "Customer" }));
     }
 
-    private FraudAlertService Sut() => new(Db, Cfg.Object, new RiskScoreCalculator(),
+    private FraudAlertService Sut() => new(new FraudAlertRepository(Db), new RiskDecisionRepository(Db),
+        new RiskListRepository(Db), new RiskNotificationRepository(Db), new AuditLogRepository(Db),
+        new RiskAppealRepository(Db), Cfg.Object, new RiskScoreCalculator(),
         Mock.Of<IAiSummaryQueue>(), NullLogger<FraudAlertService>.Instance,
         TicketApi.Object, Directory.Object);
     private static BlockRequest BReq(string scope = "ACCOUNT", int hours = 24, string reason = "Suspicious refund abuse pattern", int? userId = 7, int? ticketId = 100, int? alertId = null, string? ip = null)

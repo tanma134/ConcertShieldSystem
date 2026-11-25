@@ -82,6 +82,20 @@ axiosClient.interceptors.response.use(
       } catch (refreshError) {
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
+        localStorage.removeItem("user");
+        localStorage.removeItem("roles");
+
+        // BR-112: the refresh was refused because the account is under an active
+        // risk block (403 + code RISK_BLOCKED). Show the specific message instead
+        // of the generic session-expired login.
+        const riskBlocked =
+          refreshError.response?.status === 403 &&
+          refreshError.response?.data?.code === "RISK_BLOCKED";
+        const blockedMessage =
+          riskBlocked
+            ? (refreshError.response?.data?.message ||
+               "Your account is temporarily restricted due to unusual activity.")
+            : null;
 
         // Prevent infinite reload loops if already on an authentication page
         const currentPath = window.location.pathname;
@@ -93,7 +107,13 @@ axiosClient.interceptors.response.use(
           currentPath.includes("/reset");
 
         if (!isAuthPage) {
-          window.location.href = "/login";
+          if (blockedMessage) {
+            window.location.href =
+              "/login?reason=account-blocked&msg=" +
+              encodeURIComponent(blockedMessage);
+          } else {
+            window.location.href = "/login";
+          }
         }
         return Promise.reject(refreshError);
       }

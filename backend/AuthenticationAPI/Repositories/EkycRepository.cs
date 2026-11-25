@@ -5,6 +5,10 @@ namespace AuthenticationAPI.Repositories
 {
     public class EkycRepository : IEkycRepository
     {
+        private const string Passed = "Passed";
+        private const string ManualReview = "ManualReview";
+        private const string Pending = "Pending";
+
         private readonly AuthenticationDbContext _context;
 
         public EkycRepository(AuthenticationDbContext context)
@@ -27,7 +31,7 @@ namespace AuthenticationAPI.Repositories
             if (userEkycStatus is not null)
             {
                 user = await _context.Users.FindAsync(record.UserId);
-                if (user is not null && user.EkycStatus != "Passed")
+                if (user is not null && user.EkycStatus != Passed)
                     user.EkycStatus = userEkycStatus;
             }
 
@@ -35,14 +39,20 @@ namespace AuthenticationAPI.Repositories
             {
                 await _context.SaveChangesAsync();
             }
+            catch (DbUpdateException ex) when (DbErrors.IsUniqueViolation(ex))
+            {
+                DetachUser(user);
+                throw new DuplicateRecordException("Unique constraint violated while saving the eKYC record", ex);
+            }
             catch
             {
-                // Tránh để giá trị user chưa lưu được còn nằm trong change tracker rồi bị lưu ở lần sau
-                if (user is not null)
-                    _context.Entry(user).State = EntityState.Detached;
+                // Do not leave the unsaved user value in the change tracker, it would be saved by the next SaveChanges
+                DetachUser(user);
                 throw;
             }
         }
+
+        public Task SaveChangesAsync(CancellationToken ct = default) => _context.SaveChangesAsync(ct);
 
         public async Task<EkycVerification?> GetByIdAsync(int ekycId)
         {
@@ -54,7 +64,7 @@ namespace AuthenticationAPI.Repositories
         {
             return await _context.EkycVerifications
                 .AsNoTracking()
-                .Where(e => e.UserId == userId && (e.Status == "Passed" || e.Status == "ManualReview"))
+                .Where(e => e.UserId == userId && (e.Status == Passed || e.Status == ManualReview))
                 .OrderByDescending(e => e.EkycId)
                 .FirstOrDefaultAsync();
         }
@@ -69,12 +79,72 @@ namespace AuthenticationAPI.Repositories
                 .ToListAsync();
         }
 
+        public async Task<List<EkycVerification>> GetAllByUserAsync(int userId)
+        {
+            return await _context.EkycVerifications
+                .AsNoTracking()
+                .Where(e => e.UserId == userId)
+                .ToListAsync();
+        }
+
         public async Task<bool> IsCccdUsedByAnotherUserAsync(string cccdHash, int userId)
         {
             return await _context.EkycVerifications
                 .AnyAsync(e => e.CccdNumberHash == cccdHash
                                && e.UserId != userId
-                               && (e.Status == "Passed" || e.Status == "ManualReview"));
+                               && (e.Status == Passed || e.Status == ManualReview));
+        }
+
+        public async Task<bool> IsCccdVerifiedByAnotherUserAsync(string cccdHash, int userId)
+        {
+            return await _context.EkycVerifications
+                .AnyAsync(e => e.CccdNumberHash == cccdHash
+                               && e.UserId != userId
+                               && e.Status == Passed);
+        }
+
+        public async Task<List<EkycVerification>> GetDeletableByUserAsync(int userId, bool keepDocumentHash)
+        {
+            return await DeletableQuery(userId, keepDocumentHash).ToListAsync();
+        }
+
+        public async Task<bool> HasDeletableAsync(int userId, bool keepDocumentHash)
+        {
+            return await DeletableQuery(userId, keepDocumentHash).AnyAsync();
+        }
+
+        public async Task<(List<EkycVerification> Items, int Total)> GetManualReviewPageAsync(int page, int pageSize)
+        {
+            var q = _context.EkycVerifications.AsNoTracking().Where(e => e.Status == ManualReview);
+            var total = await q.CountAsync();
+            var items = await q.OrderBy(e => e.CreatedAt)
+                .Skip((page - 1) * pageSize).Take(pageSize)
+                .ToListAsync();
+            return (items, total);
+        }
+
+        public async Task<List<EkycVerification>> GetPurgeCandidatesAsync(DateTime cutoffUtc, int batchSize, CancellationToken ct = default)
+        {
+            return await _context.EkycVerifications
+                .Where(e => e.DataPurgedAt == null
+                            && !e.LegalHold // data under legal hold never expires
+                            && e.Status != Pending && e.Status != ManualReview
+                            && (e.VerifiedAt ?? e.CreatedAt) < cutoffUtc)
+                .OrderBy(e => e.EkycId)
+                .Take(batchSize)
+                .ToListAsync(ct);
+        }
+
+        /// <summary>Records not purged yet, or purged but still holding the CCCD hash/number that policy says must go.</summary>
+        private IQueryable<EkycVerification> DeletableQuery(int userId, bool keepDocumentHash) =>
+            _context.EkycVerifications.Where(e => e.UserId == userId
+                && (e.DataPurgedAt == null
+                    || (!keepDocumentHash && (e.CccdNumberHash != null || e.CccdNumberEncrypted != null))));
+
+        private void DetachUser(User? user)
+        {
+            if (user is not null)
+                _context.Entry(user).State = EntityState.Detached;
         }
     }
 }
