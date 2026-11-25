@@ -1071,3 +1071,15 @@ ALTER TABLE public.event_staff
     ADD COLUMN IF NOT EXISTS can_review_returns boolean NOT NULL DEFAULT false;
 CREATE INDEX IF NOT EXISTS ix_event_staff_return_reviewers
     ON public.event_staff (staff_user_id) WHERE is_active = true AND can_review_returns = true;
+
+-- ---------- 012 event gates (Cổng sự kiện & phân quyền loại vé) ----------
+CREATE TABLE IF NOT EXISTS public.event_gates (
+    gate_id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    event_id integer NOT NULL REFERENCES public.events(event_id) ON DELETE CASCADE,
+    gate_name varchar(100) NOT NULL,
+    description varchar(255) NULL,
+    allowed_ticket_types text NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS ix_event_gates_event_id ON public.event_gates(event_id);
+

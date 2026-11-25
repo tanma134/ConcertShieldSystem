@@ -25,11 +25,12 @@ namespace AuthenticationAPI.Controllers
             _configuration = configuration;
         }
 
-        // GET api/users/staff?q=an&ids=3,5
-        // q   : optional text matched against name or email.
-        // ids : optional comma separated user ids; only those accounts are returned.
+        // GET api/users/staff?q=an&ids=3,5&organizerId=14
+        // q           : optional text matched against name or email.
+        // ids         : optional comma separated user ids; only those accounts are returned.
+        // organizerId : optional organizer ID to limit candidates to staff created/managed by this organizer.
         [HttpGet]
-        public async Task<IActionResult> GetStaff([FromQuery] string? q, [FromQuery] string? ids)
+        public async Task<IActionResult> GetStaff([FromQuery] string? q, [FromQuery] string? ids, [FromQuery] int? organizerId)
         {
             var expectedKey = _configuration["InternalApiKey"];
             var suppliedKey = Request.Headers["X-Internal-Api-Key"].FirstOrDefault();
@@ -41,6 +42,38 @@ namespace AuthenticationAPI.Controllers
             var query = _context.Users
                 .AsNoTracking()
                 .Where(u => u.IsActive && u.UserRoles.Any(ur => ur.Role.RoleName == StaffRoleName));
+
+            if (organizerId.HasValue && organizerId.Value > 0)
+            {
+                var orgStaffIds = new List<int>();
+                try
+                {
+                    var conn = _context.Database.GetDbConnection();
+                    if (conn.State != System.Data.ConnectionState.Open)
+                        await conn.OpenAsync();
+
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = "SELECT staff_user_id FROM public.organizer_staff_members WHERE organizer_id = @orgId";
+                    var p = cmd.CreateParameter();
+                    p.ParameterName = "@orgId";
+                    p.Value = organizerId.Value;
+                    cmd.Parameters.Add(p);
+
+                    using var reader = await cmd.ExecuteReaderAsync();
+                    while (await reader.ReadAsync())
+                    {
+                        orgStaffIds.Add(reader.GetInt32(0));
+                    }
+                }
+                catch { }
+
+                if (orgStaffIds.Count == 0)
+                {
+                    return Ok(new List<object>());
+                }
+
+                query = query.Where(u => orgStaffIds.Contains(u.UserId));
+            }
 
             var wantedIds = ParseIds(ids);
             if (wantedIds.Count > 0)

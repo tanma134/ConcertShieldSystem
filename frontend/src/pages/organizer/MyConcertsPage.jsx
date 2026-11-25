@@ -5,6 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 import eventApi from "../../api/eventApi";
 import { formatDateRange, formatPrice } from "../../utils/format";
 import "./MyConcertsPage.css";
+import "./OrganizerStaffPage.css";
 
 const STATUS_LABELS = {
   Draft: "Draft",
@@ -29,6 +30,7 @@ export default function MyConcertsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState(null);
+  const [confirmModal, setConfirmModal] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -39,23 +41,30 @@ export default function MyConcertsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleDeleteDraft = async (event) => {
+  const handleDeleteDraft = (event) => {
     event.preventDefault();
     event.stopPropagation();
     const eventId = Number(event.currentTarget.dataset.eventId);
     const title = event.currentTarget.dataset.eventTitle;
-    if (!window.confirm(`Delete event "${title}"? This action cannot be undone.`)) return;
-
-    setDeletingId(eventId);
-    setError("");
-    try {
-      await eventApi.remove(eventId);
-      setEvents((items) => items.filter((item) => item.eventId !== eventId));
-    } catch (err) {
-      setError(err.response?.data?.message || "Could not delete this event.");
-    } finally {
-      setDeletingId(null);
-    }
+    setConfirmModal({
+      title: "Delete Event",
+      message: `Delete event "${title}"? This action cannot be undone.`,
+      confirmText: "Delete Event",
+      confirmBtnStyle: { background: "#dc2626", color: "#ffffff" },
+      onConfirm: async () => {
+        setConfirmModal(null);
+        setDeletingId(eventId);
+        setError("");
+        try {
+          await eventApi.remove(eventId);
+          setEvents((items) => items.filter((item) => item.eventId !== eventId));
+        } catch (err) {
+          setError(err.response?.data?.message || "Could not delete this event.");
+        } finally {
+          setDeletingId(null);
+        }
+      }
+    });
   };
 
   return (
@@ -176,6 +185,53 @@ export default function MyConcertsPage() {
         )}
       </div>
 
-      </OrganizerShell>
+      {/* Confirmation Modal */}
+      {confirmModal && (
+        <div className="osp-modal-overlay" onClick={() => setConfirmModal(null)}>
+          <div className="osp-modal-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "460px" }}>
+            <div className="osp-modal-header">
+              <h2 style={{ fontSize: "1.2rem", fontWeight: 700, color: "#111827", margin: 0 }}>
+                {confirmModal.title}
+              </h2>
+              <button type="button" className="osp-modal-close" onClick={() => setConfirmModal(null)}>
+                ×
+              </button>
+            </div>
+            <div className="osp-modal-body" style={{ padding: "18px 20px" }}>
+              <p style={{ margin: 0, color: "#4b5563", fontSize: "0.95rem", lineHeight: "1.55" }}>
+                {confirmModal.message}
+              </p>
+            </div>
+            <div className="osp-modal-footer" style={{ display: "flex", justifyContent: "flex-end", gap: "10px", padding: "14px 20px" }}>
+              <button
+                type="button"
+                className="tb-btn tb-btn-outline"
+                onClick={() => setConfirmModal(null)}
+                style={{ padding: "8px 18px", borderRadius: "8px", border: "1px solid #d1d5db", background: "#fff", color: "#374151", cursor: "pointer", fontWeight: 600 }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmModal.onConfirm}
+                style={{
+                  padding: "8px 20px",
+                  borderRadius: "8px",
+                  fontWeight: 600,
+                  fontSize: "0.9rem",
+                  border: "none",
+                  cursor: "pointer",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.15)",
+                  ...(confirmModal.confirmBtnStyle || { background: "linear-gradient(135deg, #d61f6e, #be185d)", color: "#ffffff" })
+                }}
+              >
+                {confirmModal.confirmText || "Confirm"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </OrganizerShell>
   );
 }

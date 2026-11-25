@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import OrganizerShell from "./OrganizerShell";
 import checkinApi from "../../api/checkinApi";
+import eventApi from "../../api/eventApi";
 import { useAuth } from "../../context/AuthContext";
 import OfflineConflictModal from "../../components/OfflineConflictModal";
 import "./RealtimeCheckinMonitorPage.css";
@@ -10,12 +12,8 @@ export default function RealtimeCheckinMonitorPage() {
   const navigate = useNavigate();
   const { user, isAuthenticated, isAdmin, isOrganizer } = useAuth();
 
-  const [activeEventId, setActiveEventId] = useState(eventId ? Number(eventId) : 1);
-  const [eventList, setEventList] = useState([
-    { id: 1, title: "Sơn Tùng M-TP Sky Tour 2026" },
-    { id: 2, title: "BlackPink Born Pink World Tour Hanoi" },
-    { id: 3, title: "Anh Trai Say Hi Live Concert 2026" },
-  ]);
+  const [activeEventId, setActiveEventId] = useState(eventId ? Number(eventId) : null);
+  const [eventList, setEventList] = useState([]);
   const [showConflictModal, setShowConflictModal] = useState(false);
   const [pendingConflictsCount, setPendingConflictsCount] = useState(0);
 
@@ -45,16 +43,48 @@ export default function RealtimeCheckinMonitorPage() {
   useEffect(() => {
     const loadEvents = async () => {
       try {
-        const res = await checkinApi.getGovernanceEvents();
-        if (res?.data?.data && res.data.data.length > 0) {
-          setEventList(res.data.data.map((e) => ({ id: e.eventId, title: e.eventName })));
+        let list = [];
+        const cleanTitle = (t) =>
+          String(t || "")
+            .replace(/\s*-\s*offline\s*sync\s*demo/gi, "")
+            .replace(/\s*offline\s*sync\s*demo/gi, "")
+            .replace(/\s*offlinesync\s*demo/gi, "")
+            .trim();
+
+        if (isOrganizer) {
+          const res = await eventApi.getMine();
+          const data = res.data?.data || res.data || [];
+          list = Array.isArray(data) ? data.map((e) => ({ id: e.eventId, title: cleanTitle(e.title) })) : [];
+        } else if (isAdmin) {
+          const res = await eventApi.getList({ pageSize: 100 });
+          const items = res.data?.data?.items || res.data?.data || [];
+          list = Array.isArray(items) ? items.map((e) => ({ id: e.eventId, title: cleanTitle(e.title) })) : [];
+        } else {
+          const res = await eventApi.getMine().catch(() => null);
+          const data = res?.data?.data || [];
+          list = Array.isArray(data) ? data.map((e) => ({ id: e.eventId, title: cleanTitle(e.title) })) : [];
+        }
+
+        if (list.length > 0) {
+          setEventList(list);
+          setActiveEventId((prev) => {
+            if (prev && list.some((e) => e.id === Number(prev))) {
+              return prev;
+            }
+            return list[0].id;
+          });
+        } else {
+          setEventList([]);
+          setLoading(false);
         }
       } catch (e) {
-        // keep defaults
+        console.warn("Could not load events for realtime check-in:", e);
+        setEventList([]);
+        setLoading(false);
       }
     };
     loadEvents();
-  }, []);
+  }, [isOrganizer, isAdmin]);
 
   const fetchPendingConflictsCount = useCallback(async () => {
     try {
@@ -122,6 +152,27 @@ export default function RealtimeCheckinMonitorPage() {
     fetchMonitorData(true);
   };
 
+  if (!loading && eventList.length === 0) {
+    return (
+      <div className="rcm-container" style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
+        <div className="rcm-card" style={{ maxWidth: "480px", textAlign: "center", padding: "40px 24px" }}>
+          <h2 style={{ fontSize: "20px", fontWeight: 800, color: "#38bdf8", margin: "0 0 12px" }}>No Events Available</h2>
+          <p style={{ fontSize: "14px", color: "#cbd5e1", lineHeight: 1.6, margin: "0 0 24px" }}>
+            You do not have any events created yet to monitor live check-in. Please create an event and publish tickets to use this feature.
+          </p>
+          <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+            <button className="rcm-btn rcm-btn-primary" onClick={() => navigate("/organizer/events/new")}>
+              + Create New Concert
+            </button>
+            <button className="rcm-btn" onClick={() => navigate("/organizer/events")}>
+              My Concerts
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (loading && !monitorData) {
     return (
       <div className="rcm-container" style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
@@ -163,77 +214,78 @@ export default function RealtimeCheckinMonitorPage() {
   } = monitorData || {};
 
   return (
-    <div className="rcm-container">
-      {/* Header Bar */}
-      <header className="rcm-header-bar">
-        <div className="rcm-header-title">
-          <h1>
-            <span>{eventTitle}</span>
-            <span className="rcm-live-badge">
-              <span className="rcm-pulse-dot"></span>
-              LIVE TELEMETRY
-            </span>
-          </h1>
-          <div className="rcm-header-subtitle">
-            Real-time Check-in Monitoring Dashboard • Event ID {activeEventId}
+    <OrganizerShell title="Check-in Live Monitor">
+      <div className="rcm-container">
+        {/* Header Bar */}
+        <header className="rcm-header-bar">
+          <div className="rcm-header-title">
+            <h1>
+              <span>{eventTitle}</span>
+              <span className="rcm-live-badge">
+                <span className="rcm-pulse-dot"></span>
+                LIVE TELEMETRY
+              </span>
+            </h1>
+            <div className="rcm-header-subtitle">
+              Live Check-in Attendance & Gate Operations Telemetry
+            </div>
           </div>
-        </div>
 
-        <div className="rcm-controls">
-          <select
-            className="rcm-select"
-            value={activeEventId}
-            onChange={(e) => setActiveEventId(Number(e.target.value))}
-            title="Select Event to Monitor"
-          >
-            {eventList.map((evt) => (
-              <option key={evt.id} value={evt.id}>
-                {evt.title} (ID: {evt.id})
-              </option>
-            ))}
-          </select>
+          <div className="rcm-controls">
+            <select
+              className="rcm-select"
+              value={activeEventId || ""}
+              onChange={(e) => {
+                const newId = Number(e.target.value);
+                setActiveEventId(newId);
+                navigate(`/organizer/events/${newId}/realtime-checkin`);
+              }}
+              title="Select Event to Monitor"
+            >
+              {eventList.map((evt) => (
+                <option key={evt.id} value={evt.id}>
+                  {evt.title}
+                </option>
+              ))}
+            </select>
 
-          <button
-            className="rcm-btn"
-            style={{
-              background: pendingConflictsCount > 0 ? "rgba(245, 158, 11, 0.25)" : undefined,
-              borderColor: pendingConflictsCount > 0 ? "#f59e0b" : undefined,
-              color: pendingConflictsCount > 0 ? "#fbbf24" : undefined,
-              fontWeight: 700,
-            }}
-            onClick={() => setShowConflictModal(true)}
-            title="View & Resolve Offline Check-in Conflicts"
-          >
-            Offline Conflicts {pendingConflictsCount > 0 ? `(${pendingConflictsCount})` : ""}
-          </button>
-          <button
-            className={`rcm-btn ${autoRefresh ? "rcm-btn-primary" : ""}`}
-            onClick={() => setAutoRefresh(!autoRefresh)}
-            title="Toggle automatic data push updates"
-          >
-            {autoRefresh ? "Live Push: ON" : "Live Push: OFF"}
-          </button>
+            <button
+              className="rcm-btn"
+              style={{
+                background: pendingConflictsCount > 0 ? "rgba(245, 158, 11, 0.15)" : undefined,
+                borderColor: pendingConflictsCount > 0 ? "#f59e0b" : undefined,
+                color: pendingConflictsCount > 0 ? "#b45309" : undefined,
+                fontWeight: 700,
+              }}
+              onClick={() => setShowConflictModal(true)}
+              title="View Offline Check-in Conflicts"
+            >
+              Offline Conflicts {pendingConflictsCount > 0 ? `(${pendingConflictsCount})` : ""}
+            </button>
+            <button
+              className={`rcm-btn ${autoRefresh ? "rcm-btn-primary" : ""}`}
+              onClick={() => setAutoRefresh(!autoRefresh)}
+              title="Toggle automatic data push updates"
+            >
+              {autoRefresh ? "Live Push: ON" : "Live Push: OFF"}
+            </button>
 
-          <select
-            className="rcm-select"
-            value={refreshIntervalSec}
-            onChange={(e) => setRefreshIntervalSec(Number(e.target.value))}
-            title="Auto-refresh polling frequency"
-          >
-            <option value={3}>3 sec refresh</option>
-            <option value={5}>5 sec refresh</option>
-            <option value={10}>10 sec refresh</option>
-          </select>
+            <select
+              className="rcm-select"
+              value={refreshIntervalSec}
+              onChange={(e) => setRefreshIntervalSec(Number(e.target.value))}
+              title="Auto-refresh polling frequency"
+            >
+              <option value={3}>3 sec refresh</option>
+              <option value={5}>5 sec refresh</option>
+              <option value={10}>10 sec refresh</option>
+            </select>
 
-          <button className="rcm-btn" onClick={handleManualRefresh} disabled={refreshing}>
-            {refreshing ? "Refreshing..." : "Refresh Now"}
-          </button>
-
-          <button className="rcm-btn" onClick={() => navigate("/organizer/dashboard")}>
-            Dashboard
-          </button>
-        </div>
-      </header>
+            <button className="rcm-btn" onClick={handleManualRefresh} disabled={refreshing}>
+              {refreshing ? "Refreshing..." : "Refresh Now"}
+            </button>
+          </div>
+        </header>
 
       <main className="rcm-content">
         {error && (
@@ -294,19 +346,13 @@ export default function RealtimeCheckinMonitorPage() {
           </div>
         </div>
 
-        {/* Scan Velocity Banner */}
+        {/* Telemetry Status Bar */}
         <div className="rcm-telemetry-banner">
           <div className="rcm-telemetry-item">
+            <span className="rcm-pulse-dot" style={{ width: "10px", height: "10px" }}></span>
             <div className="rcm-telemetry-text">
-              <div>Current Velocity</div>
-              <div>{currentScanRatePerMin} scans / min</div>
-            </div>
-          </div>
-
-          <div className="rcm-telemetry-item">
-            <div className="rcm-telemetry-text">
-              <div>Peak Rate Observed</div>
-              <div>{peakScanRatePerMin} scans / min</div>
+              <div>Telemetry Status</div>
+              <div>Connected &amp; Live Synchronized</div>
             </div>
           </div>
 
@@ -346,7 +392,7 @@ export default function RealtimeCheckinMonitorPage() {
                   <div className="rcm-gate-top">
                     <span className="rcm-gate-name">{g.gateName}</span>
                     <span className={`rcm-gate-badge status-${g.status.toLowerCase()}`}>
-                      {g.status} ({g.scanRatePerMin} / min)
+                      {g.status}
                     </span>
                   </div>
                   <div className="rcm-gate-stats">
@@ -417,11 +463,10 @@ export default function RealtimeCheckinMonitorPage() {
               <thead>
                 <tr>
                   <th>Scan ID</th>
-                  <th>Ticket Code</th>
-                  <th>Customer Name</th>
-                  <th>Seating / Zone</th>
+                  <th>Attendee Name</th>
+                  <th>Ticket Tier / Zone</th>
                   <th>Entrance Gate</th>
-                  <th>Timestamp</th>
+                  <th>Scan Time</th>
                   <th>Method</th>
                   <th>Status</th>
                 </tr>
@@ -429,7 +474,7 @@ export default function RealtimeCheckinMonitorPage() {
               <tbody>
                 {recentScans.length === 0 ? (
                   <tr>
-                    <td colSpan="8" style={{ textAlign: "center", padding: "20px", color: "#94a3b8" }}>
+                    <td colSpan="7" style={{ textAlign: "center", padding: "20px", color: "#94a3b8" }}>
                       No scan events logged yet.
                     </td>
                   </tr>
@@ -437,9 +482,10 @@ export default function RealtimeCheckinMonitorPage() {
                   recentScans.map((s) => (
                     <tr key={s.scanId}>
                       <td style={{ fontFamily: "monospace", color: "#c084fc" }}>{s.scanId}</td>
-                      <td style={{ fontWeight: 700 }}>{s.ticketCode}</td>
-                      <td>{s.customerName}</td>
-                      <td>{s.zoneName}</td>
+                      <td style={{ fontWeight: 700, color: "#f8fafc" }}>{s.customerName}</td>
+                      <td>
+                        <span style={{ color: "#38bdf8", fontWeight: 600 }}>{s.zoneName}</span>
+                      </td>
                       <td>{s.gateName}</td>
                       <td style={{ color: "#94a3b8" }}>{new Date(s.scannedAt).toLocaleTimeString()}</td>
                       <td>{s.scanMethod}</td>
@@ -469,6 +515,7 @@ export default function RealtimeCheckinMonitorPage() {
           fetchMonitorData(true);
         }}
       />
-    </div>
+      </div>
+    </OrganizerShell>
   );
 }

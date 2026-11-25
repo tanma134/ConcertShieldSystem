@@ -28,6 +28,8 @@ namespace AdminAPI.Controllers
         public string Scope { get; set; } = string.Empty;
         public string ChangeSummary { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
+        public decimal PlatformFeePercent { get; set; } = 5.0m;
+        public int PayoutDays { get; set; } = 7;
         public string Status { get; set; } = "Active"; // Active, Archived
         public DateTime EffectiveDate { get; set; }
         public DateTime CreatedAt { get; set; }
@@ -39,9 +41,11 @@ namespace AdminAPI.Controllers
     {
         public string Category { get; set; } = "PRICE_TICKETING";
         public string Title { get; set; } = string.Empty;
-        public string Scope { get; set; } = "Toàn bộ người dùng & Ban tổ chức";
+        public string Scope { get; set; } = "All Platform Attendees & Event Organizers";
         public string ChangeSummary { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
+        public decimal? PlatformFeePercent { get; set; } = 5.0m;
+        public int? PayoutDays { get; set; } = 7;
         public DateTime? EffectiveDate { get; set; }
     }
 
@@ -98,6 +102,7 @@ namespace AdminAPI.Controllers
 
                 var sql = @"
                     SELECT policy_id, category, version_code, version_number, title, scope, change_summary, content, 
+                           platform_fee_percent, payout_days,
                            status, effective_date, created_at, created_by_admin_id, created_by_admin_name
                     FROM system_policies
                     WHERE category = @cat
@@ -119,6 +124,8 @@ namespace AdminAPI.Controllers
                         Scope = Convert.ToString(reader["scope"]) ?? "",
                         ChangeSummary = Convert.ToString(reader["change_summary"]) ?? "",
                         Content = Convert.ToString(reader["content"]) ?? "",
+                        PlatformFeePercent = reader["platform_fee_percent"] != DBNull.Value ? Convert.ToDecimal(reader["platform_fee_percent"]) : 5.0m,
+                        PayoutDays = reader["payout_days"] != DBNull.Value ? Convert.ToInt32(reader["payout_days"]) : 7,
                         Status = Convert.ToString(reader["status"]) ?? "Active",
                         EffectiveDate = Convert.ToDateTime(reader["effective_date"]),
                         CreatedAt = Convert.ToDateTime(reader["created_at"]),
@@ -130,7 +137,7 @@ namespace AdminAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to load policy history for category {Category} from admin_db", category);
-                return StatusCode(500, new { success = false, message = "Không thể tải lịch sử chính sách từ cơ sở dữ liệu." });
+                return StatusCode(500, new { success = false, message = "Could not load policy version history from database." });
             }
 
             return Ok(new
@@ -159,10 +166,11 @@ namespace AdminAPI.Controllers
                 var sql = @"
                     SELECT DISTINCT ON (category) 
                            policy_id, category, version_code, version_number, title, scope, change_summary, content, 
+                           platform_fee_percent, payout_days,
                            status, effective_date, created_at, created_by_admin_id, created_by_admin_name
                     FROM system_policies
-                    WHERE status = 'Active'
-                    ORDER BY category, version_number DESC;";
+                    WHERE LOWER(status) = 'active'
+                    ORDER BY category, version_number DESC, policy_id DESC;";
 
                 using var cmd = new NpgsqlCommand(sql, conn);
                 using var reader = await cmd.ExecuteReaderAsync();
@@ -179,6 +187,8 @@ namespace AdminAPI.Controllers
                         Scope = Convert.ToString(reader["scope"]) ?? "",
                         ChangeSummary = Convert.ToString(reader["change_summary"]) ?? "",
                         Content = Convert.ToString(reader["content"]) ?? "",
+                        PlatformFeePercent = reader["platform_fee_percent"] != DBNull.Value ? Convert.ToDecimal(reader["platform_fee_percent"]) : 5.0m,
+                        PayoutDays = reader["payout_days"] != DBNull.Value ? Convert.ToInt32(reader["payout_days"]) : 7,
                         Status = "Active",
                         EffectiveDate = Convert.ToDateTime(reader["effective_date"]),
                         CreatedAt = Convert.ToDateTime(reader["created_at"]),
@@ -192,11 +202,94 @@ namespace AdminAPI.Controllers
                 _logger.LogError(ex, "Failed to load active policies from admin_db");
             }
 
+            var pricingPolicy = activePolicies.ContainsKey("PRICE_TICKETING") ? activePolicies["PRICE_TICKETING"]
+                              : activePolicies.Values.FirstOrDefault();
+
             return Ok(new
             {
                 success = true,
-                data = activePolicies
+                data = activePolicies,
+                currentPricing = new
+                {
+                    platformFeePercent = pricingPolicy?.PlatformFeePercent ?? 5.0m,
+                    payoutDays = pricingPolicy?.PayoutDays ?? 7,
+                    versionCode = pricingPolicy?.VersionCode ?? "v1.0",
+                    effectiveDate = pricingPolicy?.EffectiveDate ?? DateTime.UtcNow
+                }
             });
+        }
+
+        /// <summary>
+        /// Public endpoint for Become Organizer page and registration/login policy consent.
+        /// Returns the currently active platform fee percentage and payout settlement days.
+        /// </summary>
+        [AllowAnonymous]
+        [HttpGet("pricing-terms")]
+        public async Task<IActionResult> GetPricingTerms()
+        {
+            try
+            {
+                using var conn = new NpgsqlConnection(_connectionString);
+                await conn.OpenAsync();
+
+                var sql = @"
+                    SELECT policy_id, category, version_code, version_number, title, scope, change_summary, content, 
+                           platform_fee_percent, payout_days, effective_date, created_at
+                    FROM system_policies
+                    WHERE category = 'PRICE_TICKETING' AND LOWER(status) = 'active'
+                    ORDER BY version_number DESC, policy_id DESC
+                    LIMIT 1;";
+
+                using var cmd = new NpgsqlCommand(sql, conn);
+                using var reader = await cmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    return Ok(new
+                    {
+                        success = true,
+                        data = new
+                        {
+                            policyId = Convert.ToInt32(reader["policy_id"]),
+                            category = Convert.ToString(reader["category"]),
+                            versionCode = Convert.ToString(reader["version_code"]),
+                            versionNumber = Convert.ToInt32(reader["version_number"]),
+                            title = Convert.ToString(reader["title"]),
+                            scope = Convert.ToString(reader["scope"]),
+                            changeSummary = Convert.ToString(reader["change_summary"]),
+                            content = Convert.ToString(reader["content"]),
+                            platformFeePercent = reader["platform_fee_percent"] != DBNull.Value ? Convert.ToDecimal(reader["platform_fee_percent"]) : 5.0m,
+                            payoutDays = reader["payout_days"] != DBNull.Value ? Convert.ToInt32(reader["payout_days"]) : 7,
+                            effectiveDate = Convert.ToDateTime(reader["effective_date"]),
+                            createdAt = Convert.ToDateTime(reader["created_at"])
+                        }
+                    });
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        policyId = 0,
+                        category = "PRICE_TICKETING",
+                        versionCode = "POL-PRICE-V1.0",
+                        versionNumber = 1,
+                        title = "Standard Platform Pricing & Fee Policy",
+                        scope = "All Platform Attendees & Event Organizers",
+                        changeSummary = "Default standard policy terms",
+                        content = "ARTICLE 1. OBJECTIVES AND APPLICABLE SCOPE\n1. This platform policy establishes binding operational, ticketing, and financial standards across ConcertShield.\n\nARTICLE 2. OPERATIONAL REQUIREMENTS AND COMPLIANCE MANDATES\n1. All participants must adhere strictly to platform regulations regarding ticket issuance, platform fee deductions (5.0%), and payout schedules (7 business days).\n\nARTICLE 3. EFFECTIVE DATE AND ENFORCEMENT\n1. This policy version takes legal effect immediately upon publication on the system.",
+                        platformFeePercent = 5.0m,
+                        payoutDays = 7,
+                        effectiveDate = DateTime.UtcNow,
+                        createdAt = DateTime.UtcNow
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load active pricing policy from admin_db");
+                return StatusCode(500, new { success = false, message = "Could not load pricing policy terms." });
+            }
         }
 
         /// <summary>
@@ -207,13 +300,26 @@ namespace AdminAPI.Controllers
         public async Task<IActionResult> CreatePolicyVersion([FromBody] CreatePolicyVersionRequestDTO request)
         {
             if (string.IsNullOrWhiteSpace(request.Title))
-                return BadRequest(new { success = false, message = "Tiêu đề văn bản chính sách không được để trống." });
+                return BadRequest(new { success = false, message = "Policy document title is required." });
 
             if (string.IsNullOrWhiteSpace(request.ChangeSummary))
-                return BadRequest(new { success = false, message = "Lý do ban hành và tóm tắt nội dung thay đổi là bắt buộc." });
+                return BadRequest(new { success = false, message = "Enactment justification / change summary is required." });
 
             if (string.IsNullOrWhiteSpace(request.Content))
-                return BadRequest(new { success = false, message = "Toàn văn nội dung chính sách không được để trống." });
+                return BadRequest(new { success = false, message = "Full policy terms and content cannot be empty." });
+
+            var feePercent = request.PlatformFeePercent ?? 5.0m;
+            if (feePercent < 0 || feePercent > 100)
+                return BadRequest(new { success = false, message = "Platform fee percentage must be between 0% and 100%." });
+
+            var payoutDays = request.PayoutDays ?? 7;
+            if (payoutDays < 1 || payoutDays > 60)
+                return BadRequest(new { success = false, message = "Payout settlement timeline must be between 1 and 60 business days." });
+
+            if (request.EffectiveDate.HasValue && request.EffectiveDate.Value.ToUniversalTime().Date < DateTime.UtcNow.Date)
+            {
+                return BadRequest(new { success = false, message = "Effective start date cannot be earlier than today." });
+            }
 
             var category = NormalizeCategory(request.Category);
             var adminId = GetCurrentAdminId();
@@ -238,7 +344,7 @@ namespace AdminAPI.Controllers
                 }
 
                 // 2. Archive previous active versions for this category
-                var archiveSql = "UPDATE system_policies SET status = 'Archived' WHERE category = @cat AND status = 'Active';";
+                var archiveSql = "UPDATE system_policies SET status = 'Archived' WHERE category = @cat AND LOWER(status) = 'active';";
                 using (var cmd = new NpgsqlCommand(archiveSql, conn, tx))
                 {
                     cmd.Parameters.AddWithValue("cat", category);
@@ -259,8 +365,9 @@ namespace AdminAPI.Controllers
                 // 4. Insert new policy version
                 var insertSql = @"
                     INSERT INTO system_policies (category, version_code, version_number, title, scope, change_summary, content, 
+                                                platform_fee_percent, payout_days,
                                                 status, effective_date, created_at, created_by_admin_id, created_by_admin_name)
-                    VALUES (@cat, @code, @num, @title, @scope, @sum, @content, 'Active', @eff, NOW(), @aid, @aname)
+                    VALUES (@cat, @code, @num, @title, @scope, @sum, @content, @fee, @payout, 'Active', @eff, NOW(), @aid, @aname)
                     RETURNING policy_id, created_at;";
 
                 int newPolicyId;
@@ -272,9 +379,11 @@ namespace AdminAPI.Controllers
                     cmd.Parameters.AddWithValue("code", versionCode);
                     cmd.Parameters.AddWithValue("num", nextVer);
                     cmd.Parameters.AddWithValue("title", request.Title.Trim());
-                    cmd.Parameters.AddWithValue("scope", string.IsNullOrWhiteSpace(request.Scope) ? "Toàn bộ người dùng & Ban tổ chức" : request.Scope.Trim());
+                    cmd.Parameters.AddWithValue("scope", string.IsNullOrWhiteSpace(request.Scope) ? "All Platform Attendees & Event Organizers" : request.Scope.Trim());
                     cmd.Parameters.AddWithValue("sum", request.ChangeSummary.Trim());
                     cmd.Parameters.AddWithValue("content", request.Content.Trim());
+                    cmd.Parameters.AddWithValue("fee", feePercent);
+                    cmd.Parameters.AddWithValue("payout", payoutDays);
                     cmd.Parameters.AddWithValue("eff", effectiveDate);
                     cmd.Parameters.AddWithValue("aid", adminId);
                     cmd.Parameters.AddWithValue("aname", adminName);
@@ -300,9 +409,11 @@ namespace AdminAPI.Controllers
                     VersionCode = versionCode,
                     VersionNumber = nextVer,
                     Title = request.Title.Trim(),
-                    Scope = string.IsNullOrWhiteSpace(request.Scope) ? "Toàn bộ người dùng & Ban tổ chức" : request.Scope.Trim(),
+                    Scope = string.IsNullOrWhiteSpace(request.Scope) ? "All Platform Attendees & Event Organizers" : request.Scope.Trim(),
                     ChangeSummary = request.ChangeSummary.Trim(),
                     Content = request.Content.Trim(),
+                    PlatformFeePercent = feePercent,
+                    PayoutDays = payoutDays,
                     Status = "Active",
                     EffectiveDate = effectiveDate,
                     CreatedAt = createdAt,
@@ -325,23 +436,25 @@ namespace AdminAPI.Controllers
                         versionNumber = nextVer,
                         title = newPolicy.Title,
                         scope = newPolicy.Scope,
+                        platformFeePercent = feePercent,
+                        payoutDays,
                         effectiveDate,
-                        notes = $"Ban hành chính sách mới {versionCode}: {newPolicy.Title} (Lý do: {newPolicy.ChangeSummary})"
+                        notes = $"Enacted new policy version {versionCode}: {newPolicy.Title} (Fee: {feePercent}%, Payout: {payoutDays} days)"
                     }
                 );
 
-                _logger.LogInformation("Policy version {VersionCode} published by Admin {AdminName} in admin_db", versionCode, adminName);
+                _logger.LogInformation("Policy version {VersionCode} published by Admin {AdminName} in admin_db. Fee: {Fee}%, Payout: {Payout} days", versionCode, adminName, feePercent, payoutDays);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to create policy version in admin_db for category {Category}", category);
-                return StatusCode(500, new { success = false, message = "Lỗi máy chủ khi lưu chính sách vào cơ sở dữ liệu: " + ex.Message });
+                return StatusCode(500, new { success = false, message = "Server error while saving policy to database: " + ex.Message });
             }
 
             return Ok(new
             {
                 success = true,
-                message = $"Ban hành thành công phiên bản chính sách mới {newPolicy.VersionCode}!",
+                message = $"Successfully published new policy version {newPolicy.VersionCode}!",
                 data = newPolicy
             });
         }

@@ -197,3 +197,31 @@
 @media (max-width: 850px) {
   .admin-shell .admin-nav .admin-nav-item.active::before { display: none; }
 }
+
+/* Light theme for admin-main in PanelShell */
+.admin-main.admin-main-light {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+.admin-main.admin-main-light .admin-topbar {
+  background: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.admin-main.admin-main-light .topbar-title {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+}
+
+.admin-main.admin-main-light .admin-logout {
+  background: #f8fafc !important;
+  color: #334155 !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+.admin-main.admin-main-light .admin-logout:hover {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+}

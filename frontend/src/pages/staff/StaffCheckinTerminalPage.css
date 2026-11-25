@@ -8,8 +8,8 @@
   margin: 0 auto;
   padding: 1.5rem;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  color: #f8fafc;
-  background: #0c0c10;
+  color: #0f172a;
+  background: #faf7fd;
   min-height: 100vh;
 }
 
@@ -17,8 +17,8 @@
    HEADER BANNER
    ========================================================================== */
 .terminal-header {
-  background: #15151c;
-  border: 1px solid #232332;
+  background: #ffffff;
+  border: 1px solid #ede8f5;
   border-radius: 14px;
   padding: 1.25rem 1.75rem;
   display: flex;
@@ -27,7 +27,7 @@
   flex-wrap: wrap;
   gap: 1.25rem;
   margin-bottom: 1.25rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 16px rgba(192, 38, 211, 0.05);
 }
 
 .header-left {
@@ -39,13 +39,13 @@
 }
 
 .btn-back {
-  background: #1e1e2c;
-  border: 1px solid #2e2e42;
+  background: #fdf4ff;
+  border: 1px solid #fbcfe8;
   padding: 0.6rem 1rem;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
-  color: #e2e8f0;
+  color: #334155;
   font-size: 0.88rem;
   transition: all 0.2s;
   white-space: nowrap;
@@ -53,7 +53,7 @@
 }
 
 .btn-back:hover {
-  background: #28283c;
+  background: #fce7f3;
   border-color: #ff2d75;
   color: #ff5b93;
 }
@@ -74,7 +74,7 @@
 }
 
 .terminal-event-title {
-  color: #ffffff !important;
+  color: #0f172a !important;
   font-size: 1.45rem;
   font-weight: 700;
   margin: 0;
@@ -122,13 +122,13 @@
 }
 
 .event-selector-dark {
-  background: #1a1a26;
-  border: 1px solid #2d2d40;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 6px;
   padding: 0.3rem 0.7rem;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #f8fafc;
+  color: #0f172a;
   cursor: pointer;
   outline: none;
 }
@@ -242,9 +242,9 @@
 }
 
 .terminal-nav-tab {
-  background: #15151f;
-  color: #94a3b8;
-  border: 1px solid #242436;
+  background: #ffffff;
+  color: #64748b;
+  border: 1px solid #ede8f5;
   border-radius: 8px;
   padding: 0.65rem 1.25rem;
   font-weight: 700;
@@ -255,14 +255,14 @@
 }
 
 .terminal-nav-tab:hover {
-  color: #f8fafc;
-  background: #1c1c2a;
+  color: #0f172a;
+  background: #fdf4ff;
   border-color: #3b3b52;
 }
 
 .terminal-nav-tab.active {
   background: #d61f6e;
-  color: #ffffff;
+  color: #0f172a;
   border-color: #ff2d75;
   box-shadow: 0 4px 14px rgba(255, 45, 117, 0.4);
 }
@@ -271,8 +271,8 @@
    TAB 1: CAMERA QR VIEWFINDER & REALTIME SCAN FEED (Figure 114)
    ========================================================================== */
 .scanner-viewfinder-card {
-  background: #15151c;
-  border: 1px solid #232332;
+  background: #ffffff;
+  border: 1px solid #ede8f5;
   border-radius: 14px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
@@ -304,9 +304,9 @@
 }
 
 .camera-device-select {
-  background: #1a1a26;
-  border: 1px solid #2d2d40;
-  color: #f8fafc;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
   padding: 0.45rem 0.75rem;
   border-radius: 6px;
   font-size: 0.85rem;
@@ -314,9 +314,9 @@
 }
 
 .btn-upload-qr {
-  background: #1e1e2c;
-  border: 1px solid #2e2e42;
-  color: #e2e8f0;
+  background: #fdf4ff;
+  border: 1px solid #fbcfe8;
+  color: #334155;
   padding: 0.45rem 0.85rem;
   border-radius: 6px;
   font-weight: 600;
@@ -326,13 +326,13 @@
 }
 
 .btn-upload-qr:hover {
-  background: #2b2b3e;
+  background: #e2e8f0;
   border-color: #ff2d75;
   color: #ff6097;
 }
 
 .btn-upload-cam-file {
-  background: #1e1e2c;
+  background: #fdf4ff;
   border: 1px solid #ff2d75;
   color: #ff3c7f;
   padding: 0.45rem 0.95rem;
@@ -347,13 +347,13 @@
 
 .btn-upload-cam-file:hover {
   background: #d61f6e;
-  color: #ffffff;
+  color: #0f172a;
 }
 
 .btn-toggle-cam {
   background: #d61f6e;
   border: none;
-  color: #ffffff;
+  color: #0f172a;
   padding: 0.45rem 0.95rem;
   border-radius: 6px;
   font-weight: 700;
@@ -372,8 +372,8 @@
   max-width: 680px;
   height: 380px;
   margin: 0 auto;
-  background: #08080c;
-  border: 1px solid #232332;
+  background: #faf7fd;
+  border: 1px solid #ede8f5;
   border-radius: 12px;
   overflow: hidden;
   display: flex;
@@ -424,7 +424,7 @@
   position: absolute;
   bottom: 12px;
   background: rgba(12, 12, 16, 0.85);
-  border: 1px solid #232332;
+  border: 1px solid #ede8f5;
   color: #b0bbca;
   padding: 0.4rem 0.9rem;
   border-radius: 20px;
@@ -436,12 +436,12 @@
 .cooldown-overlay-banner {
   position: absolute;
   background: rgba(16, 185, 129, 0.9);
-  color: #ffffff;
+  color: #0f172a;
   padding: 0.6rem 1.4rem;
   border-radius: 8px;
   font-weight: 700;
   font-size: 0.95rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 16px rgba(192, 38, 211, 0.05);
 }
 
 .camera-off-msg {
@@ -502,7 +502,7 @@
 
 .feedback-msg {
   margin: 0 0 0.5rem 0;
-  color: #cbd5e1;
+  color: #475569;
   font-size: 0.95rem;
 }
 
@@ -515,13 +515,13 @@
 }
 
 .feedback-details strong {
-  color: #ffffff;
+  color: #0f172a;
 }
 
 /* Scan Feed Section Under Viewfinder (Figure 114) */
 .scan-feed-section {
-  background: #15151c;
-  border: 1px solid #232332;
+  background: #ffffff;
+  border: 1px solid #ede8f5;
   border-radius: 14px;
   padding: 1.5rem;
 }
@@ -536,7 +536,7 @@
 .feed-header-row h3 {
   margin: 0;
   font-size: 1.15rem;
-  color: #ffffff;
+  color: #0f172a;
 }
 
 .btn-history-view-all {
@@ -556,8 +556,8 @@
    TAB 2: MANUAL / HARDWARE SCANNER INPUT (Figure 115)
    ========================================================================== */
 .card-manual-input {
-  background: #15151c;
-  border: 1px solid #232332;
+  background: #ffffff;
+  border: 1px solid #ede8f5;
   border-radius: 14px;
   padding: 2rem;
   max-width: 900px;
@@ -568,7 +568,7 @@
 .manual-card-header h2 {
   margin: 0 0 0.4rem 0;
   font-size: 1.45rem;
-  color: #ffffff;
+  color: #0f172a;
 }
 
 .card-subtext {
@@ -612,9 +612,9 @@
 }
 
 .btn-demo-pill {
-  background: #1c1c2a;
-  border: 1px solid #2e2e42;
-  color: #e2e8f0;
+  background: #fdf4ff;
+  border: 1px solid #fbcfe8;
+  color: #334155;
   padding: 0.4rem 0.85rem;
   border-radius: 6px;
   font-size: 0.82rem;
@@ -624,7 +624,7 @@
 }
 
 .btn-demo-pill:hover {
-  background: #27273c;
+  background: #ede8f5;
   border-color: #ff2d75;
   color: #ff5690;
 }
@@ -644,16 +644,16 @@
 .form-group label {
   font-size: 0.88rem;
   font-weight: 700;
-  color: #cbd5e1;
+  color: #475569;
 }
 
 .form-group input,
 .form-group select {
-  background: #1a1a26;
-  border: 1px solid #2d2d40;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
   padding: 0.75rem 1rem;
-  color: #f8fafc;
+  color: #0f172a;
   font-size: 0.95rem;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -666,8 +666,8 @@
 }
 
 .cccd-box-full {
-  background: #191924;
-  border: 1px solid #28283a;
+  background: #ffffff;
+  border: 1px solid #fce7f3;
   border-radius: 8px;
   padding: 1rem 1.25rem;
 }
@@ -677,7 +677,7 @@
   gap: 0.85rem;
   align-items: flex-start;
   cursor: pointer;
-  color: #e2e8f0;
+  color: #334155;
   font-size: 0.9rem;
   line-height: 1.5;
 }
@@ -697,7 +697,7 @@
 .btn-validate-ticket-pink {
   width: 100%;
   background: #d61f6e;
-  color: #ffffff;
+  color: #0f172a;
   border: none;
   border-radius: 10px;
   padding: 0.9rem;
@@ -724,8 +724,8 @@
    TAB 3: MANUAL TICKET LOOKUP (Figure 116)
    ========================================================================== */
 .card-lookup-main {
-  background: #15151c;
-  border: 1px solid #232332;
+  background: #ffffff;
+  border: 1px solid #ede8f5;
   border-radius: 14px;
   padding: 2rem;
   max-width: 1000px;
@@ -736,7 +736,7 @@
 .lookup-header h2 {
   margin: 0 0 0.4rem 0;
   font-size: 1.45rem;
-  color: #ffffff;
+  color: #0f172a;
 }
 
 .search-type-selector {
@@ -747,9 +747,9 @@
 }
 
 .type-chip-dark {
-  background: #1a1a26;
-  border: 1px solid #2d2d40;
-  color: #94a3b8;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
   padding: 0.55rem 1.1rem;
   border-radius: 9999px;
   font-weight: 700;
@@ -759,14 +759,14 @@
 }
 
 .type-chip-dark:hover {
-  background: #232334;
-  color: #f8fafc;
+  background: #ede8f5;
+  color: #0f172a;
 }
 
 .type-chip-dark.active {
   background: #d61f6e;
   border-color: #ff2d75;
-  color: #ffffff;
+  color: #0f172a;
   box-shadow: 0 4px 12px rgba(255, 45, 117, 0.35);
 }
 
@@ -778,11 +778,11 @@
 
 .lookup-search-input {
   flex: 1;
-  background: #1a1a26;
-  border: 1px solid #2d2d40;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
   padding: 0.8rem 1.2rem;
-  color: #f8fafc;
+  color: #0f172a;
   font-size: 1rem;
   outline: none;
 }
@@ -794,7 +794,7 @@
 
 .btn-lookup-pink {
   background: #d61f6e;
-  color: #ffffff;
+  color: #0f172a;
   border: none;
   border-radius: 8px;
   padding: 0 1.75rem;
@@ -816,7 +816,7 @@
 }
 
 .empty-lookup-box {
-  background: #191924;
+  background: #ffffff;
   border: 1px dashed #2e2e42;
   border-radius: 10px;
   padding: 2.5rem;
@@ -826,8 +826,8 @@
 }
 
 .attendee-result-card {
-  background: #191926;
-  border: 1px solid #2b2b3e;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 1.5rem;
 }
@@ -837,7 +837,7 @@
   align-items: center;
   gap: 1.25rem;
   padding-bottom: 1.25rem;
-  border-bottom: 1px solid #28283a;
+  border-bottom: 1px solid #fce7f3;
   margin-bottom: 1.5rem;
 }
 
@@ -856,7 +856,7 @@
 .attendee-card-header h3 {
   margin: 0 0 0.35rem 0;
   font-size: 1.35rem;
-  color: #ffffff;
+  color: #0f172a;
 }
 
 .attendee-meta-pills {
@@ -870,7 +870,7 @@
 .associated-tickets-block h4 {
   margin: 0 0 1rem 0;
   font-size: 1.05rem;
-  color: #cbd5e1;
+  color: #475569;
 }
 
 .tickets-cards-list {
@@ -880,8 +880,8 @@
 }
 
 .associated-ticket-item {
-  background: #14141e;
-  border: 1px solid #242436;
+  background: #ffffff;
+  border: 1px solid #ede8f5;
   border-radius: 10px;
   padding: 1rem 1.25rem;
   display: flex;
@@ -900,15 +900,15 @@
 .t-code-badge {
   font-family: monospace;
   font-weight: 700;
-  color: #ffffff;
-  background: #1e1e2e;
+  color: #0f172a;
+  background: #fdf4ff;
   padding: 0.3rem 0.65rem;
   border-radius: 6px;
   border: 1px solid #32324a;
 }
 
 .t-zone-info {
-  color: #cbd5e1;
+  color: #475569;
   font-size: 0.92rem;
 }
 
@@ -946,7 +946,7 @@
 
 .btn-checkin-direct-pink {
   background: #d61f6e;
-  color: #ffffff;
+  color: #0f172a;
   border: none;
   border-radius: 6px;
   padding: 0.5rem 1rem;
@@ -971,8 +971,8 @@
    TAB 4: SCAN HISTORY (Figure 117)
    ========================================================================== */
 .history-main-card {
-  background: #15151c;
-  border: 1px solid #232332;
+  background: #ffffff;
+  border: 1px solid #ede8f5;
   border-radius: 14px;
   padding: 2rem;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
@@ -981,7 +981,7 @@
 .history-header-block h2 {
   margin: 0 0 0.4rem 0;
   font-size: 1.45rem;
-  color: #ffffff;
+  color: #0f172a;
 }
 
 /* 4 KPI Summary Cards (Figure 117) */
@@ -993,8 +993,8 @@
 }
 
 .kpi-card {
-  background: #191924;
-  border: 1px solid #28283a;
+  background: #ffffff;
+  border: 1px solid #fce7f3;
   border-radius: 12px;
   padding: 1.25rem 1.5rem;
   display: flex;
@@ -1030,7 +1030,7 @@
 .kpi-value {
   font-size: 2.2rem;
   font-weight: 900;
-  color: #ffffff;
+  color: #0f172a;
   line-height: 1.1;
 }
 
@@ -1059,9 +1059,9 @@
 }
 
 .history-filter-pill {
-  background: #191924;
-  border: 1px solid #28283a;
-  color: #94a3b8;
+  background: #ffffff;
+  border: 1px solid #fce7f3;
+  color: #64748b;
   padding: 0.45rem 0.95rem;
   border-radius: 9999px;
   font-weight: 700;
@@ -1071,21 +1071,21 @@
 }
 
 .history-filter-pill:hover {
-  background: #242436;
-  color: #f8fafc;
+  background: #ede8f5;
+  color: #0f172a;
 }
 
 .history-filter-pill.active {
   background: #d61f6e;
   border-color: #ff2d75;
-  color: #ffffff;
+  color: #0f172a;
   box-shadow: 0 4px 12px rgba(255, 45, 117, 0.35);
 }
 
 .btn-refresh-history {
-  background: #1e1e2e;
+  background: #fdf4ff;
   border: 1px solid #313148;
-  color: #cbd5e1;
+  color: #475569;
   padding: 0.45rem 0.95rem;
   border-radius: 8px;
   font-weight: 600;
@@ -1094,8 +1094,8 @@
 }
 
 .btn-refresh-history:hover {
-  background: #28283e;
-  color: #ffffff;
+  background: #fbcfe8;
+  color: #0f172a;
 }
 
 /* ==========================================================================
@@ -1113,21 +1113,21 @@
 }
 
 .terminal-table th {
-  background: #191926;
-  color: #94a3b8;
+  background: #ffffff;
+  color: #64748b;
   font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.8px;
   text-transform: uppercase;
   padding: 0.85rem 1rem;
   text-align: left;
-  border-bottom: 1px solid #28283a;
+  border-bottom: 1px solid #fce7f3;
 }
 
 .terminal-table td {
   padding: 0.85rem 1rem;
-  border-bottom: 1px solid #1e1e2d;
-  color: #e2e8f0;
+  border-bottom: 1px solid #fdf4ff;
+  color: #334155;
 }
 
 .terminal-table tbody tr:hover {
@@ -1135,9 +1135,9 @@
 }
 
 .method-tag-dark {
-  background: #1e1e2e;
+  background: #fdf4ff;
   border: 1px solid #303046;
-  color: #cbd5e1;
+  color: #475569;
   font-size: 0.75rem;
   font-weight: 600;
   padding: 0.2rem 0.55rem;
@@ -1180,8 +1180,8 @@
    TAB 5: OFFLINE MODE & EDGE SYNC (UC 14.5, 14.6, 14.7)
    ========================================================================== */
 .card-offline-control {
-  background: #15151c;
-  border: 1px solid #232332;
+  background: #ffffff;
+  border: 1px solid #ede8f5;
   border-radius: 14px;
   padding: 2rem;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
@@ -1190,7 +1190,7 @@
 .offline-card-header h2 {
   margin: 0 0 0.4rem 0;
   font-size: 1.45rem;
-  color: #ffffff;
+  color: #0f172a;
 }
 
 .offline-status-grid {
@@ -1201,8 +1201,8 @@
 }
 
 .offline-info-card {
-  background: #191924;
-  border: 1px solid #28283a;
+  background: #ffffff;
+  border: 1px solid #fce7f3;
   border-radius: 12px;
   padding: 1.5rem;
   display: flex;
@@ -1226,7 +1226,7 @@
 
 .btn-offline-action-pink {
   background: #d61f6e;
-  color: #ffffff;
+  color: #0f172a;
   border: none;
   border-radius: 8px;
   padding: 0.75rem 1.4rem;
@@ -1241,7 +1241,7 @@
 
 .btn-offline-action-blue {
   background: #2563eb;
-  color: #ffffff;
+  color: #0f172a;
   border: none;
   border-radius: 8px;
   padding: 0.75rem 1.4rem;
@@ -1273,7 +1273,7 @@
    ========================================================================== */
 .offline-sync-toast {
   background: #0b815a;
-  color: #ffffff;
+  color: #0f172a;
   padding: 0.85rem 1.5rem;
   border-radius: 10px;
   margin-bottom: 1.25rem;
@@ -1287,7 +1287,7 @@
 .toast-dismiss {
   background: transparent;
   border: none;
-  color: #ffffff;
+  color: #0f172a;
   font-size: 1.1rem;
   cursor: pointer;
 }
@@ -1306,7 +1306,7 @@
 
 .shift-inactive-banner .btn-secondary {
   background: #e21313;
-  color: #ffffff;
+  color: #0f172a;
   border: none;
   padding: 0.6rem 1.1rem;
   border-radius: 8px;
@@ -1327,8 +1327,8 @@
 }
 
 .terminal-dialog-box {
-  background: #15151c;
-  border: 1px solid #28283a;
+  background: #ffffff;
+  border: 1px solid #fce7f3;
   border-radius: 14px;
   width: 100%;
   max-width: 520px;
@@ -1353,7 +1353,7 @@
 .dialog-header-left h3 {
   margin: 0;
   font-size: 1.15rem;
-  color: #ffffff;
+  color: #0f172a;
 }
 
 .terminal-dialog-header .close-btn {
@@ -1366,14 +1366,14 @@
 
 .terminal-dialog-body {
   padding: 1.5rem;
-  color: #cbd5e1;
+  color: #475569;
   font-size: 0.95rem;
   line-height: 1.5;
 }
 
 .sync-breakdown-card {
-  background: #191924;
-  border: 1px solid #28283a;
+  background: #ffffff;
+  border: 1px solid #fce7f3;
   border-radius: 10px;
   padding: 1rem;
   margin-top: 1rem;
@@ -1393,7 +1393,7 @@
   border-top: 1px solid #232332;
   display: flex;
   justify-content: flex-end;
-  background: #121218;
+  background: #ffffff;
 }
 
 .btn-dialog-action {
@@ -1406,10 +1406,10 @@
 
 .btn-dialog-action.btn-primary {
   background: #d61f6e;
-  color: #ffffff;
+  color: #0f172a;
 }
 
 .btn-dialog-action.btn-success {
   background: #0b815a;
-  color: #ffffff;
+  color: #0f172a;
 }

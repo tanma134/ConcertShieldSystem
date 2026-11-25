@@ -87,6 +87,8 @@ builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<ICheckinService, CheckinService>();
 builder.Services.AddScoped<IStatusHistoryRepository, StatusHistoryRepository>();
 builder.Services.AddScoped<IStatusHistoryService, StatusHistoryService>();
+builder.Services.AddScoped<ITicketGovernanceRepository, TicketGovernanceRepository>();
+builder.Services.AddScoped<ITicketGovernanceService, TicketGovernanceService>();
 
 // Risk Engine: gui tin hieu gian lan/bot sang AdminAPI
 builder.Services.AddRiskClient(builder.Configuration);

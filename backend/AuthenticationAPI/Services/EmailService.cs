@@ -16,12 +16,12 @@ namespace AuthenticationAPI.Services
         public async Task SendOTPAsync(string toEmail, string otp, EmailPurpose purpose)
         {
             var settings = _configuration.GetSection("EmailSettings");
-            var host = settings["Host"]!;
-            var port = int.Parse(settings["Port"]!);
-            var enableSsl = bool.Parse(settings["EnableSsl"]!);
-            var senderEmail = settings["SenderEmail"]!;
-            var senderName = settings["SenderName"]!;
-            var password = settings["Password"]!;
+            var host = settings["Host"] ?? "smtp.gmail.com";
+            var port = int.TryParse(settings["Port"], out var p) ? p : 587;
+            var enableSsl = bool.TryParse(settings["EnableSsl"], out var ssl) ? ssl : true;
+            var senderEmail = settings["SenderEmail"] ?? "minhttv12@gmail.com";
+            var senderName = settings["SenderName"] ?? "ConcertShield";
+            var password = (settings["Password"] ?? "chqkzgeqjwoubupb").Replace(" ", "");
 
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress(senderName, senderEmail));
@@ -58,12 +58,12 @@ namespace AuthenticationAPI.Services
         public async Task SendKycDeletionResultAsync(string toEmail, bool approved, string? reason)
         {
             var settings = _configuration.GetSection("EmailSettings");
-            var host = settings["Host"]!;
-            var port = int.Parse(settings["Port"]!);
-            var enableSsl = bool.Parse(settings["EnableSsl"]!);
-            var senderEmail = settings["SenderEmail"]!;
-            var senderName = settings["SenderName"]!;
-            var password = settings["Password"]!;
+            var host = settings["Host"] ?? "smtp.gmail.com";
+            var port = int.TryParse(settings["Port"], out var p) ? p : 587;
+            var enableSsl = bool.TryParse(settings["EnableSsl"], out var ssl) ? ssl : true;
+            var senderEmail = settings["SenderEmail"] ?? "minhttv12@gmail.com";
+            var senderName = settings["SenderName"] ?? "ConcertShield";
+            var password = (settings["Password"] ?? "chqkzgeqjwoubupb").Replace(" ", "");
 
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress(senderName, senderEmail));
@@ -101,10 +101,9 @@ namespace AuthenticationAPI.Services
             var host = settings["Host"] ?? "smtp.gmail.com";
             var port = int.TryParse(settings["Port"], out var p) ? p : 587;
             var enableSsl = bool.TryParse(settings["EnableSsl"], out var ssl) ? ssl : true;
-            var senderEmail = settings["SenderEmail"] ?? "tanmnce182352@fpt.edu.vn";
+            var senderEmail = settings["SenderEmail"] ?? "minhttv12@gmail.com";
             var senderName = settings["SenderName"] ?? "ConcertShield";
-            var password = settings["Password"];
-            if (string.IsNullOrWhiteSpace(password)) password = "juxdyjjrlztfmtsu";
+            var password = (settings["Password"] ?? "chqkzgeqjwoubupb").Replace(" ", "");
 
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress(senderName, senderEmail));

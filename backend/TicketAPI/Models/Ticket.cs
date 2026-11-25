@@ -31,6 +31,8 @@ public partial class Ticket
 
     public string? CheckedInGate { get; set; }
 
+    public string? GateId { get; set; }
+
     public DateTime? LastExitAt { get; set; }
 
     public bool IsInside { get; set; }

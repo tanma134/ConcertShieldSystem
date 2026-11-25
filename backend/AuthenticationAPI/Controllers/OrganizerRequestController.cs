@@ -117,6 +117,57 @@ namespace AuthenticationAPI.Controllers
             });
         }
 
+        [HttpPut("notifications/read-all")]
+        public async Task<IActionResult> MarkAllNotificationsRead()
+        {
+            if (CurrentUserId <= 0)
+            {
+                return Unauthorized(new { message = "Invalid user session. Please log in again." });
+            }
+
+            try
+            {
+                using var conn = new Npgsql.NpgsqlConnection("Host=localhost;Port=5432;Database=notification_db;Username=postgres;Password=123456");
+                await conn.OpenAsync();
+                using var cmd = new Npgsql.NpgsqlCommand(
+                    "UPDATE notifications SET is_read = true, read_at = NOW() WHERE (user_id = @uid OR user_id = 0) AND is_read = false AND is_deleted = false;", conn);
+                cmd.Parameters.AddWithValue("uid", CurrentUserId);
+                var rowsAffected = await cmd.ExecuteNonQueryAsync();
+                return Ok(new { success = true, unreadCount = 0, rowsAffected });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error marking all notifications read: {ex.Message}");
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
+        [HttpPut("notifications/{id:int}/read")]
+        public async Task<IActionResult> MarkNotificationRead(int id)
+        {
+            if (CurrentUserId <= 0)
+            {
+                return Unauthorized(new { message = "Invalid user session. Please log in again." });
+            }
+
+            try
+            {
+                using var conn = new Npgsql.NpgsqlConnection("Host=localhost;Port=5432;Database=notification_db;Username=postgres;Password=123456");
+                await conn.OpenAsync();
+                using var cmd = new Npgsql.NpgsqlCommand(
+                    "UPDATE notifications SET is_read = true, read_at = NOW() WHERE notification_id = @nid AND (user_id = @uid OR user_id = 0);", conn);
+                cmd.Parameters.AddWithValue("nid", id);
+                cmd.Parameters.AddWithValue("uid", CurrentUserId);
+                await cmd.ExecuteNonQueryAsync();
+                return Ok(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error marking notification read: {ex.Message}");
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
         [HttpGet("{requestId:int}")]
         public async Task<IActionResult> GetById(int requestId)
         {

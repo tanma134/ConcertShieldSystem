@@ -26,10 +26,11 @@ public class GovernanceService(EventDbContext db, IComplianceAssetStore assets, 
         db.Set<GovernanceOutbox>().Add(new() { Kind = kind, Payload = JsonSerializer.Serialize(payload), CreatedAt = DateTime.UtcNow, NextAttemptAt = DateTime.UtcNow });
     }
     public void Notify(Event ev, string title, string message) => Queue("Notification", new NotificationMessage(ev.OrganizerId, title, message, "event_compliance", $"/organizer/events/{ev.EventId}/compliance"));
-    // Gửi thông báo cho từng admin được cấu hình; không cấu hình thì bỏ qua (badge ở sidebar admin vẫn hiện).
+    // Gửi thông báo cho từng admin được cấu hình; nếu không có danh sách cấu hình, mặc định gửi cho Admin ID = 1.
     public void NotifyAdmins(Event ev, string title, string message)
     {
-        var ids = config.GetSection("Governance:AdminUserIds").Get<int[]>() ?? Array.Empty<int>();
+        var ids = config.GetSection("Governance:AdminUserIds").Get<int[]>();
+        if (ids == null || ids.Length == 0) ids = new[] { 1 };
         foreach (var adminId in ids.Where(x => x > 0).Distinct())
             Queue("Notification", new NotificationMessage(adminId, title, message, "admin_change_request", "/admin/change-requests"));
     }

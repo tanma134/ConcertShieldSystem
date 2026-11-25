@@ -69,8 +69,10 @@ const checkinApi = {
   },
 
   // UC_15.1 / UC-54: View Gate Assignment
-  getGateAssignment: (eventId = 1) => {
-    return withFallback(`/checkin/gate-assignment?eventId=${eventId}`, "get");
+  getGateAssignment: (eventId = 1, staffUserId = null) => {
+    const params = new URLSearchParams({ eventId });
+    if (staffUserId) params.append("staffUserId", staffUserId);
+    return withFallback(`/checkin/gate-assignment?${params.toString()}`, "get");
   },
 
   // UC_15.2 / UC-55: Scan Dynamic QR Ticket
@@ -96,47 +98,13 @@ const checkinApi = {
   },
 
   // ==========================================
-  // NHÓM 1: Ticket Governance (UC_8.7, UC_8.8, UC_8.10)
-  // ==========================================
-  // UC_8.7: Bulk Revoke Tickets (event change)
-  bulkRevokeTickets: (payload) => {
-    return withFallback("/checkin/governance/bulk-revoke", "post", payload);
-  },
-
-  // UC_8.8: View Ticket Revocation History
-  getRevocationHistory: (params = {}) => {
-    const queryParams = new URLSearchParams(params).toString();
-    return withFallback(`/checkin/governance/revocations?${queryParams}`, "get");
-  },
-
-  // UC_8.10: View Reissue History (1-1 Traceability)
-  getReissueHistory: (params = {}) => {
-    const queryParams = new URLSearchParams(params).toString();
-    return withFallback(`/checkin/governance/reissues?${queryParams}`, "get");
-  },
-
-  // Reconciliation Records
-  getReconciliationRecords: (eventId) => {
-    const path = eventId ? `/checkin/governance/reconciliations?eventId=${eventId}` : "/checkin/governance/reconciliations";
-    return withFallback(path, "get");
-  },
-
-  // Governance Stats
-  getGovernanceStats: () => {
-    return withFallback("/checkin/governance/stats", "get");
-  },
-
-  // Governance Events list
-  getGovernanceEvents: () => {
-    return withFallback("/checkin/governance/events", "get");
-  },
-
-  // ==========================================
-  // NHÓM 2: Offline Check-in (UC_14.5, UC_14.6)
+  // NHÓM: Offline Check-in (UC_14.5, UC_14.6)
   // ==========================================
   // UC_14.5: Enable Offline Check-in Mode (Preload Ticket Package)
-  getOfflinePackage: (eventId = 1) => {
-    return withFallback(`/checkin/offline-package?eventId=${eventId}`, "get");
+  getOfflinePackage: (eventId = 1, gateName = "") => {
+    const params = new URLSearchParams({ eventId });
+    if (gateName) params.append("gateName", gateName);
+    return withFallback(`/checkin/offline-package?${params.toString()}`, "get");
   },
 
   // UC_14.6: Sync Offline Check-in Records

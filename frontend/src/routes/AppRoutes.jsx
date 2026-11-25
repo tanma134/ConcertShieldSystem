@@ -56,6 +56,7 @@ import MyOrdersPage from "../pages/customer/MyOrdersPage";
 import OrderDetailsPage from "../pages/customer/OrderDetailsPage";
 import RevenueDashboardPage from "../pages/organizer/RevenueDashboardPage";
 import CheckinManagementPage from "../pages/organizer/CheckinManagementPage";
+import OrganizerStaffPage from "../pages/organizer/OrganizerStaffPage";
 import TicketReturnReviewPage from "../pages/admin/TicketReturnReviewPage";
 import RefundReconciliationPage from "../pages/admin/RefundReconciliationPage";
 import EventGovernancePage from "../pages/organizer/EventGovernancePage";
@@ -228,6 +229,9 @@ export default function AppRoutes() {
       <Route path="/organizer/events/:id/revenue" element={<ProtectedRoute organizerOnly><RevenueDashboardPage /></ProtectedRoute>} />
       <Route path="/organizer/events/:id/checkin" element={<ProtectedRoute organizerOnly><CheckinManagementPage /></ProtectedRoute>} />
       <Route path="/organizer/events/:id/staff" element={<ProtectedRoute organizerOnly><CheckinManagementPage /></ProtectedRoute>} />
+      <Route path="/organizer/checkin" element={<ProtectedRoute organizerOnly><CheckinManagementPage /></ProtectedRoute>} />
+      <Route path="/organizer/checkin-staff" element={<ProtectedRoute organizerOnly><CheckinManagementPage /></ProtectedRoute>} />
+      <Route path="/organizer/staff" element={<ProtectedRoute organizerOnly><OrganizerStaffPage /></ProtectedRoute>} />
 
       {/* Any logged-in Customer may create and configure a Draft concert. */}
       <Route

@@ -11,9 +11,8 @@ namespace AuthenticationAPI.DTOs
         [MaxLength(1000)]
         public string Reason { get; set; } = null!;
 
-        [Required(ErrorMessage = "Company name is required.")]
         [MaxLength(200)]
-        public string CompanyName { get; set; } = null!;
+        public string? CompanyName { get; set; }
 
         [Required(ErrorMessage = "Tax code is required.")]
         [MaxLength(50)]
@@ -22,6 +21,21 @@ namespace AuthenticationAPI.DTOs
         [Required(ErrorMessage = "Legal representative name is required.")]
         [MaxLength(200)]
         public string RepresentativeName { get; set; } = null!;
+
+        [Required(ErrorMessage = "Bank account holder name is required.")]
+        [MaxLength(200)]
+        public string BankAccountHolder { get; set; } = null!;
+
+        [Required(ErrorMessage = "Bank account number is required.")]
+        [MaxLength(100)]
+        public string BankAccountNumber { get; set; } = null!;
+
+        [Required(ErrorMessage = "Bank name is required.")]
+        [MaxLength(150)]
+        public string BankName { get; set; } = null!;
+
+        [MaxLength(150)]
+        public string? BankBranch { get; set; }
 
         [MaxLength(255)]
         public string? Website { get; set; }
@@ -32,8 +46,7 @@ namespace AuthenticationAPI.DTOs
         [MaxLength(2000)]
         public string? Experience { get; set; }
 
-        [Required(ErrorMessage = "Business registration license is required.")]
-        public IFormFile BusinessLicenseFile { get; set; } = null!;
+        public IFormFile? BusinessLicenseFile { get; set; }
 
         [Required(ErrorMessage = "Representative ID / passport is required.")]
         public IFormFile RepresentativeIdFile { get; set; } = null!;
@@ -79,6 +92,11 @@ namespace AuthenticationAPI.DTOs
         public string? Website { get; set; }
         public string? PhoneNumber { get; set; }
         public string? Experience { get; set; }
+
+        public string? BankAccountHolder { get; set; }
+        public string? BankAccountNumber { get; set; }
+        public string? BankName { get; set; }
+        public string? BankBranch { get; set; }
 
         public string Status { get; set; } = null!;
         public int? ReviewedBy { get; set; }

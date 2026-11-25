@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import AdminShell from "./AdminShell";
-import checkinApi from "../../api/checkinApi";
+import ticketApi from "../../api/ticketApi";
 import "./TicketGovernancePage.css";
 
 export default function TicketGovernancePage() {
@@ -73,7 +73,7 @@ export default function TicketGovernancePage() {
   const fetchStats = async () => {
     setLoadingStats(true);
     try {
-      const res = await checkinApi.getGovernanceStats();
+      const res = await ticketApi.getGovernanceStats();
       if (res?.data?.data) {
         setStats(res.data.data);
       }
@@ -87,7 +87,7 @@ export default function TicketGovernancePage() {
   const fetchEvents = async () => {
     setLoadingEvents(true);
     try {
-      const res = await checkinApi.getGovernanceEvents();
+      const res = await ticketApi.getGovernanceEvents();
       if (res?.data?.data) {
         const allEvents = res.data.data;
         setEvents(allEvents);
@@ -107,7 +107,7 @@ export default function TicketGovernancePage() {
   const fetchReconciliations = async () => {
     setLoadingReconciliations(true);
     try {
-      const res = await checkinApi.getReconciliationRecords();
+      const res = await ticketApi.getReconciliationRecords();
       if (res?.data?.data) {
         setReconciliations(res.data.data);
       }
@@ -129,7 +129,7 @@ export default function TicketGovernancePage() {
       };
       if (revocationEventFilter) params.eventId = revocationEventFilter;
 
-      const res = await checkinApi.getRevocationHistory(params);
+      const res = await ticketApi.getRevocationHistory(params);
       if (res?.data?.data) {
         setRevocations(res.data.data.items || []);
         setRevocationTotal(res.data.data.totalCount || 0);
@@ -152,7 +152,7 @@ export default function TicketGovernancePage() {
       };
       if (reissueEventFilter) params.eventId = reissueEventFilter;
 
-      const res = await checkinApi.getReissueHistory(params);
+      const res = await ticketApi.getReissueHistory(params);
       if (res?.data?.data) {
         setReissues(res.data.data.items || []);
         setReissueTotal(res.data.data.totalCount || 0);
@@ -185,14 +185,18 @@ export default function TicketGovernancePage() {
 
     setSubmittingBulk(true);
     try {
+      const actualReasonType = selectedEventObj?.status?.toLowerCase().includes("postpone")
+        ? "EVENT_POSTPONED"
+        : "EVENT_CANCELLED";
+
       const payload = {
         eventId: Number(selectedEventId),
-        reasonType,
+        reasonType: actualReasonType,
         reasonNote: reasonNote.trim(),
         notifyAttendees,
       };
 
-      const res = await checkinApi.bulkRevokeTickets(payload);
+      const res = await ticketApi.bulkRevokeTickets(payload);
       if (res?.data?.data) {
         setShowConfirmModal(false);
         setReasonNote("");
@@ -218,7 +222,11 @@ export default function TicketGovernancePage() {
           ...prev.filter((r) => r.reconciliationId !== newRec.reconciliationId),
         ]);
 
-        setSuccessResultModal(res.data.data);
+        const currentEvt = events.find((e) => e.eventId === Number(selectedEventId));
+        setSuccessResultModal({
+          ...res.data.data,
+          eventTitle: currentEvt?.title || res.data.data.eventTitle,
+        });
         await Promise.all([
           fetchStats(),
           fetchEvents(),
@@ -431,14 +439,14 @@ export default function TicketGovernancePage() {
                     ) : (
                       eligibleEvents.map((ev) => (
                         <option key={ev.eventId} value={ev.eventId}>
-                          {ev.title} ({Number(ev.activeTicketsCount).toLocaleString()} active tickets)
+                          {ev.title} [{ev.status.toUpperCase()}] ({Number(ev.activeTicketsCount).toLocaleString()} active tickets)
                         </option>
                       ))
                     )}
                   </select>
                   {eligibleEvents.length === 0 && !loadingEvents && (
                     <div className="gov-empty-events-warning">
-                      <span>Currently there are no events with active tickets. All events have already been reconciled or cancelled.</span>
+                      <span>Currently there are no cancelled or rescheduled events with active tickets. All tickets have already been revoked or reconciled.</span>
                     </div>
                   )}
                   {selectedEventObj && eligibleEvents.length > 0 && (
@@ -450,7 +458,7 @@ export default function TicketGovernancePage() {
                         <span>Status: <strong>{selectedEventObj.status}</strong></span>
                       </div>
 
-                      {/* Bảng cảnh báo hiển thị tổng số vé sẽ bị hủy (Bước 2) */}
+                      {/* Prominent Warning Box */}
                       <div className="gov-warning-box-prominent" style={{
                         marginTop: "12px",
                         padding: "16px",
@@ -460,11 +468,11 @@ export default function TicketGovernancePage() {
                       }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
                           <strong style={{ fontSize: "1rem", color: "#d46b08" }}>
-                            CẢNH BÁO: SỰ KIỆN ĐÃ ĐƯỢC CHẤP NHẬN HỦY / HOÃN ({selectedEventObj.status.toUpperCase()})
+                            EVENT STATUS: {selectedEventObj.status.toUpperCase()}
                           </strong>
                         </div>
                         <p style={{ margin: "4px 0 10px 0", fontSize: "0.9rem", color: "#595959" }}>
-                          Sự kiện <strong>"{selectedEventObj.title}"</strong> đã được chấp nhận hủy/hoãn trên hệ thống. Khi thực hiện thu hồi, toàn bộ vé đang hoạt động sẽ bị vô hiệu hóa, xóa quyền quét tại cổng và tự động gửi thông báo đến người mua.
+                          Event <strong>"{selectedEventObj.title}"</strong> has been approved for cancellation or rescheduling. Executing bulk revocation will immediately invalidate all active tickets, revoke gate access credentials, and notify ticket owners.
                         </p>
                         <div style={{
                           display: "inline-block",
@@ -476,7 +484,7 @@ export default function TicketGovernancePage() {
                           fontWeight: "bold",
                           fontSize: "1.05rem"
                         }}>
-                          Tổng số vé sẽ bị hủy: {Number(selectedEventObj.activeTicketsCount).toLocaleString()} vé
+                          Total Active Tickets to Invalidate: {Number(selectedEventObj.activeTicketsCount).toLocaleString()} tickets
                         </div>
                       </div>
                     </>
@@ -485,54 +493,19 @@ export default function TicketGovernancePage() {
 
                 <div className="form-group">
                   <label className="form-label">
-                    Event Disruption Reason <span className="text-danger">*</span>
-                  </label>
-                  <div className="radio-group-boxes">
-                    <label className={`radio-box ${reasonType === "EVENT_CANCELLED" ? "selected" : ""}`}>
-                      <input
-                        type="radio"
-                        name="reasonType"
-                        value="EVENT_CANCELLED"
-                        checked={reasonType === "EVENT_CANCELLED"}
-                        onChange={() => setReasonType("EVENT_CANCELLED")}
-                      />
-                      <div className="box-content">
-                        <strong>Event Cancelled (Force Majeure)</strong>
-                        <span>Permanently cancel show due to severe weather, venue disruption, or artist withdrawal.</span>
-                      </div>
-                    </label>
-
-                    <label className={`radio-box ${reasonType === "EVENT_POSTPONED" ? "selected" : ""}`}>
-                      <input
-                        type="radio"
-                        name="reasonType"
-                        value="EVENT_POSTPONED"
-                        checked={reasonType === "EVENT_POSTPONED"}
-                        onChange={() => setReasonType("EVENT_POSTPONED")}
-                      />
-                      <div className="box-content">
-                        <strong>Event Postponed / Rescheduled</strong>
-                        <span>Hold show and revoke existing tickets to reissue replacement tickets for the new schedule.</span>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">
-                    Revocation Reason (Lý do thu hồi vé) <span className="text-danger">*</span>
+                    Revocation Justification Reason <span className="text-danger">*</span>
                   </label>
                   <textarea
                     className="form-control"
                     rows={3}
-                    placeholder='Bắt buộc nhập lý do thu hồi (Ví dụ: "Hủy show do thời tiết bão", "Ban tổ chức dời lịch diễn sang tháng sau")...'
+                    placeholder="Enter revocation justification reason..."
                     value={reasonNote}
                     onChange={(e) => setReasonNote(e.target.value)}
                     disabled={submittingBulk}
                   />
                   {!reasonNote.trim() && (
                     <small style={{ color: "#cf1322", display: "block", marginTop: "6px", fontWeight: "500" }}>
-                      * Bắt buộc phải nhập lý do thu hồi (Revocation Reason) mới có thể bấm nút xác nhận.
+                      * Audit justification reason is required to confirm bulk revocation.
                     </small>
                   )}
                 </div>
@@ -547,7 +520,7 @@ export default function TicketGovernancePage() {
                     />
                     <span>
                       <strong>Trigger automated in-app notification to all ticket holders</strong>
-                      <small className="help-text">Tự động gửi thông báo đến từng tài khoản khách hàng sở hữu vé.</small>
+                      <small className="help-text">Sends notification directly to customer accounts holding tickets for this event.</small>
                     </span>
                   </label>
                 </div>
@@ -569,8 +542,8 @@ export default function TicketGovernancePage() {
                       if (!reasonNote.trim()) {
                         setNoticeDialog({
                           type: "WARNING",
-                          title: "Lý do thu hồi bắt buộc",
-                          message: "Bắt buộc phải nhập lý do thu hồi vé (Revocation Reason, ví dụ: 'Hủy show do thời tiết') trước khi xác nhận.",
+                          title: "Audit Reason Required",
+                          message: "Please enter detailed justification notes for the reconciliation audit record.",
                         });
                         return;
                       }
@@ -580,43 +553,6 @@ export default function TicketGovernancePage() {
                     Confirm & Execute Bulk Revocation
                   </button>
                 </div>
-              </div>
-
-              {/* Reconciliation Records History Panel */}
-              <div className="gov-card gov-reconcile-card">
-                <div className="gov-card-header">
-                  <h3>Reconciliation Records (Audit Trail)</h3>
-                  <p className="gov-card-desc">
-                    Historical event-level bulk revocation logs recorded for financial reconciliation and compliance auditing.
-                  </p>
-                </div>
-
-                {loadingReconciliations ? (
-                  <div className="loading-spinner-box">Loading reconciliation records...</div>
-                ) : reconciliations.length === 0 ? (
-                  <div className="empty-state">No bulk revocation reconciliation records found.</div>
-                ) : (
-                  <div className="reconcile-list">
-                    {reconciliations.map((r) => (
-                      <div key={r.reconciliationId} className="reconcile-item">
-                        <div className="reconcile-top">
-                          <span className="reconcile-id">Record {r.reconciliationId}</span>
-                          <span className={`badge-reason ${r.reasonType}`}>
-                            {r.reasonType === "EVENT_CANCELLED" ? "CANCELLED" : "POSTPONED"}
-                          </span>
-                          <span className="badge-refund-status">{r.refundStatus}</span>
-                        </div>
-                        <h4 className="reconcile-title">{r.eventTitle}</h4>
-                        <div className="reconcile-meta">
-                          <span>Admin: <strong>{r.adminName}</strong></span>
-                          <span>Revoked Tickets: <strong>{r.totalTicketsRevoked} tickets</strong></span>
-                          <span>Date: <strong>{new Date(r.createdAt).toLocaleString("en-US")}</strong></span>
-                        </div>
-                        <p className="reconcile-note">"{r.notes}"</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
 
@@ -648,7 +584,7 @@ export default function TicketGovernancePage() {
                           <strong>INSTANTLY INVALIDATES</strong> ticket QR identifiers across Gate Validation Cache (Redis) to block entry at all terminals.
                         </li>
                         <li>
-                          Tạo bản ghi đối soát hệ thống (Reconciliation Record) và gửi thông báo trực tiếp đến người sở hữu vé.
+                          Creates an immutable system reconciliation audit record and delivers in-app alerts directly to ticket holders.
                         </li>
                       </ul>
                       <p className="text-danger fw-bold">
@@ -657,8 +593,8 @@ export default function TicketGovernancePage() {
                     </div>
                     <div className="modal-summary-table">
                       <div><span>Event:</span> <strong>{selectedEventObj?.title}</strong></div>
-                      <div><span>Estimated Tickets:</span> <strong>{selectedEventObj?.activeTicketsCount} tickets</strong></div>
-                      <div><span>Disruption Type:</span> <strong>{reasonType === "EVENT_CANCELLED" ? "Cancellation" : "Reschedule / Postpone"}</strong></div>
+                      <div><span>Event Status:</span> <strong>{selectedEventObj?.status?.toUpperCase()}</strong></div>
+                      <div><span>Active Tickets to Revoke:</span> <strong>{selectedEventObj?.activeTicketsCount} tickets</strong></div>
                       <div><span>Audit Justification:</span> <strong>{reasonNote}</strong></div>
                     </div>
                   </div>
@@ -739,6 +675,7 @@ export default function TicketGovernancePage() {
                     <option value="EVENT_POSTPONED">Event Postponed (Bulk)</option>
                     <option value="FRAUD_PREVENTION">Fraud Prevention / Scalper Bot</option>
                     <option value="TICKET_EXCHANGE">Ticket Exchange / Upgrade</option>
+                    <option value="INDIVIDUAL_REVOCATION">Individual Revocation (Single)</option>
                   </select>
                 </div>
 
@@ -1049,11 +986,23 @@ export default function TicketGovernancePage() {
                 </button>
               </div>
               <div className="gov-modal-body">
-                <div className="success-banner">
-                  <span className="success-badge">ATOMIC TRANSACTION VERIFIED</span>
-                  <h4>{successResultModal.eventTitle}</h4>
-                  <p>{successResultModal.message}</p>
-                </div>
+                {(() => {
+                  const evObj = events.find((e) => e.eventId === successResultModal.eventId);
+                  const rawTitle = successResultModal.eventTitle || evObj?.title || `Event #${successResultModal.eventId}`;
+                  const formattedTitle = rawTitle.startsWith("Event #") && evObj?.title
+                    ? `Event #${successResultModal.eventId}: ${evObj.title}`
+                    : (rawTitle.includes(":") || rawTitle.startsWith("Event #") ? rawTitle : `Event #${successResultModal.eventId}: ${rawTitle}`);
+
+                  return (
+                    <div className="success-banner">
+                      <span className="success-badge">ATOMIC TRANSACTION VERIFIED</span>
+                      <h4>{formattedTitle}</h4>
+                      <p>
+                        Successfully revoked {Number(successResultModal.totalRevokedTickets).toLocaleString()} tickets for event &lsquo;{formattedTitle}&rsquo;. Reconciliation record #{successResultModal.reconciliationId} created.
+                      </p>
+                    </div>
+                  );
+                })()}
                 <div className="modal-summary-table">
                   <div>
                     <span>Reconciliation Record ID:</span>

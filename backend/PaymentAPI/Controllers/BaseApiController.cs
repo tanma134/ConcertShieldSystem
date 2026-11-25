@@ -15,7 +15,7 @@ namespace PaymentAPI.Controllers
             {
                 var raw = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
                 if (string.IsNullOrEmpty(raw) || !int.TryParse(raw, out var id))
-                    throw new UnauthorizedAccessException("Không tìm thấy thông tin định danh người dùng trong token.");
+                    throw new UnauthorizedAccessException("User identity not found in token.");
                 return id;
             }
         }
@@ -38,7 +38,7 @@ namespace PaymentAPI.Controllers
                 UnauthorizedAccessException => StatusCode(403, ApiResponseDTO<object>.FailResponse(ex.Message)),
                 InvalidOperationException => BadRequest(ApiResponseDTO<object>.FailResponse(ex.Message)),
                 ArgumentException => BadRequest(ApiResponseDTO<object>.FailResponse(ex.Message)),
-                _ => StatusCode(500, ApiResponseDTO<object>.FailResponse("Lỗi máy chủ nội bộ: " + ex.Message))
+                _ => StatusCode(500, ApiResponseDTO<object>.FailResponse("Internal server error: " + ex.Message))
             };
         }
     }

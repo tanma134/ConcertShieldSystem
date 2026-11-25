@@ -6,13 +6,15 @@ export const ORGANIZER_LINKS = [
   ["/organizer/dashboard", "Dashboard", true],
   ["/organizer/events", "My Concerts", true],
   ["/organizer/events/new", "Create Concert", true],
-  ["/organizer/realtime-checkin", "Check-in Live Monitor"],
-  ["/organizer/vouchers", "Vouchers"],
-  ["/notifications", "Notifications"],
+  ["/organizer/staff", "Staff Management", false],
+  ["/organizer/checkin", "Check-in Staff", false],
+  ["/organizer/realtime-checkin", "Check-in Live Monitor", false],
+  ["/organizer/vouchers", "Vouchers", false],
+  ["/notifications", "Notifications", false],
   ["/", "← Back to site", true],
 ];
 
-export default function OrganizerShell({ children, title = "Organizer Panel" }) {
+export default function OrganizerShell({ children, title = "Organizer Panel", theme = "default" }) {
   return (
     <PanelShell
       title={title}
@@ -20,6 +22,7 @@ export default function OrganizerShell({ children, title = "Organizer Panel" }) 
       roleLabel="Organizer"
       logoutPath="/login"
       navLabel="Organizer navigation"
+      theme={theme}
     >
       {children}
     </PanelShell>

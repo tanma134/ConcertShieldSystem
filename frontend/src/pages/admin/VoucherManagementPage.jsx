@@ -161,7 +161,7 @@ export default function VoucherManagementPage() {
     } else if (data.discount_type === "FIXED") {
       const val = parseInt(data.discount_amount);
       if (isNaN(val) || val <= 0) {
-        errors.discount_amount = "Fixed discount amount must be greater than 0 VNĐ.";
+        errors.discount_amount = "Fixed discount amount must be greater than 0 VND.";
       } else if (minOrderVal > 0 && val > minOrderVal) {
         errors.discount_amount = "Fixed discount amount cannot exceed minimum order amount.";
       }
@@ -180,7 +180,7 @@ export default function VoucherManagementPage() {
     if (isNaN(qty) || qty < 1) {
       errors.total_quantity = "Total quantity must be at least 1.";
     } else if (isEdit && qty < usedCount) {
-      errors.total_quantity = "Usage limit cannot be less than the number of already used vouchers.";
+      errors.total_quantity = `Cannot reduce usage limit below current used count (${usedCount}).`;
     }
 
     // Max usage per user
@@ -213,6 +213,8 @@ export default function VoucherManagementPage() {
       if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
         if (end <= start) {
           errors.ends_at = "End date must be after start date.";
+        } else if (isEdit && end <= new Date()) {
+          errors.ends_at = "End date must be in the future (after current update time).";
         }
       }
     }
@@ -278,9 +280,14 @@ export default function VoucherManagementPage() {
 
   const handleDeleteVoucher = async () => {
     if (!selectedVoucher) return;
+    if (selectedVoucher.usedQuantity > 0) {
+      setError(`Cannot delete voucher '${selectedVoucher.code}' because it has already been used ${selectedVoucher.usedQuantity} time(s). You can pause/deactivate it instead.`);
+      closeModal();
+      return;
+    }
     try {
       await voucherApi.deleteVoucher(selectedVoucher.voucherId);
-      setSuccess(`Voucher '${selectedVoucher.code}' deleted successfully.`);
+      setSuccess(`Voucher '${selectedVoucher.code}' marked as deleted successfully.`);
       closeModal();
       loadVouchers();
     } catch (err) {
@@ -392,6 +399,14 @@ export default function VoucherManagementPage() {
     setFieldErrors({});
   };
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("action") === "create") {
+      resetForm();
+      setModal("create");
+    }
+  }, [location.search]);
+
   const closeModal = () => {
     setModal(null);
     setSelectedVoucher(null);
@@ -486,7 +501,7 @@ export default function VoucherManagementPage() {
                   setSearchCode(e.target.value);
                   setPage(1);
                 }}
-                placeholder="e.g. SUMMER2026, PROMO10..."
+                placeholder="Search voucher code..."
               />
             </div>
             <div className="search-box" style={{ width: "200px" }}>
@@ -520,7 +535,7 @@ export default function VoucherManagementPage() {
                     setSearchCode(e.target.value);
                     setPage(1);
                   }}
-                  placeholder="Search by voucher code (e.g. SUMMER2026)..."
+                  placeholder="Search by voucher code..."
                 />
               </div>
             </div>
@@ -647,7 +662,13 @@ export default function VoucherManagementPage() {
                           </button>
                           <button
                             type="button"
-                            className="danger-button"
+                            className={`danger-button ${v.usedQuantity > 0 ? "disabled" : ""}`}
+                            disabled={v.usedQuantity > 0}
+                            title={
+                              v.usedQuantity > 0
+                                ? `Cannot delete voucher with ${v.usedQuantity} usage(s). Pause it instead.`
+                                : "Delete voucher"
+                            }
                             onClick={() => {
                               setSelectedVoucher(v);
                               setModal("delete");
@@ -718,14 +739,14 @@ export default function VoucherManagementPage() {
                   required
                   disabled={modal === "edit"}
                   className={fieldErrors.code ? "input-error" : ""}
-                  placeholder="e.g. SUMMER2026, PROMO10..."
+                  placeholder="Enter voucher code"
                   value={formData.code}
                   onChange={(e) => handleFieldChange("code", e.target.value.replace(/\s+/g, "").toUpperCase())}
                 />
                 {modal === "edit" ? (
                   <span className="form-hint" style={{ color: "#d97706" }}>Immutable: Voucher code cannot be edited after creation.</span>
                 ) : (
-                  <span className="form-hint">Uppercase letters and numbers, no spaces (e.g. VIP2026).</span>
+                  <span className="form-hint">Uppercase letters and numbers, no spaces.</span>
                 )}
                 {fieldErrors.code && <span className="field-error-text">{fieldErrors.code}</span>}
               </label>
@@ -791,7 +812,7 @@ export default function VoucherManagementPage() {
                     value={formData.event_id}
                     onChange={(e) => handleFieldChange("event_id", e.target.value)}
                   />
-                  <span className="form-hint">Enter your numeric Event ID (e.g. 1).</span>
+                  <span className="form-hint">Enter your numeric Event ID.</span>
                   {fieldErrors.event_id && <span className="field-error-text">{fieldErrors.event_id}</span>}
                 </label>
               )}
@@ -810,7 +831,7 @@ export default function VoucherManagementPage() {
                   }}
                 >
                   <option value="PERCENT">Percentage Discount (%)</option>
-                  <option value="FIXED">Fixed Amount Discount (VNĐ)</option>
+                  <option value="FIXED">Fixed Amount Discount (VND)</option>
                 </select>
                 {isIssued && <span className="form-hint" style={{ color: "#d97706" }}>Discount type cannot be changed once used.</span>}
               </label>
@@ -827,7 +848,7 @@ export default function VoucherManagementPage() {
                       required
                       disabled={isIssued}
                       className={fieldErrors.discount_percent ? "input-error" : ""}
-                      placeholder="e.g. 15"
+                      placeholder="Enter discount percentage"
                       value={formData.discount_percent}
                       onChange={(e) => handleFieldChange("discount_percent", e.target.value)}
                     />
@@ -835,21 +856,23 @@ export default function VoucherManagementPage() {
                     {fieldErrors.discount_percent && <span className="field-error-text">{fieldErrors.discount_percent}</span>}
                   </label>
                   <label>
-                    <span>Max Discount Cap (VNĐ)</span>
+                    <span>Max Discount Cap (VND)</span>
                     <input
                       type="number"
                       min="0"
                       step="1000"
-                      placeholder="e.g. 50000"
+                      className={fieldErrors.max_discount_amount ? "input-error" : ""}
+                      placeholder="Enter maximum discount cap"
                       value={formData.max_discount_amount}
                       onChange={(e) => handleFieldChange("max_discount_amount", e.target.value)}
                     />
                     <span className="form-hint">Leave blank for no upper limit cap.</span>
+                    {fieldErrors.max_discount_amount && <span className="field-error-text">{fieldErrors.max_discount_amount}</span>}
                   </label>
                 </>
               ) : (
                 <label className="full-width">
-                  <span>Fixed Discount Amount (VNĐ) *</span>
+                  <span>Fixed Discount Amount (VND) *</span>
                   <input
                     type="number"
                     min="1000"
@@ -857,7 +880,7 @@ export default function VoucherManagementPage() {
                     required
                     disabled={isIssued}
                     className={fieldErrors.discount_amount ? "input-error" : ""}
-                    placeholder="e.g. 50000"
+                    placeholder="Enter fixed discount amount"
                     value={formData.discount_amount}
                     onChange={(e) => handleFieldChange("discount_amount", e.target.value)}
                   />
@@ -867,15 +890,18 @@ export default function VoucherManagementPage() {
               )}
 
               <label>
-                <span>Minimum Order Value (VNĐ)</span>
+                <span>Minimum Order Value (VND)</span>
                 <input
                   type="number"
                   min="0"
                   step="1000"
+                  className={fieldErrors.min_order_amount ? "input-error" : ""}
+                  placeholder="Enter minimum order value (0 for none)"
                   value={formData.min_order_amount}
                   onChange={(e) => handleFieldChange("min_order_amount", e.target.value)}
                 />
                 <span className="form-hint">Minimum purchase total required (0 = no minimum).</span>
+                {fieldErrors.min_order_amount && <span className="field-error-text">{fieldErrors.min_order_amount}</span>}
               </label>
 
               <label>
@@ -885,6 +911,7 @@ export default function VoucherManagementPage() {
                   min={modal === "edit" && selectedVoucher ? selectedVoucher.usedQuantity : 1}
                   required
                   className={fieldErrors.total_quantity ? "input-error" : ""}
+                  placeholder="Enter total issue quantity"
                   value={formData.total_quantity}
                   onChange={(e) => handleFieldChange("total_quantity", e.target.value)}
                 />
@@ -901,6 +928,7 @@ export default function VoucherManagementPage() {
                   min="1"
                   required
                   className={fieldErrors.max_usage_per_user ? "input-error" : ""}
+                  placeholder="Enter max usage per user"
                   value={formData.max_usage_per_user}
                   onChange={(e) => handleFieldChange("max_usage_per_user", e.target.value)}
                 />
@@ -1028,15 +1056,37 @@ export default function VoucherManagementPage() {
               <p>
                 Are you sure you want to delete voucher <strong>{selectedVoucher.code}</strong>?
               </p>
-              <p style={{ fontSize: "12px", color: "var(--admin-muted, #6b7280)", margin: "8px 0 0" }}>
-                This action will deactivate the voucher. Customers will no longer be able to apply this code at checkout.
-              </p>
+              {selectedVoucher.usedQuantity > 0 ? (
+                <div
+                  style={{
+                    background: "rgba(239, 68, 68, 0.1)",
+                    border: "1px solid rgba(239, 68, 68, 0.3)",
+                    borderRadius: "6px",
+                    padding: "10px 12px",
+                    fontSize: "12px",
+                    color: "#fca5a5",
+                    margin: "12px 0 0",
+                    lineHeight: "1.5",
+                  }}
+                >
+                  ⚠️ <strong>Cannot be deleted:</strong> This voucher has already been used by customers (<strong>{selectedVoucher.usedQuantity}</strong> time(s)). Deletion is blocked to preserve transaction audit records. Please pause/deactivate the voucher instead.
+                </div>
+              ) : (
+                <p style={{ fontSize: "12px", color: "var(--admin-muted, #6b7280)", margin: "8px 0 0" }}>
+                  This action will mark the voucher as deleted (soft-delete). Customers will no longer be able to apply this code at checkout.
+                </p>
+              )}
             </div>
             <div className="modal-footer">
               <button type="button" className="admin-button-secondary" onClick={closeModal}>
                 Cancel
               </button>
-              <button type="button" className="admin-button danger" onClick={handleDeleteVoucher}>
+              <button
+                type="button"
+                className="admin-button danger"
+                disabled={selectedVoucher.usedQuantity > 0}
+                onClick={handleDeleteVoucher}
+              >
                 Confirm Delete
               </button>
             </div>

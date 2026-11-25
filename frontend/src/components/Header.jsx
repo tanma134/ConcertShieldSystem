@@ -54,8 +54,8 @@ export default function Header() {
   };
 
   const fetchHeaderNotifications = () => {
-    // Guests and admins have no bell
-    if (!isAuthenticated || isAdmin) return;
+    // Guests have no bell
+    if (!isAuthenticated) return;
 
     const currentUid = user?.userId ?? user?.id;
 
@@ -76,11 +76,24 @@ export default function Header() {
         // Merge locally stored notifications for this user (resilience for cross-tab notifications)
         if (currentUid) {
           try {
-            const localSaved = JSON.parse(localStorage.getItem(`cs_user_notifs_${currentUid}`) || "[]");
+            const userNotifsKey = `cs_user_notifs_${currentUid}`;
+            const localSaved = JSON.parse(localStorage.getItem(userNotifsKey) || "[]");
+            let localChanged = false;
             for (const item of localSaved) {
-              if (!items.some((n) => n.title === item.title && n.message === item.message)) {
+              const matched = items.find((n) => n.title === item.title && n.message === item.message);
+              if (!matched) {
                 items.unshift(item);
+              } else {
+                if (matched.isRead && !item.isRead) {
+                  item.isRead = true;
+                  localChanged = true;
+                } else if (!matched.isRead && item.isRead) {
+                  matched.isRead = true;
+                }
               }
+            }
+            if (localChanged) {
+              localStorage.setItem(userNotifsKey, JSON.stringify(localSaved));
             }
           } catch (_) {}
         }
@@ -101,7 +114,7 @@ export default function Header() {
   };
 
   useEffect(() => {
-    if (!isAuthenticated || isAdmin) return;
+    if (!isAuthenticated) return;
 
     fetchHeaderNotifications();
 
@@ -345,8 +358,8 @@ export default function Header() {
             </>
           )}
 
-          {/* Notification Bell Dropdown (logged-in Customer and Organizer only) */}
-          {isAuthenticated && !isAdmin && (
+          {/* Notification Bell Dropdown (logged-in Customer, Organizer, and Admin) */}
+          {isAuthenticated && (
             <div className="tb-notif-wrap" ref={notifRef}>
               <button
                 type="button"
@@ -377,9 +390,18 @@ export default function Header() {
                         onClick={async () => {
                           setUnreadCount(0);
                           setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+                          if (currentUid) {
+                            try {
+                              const userNotifsKey = `cs_user_notifs_${currentUid}`;
+                              const localSaved = JSON.parse(localStorage.getItem(userNotifsKey) || "[]");
+                              const updatedLocal = localSaved.map((n) => ({ ...n, isRead: true }));
+                              localStorage.setItem(userNotifsKey, JSON.stringify(updatedLocal));
+                            } catch (_) {}
+                          }
                           try {
                             await notificationApi.markAllAsRead();
                           } catch (e) {}
+                          window.dispatchEvent(new Event("notification-updated"));
                         }}
                       >
                         Mark all read
@@ -403,9 +425,22 @@ export default function Header() {
                                 )
                               );
                               setUnreadCount((prev) => Math.max(0, prev - 1));
+                              if (currentUid) {
+                                try {
+                                  const userNotifsKey = `cs_user_notifs_${currentUid}`;
+                                  const localSaved = JSON.parse(localStorage.getItem(userNotifsKey) || "[]");
+                                  const updatedLocal = localSaved.map((n) =>
+                                    n.notificationId === notif.notificationId || (n.title === notif.title && n.message === notif.message)
+                                      ? { ...n, isRead: true }
+                                      : n
+                                  );
+                                  localStorage.setItem(userNotifsKey, JSON.stringify(updatedLocal));
+                                } catch (_) {}
+                              }
                               try {
                                 await notificationApi.markAsRead(notif.notificationId);
                               } catch (e) {}
+                              window.dispatchEvent(new Event("notification-updated"));
                             }
                             setNotifOpen(false);
                             if (notif.targetUrl) {
@@ -420,8 +455,8 @@ export default function Header() {
                           <button
                             type="button"
                             className="tb-notif-item-delete"
-                            title="Xóa thông báo"
-                            aria-label="Xóa thông báo"
+                            title="Delete notification"
+                            aria-label="Delete notification"
                             onClick={async (e) => {
                               e.stopPropagation();
                               const targetId = notif.notificationId;

@@ -283,6 +283,18 @@ public partial class AuthenticationDbContext : DbContext
             entity.Property(e => e.Website)
                 .HasMaxLength(200)
                 .HasColumnName("website");
+            entity.Property(e => e.BankAccountHolder)
+                .HasMaxLength(200)
+                .HasColumnName("bank_account_holder");
+            entity.Property(e => e.BankAccountNumber)
+                .HasMaxLength(50)
+                .HasColumnName("bank_account_number");
+            entity.Property(e => e.BankName)
+                .HasMaxLength(100)
+                .HasColumnName("bank_name");
+            entity.Property(e => e.BankBranch)
+                .HasMaxLength(100)
+                .HasColumnName("bank_branch");
 
             entity.HasOne(d => d.DeletedByNavigation).WithMany(p => p.OrganizerRequestDeletedByNavigations)
                 .HasForeignKey(d => d.DeletedBy)

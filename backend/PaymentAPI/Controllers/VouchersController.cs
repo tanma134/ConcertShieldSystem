@@ -29,7 +29,7 @@ namespace PaymentAPI.Controllers
             try
             {
                 var result = await _voucherService.CreateVoucherAsync(dto, CurrentUserId, IsAdmin, IsOrganizer);
-                return StatusCode(201, ApiResponseDTO<VoucherResponseDTO>.SuccessResponse(result, "Tạo voucher thành công!"));
+                return StatusCode(201, ApiResponseDTO<VoucherResponseDTO>.SuccessResponse(result, "Voucher created successfully."));
             }
             catch (Exception ex)
             {
@@ -127,7 +127,7 @@ namespace PaymentAPI.Controllers
                 }
 
                 var result = await _voucherService.UpdateVoucherStatusAsync(id, newStatus, CurrentUserId, IsAdmin, IsOrganizer);
-                return Ok(ApiResponseDTO<VoucherResponseDTO>.SuccessResponse(result, "Cập nhật trạng thái voucher thành công."));
+                return Ok(ApiResponseDTO<VoucherResponseDTO>.SuccessResponse(result, "Voucher status updated successfully."));
             }
             catch (Exception ex)
             {
@@ -144,7 +144,7 @@ namespace PaymentAPI.Controllers
             try
             {
                 var result = await _voucherService.UpdateVoucherAsync(id, dto, CurrentUserId, IsAdmin, IsOrganizer);
-                return Ok(ApiResponseDTO<VoucherResponseDTO>.SuccessResponse(result, "Cập nhật voucher thành công."));
+                return Ok(ApiResponseDTO<VoucherResponseDTO>.SuccessResponse(result, "Voucher updated successfully."));
             }
             catch (Exception ex)
             {
@@ -161,7 +161,7 @@ namespace PaymentAPI.Controllers
             try
             {
                 await _voucherService.SoftDeleteVoucherAsync(id, CurrentUserId, IsAdmin, IsOrganizer);
-                return Ok(ApiResponseDTO<object>.SuccessResponse(new { id }, "Xóa voucher thành công."));
+                return Ok(ApiResponseDTO<object>.SuccessResponse(new { id }, "Voucher marked as deleted successfully."));
             }
             catch (Exception ex)
             {
@@ -178,7 +178,7 @@ namespace PaymentAPI.Controllers
 
                 return Ok(ApiResponseDTO<List<VoucherResponseDTO>>.SuccessResponse(
                         vouchers,
-                        "Lấy danh sách voucher khả dụng thành công."));
+                        "Available vouchers retrieved successfully."));
             }
             catch (Exception ex)
             {

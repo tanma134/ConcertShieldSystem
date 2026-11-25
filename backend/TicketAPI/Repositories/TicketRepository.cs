@@ -135,6 +135,25 @@ namespace TicketAPI.Repositories
                 Metadata = "{}"
             });
 
+            var order = await _context.Orders.AsNoTracking().FirstOrDefaultAsync(o => o.OrderId == ticket.OrderId);
+
+            _context.TicketRevocations.Add(new TicketRevocation
+            {
+                TicketCode = ticket.TicketCode.ToString(),
+                EventId = ticket.EventId,
+                EventTitle = order?.EventName ?? $"Event #{ticket.EventId}",
+                RevokedByAdminId = adminUserId,
+                RevokedByName = $"Admin #{adminUserId}",
+                RevokedAt = now,
+                ReasonType = "INDIVIDUAL_REVOCATION",
+                ReasonNote = reason,
+                IsBulk = false,
+                RefundQueued = false,
+                NotificationSent = true,
+                SeatOrZone = ticket.TicketTypeName ?? "",
+                CustomerName = ticket.OwnerName ?? order?.FullName ?? "Customer"
+            });
+
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
         }
