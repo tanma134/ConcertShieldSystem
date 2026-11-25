@@ -4,6 +4,8 @@ import authApi from "../api/authApi";
 import PlatformPolicyModal from "../components/PlatformPolicyModal";
 import "../styles/auth.css";
 
+const MIN_PASSWORD_LENGTH = 8;
+
 export default function RegisterPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
@@ -25,9 +27,14 @@ export default function RegisterPage() {
     e.preventDefault();
     setError("");
 
+    if (form.password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+      return;
+    }
+
     // UC 11.1 & 11.2: Check policy agreement
     if (!agreedPolicies) {
-      setError("Vui lòng đọc và tích chọn đồng ý với Điều khoản Dịch vụ & Chính sách nền tảng để tiếp tục.");
+      setError("Please agree to the Terms of Service and Platform Privacy Policy to continue.");
       return;
     }
 
@@ -97,11 +104,14 @@ export default function RegisterPage() {
                 name="password"
                 value={form.password}
                 onChange={handleChange}
+                minLength={MIN_PASSWORD_LENGTH}
+                maxLength={72}
                 required
               />
+              <small className="auth-hint">At least {MIN_PASSWORD_LENGTH} characters.</small>
             </div>
 
-            {/* UC 11.1 & UC 11.2: Policy Agreement Checkbox */}
+            {/* Policy Agreement Checkbox */}
             <div className="auth-policy-group">
               <input
                 type="checkbox"
@@ -134,7 +144,7 @@ export default function RegisterPage() {
                 cursor: agreedPolicies ? "pointer" : "not-allowed",
               }}
             >
-              {loading ? "Processing..." : "Sign Up"}
+              {loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Sign Up"}
             </button>
           </form>
 
@@ -144,7 +154,7 @@ export default function RegisterPage() {
         </div>
       </div>
 
-      {/* UC 11.1 & 11.2: Platform Policy Modal */}
+      {/* Platform Policy Modal */}
       <PlatformPolicyModal
         isOpen={showPolicyModal}
         onClose={() => setShowPolicyModal(false)}

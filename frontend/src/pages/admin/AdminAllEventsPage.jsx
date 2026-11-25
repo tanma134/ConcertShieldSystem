@@ -140,7 +140,7 @@ export default function AdminAllEventsPage() {
         </form>
 
         {error && <div className="ow-error">{error}</div>}
-        {loading && <div className="tb-loading">Loading...</div>}
+        {loading && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
 
         {!loading && !error && items.length === 0 && (
           <div className="tb-empty">No events match these filters.</div>

@@ -1,5 +1,6 @@
 using System.Text;
 using AdminAPI.Data;
+using AdminAPI.Repositories;
 using AdminAPI.Services;
 using AdminAPI.Services.Risks;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -12,9 +13,19 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AdminDbContext>(options =>
  options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddHttpClient();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 builder.Services.AddScoped<ISupportEmailService, SupportEmailService>();
-builder.Services.AddScoped<ISupportCaseService, SupportCaseService>();
+// Explicit factory: SupportCaseService exposes several convenience constructors for tests.
+builder.Services.AddScoped<ISupportCaseService>(sp => new SupportCaseService(
+    sp.GetRequiredService<ISupportCaseRepository>(),
+    sp.GetRequiredService<ILogger<SupportCaseService>>(),
+    sp.GetRequiredService<ISupportEmailService>(),
+    sp.GetRequiredService<IHttpClientFactory>(),
+    sp.GetRequiredService<IConfiguration>()));
+builder.Services.AddScoped<ISupportCaseRepository, SupportCaseRepository>();
+builder.Services.AddScoped<ISystemPolicyService, SystemPolicyService>();
+builder.Services.AddAdminRepositories();
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtSection["Key"]
@@ -49,10 +60,6 @@ builder.Services.AddAuthorization(options =>
 
  options.AddPolicy("CanManageSupportCases", policy =>
  policy.RequireRole("Admin", "Staff", "SupportStaff", "SecurityStaff"));
-
- // chỉ Admin được xem/xử lý fraud-risk (Staff không còn quyền).
- // Bật "Risk:RequirePermissionClaim": true để yêu cầu thêm claim permission = fraud.manage | risk.manage
- // (claim này phải do AuthenticationAPI cấp trong JWT).
  options.AddPolicy("CanReviewFraud", policy =>
  {
  policy.RequireRole("Admin");
@@ -60,6 +67,12 @@ builder.Services.AddAuthorization(options =>
  policy.RequireAssertion(ctx => ctx.User.Claims.Any(c =>
  c.Type == "permission" && (c.Value == "fraud.manage" || c.Value == "risk.manage")));
  });
+
+ // Fraud case queue: Admin and Staff can view the queue and the case detail.
+ // Staff may only submit a review recommendation for a case assigned to them;
+ // assigning and resolving stay Admin-only (enforced in the controller).
+ options.AddPolicy("CanReviewFraudCases", policy =>
+ policy.RequireRole("Admin", "Staff"));
 });
 
 builder.Services.AddControllers();
@@ -100,6 +113,17 @@ builder.Services.AddCors(options =>
 });
 builder.Services.AddRiskEngine(builder.Configuration);
 builder.Services.AddAppealEngine();
+
+// Delivers block/restore/appeal notifications and expires temporary blocks.
+builder.Services.AddHttpClient("RiskNotificationDelivery", c =>
+{
+    c.BaseAddress = new Uri(builder.Configuration["NotificationApi:BaseUrl"] ?? "https://localhost:7197/");
+    c.Timeout = TimeSpan.FromSeconds(15);
+    var key = builder.Configuration["NotificationApi:InternalApiKey"];
+    if (!string.IsNullOrWhiteSpace(key))
+        c.DefaultRequestHeaders.Add("X-Internal-Api-Key", key);
+});
+builder.Services.AddHostedService<RiskMaintenanceWorker>();
 var app = builder.Build();
 
 // Tự động khởi tạo schema Support Cases nếu chưa có trong admin_db
@@ -153,6 +177,26 @@ using (var scope = app.Services.CreateScope())
  CREATE INDEX IF NOT EXISTS ix_support_cases_customer_email ON support_cases(customer_email);
  CREATE INDEX IF NOT EXISTS ix_support_case_notes_case_id ON support_case_notes(case_id);
  ");
+
+ // Small, idempotent schema additions for the Staff review + ticket appeal deadline.
+ try
+ {
+     await adminDb.Database.ExecuteSqlRawAsync(@"
+ ALTER TABLE fraud_alerts ADD COLUMN IF NOT EXISTS recommendation VARCHAR(1000);
+ ALTER TABLE fraud_alerts ADD COLUMN IF NOT EXISTS recommended_outcome VARCHAR(20);
+ ALTER TABLE fraud_alerts ADD COLUMN IF NOT EXISTS recommended_by INT;
+ ALTER TABLE fraud_alerts ADD COLUMN IF NOT EXISTS recommended_at TIMESTAMPTZ;
+
+ INSERT INTO system_parameters (param_key, param_value, category, description, updated_by, updated_at)
+ SELECT 'risk.appeal.ticket_deadline_hours', '24', 'risk_config',
+        'Hours a customer has to appeal a ticket-scope block', 0, NOW()
+ WHERE NOT EXISTS (SELECT 1 FROM system_parameters WHERE param_key = 'risk.appeal.ticket_deadline_hours');
+ ");
+ }
+ catch (Exception ex)
+ {
+     app.Logger.LogWarning(ex, "Could not apply risk schema additions; check the admin_db schema.");
+ }
 }
 
 if (app.Environment.IsDevelopment())

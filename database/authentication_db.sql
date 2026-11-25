@@ -1,12 +1,8 @@
-
-
--- =================================================================
--- AUTH INITIALIZATION - DESTRUCTIVE DROPS
--- =================================================================
 -- =============================================================================
 -- DATABASE: authentication_db
 -- System: PostgreSQL 13+
 -- Description: Init script for AuthenticationAPI database schema & seed data
+-- An toàn khi chạy lại hoặc tạo mới (DROP CASCADE rồi CREATE).
 -- =============================================================================
 
 -- Drop existing tables (reverse dependency order)
@@ -15,6 +11,7 @@ DROP TABLE IF EXISTS kyc_deletion_requests CASCADE;
 DROP TABLE IF EXISTS kyc_settings CASCADE;
 DROP TABLE IF EXISTS kyc_consent_versions CASCADE;
 DROP TABLE IF EXISTS ekyc_verifications CASCADE;
+DROP TABLE IF EXISTS organizer_request_documents CASCADE;
 DROP TABLE IF EXISTS organizer_requests CASCADE;
 DROP TABLE IF EXISTS refresh_tokens CASCADE;
 DROP TABLE IF EXISTS user_roles CASCADE;
@@ -70,10 +67,12 @@ CREATE TABLE organizer_requests (
     request_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id INT NOT NULL REFERENCES users(user_id),
     company_name VARCHAR(200),
+    tax_code VARCHAR(50),
+    representative_name VARCHAR(200),
     phone_number VARCHAR(20),
     website VARCHAR(200),
     experience VARCHAR(2000),
-    reason VARCHAR(1000),
+    reason VARCHAR(1000) NOT NULL DEFAULT '',
     status VARCHAR(20) NOT NULL DEFAULT 'Pending',
     rejection_reason VARCHAR(1000),
     review_note VARCHAR(1000),
@@ -86,57 +85,111 @@ CREATE TABLE organizer_requests (
     deleted_by INT REFERENCES users(user_id)
 );
 
+-- 5b. Organizer Request Documents table
+CREATE TABLE organizer_request_documents (
+    document_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    request_id INT NOT NULL REFERENCES organizer_requests(request_id) ON DELETE CASCADE,
+    document_type VARCHAR(50) NOT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    file_url TEXT NOT NULL,
+    preview_url TEXT,
+    public_id VARCHAR(255),
+    is_image BOOLEAN NOT NULL DEFAULT TRUE,
+    uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- 6. eKYC Verifications table
 CREATE TABLE ekyc_verifications (
     ekyc_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id INT NOT NULL REFERENCES users(user_id),
     cccd_number_encrypted TEXT,
+    cccd_number_hash VARCHAR(64),
     cccd_front_object_key VARCHAR(500),
     cccd_back_object_key VARCHAR(500),
     face_capture_object_key VARCHAR(500),
+    face_vector BYTEA,
+    ocr_raw_data JSONB,
     face_match_score NUMERIC(5,2),
     liveness_score NUMERIC(5,2),
     liveness_passed BOOLEAN,
-    ocr_raw_data JSONB,
     status VARCHAR(20) NOT NULL DEFAULT 'Pending',
     fail_reason VARCHAR(500),
+    consent_version VARCHAR(20),
+    consented_at TIMESTAMPTZ,
+    data_purged_at TIMESTAMPTZ,
+    legal_hold BOOLEAN NOT NULL DEFAULT FALSE,
+    legal_hold_reason VARCHAR(500),
+    legal_hold_at TIMESTAMPTZ,
+    reviewed_by INT,
+    reviewed_at TIMESTAMPTZ,
     verified_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS ix_ekyc_cccd_number_hash ON ekyc_verifications(cccd_number_hash);
+CREATE INDEX IF NOT EXISTS ix_ekyc_user_status ON ekyc_verifications(user_id, status);
+CREATE INDEX IF NOT EXISTS ix_ekyc_verifications_purge ON ekyc_verifications(created_at) WHERE (data_purged_at IS NULL);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_ekyc_cccd_hash_active ON ekyc_verifications(cccd_number_hash) 
+    WHERE (cccd_number_hash IS NOT NULL AND status IN ('Passed', 'ManualReview'));
+CREATE UNIQUE INDEX IF NOT EXISTS ux_ekyc_cccd_hash_passed ON ekyc_verifications(cccd_number_hash) 
+    WHERE (status = 'Passed');
+
 -- 7. Kyc Consent Versions table
 CREATE TABLE kyc_consent_versions (
-    consent_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    version VARCHAR(20) NOT NULL,
-    content TEXT NOT NULL,
-    effective_from TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    version VARCHAR(20) NOT NULL UNIQUE,
+    title VARCHAR(500) NOT NULL,
+    content_json TEXT NOT NULL,
+    checkbox_text TEXT NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_by INT
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_kyc_consent_versions_one_active ON kyc_consent_versions(is_active) WHERE is_active = true;
 
 -- 8. Kyc Settings table
 CREATE TABLE kyc_settings (
-    setting_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id INT PRIMARY KEY,
     retention_days INT NOT NULL DEFAULT 30,
-    privacy_contact VARCHAR(200)
+    keep_document_hash_after_deletion BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_by INT
 );
 
 -- 9. Kyc Deletion Requests table
 CREATE TABLE kyc_deletion_requests (
-    request_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id INT NOT NULL REFERENCES users(user_id),
     status VARCHAR(20) NOT NULL DEFAULT 'Pending',
-    reason VARCHAR(500),
     requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    processed_at TIMESTAMPTZ
+    processed_at TIMESTAMPTZ,
+    processed_by INT,
+    note TEXT,
+    reason_code VARCHAR(30)
 );
+
+CREATE INDEX IF NOT EXISTS ix_kyc_deletion_requests_status_requested ON kyc_deletion_requests(status, requested_at DESC);
+CREATE INDEX IF NOT EXISTS ix_kyc_deletion_requests_user_status ON kyc_deletion_requests(user_id, status);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_kyc_deletion_one_pending_per_user ON kyc_deletion_requests(user_id) WHERE (status = 'Pending');
 
 -- 10. Kyc Access Logs table
 CREATE TABLE kyc_access_logs (
-    log_id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    user_id INT NOT NULL REFERENCES users(user_id),
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    subject_user_id INT NOT NULL REFERENCES users(user_id),
+    ekyc_id INT REFERENCES ekyc_verifications(ekyc_id),
+    actor_user_id INT REFERENCES users(user_id),
+    actor_type VARCHAR(50) NOT NULL,
     action VARCHAR(50) NOT NULL,
+    ip_address VARCHAR(50),
     details TEXT,
-    accessed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS ix_kyc_access_logs_actor_created ON kyc_access_logs(actor_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS ix_kyc_access_logs_created ON kyc_access_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS ix_kyc_access_logs_ekyc ON kyc_access_logs(ekyc_id);
+CREATE INDEX IF NOT EXISTS ix_kyc_access_logs_subject_created ON kyc_access_logs(subject_user_id, created_at DESC);
 
 -- 11. Pending Registrations table
 CREATE TABLE pending_registrations (
@@ -144,9 +197,9 @@ CREATE TABLE pending_registrations (
     full_name VARCHAR(100),
     email VARCHAR(256) NOT NULL,
     phone_number VARCHAR(20),
-    password_hash TEXT,
-    otp_code VARCHAR(10),
-    expired_at TIMESTAMPTZ
+    password_hash TEXT NOT NULL,
+    otp_code VARCHAR(10) NOT NULL,
+    expired_at TIMESTAMPTZ NOT NULL
 );
 
 -- =============================================================================
@@ -169,6 +222,46 @@ VALUES ('Test Customer', 'customer@ticketbox.com', '0987654321', '$2a$11$H4HcBDS
 INSERT INTO users (full_name, email, phone_number, password_hash, is_verified, is_active, auth_provider, has_password, ekyc_status)
 VALUES ('Test Organizer', 'organizer@ticketbox.com', '0912345678', '$2a$11$7SKcRyOK56NKx/gH4B8RWevtpMW9FfPGaWQCnVZqmrc7a8CfgcHAu', true, true, 'local', true, 'NotSubmitted');
 
+-- 4. Customer 1: customer1@ticketbox.com / Customer@123
+INSERT INTO users (full_name, email, phone_number, password_hash, is_verified, is_active, auth_provider, has_password, ekyc_status)
+VALUES ('Customer One (Nguyen Van An)', 'customer1@ticketbox.com', '0981111111', '$2a$11$H4HcBDSBWC6uPn1WXyMm0.EqGbPaKbRLxzs7I/lgLohWmW77ekYeS', true, true, 'local', true, 'NotSubmitted');
+
+-- 5. Customer 2: customer2@ticketbox.com / Customer@123
+INSERT INTO users (full_name, email, phone_number, password_hash, is_verified, is_active, auth_provider, has_password, ekyc_status)
+VALUES ('Customer Two (Tran Thi Binh)', 'customer2@ticketbox.com', '0982222222', '$2a$11$H4HcBDSBWC6uPn1WXyMm0.EqGbPaKbRLxzs7I/lgLohWmW77ekYeS', true, true, 'local', true, 'NotSubmitted');
+
+-- 6. Customer 3: customer3@ticketbox.com / Customer@123
+INSERT INTO users (full_name, email, phone_number, password_hash, is_verified, is_active, auth_provider, has_password, ekyc_status)
+VALUES ('Customer Three (Le Van Cuong)', 'customer3@ticketbox.com', '0983333333', '$2a$11$H4HcBDSBWC6uPn1WXyMm0.EqGbPaKbRLxzs7I/lgLohWmW77ekYeS', true, true, 'local', true, 'NotSubmitted');
+
+-- 7. Customer 4: customer4@ticketbox.com / Customer@123
+INSERT INTO users (full_name, email, phone_number, password_hash, is_verified, is_active, auth_provider, has_password, ekyc_status)
+VALUES ('Customer Four (Pham Thi Dung)', 'customer4@ticketbox.com', '0984444444', '$2a$11$H4HcBDSBWC6uPn1WXyMm0.EqGbPaKbRLxzs7I/lgLohWmW77ekYeS', true, true, 'local', true, 'NotSubmitted');
+
+-- 8. Customer 5: customer5@ticketbox.com / Customer@123
+INSERT INTO users (full_name, email, phone_number, password_hash, is_verified, is_active, auth_provider, has_password, ekyc_status)
+VALUES ('Customer Five (Hoang Van Em)', 'customer5@ticketbox.com', '0985555555', '$2a$11$H4HcBDSBWC6uPn1WXyMm0.EqGbPaKbRLxzs7I/lgLohWmW77ekYeS', true, true, 'local', true, 'NotSubmitted');
+
+-- 9. Customer 6: customer6@ticketbox.com / Customer@123
+INSERT INTO users (full_name, email, phone_number, password_hash, is_verified, is_active, auth_provider, has_password, ekyc_status)
+VALUES ('Customer Six (Vu Thi Giang)', 'customer6@ticketbox.com', '0986666666', '$2a$11$H4HcBDSBWC6uPn1WXyMm0.EqGbPaKbRLxzs7I/lgLohWmW77ekYeS', true, true, 'local', true, 'NotSubmitted');
+
+-- 10. Customer 7: customer7@ticketbox.com / Customer@123
+INSERT INTO users (full_name, email, phone_number, password_hash, is_verified, is_active, auth_provider, has_password, ekyc_status)
+VALUES ('Customer Seven (Dang Van Hai)', 'customer7@ticketbox.com', '0987777777', '$2a$11$H4HcBDSBWC6uPn1WXyMm0.EqGbPaKbRLxzs7I/lgLohWmW77ekYeS', true, true, 'local', true, 'NotSubmitted');
+
+-- 11. Customer Minh: minhttv12@gmail.com / Customer@123
+INSERT INTO users (full_name, email, phone_number, password_hash, is_verified, is_active, auth_provider, has_password, ekyc_status)
+VALUES ('Minh Test Customer', 'minhttv12@gmail.com', '0989999999', '$2a$11$H4HcBDSBWC6uPn1WXyMm0.EqGbPaKbRLxzs7I/lgLohWmW77ekYeS', true, true, 'local', true, 'NotSubmitted');
+
+-- 6. Organizer 1: organizer1@ticketbox.com / Organizer@123
+INSERT INTO users (full_name, email, phone_number, password_hash, is_verified, is_active, auth_provider, has_password, ekyc_status)
+VALUES ('Organizer One (Saigon Sound Entertainment)', 'organizer1@ticketbox.com', '0911111111', '$2a$11$7SKcRyOK56NKx/gH4B8RWevtpMW9FfPGaWQCnVZqmrc7a8CfgcHAu', true, true, 'local', true, 'NotSubmitted');
+
+-- 7. Organizer 2: organizer2@ticketbox.com / Organizer@123
+INSERT INTO users (full_name, email, phone_number, password_hash, is_verified, is_active, auth_provider, has_password, ekyc_status)
+VALUES ('Organizer Two (Hanoi Music Production)', 'organizer2@ticketbox.com', '0912222222', '$2a$11$7SKcRyOK56NKx/gH4B8RWevtpMW9FfPGaWQCnVZqmrc7a8CfgcHAu', true, true, 'local', true, 'NotSubmitted');
+
 -- Assign Roles
 -- Admin user (user_id 1) -> Admin
 INSERT INTO user_roles (user_id, role_id) VALUES (1, (SELECT role_id FROM roles WHERE role_name = 'Admin'));
@@ -178,9 +271,41 @@ INSERT INTO user_roles (user_id, role_id) VALUES (2, (SELECT role_id FROM roles 
 INSERT INTO user_roles (user_id, role_id) VALUES (3, (SELECT role_id FROM roles WHERE role_name = 'Customer'));
 INSERT INTO user_roles (user_id, role_id) VALUES (3, (SELECT role_id FROM roles WHERE role_name = 'Organizer'));
 
+-- Customer 1 & 2 -> Customer
+INSERT INTO user_roles (user_id, role_id) VALUES ((SELECT user_id FROM users WHERE email = 'customer1@ticketbox.com'), (SELECT role_id FROM roles WHERE role_name = 'Customer'));
+INSERT INTO user_roles (user_id, role_id) VALUES ((SELECT user_id FROM users WHERE email = 'customer2@ticketbox.com'), (SELECT role_id FROM roles WHERE role_name = 'Customer'));
+INSERT INTO user_roles (user_id, role_id) VALUES ((SELECT user_id FROM users WHERE email = 'customer3@ticketbox.com'), (SELECT role_id FROM roles WHERE role_name = 'Customer'));
+INSERT INTO user_roles (user_id, role_id) VALUES ((SELECT user_id FROM users WHERE email = 'customer4@ticketbox.com'), (SELECT role_id FROM roles WHERE role_name = 'Customer'));
+INSERT INTO user_roles (user_id, role_id) VALUES ((SELECT user_id FROM users WHERE email = 'customer5@ticketbox.com'), (SELECT role_id FROM roles WHERE role_name = 'Customer'));
+INSERT INTO user_roles (user_id, role_id) VALUES ((SELECT user_id FROM users WHERE email = 'customer6@ticketbox.com'), (SELECT role_id FROM roles WHERE role_name = 'Customer'));
+INSERT INTO user_roles (user_id, role_id) VALUES ((SELECT user_id FROM users WHERE email = 'customer7@ticketbox.com'), (SELECT role_id FROM roles WHERE role_name = 'Customer'));
+INSERT INTO user_roles (user_id, role_id) VALUES ((SELECT user_id FROM users WHERE email = 'minhttv12@gmail.com'), (SELECT role_id FROM roles WHERE role_name = 'Customer'));
+
+-- Organizer 1 & 2 -> Customer + Organizer
+INSERT INTO user_roles (user_id, role_id) VALUES ((SELECT user_id FROM users WHERE email = 'organizer1@ticketbox.com'), (SELECT role_id FROM roles WHERE role_name = 'Customer'));
+INSERT INTO user_roles (user_id, role_id) VALUES ((SELECT user_id FROM users WHERE email = 'organizer1@ticketbox.com'), (SELECT role_id FROM roles WHERE role_name = 'Organizer'));
+INSERT INTO user_roles (user_id, role_id) VALUES ((SELECT user_id FROM users WHERE email = 'organizer2@ticketbox.com'), (SELECT role_id FROM roles WHERE role_name = 'Customer'));
+INSERT INTO user_roles (user_id, role_id) VALUES ((SELECT user_id FROM users WHERE email = 'organizer2@ticketbox.com'), (SELECT role_id FROM roles WHERE role_name = 'Organizer'));
+
+-- Seed Default KYC Settings
+INSERT INTO kyc_settings (id, retention_days, keep_document_hash_after_deletion, updated_at)
+VALUES (1, 30, false, NOW()) ON CONFLICT (id) DO NOTHING;
 
 -- =================================================================
 -- AUTH AVATAR MIGRATION
 -- =================================================================
 -- Non-destructive avatar metadata migration. Image binaries remain in Cloudinary.
 ALTER TABLE public.users ADD COLUMN IF NOT EXISTS avatar_public_id text;
+
+-- =================================================================
+-- ORGANIZER STAFF MEMBERS MAPPING
+-- =================================================================
+CREATE TABLE IF NOT EXISTS public.organizer_staff_members (
+    organizer_id integer NOT NULL,
+    staff_user_id integer NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT pk_organizer_staff_members PRIMARY KEY (organizer_id, staff_user_id)
+);
+CREATE INDEX IF NOT EXISTS ix_organizer_staff_organizer ON public.organizer_staff_members(organizer_id);
+CREATE INDEX IF NOT EXISTS ix_organizer_staff_staff ON public.organizer_staff_members(staff_user_id);
+

@@ -26,8 +26,13 @@ const axiosClient = axios.create({
 // Attach the access token to every request, EXCEPT the public endpoints above
 axiosClient.interceptors.request.use((config) => {
   if (config.data instanceof FormData) {
-    delete config.headers["Content-Type"];
-    delete config.headers["content-type"];
+    if (config.headers?.delete) {
+      config.headers.delete("Content-Type");
+      config.headers.delete("content-type");
+    } else if (config.headers) {
+      delete config.headers["Content-Type"];
+      delete config.headers["content-type"];
+    }
   }
   // Risk Engine: gửi tín hiệu thiết bị/phiên kèm mọi request (kể cả login/register)
   Object.assign(config.headers, riskHeaders());
@@ -77,6 +82,20 @@ axiosClient.interceptors.response.use(
       } catch (refreshError) {
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
+        localStorage.removeItem("user");
+        localStorage.removeItem("roles");
+
+        // BR-112: the refresh was refused because the account is under an active
+        // risk block (403 + code RISK_BLOCKED). Show the specific message instead
+        // of the generic session-expired login.
+        const riskBlocked =
+          refreshError.response?.status === 403 &&
+          refreshError.response?.data?.code === "RISK_BLOCKED";
+        const blockedMessage =
+          riskBlocked
+            ? (refreshError.response?.data?.message ||
+               "Your account is temporarily restricted due to unusual activity.")
+            : null;
 
         // Prevent infinite reload loops if already on an authentication page
         const currentPath = window.location.pathname;
@@ -88,7 +107,13 @@ axiosClient.interceptors.response.use(
           currentPath.includes("/reset");
 
         if (!isAuthPage) {
-          window.location.href = "/login";
+          if (blockedMessage) {
+            window.location.href =
+              "/login?reason=account-blocked&msg=" +
+              encodeURIComponent(blockedMessage);
+          } else {
+            window.location.href = "/login";
+          }
         }
         return Promise.reject(refreshError);
       }

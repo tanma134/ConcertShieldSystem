@@ -35,6 +35,9 @@ public class TicketRiskServiceTests : IDisposable
 
         _guard.Setup(g => g.PreCheckAsync(It.IsAny<HttpContext>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
               .ReturnsAsync(RiskVerdict.Allow());
+        // The eKYC gate is a separate policy; these tests exercise the fraud rules.
+        _guard.Setup(g => g.CheckEkycAsync(It.IsAny<HttpContext>(), It.IsAny<string?>()))
+              .Returns(RiskVerdict.Allow());
         _guard.Setup(g => g.EvaluateAsync(It.IsAny<HttpContext>(), It.IsAny<RiskEvent>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
               .Callback<HttpContext, RiskEvent, bool, CancellationToken>((_, e, _, _) => _sent = e)
               .ReturnsAsync(RiskVerdict.Allow());
@@ -282,7 +285,7 @@ public class TicketRiskServiceTests : IDisposable
     public async Task V02_NotRaised_WhenUserTookTheirTime()
     {
         _holds.Setup(h => h.GetHoldDetailsAsync("h1", UserId))
-              .ReturnsAsync(new HoldSessionResponse { ExpiresAtUtc = DateTime.UtcNow.AddSeconds(300) });   // giữ chỗ cách đây ~5 phút
+              .ReturnsAsync(new HoldSessionResponse { CreatedAtUtc = DateTime.UtcNow.AddSeconds(-300), ExpiresAtUtc = DateTime.UtcNow.AddSeconds(300) });   // giữ chỗ cách đây ~5 phút
 
         await _svc.CheckOrderAsync(TestHttp.Browser(), UserId, OrderFor(1));
 

@@ -117,7 +117,6 @@ export default function ProcessRefundModal({
       <div className="rf-modal" onClick={(e) => e.stopPropagation()}>
         <div className="rf-header">
           <div className="rf-header-title">
-            <span className="rf-icon">⟲</span>
             <div>
               <h2>Process Refund</h2>
               <p>Issue a full or partial refund via VNPay gateway.</p>
@@ -134,7 +133,7 @@ export default function ProcessRefundModal({
         </div>
 
         {loadingOrder ? (
-          <div className="rf-loading">Loading order transaction details...</div>
+          <div className="rf-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
         ) : (
           <form onSubmit={handleSubmit} className="rf-form">
             {/* Figure 142 Summary Card */}
@@ -254,7 +253,7 @@ export default function ProcessRefundModal({
                 className="rf-btn-submit"
                 disabled={submitting || maxRefundable <= 0}
               >
-                {submitting ? "Processing..." : "Process Refund"}
+                {submitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Process Refund"}
               </button>
             </div>
           </form>

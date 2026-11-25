@@ -1,13 +1,11 @@
-
-using AuthenticationAPI.Models;
-using Microsoft.EntityFrameworkCore;
+using AuthenticationAPI.Repositories;
 
 namespace AuthenticationAPI.Services
 {
     /// <summary>
-    /// 3.5 - T? ð?ng xóa ?nh g?c + d? li?u OCR sau N ngày (N l?y t? b?ng kyc_settings, 0 = t?t).
-    /// Gi? l?i: tr?ng thái, ði?m, th?i ði?m; hash/b?n m? hóa s? CCCD tùy KeepDocumentHashAfterDeletion.
-    /// Không ð?ng t?i h? sõ ðang Pending ho?c ManualReview.
+    /// 3.5 - Automatically deletes the original images and OCR data after N days (N comes from kyc_settings).
+    /// Kept: status, scores, timestamps; the CCCD hash / encrypted number depend on KeepDocumentHashAfterDeletion.
+    /// Records that are Pending or ManualReview are never touched.
     /// </summary>
     public class KycRetentionService : BackgroundService
     {
@@ -26,7 +24,7 @@ namespace AuthenticationAPI.Services
         {
             try
             {
-                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken); // ð?i app kh?i ð?ng xong
+                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken); // wait for the app to finish starting
 
                 while (!stoppingToken.IsCancellationRequested)
                 {
@@ -36,7 +34,7 @@ namespace AuthenticationAPI.Services
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException)
                     {
-                        _logger.LogError(ex, "KYC retention job l?i");
+                        _logger.LogError(ex, "KYC retention job failed");
                     }
 
                     await Task.Delay(TimeSpan.FromHours(6), stoppingToken);
@@ -44,7 +42,7 @@ namespace AuthenticationAPI.Services
             }
             catch (OperationCanceledException)
             {
-                // app ðang t?t
+                // application is shutting down
             }
         }
 
@@ -57,7 +55,7 @@ namespace AuthenticationAPI.Services
             if (settings.RetentionDays <= 0)
                 return;
 
-            var db = sp.GetRequiredService<AuthenticationDbContext>();
+            var ekycRepository = sp.GetRequiredService<IEkycRepository>();
             var purger = sp.GetRequiredService<IKycDataPurger>();
             var accessLog = sp.GetRequiredService<IKycAccessLogService>();
 
@@ -66,14 +64,7 @@ namespace AuthenticationAPI.Services
 
             while (!ct.IsCancellationRequested)
             {
-                var candidates = await db.EkycVerifications
-                    .Where(e => e.DataPurgedAt == null
-                                && !e.LegalHold // data under legal hold is not expired
-                                && e.Status != "Pending" && e.Status != "ManualReview"
-                                && (e.VerifiedAt ?? e.CreatedAt) < cutoff)
-                    .OrderBy(e => e.EkycId)
-                    .Take(BatchSize)
-                    .ToListAsync(ct);
+                var candidates = await ekycRepository.GetPurgeCandidatesAsync(cutoff, BatchSize, ct);
 
                 if (candidates.Count == 0)
                     break;
@@ -99,23 +90,23 @@ namespace AuthenticationAPI.Services
                         catch (Exception logEx) when (logEx is not OperationCanceledException)
                         {
                             // The data is already gone; a failed log write must not be counted as a failed purge
-                            _logger.LogError(logEx, "Không ghi ðý?c b?ng ch?ng purge cho ekyc {EkycId}", record.EkycId);
+                            _logger.LogError(logEx, "Could not write the purge evidence for ekyc {EkycId}", record.EkycId);
                         }
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException)
                     {
-                        _logger.LogError(ex, "Không xóa ðý?c d? li?u KYC c?a ekyc {EkycId}", record.EkycId);
+                        _logger.LogError(ex, "Could not delete the KYC data of ekyc {EkycId}", record.EkycId);
                     }
                 }
 
                 total += purgedInBatch;
-                // Có b?n ghi l?i (s? xu?t hi?n l?i ? ð?u batch) ho?c h?t d? li?u th? d?ng, ch? l?n ch?y sau
+                // Some records failed (they would show up again at the start of the next batch) or the data ran out: wait for the next run
                 if (purgedInBatch < candidates.Count || candidates.Count < BatchSize)
                     break;
             }
 
             if (total > 0)
-                _logger.LogInformation("KYC retention: ð? xóa ?nh/d? li?u OCR c?a {Count} h? sõ (quá {Days} ngày)", total, settings.RetentionDays);
+                _logger.LogInformation("KYC retention: deleted images/OCR data of {Count} records (older than {Days} days)", total, settings.RetentionDays);
         }
     }
 }

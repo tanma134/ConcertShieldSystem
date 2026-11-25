@@ -1,23 +1,34 @@
 import axiosClient from "./axiosClient";
 
-// UC_9: ticket return requests of the signed-in customer.
+// Quan ly yeu cau hoan tra ve va xet duyet hoan tien danh cho Customer, Staff va Admin
 const ticketReturnApi = {
-  // "My tickets" list, each ticket carries whether it can be returned right now.
+  // Lay danh sach ve cua toi danh cho Customer
   getMyTickets: () => axiosClient.get("/tickets/my"),
 
-  // UC_9.1: submit a return request for one ticket.
-  submit: (ticketId, reason) => axiosClient.post("/ticket-returns", { ticketId, reason }),
+  // Gui yeu cau hoan tra 1 ve danh cho Customer
+  submit: (ticketId, reason, proofUrl = null) =>
+    axiosClient.post("/ticket-returns", { ticketId, reason, proofUrl }),
 
-  // UC_9.2: all my return requests, optionally filtered by status.
+  // Gui yeu cau hoan tra theo lo cho nhieu ve trong don hang danh cho Customer
+  submitBatch: (ticketIds, reason, proofUrl = null) =>
+    axiosClient.post("/ticket-returns/batch", { ticketIds, reason, proofUrl }),
+
+  // Lay danh sach cac yeu cau hoan ve cua toi danh cho Customer
   list: (status) => axiosClient.get("/ticket-returns", { params: status ? { status } : {} }),
 
-  // UC_9.2: one return request.
+  // Xem chi tiet mot yeu cau hoan ve theo id danh cho Customer
   getById: (id) => axiosClient.get(`/ticket-returns/${id}`),
 
-  // UC_9.3: withdraw a request that is still pending.
+  // Huy yeu cau hoan ve dang cho duyet danh cho Customer
   cancel: (id) => axiosClient.post(`/ticket-returns/${id}/cancel`),
+
+  // Lay danh sach hang cho duyet hoan ve danh cho Staff va Admin
   reviewQueue: (status = "Pending") => axiosClient.get("/ticket-returns/review", { params: status ? { status } : {} }),
+
+  // Thu lai yeu cau hoan tien bi loi danh cho Admin
   retryRefund: (id) => axiosClient.post(`/ticket-returns/${id}/retry-refund`),
+
+  // Phe duyet hoac tu choi yeu cau hoan ve danh cho Staff va Admin
   review: (id, approve, reviewNote = "") => axiosClient.post(`/ticket-returns/${id}/review`, { approve, reviewNote }),
 };
 

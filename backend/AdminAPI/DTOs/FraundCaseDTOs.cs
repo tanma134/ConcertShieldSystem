@@ -34,6 +34,10 @@ namespace AdminAPI.DTOs
         public DateTime? ReviewedAt { get; set; }
         public DateTime SlaDueAt { get; set; }
         public bool IsOverdue { get; set; }
+        public string? Recommendation { get; set; }
+        public string? RecommendedOutcome { get; set; }
+        public int? RecommendedBy { get; set; }
+        public DateTime? RecommendedAt { get; set; }
     }
 
     public class AssignFraudCaseRequest
@@ -52,6 +56,15 @@ namespace AdminAPI.DTOs
         public string Note { get; set; } = null!;
     }
 
+    // Staff review: the assigned Staff member proposes an outcome; only an Admin can close the case.
+    public class RecommendFraudCaseRequest
+    {
+        [Required]
+        public string Outcome { get; set; } = null!;
+        [Required, MaxLength(1000)]
+        public string Note { get; set; } = null!;
+    }
+
     public class FraudCaseResultDto
     {
         public int CaseId { get; set; }
@@ -62,6 +75,10 @@ namespace AdminAPI.DTOs
         public DateTime? ReviewedAt { get; set; }
         public string? PreviousStatus { get; set; }
         public int? PreviousAssignee { get; set; }
+        public string? Recommendation { get; set; }
+        public string? RecommendedOutcome { get; set; }
+        public int? RecommendedBy { get; set; }
+        public DateTime? RecommendedAt { get; set; }
     }
 
     public class RiskPolicyItemDto

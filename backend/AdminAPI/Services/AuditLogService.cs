@@ -2,10 +2,9 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using AdminAPI.Data;
 using AdminAPI.DTOs;
 using AdminAPI.Models;
-using Microsoft.EntityFrameworkCore;
+using AdminAPI.Repositories;
 
 namespace AdminAPI.Services
 {
@@ -16,16 +15,16 @@ namespace AdminAPI.Services
         private const int MaxExportDays = 90;
         private const int MaxExportRows = 50_000;
 
-        private readonly AdminDbContext _db;
+        private readonly IAuditLogRepository _repository;
 
-        public AuditLogService(AdminDbContext db)
+        public AuditLogService(IAuditLogRepository repository)
         {
-            _db = db;
+            _repository = repository;
         }
 
-        // ------------------------------------------------------------
+        // -----------------------------------------------------------
         // 19.1 View Activity Log List
-        // ------------------------------------------------------------
+        // -----------------------------------------------------------
         public async Task<PagedResult<AuditLogDto>> SearchAsync(AuditLogQuery query)
         {
             if (query.From is not null && query.To is not null && query.From > query.To)
@@ -34,30 +33,20 @@ namespace AdminAPI.Services
             var page = query.Page < 1 ? 1 : query.Page;
             var pageSize = query.PageSize is < 1 or > MaxPageSize ? 20 : query.PageSize;
 
-            var q = BuildFilteredQuery(query);
-
-            var totalCount = await q.LongCountAsync();
-
-            var items = await q
-                .OrderByDescending(a => a.CreatedAt)
-                .ThenByDescending(a => a.AuditLogId)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .Select(a => ToDto(a))
-                .ToListAsync();
+            var (rows, totalCount) = await _repository.SearchAsync(query, page, pageSize);
 
             return new PagedResult<AuditLogDto>
             {
-                Items = items,
+                Items = rows.Select(ToDto).ToList(),
                 Page = page,
                 PageSize = pageSize,
                 TotalCount = totalCount
             };
         }
 
-        // ------------------------------------------------------------
+        // -----------------------------------------------------------
         // 19.2 Export Audit Log
-        // ------------------------------------------------------------
+        // -----------------------------------------------------------
         public async Task<(byte[] Content, string ContentType, string FileName)> ExportAsync(AuditLogQuery query, string format)
         {
             if (query.From is null || query.To is null)
@@ -69,13 +58,7 @@ namespace AdminAPI.Services
             if ((query.To.Value - query.From.Value).TotalDays > MaxExportDays)
                 throw new InvalidOperationException($"Khoảng thời gian export tối đa là {MaxExportDays} ngày");
 
-            var q = BuildFilteredQuery(query);
-
-            var rows = await q
-                .OrderBy(a => a.CreatedAt)
-                .Take(MaxExportRows + 1) // +1 để phát hiện có vượt giới hạn hay không
-                .Select(a => ToDto(a))
-                .ToListAsync();
+            var rows = (await _repository.ExportAsync(query, MaxExportRows)).Select(ToDto).ToList();
 
             if (rows.Count > MaxExportRows)
                 throw new InvalidOperationException(
@@ -88,9 +71,9 @@ namespace AdminAPI.Services
             };
         }
 
-        // ------------------------------------------------------------
+        // -----------------------------------------------------------
         // Ghi log (dùng ở các service/controller khác trong AdminAPI)
-        // ------------------------------------------------------------
+        // -----------------------------------------------------------
         public async Task LogAsync(int? userId, string actorType, string action, string entityType,
             string? entityId = null, object? oldValue = null, object? newValue = null,
             string? ipAddress = null, string? requestId = null, string? userAgent = null)
@@ -110,50 +93,13 @@ namespace AdminAPI.Services
                 CreatedAt = DateTime.UtcNow
             };
 
-            _db.AuditLogs.Add(log);
-            await _db.SaveChangesAsync();
+            await _repository.AddAsync(log);
+            await _repository.SaveChangesAsync();
         }
 
-        // ------------------------------------------------------------
+        // -----------------------------------------------------------
         // Helpers
-        // ------------------------------------------------------------
-        private IQueryable<AuditLog> BuildFilteredQuery(AuditLogQuery query)
-        {
-            var q = _db.AuditLogs.AsNoTracking().AsQueryable();
-
-            if (query.UserId is not null)
-                q = q.Where(a => a.UserId == query.UserId);
-
-            if (!string.IsNullOrWhiteSpace(query.ActorType))
-                q = q.Where(a => a.ActorType == query.ActorType);
-
-            if (!string.IsNullOrWhiteSpace(query.Action))
-                q = q.Where(a => a.Action == query.Action);
-
-            if (!string.IsNullOrWhiteSpace(query.EntityType))
-                q = q.Where(a => a.EntityType == query.EntityType);
-
-            if (!string.IsNullOrWhiteSpace(query.EntityId))
-                q = q.Where(a => a.EntityId == query.EntityId);
-
-            if (query.From is not null)
-            {
-                // Cột created_at là "timestamp with time zone" (timestamptz) nên Npgsql bắt buộc
-                // DateTime truyền vào phải có Kind=Utc. Giá trị bind từ query string (?from=2026-09-25)
-                // luôn có Kind=Unspecified, nên phải ép lại trước khi dùng trong biểu thức LINQ.
-                var from = DateTime.SpecifyKind(query.From.Value, DateTimeKind.Utc);
-                q = q.Where(a => a.CreatedAt >= from);
-            }
-
-            if (query.To is not null)
-            {
-                var to = DateTime.SpecifyKind(query.To.Value, DateTimeKind.Utc);
-                q = q.Where(a => a.CreatedAt <= to);
-            }
-
-            return q;
-        }
-
+        // -----------------------------------------------------------
         private static AuditLogDto ToDto(AuditLog a) => new()
         {
             AuditLogId = a.AuditLogId,

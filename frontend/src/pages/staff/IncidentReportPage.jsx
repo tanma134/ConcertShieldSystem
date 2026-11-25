@@ -443,7 +443,7 @@ export default function IncidentReportPage() {
             </div>
           </div>
 
-          {/* Evidence Upload (UC_16.2) */}
+          {/* Evidence Upload */}
           <div className="inc-card" style={{ marginTop: "20px" }}>
             <div className="inc-card-title">
               <div className="inc-card-title-left">
@@ -575,7 +575,7 @@ export default function IncidentReportPage() {
               disabled={isSubmitting}
               style={{ minWidth: "180px" }}
             >
-              {isSubmitting ? (uploadProgressText || "Filing Report...") : "Submit Incident Report"}
+              {isSubmitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Submit Incident Report"}
             </button>
           </div>
         </form>

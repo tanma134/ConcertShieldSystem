@@ -3,27 +3,44 @@ import { Link } from "react-router-dom";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import ticketApi from "../../api/ticketApi";
+import ticketReturnApi from "../../api/ticketReturnApi";
+import { useToast } from "../../components/ToastProvider";
+import appealApi from "../../api/appealApi";
+
 import "./MyTicketsPage.css";
+
+const REFUND_CATEGORIES = {
+  PersonalSchedule: "Personal schedule conflict / Unable to attend",
+  MedicalEmergency: "Medical emergency / Health issue / Hospitalization",
+  EventChanged: "Event schedule or venue changed",
+  AccidentalBooking: "Accidental booking / Wrong tier or quantity",
+  ForceMajeure: "Severe weather / Natural disaster / Travel disruption",
+  Other: "Other reason (detailed explanation required)",
+};
 
 const TABS = [
   { id: "all", label: "All" },
   { id: "success", label: "Successful" },
   { id: "processing", label: "Processing" },
   { id: "cancelled", label: "Cancelled" },
+  { id: "restricted", label: "Restricted" },
 ];
 
 const normalize = (value) =>
   String(value || "").replace(/[\s_-]/g, "").toLowerCase();
 
-function getTicketCategory(ticket) {
+function getTicketCategory(ticket, restricted = false) {
   const orderStatus = normalize(ticket.orderStatus);
   const ticketStatus = normalize(ticket.status);
+
+  if (restricted || ticketStatus === "blocked") return "restricted";
 
   const processingStatuses = [
     "refundpending",
     "refundrequested",
     "pendingrefund",
     "processingrefund",
+    "returnpending",
   ];
 
   const refundedStatuses = [
@@ -31,6 +48,8 @@ function getTicketCategory(ticket) {
     "refundcompleted",
     "cancelled",
     "canceled",
+    "returned",
+    "revoked",
   ];
 
   if (
@@ -52,15 +71,40 @@ function getTicketCategory(ticket) {
   );
   const isUsable = ["active", "used", "checkedin"].includes(ticketStatus);
 
-  return isPaid && isUsable ? "success" : "other";
+  return isPaid && isUsable ? "success" : "processing";
 }
 
 function getStatusLabel(category, ticket) {
   if (category === "success") return "Successful";
-  if (category === "processing") return "Refund processing";
-  if (category === "cancelled") return "Refunded";
+  if (category === "processing") {
+    const orderStatus = normalize(ticket.orderStatus);
+    const ticketStatus = normalize(ticket.status);
+    const refundProcessingStatuses = [
+      "refundpending",
+      "refundrequested",
+      "pendingrefund",
+      "processingrefund",
+      "returnpending",
+    ];
 
-  return ticket.orderStatus || ticket.status || "Status unavailable";
+    if (
+      refundProcessingStatuses.includes(orderStatus) ||
+      refundProcessingStatuses.includes(ticketStatus)
+    ) {
+      return "Refund processing";
+    }
+
+    const paidStatuses = ["paid", "completed", "success", "succeeded"];
+    if (ticket.orderStatus && !paidStatuses.includes(orderStatus)) {
+      return ticket.orderStatus;
+    }
+
+    return ticket.status || ticket.orderStatus || "Processing";
+  }
+  if (category === "cancelled") return "Refunded";
+  if (category === "restricted") return "Blocked";
+
+  return ticket.status || ticket.orderStatus || "Status unavailable";
 }
 
 function formatDate(value) {
@@ -73,6 +117,16 @@ function formatDate(value) {
     dateStyle: "medium",
     timeStyle: "short",
   });
+}
+
+function toLocalDateKey(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function formatPrice(value) {
@@ -106,10 +160,92 @@ function groupTicketsByOrder(tickets) {
 }
 
 export default function MyTicketsPage() {
+  const toast = useToast();
   const [tickets, setTickets] = useState([]);
+  const [restrictions, setRestrictions] = useState([]);
   const [activeTab, setActiveTab] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const [batchModalOpen, setBatchModalOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedTicketIds, setSelectedTicketIds] = useState([]);
+  const [batchCategory, setBatchCategory] = useState("PersonalSchedule");
+  const [batchReason, setBatchReason] = useState("");
+  const [batchProofUrl, setBatchProofUrl] = useState("");
+  const [submittingBatch, setSubmittingBatch] = useState(false);
+
+  const handleOpenBatchModal = (order) => {
+    // Check if event cutoff window passed (< 24h)
+    const isWindowOpen =
+      order.startsAt &&
+      new Date(order.startsAt).getTime() - Date.now() >= 24 * 3600 * 1000;
+
+    if (!isWindowOpen) {
+      toast.error("Refund window has closed (returns close 24 hours before showtime).");
+      return;
+    }
+
+    const eligibleTickets = order.tickets.filter(
+      (t) =>
+        normalize(t.orderStatus) === "paid" &&
+        normalize(t.status) === "active" &&
+        !t.checkedInAt
+    );
+    if (eligibleTickets.length === 0) {
+      toast.error("No eligible tickets found for refund in this order.");
+      return;
+    }
+    setSelectedOrder(order);
+    setSelectedTicketIds(eligibleTickets.map((t) => t.ticketId));
+    setBatchCategory("PersonalSchedule");
+    setBatchReason("");
+    setBatchProofUrl("");
+    setBatchModalOpen(true);
+  };
+
+  const toggleTicketSelection = (ticketId) => {
+    setSelectedTicketIds((prev) =>
+      prev.includes(ticketId)
+        ? prev.filter((id) => id !== ticketId)
+        : [...prev, ticketId]
+    );
+  };
+
+  const handleSubmitBatchReturn = async () => {
+    if (selectedTicketIds.length === 0) {
+      toast.error("Please select at least one ticket to request a refund.");
+      return;
+    }
+    if (batchReason.trim().length < 10) {
+      toast.error("Please enter a detailed explanation of at least 10 characters.");
+      return;
+    }
+
+    setSubmittingBatch(true);
+    try {
+      const categoryLabel = REFUND_CATEGORIES[batchCategory] || batchCategory;
+      const fullReason = `[${categoryLabel}] ${batchReason.trim()}`;
+      const proofUrl = batchProofUrl.trim() || null;
+
+      await ticketReturnApi.submitBatch(selectedTicketIds, fullReason, proofUrl);
+      toast.success(
+        `Refund request submitted successfully for ${selectedTicketIds.length} ticket(s)! The ticket QR codes have been deactivated.`
+      );
+      setBatchModalOpen(false);
+      window.location.reload();
+    } catch (err) {
+      const errMsg =
+        err.response?.data?.message ||
+        err.message ||
+        "Could not submit batch refund request.";
+      toast.error(errMsg);
+    } finally {
+      setSubmittingBatch(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -119,14 +255,21 @@ export default function MyTicketsPage() {
         setLoading(true);
         setError("");
 
-        const response = await ticketApi.getMyTickets();
+        const [response, decisionResponse] = await Promise.all([
+          ticketApi.getMyTickets(),
+          appealApi.getMyDecisions().catch(() => ({ data: [] })),
+        ]);
         const data = response.data?.data ?? response.data;
 
         if (!Array.isArray(data)) {
           throw new Error("The ticket response is invalid.");
         }
 
-        if (!cancelled) setTickets(data);
+        const decisionData = decisionResponse.data?.data ?? decisionResponse.data;
+        if (!cancelled) {
+          setTickets(data);
+          setRestrictions(Array.isArray(decisionData) ? decisionData : []);
+        }
       } catch (err) {
         if (!cancelled) {
           setError(
@@ -145,13 +288,39 @@ export default function MyTicketsPage() {
     };
   }, []);
 
-  const visibleTickets = useMemo(() => {
-    if (activeTab === "all") return tickets;
+  // Active ticket blocks are joined from AdminAPI by ticket id. TicketAPI owns the
+  // ticket status and AdminAPI owns the appeal, so the customer screen combines both.
+  const restrictionByTicketId = useMemo(() => {
+    const map = new Map();
+    for (const d of restrictions) {
+      if (d.ticketId == null) continue;
+      const active = d.status === "Active" &&
+        (!d.expiresAt || new Date(d.expiresAt).getTime() > Date.now());
+      if (!active && d.existingAppealId == null) continue;
+      map.set(Number(d.ticketId), d);
+    }
+    return map;
+  }, [restrictions]);
 
-    return tickets.filter(
-      (ticket) => getTicketCategory(ticket) === activeTab
-    );
-  }, [tickets, activeTab]);
+  const categoryOf = (ticket) =>
+    getTicketCategory(ticket, restrictionByTicketId.has(Number(ticket.ticketId)));
+
+  const dateFilteredTickets = useMemo(() => {
+    let filteredTickets = tickets;
+    if (dateFrom || dateTo) {
+      filteredTickets = filteredTickets.filter((ticket) => {
+        const eventDate = toLocalDateKey(ticket.startsAt);
+        return eventDate && (!dateFrom || eventDate >= dateFrom) && (!dateTo || eventDate <= dateTo);
+      });
+    }
+    return filteredTickets;
+  }, [tickets, dateFrom, dateTo]);
+
+  const visibleTickets = useMemo(() => {
+    if (activeTab === "all") return dateFilteredTickets;
+
+    return dateFilteredTickets.filter((ticket) => categoryOf(ticket) === activeTab);
+  }, [dateFilteredTickets, activeTab, restrictionByTicketId]);
 
   const visibleOrders = useMemo(
     () => groupTicketsByOrder(visibleTickets),
@@ -159,11 +328,9 @@ export default function MyTicketsPage() {
   );
 
   function getTabCount(tabId) {
-    if (tabId === "all") return tickets.length;
+    if (tabId === "all") return dateFilteredTickets.length;
 
-    return tickets.filter(
-      (ticket) => getTicketCategory(ticket) === tabId
-    ).length;
+    return dateFilteredTickets.filter((ticket) => categoryOf(ticket) === tabId).length;
   }
 
   return (
@@ -184,23 +351,41 @@ export default function MyTicketsPage() {
             </span>
           </header>
 
-          <nav className="mt-tabs" aria-label="Filter tickets">
-            {TABS.map((tab) => (
-              <button
-                type="button"
-                key={tab.id}
-                className={activeTab === tab.id ? "is-active" : ""}
-                aria-pressed={activeTab === tab.id}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                {tab.label}
-                <span>{getTabCount(tab.id)}</span>
-              </button>
-            ))}
-          </nav>
+          <div className="mt-toolbar">
+            <nav className="mt-tabs" aria-label="Filter tickets">
+              {TABS.map((tab) => (
+                <button
+                  type="button"
+                  key={tab.id}
+                  className={activeTab === tab.id ? "is-active" : ""}
+                  aria-pressed={activeTab === tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  {tab.label}
+                  <span>{getTabCount(tab.id)}</span>
+                </button>
+              ))}
+            </nav>
+
+            <div className="mt-date-filter" aria-label="Filter by event date">
+              <label>
+                <span>From</span>
+                <input type="date" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} />
+              </label>
+              <label>
+                <span>To</span>
+                <input type="date" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} />
+              </label>
+              {(dateFrom || dateTo) && (
+                <button type="button" onClick={() => { setDateFrom(""); setDateTo(""); }}>
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
 
           {loading ? (
-            <div className="mt-state">Loading tickets...</div>
+            <div className="mt-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
           ) : error ? (
             <div className="mt-state is-error" role="alert">
               {error}
@@ -231,15 +416,39 @@ export default function MyTicketsPage() {
                       </p>
                     </div>
 
-                    <span className="mt-order-count">
-                      {order.tickets.length}{" "}
-                      {order.tickets.length === 1 ? "ticket" : "tickets"}
-                    </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      {order.startsAt &&
+                        new Date(order.startsAt).getTime() - Date.now() >= 24 * 3600 * 1000 &&
+                        (() => {
+                          const eligibleCount = order.tickets.filter(
+                            (t) =>
+                              normalize(t.orderStatus) === "paid" &&
+                              normalize(t.status) === "active" &&
+                              !t.checkedInAt
+                          ).length;
+                          if (eligibleCount === 0) return null;
+                          return (
+                            <button
+                              type="button"
+                              className="mt-batch-refund-btn"
+                              onClick={() => handleOpenBatchModal(order)}
+                              title="Request refund for tickets in this order"
+                            >
+                              ↺ Request Order Refund ({eligibleCount})
+                            </button>
+                          );
+                        })()}
+                      <span className="mt-order-count">
+                        {order.tickets.length}{" "}
+                        {order.tickets.length === 1 ? "ticket" : "tickets"}
+                      </span>
+                    </div>
                   </header>
 
                   <div className="mt-order-tickets">
                     {order.tickets.map((ticket) => {
-                      const category = getTicketCategory(ticket);
+                      const restriction = restrictionByTicketId.get(Number(ticket.ticketId));
+                      const category = getTicketCategory(ticket, !!restriction);
 
                       return (
                         <article className="mt-ticket" key={ticket.ticketId}>
@@ -290,6 +499,31 @@ export default function MyTicketsPage() {
                               {getStatusLabel(category, ticket)}
                             </span>
 
+                            {restriction && (
+                              <div className="mt-restriction-note">
+                                {restriction.existingAppealId ? (
+                                  <span>
+                                    Appeal #{restriction.existingAppealId}: <b>{restriction.existingAppealStatus}</b>
+                                  </span>
+                                ) : (
+                                  <span>
+                                    Under risk review
+                                    {restriction.appealDeadlineAt
+                                      ? ` · appeal by ${formatDate(restriction.appealDeadlineAt)}`
+                                      : ""}
+                                  </span>
+                                )}
+                                {(restriction.canAppeal || restriction.existingAppealId != null) && (
+                                  <Link
+                                    className="mt-appeal-link"
+                                    to={`/risk/decisions/${restriction.riskDecisionId}/appeal`}
+                                  >
+                                    {restriction.existingAppealId ? "View appeal" : "Submit appeal"}
+                                  </Link>
+                                )}
+                              </div>
+                            )}
+
                             <Link
                               className="mt-details-link"
                               to={`/my-tickets/${ticket.ticketId}`}
@@ -307,6 +541,200 @@ export default function MyTicketsPage() {
           )}
         </div>
       </main>
+
+      {/* Modal Hoàn Vé Theo Lô (Batch Return Modal) */}
+      {batchModalOpen && selectedOrder && (
+        <div
+          className="bm-overlay"
+          onClick={() => !submittingBatch && setBatchModalOpen(false)}
+        >
+          <div className="bm-card" onClick={(e) => e.stopPropagation()}>
+            <div className="bm-header">
+              <div className="bm-icon">↺</div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 700, color: "#1e1b2e" }}>
+                  Batch Ticket Refund - Order #{selectedOrder.orderId}
+                </h3>
+                <p style={{ margin: "2px 0 0", fontSize: "13px", color: "#6b6480" }}>
+                  {selectedOrder.eventName}
+                </p>
+              </div>
+            </div>
+
+            <div style={{ marginTop: "14px" }}>
+              <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", fontWeight: 600, color: "#374151" }}>
+                1. Select tickets to refund in this order:
+              </label>
+
+              <div className="bm-ticket-list">
+                {selectedOrder.tickets.map((t) => {
+                  const isEligible =
+                    normalize(t.orderStatus) === "paid" &&
+                    normalize(t.status) === "active" &&
+                    !t.checkedInAt;
+                  const isSelected = selectedTicketIds.includes(t.ticketId);
+
+                  return (
+                    <div
+                      key={t.ticketId}
+                      className={`bm-ticket-row ${isSelected ? "is-selected" : ""} ${
+                        !isEligible ? "is-disabled" : ""
+                      }`}
+                      onClick={() => isEligible && toggleTicketSelection(t.ticketId)}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          disabled={!isEligible}
+                          onChange={() => isEligible && toggleTicketSelection(t.ticketId)}
+                          style={{ cursor: isEligible ? "pointer" : "not-allowed", width: "16px", height: "16px" }}
+                        />
+                        <div>
+                          <div style={{ fontSize: "13px", fontWeight: 600, color: "#1f2937" }}>
+                            Ticket #{t.ticketId} · {t.ticketTypeName || "Ticket"}
+                          </div>
+                          <div style={{ fontSize: "12px", color: "#6b7280" }}>
+                            {t.seatId ? `Seat ${t.seatId}` : "General Admission"} · {formatPrice(t.unitPrice)}
+                          </div>
+                        </div>
+                      </div>
+
+                      {!isEligible && (
+                        <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "4px", background: "#fee2e2", color: "#991b1b" }}>
+                          {t.checkedInAt ? "Checked-in" : t.status}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ fontSize: "12px", color: "#7e22ce", fontWeight: 600, marginBottom: "12px" }}>
+                ✓ {selectedTicketIds.length} ticket(s) selected for refund
+              </div>
+            </div>
+
+            <div style={{ marginBottom: "12px" }}>
+              <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", fontWeight: 600, color: "#374151" }}>
+                2. Refund Reason Category:
+              </label>
+              <select
+                value={batchCategory}
+                onChange={(e) => setBatchCategory(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "9px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid #d1d5db",
+                  background: "#ffffff",
+                  fontSize: "13px",
+                  color: "#1f2937",
+                  outline: "none",
+                }}
+              >
+                {Object.entries(REFUND_CATEGORIES).map(([key, label]) => (
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ marginBottom: "12px" }}>
+              <label style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "13px", fontWeight: 600, color: "#374151" }}>
+                <span>3. Detailed Explanation / Notes *</span>
+                <span style={{ fontSize: "12px", color: "#9ca3af", fontWeight: "normal" }}>
+                  {batchReason.trim().length}/10 min characters
+                </span>
+              </label>
+              <textarea
+                rows={2}
+                placeholder="Please describe your reason clearly to help staff verify..."
+                value={batchReason}
+                onChange={(e) => setBatchReason(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "9px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid #d1d5db",
+                  fontSize: "13px",
+                  outline: "none",
+                  resize: "vertical",
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "13px", fontWeight: 600, color: "#374151" }}>
+                <span>4. Supporting Document / Evidence Link</span>
+                <span style={{ fontSize: "12px", color: "#6b7280", fontWeight: "normal" }}>(Optional)</span>
+              </label>
+              <input
+                type="url"
+                placeholder="https://... (Link to doctor's note, travel disruption notice...)"
+                value={batchProofUrl}
+                onChange={(e) => setBatchProofUrl(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid #d1d5db",
+                  background: "#ffffff",
+                  fontSize: "13px",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button
+                type="button"
+                onClick={() => setBatchModalOpen(false)}
+                disabled={submittingBatch}
+                style={{
+                  padding: "9px 18px",
+                  borderRadius: "8px",
+                  border: "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  color: "#475569",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmitBatchReturn}
+                disabled={submittingBatch || selectedTicketIds.length === 0 || batchReason.trim().length < 10}
+                style={{
+                  padding: "9px 20px",
+                  borderRadius: "8px",
+                  border: "none",
+                  background:
+                    submittingBatch || selectedTicketIds.length === 0 || batchReason.trim().length < 10
+                      ? "#e2e8f0"
+                      : "#7e22ce",
+                  color:
+                    submittingBatch || selectedTicketIds.length === 0 || batchReason.trim().length < 10
+                      ? "#94a3b8"
+                      : "#ffffff",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  cursor:
+                    submittingBatch || selectedTicketIds.length === 0 || batchReason.trim().length < 10
+                      ? "not-allowed"
+                      : "pointer",
+                }}
+              >
+                {submittingBatch ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : `Confirm Refund (${selectedTicketIds.length} tickets)`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </>

@@ -23,6 +23,7 @@
 }
 .app-toast-success { background: #e8faf1; border-left-color: #0e9e78; color: #0b6b52; }
 .app-toast-error { background: #fdeaea; border-left-color: #d63a3a; color: #9c2b2b; }
+.app-toast-warning { background: #fffbeb; border-left-color: #f59e0b; color: #92400e; }
 .app-toast-info { background: #f1e9fb; border-left-color: #a855f7; color: #5c3a86; }
 .app-toast-msg { flex: 1; }
 .app-toast-close {

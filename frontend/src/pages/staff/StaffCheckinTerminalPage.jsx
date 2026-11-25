@@ -15,7 +15,7 @@ export default function StaffCheckinTerminalPage() {
   const { user } = useAuth();
 
   const [assignedEvents, setAssignedEvents] = useState([]);
-  const currentEventId = eventId ? Number(eventId) : (assignedEvents.length > 0 ? assignedEvents[0].eventId : 20);
+  const currentEventId = eventId ? Number(eventId) : (assignedEvents.length > 0 ? assignedEvents[0].eventId : null);
   const [activeTab, setActiveTab] = useState("SCAN"); // "SCAN", "MANUAL", "LOOKUP", "HISTORY", "OFFLINE"
 
   // Gate Assignment & Shift Info
@@ -26,10 +26,20 @@ export default function StaffCheckinTerminalPage() {
   const [cameraActive, setCameraActive] = useState(true);
   const [cameraError, setCameraError] = useState("");
   const [scanResult, setScanResult] = useState(null);
+  const [activeScanAlert, setActiveScanAlert] = useState(null);
+  const alertTimerRef = useRef(null);
   const [scanning, setScanning] = useState(false);
   const [autoScannedFlash, setAutoScannedFlash] = useState(false);
   const [videoDevices, setVideoDevices] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
+
+  const triggerScanAlert = (res) => {
+    if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
+    setActiveScanAlert(res);
+    alertTimerRef.current = setTimeout(() => {
+      setActiveScanAlert(null);
+    }, 5000);
+  };
 
   const videoRef = useRef(null);
   const mediaStreamRef = useRef(null);
@@ -76,7 +86,7 @@ export default function StaffCheckinTerminalPage() {
     successRate: 100,
   });
 
-  // UC_14.5 & UC_14.6: Offline Check-in Mode State
+  // Offline Check-in Mode State
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [isNetworkOnline, setIsNetworkOnline] = useState(navigator.onLine);
   const [offlinePackageMeta, setOfflinePackageMeta] = useState(null);
@@ -116,7 +126,7 @@ export default function StaffCheckinTerminalPage() {
       // If currently on an event that is not in the assigned list, automatically switch to first assigned event
       if (list.length > 0) {
         const isCurrentAssigned = list.some((e) => e.eventId === Number(currentEventId));
-        if (!isCurrentAssigned) {
+        if (!isCurrentAssigned && !eventId) {
           navigate(`/staff/checkin/${list[0].eventId}`, { replace: true });
         }
       }
@@ -127,6 +137,7 @@ export default function StaffCheckinTerminalPage() {
 
   // Load Gate Assignment, History, and Auto-preload Offline Package on Mount
   useEffect(() => {
+    if (!currentEventId) return;
     fetchGateAssignment();
     fetchScanHistory();
     autoPreloadOfflinePackage(currentEventId);
@@ -165,7 +176,7 @@ export default function StaffCheckinTerminalPage() {
     };
   }, [currentEventId]);
 
-  // UC_14.5: Always auto-preload and keep offline ticket package ready in IndexedDB
+  // Always auto-preload and keep offline ticket package ready in IndexedDB
   const autoPreloadOfflinePackage = async (evtId) => {
     setDownloadingPackage(true);
     try {
@@ -177,7 +188,7 @@ export default function StaffCheckinTerminalPage() {
 
       // Fetch fresh package from server in background if network is available
       if (navigator.onLine) {
-        const res = await checkinApi.getOfflinePackage(evtId);
+        const res = await checkinApi.getOfflinePackage(evtId, gateAssignment?.gateName || "");
         if (res?.data?.data) {
           const pkg = res.data.data;
           await offlineCheckinDb.saveOfflinePackage(evtId, pkg);
@@ -214,19 +225,23 @@ export default function StaffCheckinTerminalPage() {
     }
   };
 
-  // UC_14.5: Manual re-download / refresh offline ticket package if desired
+  // Manual re-download / refresh offline ticket package if desired
   const handleDownloadOfflinePackage = async () => {
     setDownloadingPackage(true);
     try {
-      const res = await checkinApi.getOfflinePackage(currentEventId);
+      const res = await checkinApi.getOfflinePackage(currentEventId, gateAssignment?.gateName || "");
       if (res?.data?.data) {
         const pkg = res.data.data;
         await offlineCheckinDb.saveOfflinePackage(currentEventId, pkg);
         await refreshOfflineStatus();
+        const gateText = pkg.assignedGate ? `for Gate '${pkg.assignedGate}'` : "";
+        const typesText = pkg.allowedTicketTypes && pkg.allowedTicketTypes.length > 0
+          ? ` (Only admits: ${pkg.allowedTicketTypes.join(", ")})`
+          : "";
         setTerminalDialog({
           type: "SUCCESS",
-          title: "Offline Ticket Package Loaded",
-          message: `Preloaded ${pkg.totalTickets} tickets for event '${pkg.eventTitle || "Current"}' into local IndexedDB storage. Ready for offline scanning!`,
+          title: "Offline Package Downloaded",
+          message: `Downloaded ${pkg.totalTickets} tickets ${gateText}${typesText} to device IndexedDB. Ready for offline scanning at designated gate!`,
         });
       }
     } catch (err) {
@@ -241,7 +256,7 @@ export default function StaffCheckinTerminalPage() {
     }
   };
 
-  // UC_14.6: Sync Offline Scans to Backend (Supports both manual click & automatic background sync)
+  // Sync Offline Scans to Backend (Supports both manual click & automatic background sync)
   const handleSyncOfflineScans = async (isSilent = false) => {
     if (syncingOfflineRef.current) return;
     if (!navigator.onLine) {
@@ -346,13 +361,13 @@ export default function StaffCheckinTerminalPage() {
     } catch (e) {}
   };
 
-  // UC_14.5: Execute Offline Scan against local IndexedDB
+  // Execute Offline Scan against local IndexedDB
   const executeOfflineScan = async (rawCode, isAutoFallback = false) => {
     try {
       const offlineResult = await offlineCheckinDb.verifyOfflineTicket(
         Number(currentEventId),
         rawCode.trim(),
-        gateAssignment?.gateId || "GATE_A",
+        gateAssignment?.gateName || gateAssignment?.gateId || "Main Gate",
         user?.id || 1
       );
 
@@ -360,13 +375,15 @@ export default function StaffCheckinTerminalPage() {
         ? "[Network Disconnected - Offline Mode]"
         : "[Server Unreachable - Auto Offline Mode] (CheckinAPI backend not responding on localhost).";
 
-      setScanResult({
+      const offObj = {
         ...offlineResult,
         isOffline: true,
         message: isAutoFallback
           ? `${serverStatusPrefix} ${offlineResult.message}`
           : offlineResult.message,
-      });
+      };
+      setScanResult(offObj);
+      triggerScanAlert(offObj);
       playAudioFeedback(offlineResult.status === "SUCCESS" ? "SUCCESS" : "ERROR");
 
       setScanFeed((prev) => [
@@ -375,6 +392,7 @@ export default function StaffCheckinTerminalPage() {
           ticketCode: offlineResult.ticketCode || rawCode,
           customerName: offlineResult.customerName || "Attendee",
           zoneName: offlineResult.zoneName || "General Admission",
+          orderId: offlineResult.orderId || "N/A",
           gateName: gateAssignment?.gateName || "Gate A",
           scannedAt: offlineResult.scannedAt || new Date().toISOString(),
           scanMethod: isAutoFallback ? "Server Offline Fallback (IndexedDB)" : "Offline QR Scan (IndexedDB)",
@@ -392,6 +410,7 @@ export default function StaffCheckinTerminalPage() {
         message: "Local IndexedDB storage error during offline check-in: " + offlineErr.message,
       };
       setScanResult(errResult);
+      triggerScanAlert(errResult);
       playAudioFeedback("ERROR");
     } finally {
       setScanning(false);
@@ -403,16 +422,6 @@ export default function StaffCheckinTerminalPage() {
   // Submit Scan Request (Camera or HID Scanner)
   const handleProcessScan = useCallback(
     async (codeToScan) => {
-      // Strictly block scanning if outside active shift hours
-      if (gateAssignment && gateAssignment.isShiftActive === false) {
-        setTerminalDialog({
-          type: "WARNING",
-          title: "Access Denied",
-          message: "Access Denied: Scanner functions are locked because you are outside your assigned shift hours.",
-        });
-        return;
-      }
-
       const payload = codeToScan || ticketInput;
       if (!payload || !payload.trim()) return;
 
@@ -424,7 +433,7 @@ export default function StaffCheckinTerminalPage() {
       setScanning(true);
       setScanResult(null);
 
-      // UC_14.5: If in offline mode OR device has no internet connection, verify locally immediately
+      // If in offline mode OR device has no internet connection, verify locally immediately
       if (isOfflineMode || !navigator.onLine) {
         await executeOfflineScan(payload, false);
         return;
@@ -440,19 +449,29 @@ export default function StaffCheckinTerminalPage() {
 
         if (res && res.data && res.data.data) {
           const result = res.data.data;
+          const isSuccess = result.success || result.status === "SUCCESS" || result.status === "APPROVED";
+          const normStatus = isSuccess
+            ? "SUCCESS"
+            : result.status === "ALREADY_USED" || result.status === "ALREADY_CHECKED_IN"
+            ? "ALREADY_USED"
+            : "INVALID_QR";
+
+          result.status = normStatus;
           setScanResult(result);
-          playAudioFeedback(result.status === "SUCCESS" ? "SUCCESS" : "ERROR");
+          triggerScanAlert(result);
+          playAudioFeedback(normStatus === "SUCCESS" ? "SUCCESS" : "ERROR");
 
           setScanFeed((prev) => [
             {
               scanId: Math.random().toString(36).substring(2, 9),
               ticketCode: result.ticketCode || payload,
               customerName: result.customerName || "Attendee",
-              zoneName: result.zoneName || "Standing Area",
+              zoneName: result.zoneName || "General Admission",
+              orderId: result.orderId || "N/A",
               gateName: gateAssignment?.gateName || "Gate A",
               scannedAt: new Date().toISOString(),
               scanMethod: "Dynamic QR Code",
-              status: result.status,
+              status: normStatus,
             },
             ...prev,
           ]);
@@ -476,6 +495,7 @@ export default function StaffCheckinTerminalPage() {
           message: err.response?.data?.message || "Invalid QR code payload or server error.",
         };
         setScanResult(errResult);
+        triggerScanAlert(errResult);
         playAudioFeedback("ERROR");
       } finally {
         setScanning(false);
@@ -537,6 +557,9 @@ export default function StaffCheckinTerminalPage() {
   const cleanEventTitle = (title) => {
     if (!title) return "";
     return title
+      .replace(/\s*-\s*offline\s*sync\s*demo/gi, "")
+      .replace(/\s*offline\s*sync\s*demo/gi, "")
+      .replace(/\s*offlinesync\s*demo/gi, "")
       .replace(/^Event\s*#\s*\d+\s*:\s*/i, "")
       .replace(/^Event\s*#\s*/i, "Event ")
       .replace(/^Concert\s*#\s*\d+\s*:\s*/i, "")
@@ -544,42 +567,12 @@ export default function StaffCheckinTerminalPage() {
       .trim();
   };
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const c = document.createElement("canvas");
-        c.width = img.width;
-        c.height = img.height;
-        const cCtx = c.getContext("2d");
-        cCtx.drawImage(img, 0, 0);
-        const imgData = cCtx.getImageData(0, 0, img.width, img.height);
-        const decodeQR = typeof jsQR === "function" ? jsQR : (jsQR?.default || window.jsQR);
-        const res = decodeQR ? decodeQR(imgData.data, img.width, img.height, { inversionAttempts: "attemptBoth" }) : null;
-        if (res && res.data) {
-          const codeTrimmed = res.data.trim();
-          console.log("Decoded uploaded QR image:", codeTrimmed);
-          setAutoScannedFlash(true);
-          setTimeout(() => setAutoScannedFlash(false), 800);
-          handleProcessScan(codeTrimmed);
-        } else {
-          setCameraError("Could not detect a QR code in the uploaded image. Please ensure the QR code image is clear and try again.");
-        }
-      };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(file);
-  };
-
   // Real-time Dual-Engine QR Scanner (ZXing + Native BarcodeDetector + jsQR)
   useEffect(() => {
     let active = true;
 
     async function startScanner() {
-      if (activeTab !== "SCAN" || !cameraActive || (gateAssignment && gateAssignment.isShiftActive === false)) {
+      if (activeTab !== "SCAN" || !cameraActive) {
         stopWebcam();
         return;
       }
@@ -743,7 +736,8 @@ export default function StaffCheckinTerminalPage() {
 
   const fetchGateAssignment = async () => {
     try {
-      const res = await checkinApi.getGateAssignment(currentEventId);
+      const staffId = user?.userId ?? user?.id ?? user?.UserId ?? 0;
+      const res = await checkinApi.getGateAssignment(currentEventId, staffId);
       const data = res.data?.data || res.data;
       if (data) {
         setGateAssignment(data);
@@ -820,14 +814,6 @@ export default function StaffCheckinTerminalPage() {
   // Submit Manual Check-in
   const handleManualCheckinSubmit = async (e) => {
     e.preventDefault();
-    if (gateAssignment && gateAssignment.isShiftActive === false) {
-      setTerminalDialog({
-        type: "WARNING",
-        title: "Outside Shift Hours",
-        message: "Manual check-in is disabled because you are outside your assigned shift hours.",
-      });
-      return;
-    }
     if (!manualForm.cccdNumber.trim() || manualForm.cccdNumber.trim().length < 9) {
       setTerminalDialog({
         type: "WARNING",
@@ -918,14 +904,6 @@ export default function StaffCheckinTerminalPage() {
 
   // Quick Check-in from Lookup Result
   const handleLookupCheckinNow = (ticket) => {
-    if (gateAssignment && gateAssignment.isShiftActive === false) {
-      setTerminalDialog({
-        type: "WARNING",
-        title: "Outside Shift Hours",
-        message: "Check-in functions are locked because you are outside your assigned shift hours.",
-      });
-      return;
-    }
     setActiveTab("MANUAL");
     setSelectedManualTicket(ticket);
     setManualLookupTickets([ticket]);
@@ -965,23 +943,22 @@ export default function StaffCheckinTerminalPage() {
             <span className="badge-terminal">GATE ADMISSION CONTROL TERMINAL</span>
             <div className="gate-title-row">
               <h1 className="terminal-event-title">
-                {currentEventId === 20
-                  ? "Acoustic Night"
-                  : currentEventId === 21
-                  ? "Hà Anh Tuấn - \"Chân Trời Rực Rỡ\" Live Concert"
-                  : cleanEventTitle(assignedEvents.find((e) => e.eventId === currentEventId)?.eventTitle)
-                  || cleanEventTitle(gateAssignment?.eventTitle)
+                {cleanEventTitle(gateAssignment?.eventTitle)
+                  || cleanEventTitle(assignedEvents.find((e) => e.eventId === currentEventId)?.eventTitle)
                   || cleanEventTitle(gateAssignment?.eventName)
-                  || `Event ${currentEventId}`}
+                  || (currentEventId ? `Event #${currentEventId}` : "No Event Selected")}
               </h1>
-              <span className="badge-event-active">Event Active</span>
+              {gateAssignment?.isAssigned && (
+                <span className="badge-event-active">Event Active</span>
+              )}
             </div>
             <div className="event-switch-row">
               <span className="event-switch-label">Switch Event:</span>
               <select
-                value={currentEventId}
+                value={currentEventId || ""}
                 onChange={(e) => navigate(`/staff/checkin/${e.target.value}`)}
                 className="event-selector-dark"
+                disabled={assignedEvents.length === 0}
               >
                 {assignedEvents.length > 0 ? (
                   assignedEvents.map((ev) => (
@@ -990,13 +967,23 @@ export default function StaffCheckinTerminalPage() {
                     </option>
                   ))
                 ) : (
-                  <option value="" disabled>Chưa có sự kiện nào được phân công</option>
+                  <option value="" disabled>No events assigned yet</option>
                 )}
               </select>
             </div>
             <p className="shift-sub">
-              Shift: <strong>{gateAssignment?.shiftStartTime || "17:30"} - {gateAssignment?.shiftEndTime || "00:30"}</strong> | Gate: <strong>{gateAssignment?.gateName || "Gate A - Main Entrance"}</strong> | Staff:{" "}
-              <strong>{user?.fullName || user?.email || "Check-in Officer"}</strong>
+              {assignedEvents.length > 0 || gateAssignment?.isAssigned || currentEventId ? (
+                <>
+                  Shift: <strong>{gateAssignment?.shiftStartTime && gateAssignment?.shiftEndTime ? `${gateAssignment.shiftStartTime} - ${gateAssignment.shiftEndTime}` : (assignedEvents.find(e => e.eventId === currentEventId)?.shiftStartTime ? `${assignedEvents.find(e => e.eventId === currentEventId).shiftStartTime} - ${assignedEvents.find(e => e.eventId === currentEventId).shiftEndTime}` : "19:30 - 22:30")}</strong> | Gate: <strong>{gateAssignment?.gateName && gateAssignment.gateName !== "Unassigned" ? gateAssignment.gateName : (assignedEvents.find(e => e.eventId === currentEventId)?.gateName || "Main Gate")}</strong> | Staff: <strong>{user?.fullName || user?.email || "Check-in Staff"}</strong>
+                  {((gateAssignment?.allowedTicketTiers && gateAssignment.allowedTicketTiers.length > 0) || (assignedEvents.find(e => e.eventId === currentEventId)?.allowedTicketTypes && assignedEvents.find(e => e.eventId === currentEventId).allowedTicketTypes.length > 0)) && (
+                    <span style={{ marginLeft: "8px", color: "#38bdf8" }}>
+                      | Permitted: <strong>{(gateAssignment?.allowedTicketTiers?.length > 0 ? gateAssignment.allowedTicketTiers : [assignedEvents.find(e => e.eventId === currentEventId)?.allowedTicketTypes]).join(", ")}</strong>
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span style={{ color: "#ef4444" }}>No event assigned yet</span>
+              )}
             </p>
           </div>
         </div>
@@ -1007,7 +994,7 @@ export default function StaffCheckinTerminalPage() {
             <span>Camera Active</span>
           </div>
 
-          {/* UC_14.5: Offline Mode Toggle */}
+          {/* Offline Mode Toggle */}
           <button
             type="button"
             className={`btn-mode-toggle ${isOfflineMode ? "mode-offline" : "mode-online"}`}
@@ -1022,7 +1009,7 @@ export default function StaffCheckinTerminalPage() {
             {isOfflineMode ? "Offline Mode" : "Online Mode"}
           </button>
 
-          {/* UC_14.6: Compact Auto-Sync Indicator in Header */}
+          {/* Compact Auto-Sync Indicator in Header */}
           {offlineQueueCount > 0 && (
             <button
               type="button"
@@ -1031,7 +1018,7 @@ export default function StaffCheckinTerminalPage() {
               disabled={syncingOffline}
               title="Pending offline scans waiting for sync."
             >
-              {syncingOffline ? "Syncing..." : `Pending Sync (${offlineQueueCount})`}
+              {syncingOffline ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : `Pending Sync (${offlineQueueCount})`}
             </button>
           )}
 
@@ -1098,20 +1085,154 @@ export default function StaffCheckinTerminalPage() {
         </div>
       )}
 
-      {/* Inactive Shift Warning Banner */}
-      {gateAssignment && gateAssignment.isShiftActive === false && (
+      {/* Not Assigned or Inactive Shift Warning Banner */}
+      {!currentEventId ? (
         <div className="shift-inactive-banner">
           <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
             <div>
-              <h4 style={{ margin: "0 0 0.25rem 0", fontSize: "1.15rem" }}>ACCESS DENIED: OUTSIDE SHIFT OPERATIONAL HOURS</h4>
+              <h4 style={{ margin: "0 0 0.25rem 0", fontSize: "1.15rem" }}>NO EVENT ASSIGNED</h4>
               <p style={{ margin: 0, fontSize: "0.95rem" }}>
-                Your assigned shift hours ({gateAssignment.shiftStartTime || "17:30"} - {gateAssignment.shiftEndTime || "00:30"}) are currently inactive.
+                Your staff account is currently not assigned to any event or admission gate. Scanning terminal is locked.
               </p>
             </div>
           </div>
           <button className="btn-secondary" onClick={() => navigate("/staff/gate-assignment")}>
-            Return to Gate Selection
+            Return to Gate Assignment
           </button>
+        </div>
+      ) : null}
+
+      {/* PROMINENT REAL-TIME SCAN NOTIFICATION BANNER */}
+      {activeScanAlert && (
+        <div
+          className={`scan-notification-popup ${
+            activeScanAlert.status === "SUCCESS"
+              ? "popup-success"
+              : activeScanAlert.status === "ALREADY_USED"
+              ? "popup-warning"
+              : "popup-error"
+          }`}
+          style={{
+            marginBottom: "20px",
+            padding: "20px 24px",
+            borderRadius: "12px",
+            background:
+              activeScanAlert.status === "SUCCESS"
+                ? "#064e3b"
+                : activeScanAlert.status === "ALREADY_USED"
+                ? "#78350f"
+                : "#7f1d1d",
+            border: `2px solid ${
+              activeScanAlert.status === "SUCCESS"
+                ? "#10b981"
+                : activeScanAlert.status === "ALREADY_USED"
+                ? "#f59e0b"
+                : "#ef4444"
+            }`,
+            color: "#ffffff",
+            boxShadow: "0 10px 25px rgba(0,0,0,0.4)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "16px",
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ flex: 1, minWidth: "260px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
+              <span
+                style={{
+                  padding: "4px 12px",
+                  borderRadius: "6px",
+                  fontSize: "0.85rem",
+                  fontWeight: 800,
+                  letterSpacing: "0.05em",
+                  background:
+                    activeScanAlert.status === "SUCCESS"
+                      ? "#10b981"
+                      : activeScanAlert.status === "ALREADY_USED"
+                      ? "#f59e0b"
+                      : "#ef4444",
+                  color: activeScanAlert.status === "ALREADY_USED" ? "#111827" : "#ffffff",
+                }}
+              >
+                {activeScanAlert.status === "SUCCESS"
+                  ? "SUCCESS"
+                  : activeScanAlert.status === "ALREADY_USED"
+                  ? "ALREADY USED"
+                  : "INVALID QR"}
+              </span>
+              {activeScanAlert.isOffline && (
+                <span style={{ fontSize: "0.8rem", padding: "3px 8px", background: "rgba(255,255,255,0.2)", borderRadius: "4px" }}>
+                  Offline Mode
+                </span>
+              )}
+            </div>
+
+            <div style={{ fontSize: "1.15rem", fontWeight: 700, marginBottom: "6px" }}>
+              {activeScanAlert.status === "SUCCESS"
+                ? "Ticket verified successfully. Admission permitted!"
+                : activeScanAlert.status === "ALREADY_USED"
+                ? "This ticket has already been checked in. (Already Used)"
+                : (activeScanAlert.message || "Invalid QR code. Admission rejected!")}
+            </div>
+
+            <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", fontSize: "0.9rem", color: "#e2e8f0" }}>
+              {activeScanAlert.customerName && activeScanAlert.customerName !== "N/A" && (
+                <span>Attendee: <strong style={{ color: "#fff" }}>{activeScanAlert.customerName}</strong></span>
+              )}
+              {activeScanAlert.zoneName && activeScanAlert.zoneName !== "N/A" && (
+                <span>Ticket Type: <strong style={{ color: "#fff" }}>{activeScanAlert.zoneName}</strong></span>
+              )}
+              {activeScanAlert.orderId && activeScanAlert.orderId !== "N/A" && (
+                <span>Order ID: <strong style={{ color: "#fff" }}>#{activeScanAlert.orderId}</strong></span>
+              )}
+              <span>Gate: <strong style={{ color: "#fff" }}>{gateAssignment?.gateName || "Gate A"}</strong></span>
+            </div>
+
+            {activeScanAlert.status === "ALREADY_USED" && activeScanAlert.previousScanTime && (
+              <div style={{ marginTop: "6px", fontSize: "0.85rem", color: "#fef08a" }}>
+                Previously admitted at {new Date(activeScanAlert.previousScanTime).toLocaleTimeString()} at {activeScanAlert.previousGateName || "Gate A"}.
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            {activeScanAlert.status === "ALREADY_USED" && (
+              <button
+                type="button"
+                onClick={() => setShowConflictModal(true)}
+                style={{
+                  background: "#f59e0b",
+                  color: "#111827",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "10px 18px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontSize: "0.9rem",
+                }}
+              >
+                View Duplicate Details
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setActiveScanAlert(null)}
+              style={{
+                background: "rgba(255,255,255,0.2)",
+                color: "#ffffff",
+                border: "1px solid rgba(255,255,255,0.4)",
+                borderRadius: "8px",
+                padding: "10px 18px",
+                fontWeight: 700,
+                cursor: "pointer",
+                fontSize: "0.9rem",
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
       )}
 
@@ -1125,7 +1246,6 @@ export default function StaffCheckinTerminalPage() {
             <div className="viewfinder-header">
               <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                 <span style={{ fontWeight: 700, fontSize: "1.1rem" }}>Camera QR Scanner</span>
-                <span className="live-engine-tag">ZXing Real-Time</span>
               </div>
               <div className="viewfinder-tools">
                 {videoDevices.length > 1 && (
@@ -1142,39 +1262,24 @@ export default function StaffCheckinTerminalPage() {
                     ))}
                   </select>
                 )}
-                <label className="btn-upload-cam-file" title="Upload QR image file">
-                  Upload QR Image
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    style={{ display: "none" }}
-                  />
-                </label>
                 <button
                   className="btn-toggle-cam"
                   onClick={() => setCameraActive(!cameraActive)}
-                  disabled={gateAssignment?.isShiftActive === false}
                 >
                   {cameraActive ? "Pause Camera" : "Activate Camera"}
                 </button>
               </div>
             </div>
 
-            <div className={`camera-box ${cameraActive && gateAssignment?.isShiftActive !== false ? "active" : "paused"} ${autoScannedFlash ? "flash-detected" : ""}`}>
-              {gateAssignment && gateAssignment.isShiftActive === false ? (
-                <div className="camera-off-msg">
-                  <span>SCANNING LOCKED</span>
-                  <p>Check-in scanner is disabled outside assigned shift operational hours</p>
-                </div>
-              ) : cameraActive ? (
+            <div className={`camera-box ${cameraActive ? "active" : "paused"} ${autoScannedFlash ? "flash-detected" : ""}`}>
+              {cameraActive ? (
                 <>
                   <video ref={videoRef} autoPlay playsInline muted className="webcam-video-stream" />
                   <div className="scanner-laser"></div>
                   <div className={`scanner-frame ${autoScannedFlash ? "detected" : ""}`}></div>
                   {isCooldownActive ? (
                     <div className="cooldown-overlay-banner">
-                      Pausing 2s to verify scan...
+                      <span className="app-loading-spinner" role="status" aria-label="Loading" />
                     </div>
                   ) : (
                     <p className="scanner-hint">Point attendee QR code at camera to scan automatically</p>
@@ -1215,7 +1320,6 @@ export default function StaffCheckinTerminalPage() {
                     <span>Attendee: <strong>{scanResult.customerName}</strong></span>
                     <span>Zone: <strong>{scanResult.zoneName}</strong></span>
                     <span>Seat: <strong>{scanResult.seatNumber || "Standing"}</strong></span>
-                    <span>Ticket: <strong>{scanResult.ticketCode}</strong></span>
                   </div>
                 )}
 
@@ -1252,7 +1356,8 @@ export default function StaffCheckinTerminalPage() {
                     <th>Time</th>
                     <th>Ticket Code</th>
                     <th>Attendee</th>
-                    <th>Zone / Seat</th>
+                    <th>Ticket Type</th>
+                    <th>Gate</th>
                     <th>Method</th>
                     <th>Status</th>
                   </tr>
@@ -1260,7 +1365,7 @@ export default function StaffCheckinTerminalPage() {
                 <tbody>
                   {scanFeed.length === 0 ? (
                     <tr>
-                      <td colSpan="6" style={{ textAlign: "center", padding: "2rem", color: "#6b6480" }}>
+                      <td colSpan="7" style={{ textAlign: "center", padding: "2rem", color: "#6b6480" }}>
                         No admissions recorded yet for this shift.
                       </td>
                     </tr>
@@ -1273,8 +1378,15 @@ export default function StaffCheckinTerminalPage() {
                         <td>
                           <strong style={{ color: "#1e1b2e", fontFamily: "monospace" }}>{item.ticketCode}</strong>
                         </td>
-                        <td>{item.customerName || "N/A"}</td>
-                        <td>{item.zoneName || "General Admission"}</td>
+                        <td>
+                          <strong style={{ color: "#1e1b2e" }}>{item.customerName || "N/A"}</strong>
+                        </td>
+                        <td>
+                          <span style={{ color: "#2fa4e0", fontWeight: 600 }}>{item.zoneName || "General Admission"}</span>
+                        </td>
+                        <td>
+                          <span style={{ color: "#7a7392" }}>{item.gateName || gateAssignment?.gateName || "Gate A"}</span>
+                        </td>
                         <td>
                           <span className="method-tag-dark">{item.scanMethod || "Dynamic QR"}</span>
                         </td>
@@ -1319,7 +1431,7 @@ export default function StaffCheckinTerminalPage() {
                   <input
                     type="text"
                     required
-                    placeholder="Nhập số CCCD (e.g. 001202000000, 079201008812)..."
+                    placeholder="Enter National ID / CCCD (e.g. 001202000000, 079201008812)..."
                     value={manualForm.cccdNumber}
                     onChange={(e) => {
                       const val = e.target.value;
@@ -1344,7 +1456,7 @@ export default function StaffCheckinTerminalPage() {
                     onClick={() => searchTicketsByCccd(manualForm.cccdNumber)}
                     disabled={searchingManualTickets || !manualForm.cccdNumber.trim()}
                   >
-                    {searchingManualTickets ? "Đang tìm..." : "Tìm vé theo CCCD"}
+                    {searchingManualTickets ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Tìm vé theo CCCD"}
                   </button>
                 </div>
               </div>
@@ -1358,7 +1470,7 @@ export default function StaffCheckinTerminalPage() {
 
               {manualLookupSearched && !searchingManualTickets && manualLookupTickets.length === 0 && (
                 <div className="cccd-box-full empty-lookup-box" style={{ margin: "0.5rem 0" }}>
-                  Không tìm thấy vé nào thuộc số CCCD <strong>{manualForm.cccdNumber}</strong> cho sự kiện này trong cơ sở dữ liệu.
+                  No tickets found matching ID / CCCD <strong>{manualForm.cccdNumber}</strong> for this concert in the database.
                 </div>
               )}
 
@@ -1417,7 +1529,7 @@ export default function StaffCheckinTerminalPage() {
                           </div>
                           <div>
                             <span className={`status-pill ${t.status}`}>
-                              {t.status === "AVAILABLE" ? "HỢP LỆ / SẴN SÀNG" : t.status === "CHECKED_IN" ? "ĐÃ CHECK-IN" : t.status}
+                              {t.status === "AVAILABLE" ? "VALID / READY" : t.status === "CHECKED_IN" ? "CHECKED-IN" : t.status}
                             </span>
                           </div>
                         </div>
@@ -1476,7 +1588,7 @@ export default function StaffCheckinTerminalPage() {
                   className="btn-validate-ticket-pink"
                   disabled={!manualForm.cccdVerified || !manualForm.cccdNumber.trim() || (!selectedManualTicket && !manualForm.ticketCode.trim()) || scanning}
                 >
-                  {scanning ? "Đang xử lý..." : "Xác nhận Check-in Vé"}
+                  {scanning ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Xác nhận Check-in Vé"}
                 </button>
               </div>
             </form>
@@ -1566,7 +1678,7 @@ export default function StaffCheckinTerminalPage() {
                   className="btn-lookup-pink"
                   disabled={searchingLookup || !lookupSearch.queryValue.trim()}
                 >
-                  {searchingLookup ? "Searching..." : "Search Ticket"}
+                  {searchingLookup ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Search Ticket"}
                 </button>
               </div>
             </form>
@@ -1597,8 +1709,8 @@ export default function StaffCheckinTerminalPage() {
                         {lookupResults.tickets.map((t) => (
                           <div key={t.ticketId} className="associated-ticket-item">
                             <div className="t-left">
-                              <span className="t-code-badge">{t.ticketCode}</span>
-                              <span className="t-zone-info">{t.zoneName} • Seat: {t.seatNumber || "Standing"}</span>
+                              <span className="t-code-badge" style={{ background: "rgba(56, 189, 248, 0.2)", color: "#38bdf8" }}>{t.zoneName}</span>
+                              <span className="t-zone-info">Seat: {t.seatNumber || "General"}</span>
                               <span className="t-price-tag">{(t.price || 1500000).toLocaleString()} VND</span>
                             </div>
                             <div className="t-right">
@@ -1609,7 +1721,6 @@ export default function StaffCheckinTerminalPage() {
                                 <button
                                   type="button"
                                   className="btn-checkin-direct-pink"
-                                  disabled={gateAssignment?.isShiftActive === false}
                                   onClick={() => handleLookupCheckinNow(t)}
                                 >
                                   Check-in Manually Now
@@ -1704,16 +1815,17 @@ export default function StaffCheckinTerminalPage() {
                   <tr>
                     <th>Time</th>
                     <th>Ticket Code</th>
-                    <th>Attendee</th>
-                    <th>Gate / Shift</th>
-                    <th>Method</th>
-                    <th>Result</th>
+                    <th>Attendee Name</th>
+                    <th>Ticket Type</th>
+                    <th>Order ID</th>
+                    <th>Gate</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {scanFeed.length === 0 ? (
                     <tr>
-                      <td colSpan="6" style={{ textAlign: "center", padding: "2rem", color: "#6b6480" }}>
+                      <td colSpan="7" style={{ textAlign: "center", padding: "2rem", color: "#6b6480" }}>
                         No scan records found matching this filter.
                       </td>
                     </tr>
@@ -1726,20 +1838,25 @@ export default function StaffCheckinTerminalPage() {
                         <td>
                           <strong style={{ color: "#1e1b2e", fontFamily: "monospace" }}>{item.ticketCode}</strong>
                         </td>
-                        <td>{item.customerName || "N/A"}</td>
+                        <td>
+                          <strong style={{ color: "#1e1b2e" }}>{item.customerName || "N/A"}</strong>
+                        </td>
+                        <td>
+                          <span style={{ color: "#2fa4e0", fontWeight: 600 }}>{item.zoneName || "General Admission"}</span>
+                        </td>
+                        <td>
+                          {item.orderId ? `#${item.orderId}` : "N/A"}
+                        </td>
                         <td>
                           <span style={{ color: "#7a7392" }}>{item.gateName || gateAssignment?.gateName || "Gate A"}</span>
                         </td>
                         <td>
-                          <span className="method-tag-dark">{item.scanMethod || "Dynamic QR"}</span>
-                        </td>
-                        <td>
                           <span className={`status-badge-pill ${item.status?.toLowerCase()}`}>
                             {item.status === "SUCCESS"
-                              ? "Approved"
+                              ? "Success"
                               : item.status === "ALREADY_USED"
                               ? "Already Used"
-                              : "Invalid / Error"}
+                              : "Invalid QR"}
                           </span>
                         </td>
                       </tr>
@@ -1752,14 +1869,14 @@ export default function StaffCheckinTerminalPage() {
         </div>
       )}
 
-      {/* TAB 5: Offline Admission Mode & Edge Sync (UC 14.5, 14.6, 14.7) */}
+      {/* TAB 5: Offline Admission Mode & Edge Sync */}
       {activeTab === "OFFLINE" && (
         <div className="terminal-offline-tab">
           <div className="card-offline-control">
             <div className="offline-card-header">
               <h2>Offline Check-in Mode & Edge Sync</h2>
               <p className="card-subtext">
-                UC_14.5, UC_14.6, UC_14.7: Edge admission redundancy allows gates to verify tickets without cloud internet connection using IndexedDB cached packages.
+                Edge admission redundancy allows gates to verify tickets without cloud internet connection using IndexedDB cached packages.
               </p>
             </div>
 
@@ -1802,7 +1919,7 @@ export default function StaffCheckinTerminalPage() {
                 onClick={handleDownloadOfflinePackage}
                 disabled={downloadingPackage}
               >
-                {downloadingPackage ? "Preloading..." : "Download / Refresh Offline Package"}
+                {downloadingPackage ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Download / Refresh Offline Package"}
               </button>
 
               <button
@@ -1811,7 +1928,7 @@ export default function StaffCheckinTerminalPage() {
                 onClick={() => handleSyncOfflineScans(false)}
                 disabled={syncingOffline || offlineQueueCount === 0}
               >
-                {syncingOffline ? "Synchronizing..." : `Synchronize Scans to Server (${offlineQueueCount})`}
+                {syncingOffline ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : `Synchronize Scans to Server (${offlineQueueCount})`}
               </button>
 
               <button

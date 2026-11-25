@@ -8,7 +8,6 @@ namespace PaymentAPI.Services
 {
     public class VnPayService : IVnPayService
     {
-        // VNPay chỉ nhận mỗi giao dịch dưới 1 tỷ VND.
         private const long MaxVnPayAmountVnd = 999_999_999L;
 
         private readonly VnPayConfig _config;
@@ -25,11 +24,9 @@ namespace PaymentAPI.Services
         }
         public string CreatePaymentUrl(long orderId, long amount, string ipAddress)
         {
-            // vnp_Amount = số tiền VND x 100. PHẢI tính bằng long: với int, 50.000.000 x 100 = 5 tỷ
-            // vượt 2,147,483,647 nên bị tràn số và VNPay nhận ~7 triệu thay vì 50 triệu.
             if (amount <= 0 || amount > MaxVnPayAmountVnd)
                 throw new ArgumentOutOfRangeException(nameof(amount),
-                    $"Số tiền phải từ 1 đến {MaxVnPayAmountVnd:N0} VND.");
+                    $"The amount must be between 1 and {MaxVnPayAmountVnd:N0} VND.");
 
             var vnpUrl = _config.BaseUrl;
             var tmnCode = _config.TmnCode;
@@ -46,7 +43,7 @@ namespace PaymentAPI.Services
                 { "vnp_CurrCode", "VND" },
                 { "vnp_IpAddr", ipAddress ?? "127.0.0.1" },
                 { "vnp_Locale", "en" },
-                { "vnp_OrderInfo", $"Thanh toan don hang {orderId}" },
+                { "vnp_OrderInfo", $"Payment for order {orderId}" },
                 { "vnp_OrderType", "other" },
                 { "vnp_ReturnUrl", returnUrl },
                 { "vnp_TxnRef", orderId.ToString() }
@@ -121,6 +118,7 @@ namespace PaymentAPI.Services
             var transactionNo = query["vnp_TransactionNo"].ToString();
 
             var isSuccess = responseCode == "00" && transactionStatus == "00";
+            var isUserCancelled = responseCode == "24";
 
             if (!int.TryParse(orderIdStr, out int orderId))
                 return "Invalid order id";
@@ -130,17 +128,29 @@ namespace PaymentAPI.Services
                     item => item.Key,
                     item => item.Value.ToString()));
 
-            var updated = await _paymentTransactionService.UpdatePaymentTransactionAsync(orderId, vnpAmount, transactionNo, isSuccess ? "Success" : "Failed", callbackPayload);
+            var paymentStatus = isSuccess
+                ? "Success"
+                : isUserCancelled
+                    ? "Cancelled"
+                    : "Failed";
+
+            var updated = await _paymentTransactionService.UpdatePaymentTransactionAsync(
+                orderId,
+                vnpAmount,
+                transactionNo,
+                paymentStatus,
+                callbackPayload);
 
             if (!updated)
                 return "Payment transaction not found or amount does not match";
 
-            if (responseCode == "00" && transactionStatus == "00")
-            {
+            if (isSuccess)
                 return "Payment successful";
-            }
 
-            return "Payment failed or cancelled";
+            if (isUserCancelled)
+                return "Payment cancelled";
+
+            return "Payment failed";
         }
     }
 }

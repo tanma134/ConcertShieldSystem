@@ -67,7 +67,7 @@ export default function EventGovernancePage({ admin = false }) {
         {event ? (
           <GovernancePanel event={event} admin={admin} onUpdated={load} />
         ) : (
-          !error && <p>Loading concert...</p>
+          !error && <p><span className="app-loading-spinner" role="status" aria-label="Loading" /></p>
         )}
       </div>
     </Shell>

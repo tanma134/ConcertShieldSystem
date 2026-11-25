@@ -16,7 +16,7 @@ const EMPTY_FILTERS = {
 };
 
 function formatDate(value) {
-  if (!value) return "—";
+  if (!value) return "-";
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
@@ -131,7 +131,7 @@ export default function ConcertOrderListPage() {
               onClick={loadOrders}
               disabled={loading}
             >
-              {loading ? "Loading…" : "Refresh"}
+              {loading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Refresh"}
             </button>
           </div>
         </header>
@@ -227,7 +227,7 @@ export default function ConcertOrderListPage() {
           </div>
 
           {loading ? (
-            <div className="co-state">Loading orders…</div>
+            <div className="co-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
           ) : !error && items.length === 0 ? (
             <div className="co-state">
               No orders match the selected filters.
@@ -254,7 +254,7 @@ export default function ConcertOrderListPage() {
                         <td>#{order.orderId}</td>
                         <td>
                           <div className="co-customer-name">
-                            {order.customerName || "—"}
+                            {order.customerName || "-"}
                           </div>
                           <div className="co-customer-email">
                             {order.customerEmail || ""}
@@ -263,7 +263,7 @@ export default function ConcertOrderListPage() {
                         <td>{formatDate(order.orderDate)}</td>
                         <td>{order.ticketCount ?? 0}</td>
                         <td>{formatPrice(order.finalAmount ?? 0)}</td>
-                        <td>{order.paymentMethod || "—"}</td>
+                        <td>{order.paymentMethod || "-"}</td>
                         <td>
                           <span
                             className={`co-status co-status-${String(

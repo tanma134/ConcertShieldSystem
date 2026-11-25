@@ -127,11 +127,11 @@ const PaperclipIcon = () => (
 /**
  * IncidentDetailPage
  * Unified command hub for Concert Incident Management:
- *   - UC_16.1: View on-site incident details
- *   - UC_16.2: Attach additional evidence (photos, video, audio, PDF to Cloudinary)
- *   - UC_16.3: Update incident details & log progress notes
- *   - UC_16.4: Escalate incident to Admin
- *   - UC_16.5: View resolution report & Admin finalize resolution
+ * - View on-site incident details
+ * - Attach additional evidence (photos, video, audio, PDF to Cloudinary)
+ * - Update incident details & log progress notes
+ * - Escalate incident to Admin
+ * - View resolution report & Admin finalize resolution
  */
 export default function IncidentDetailPage() {
   const { id } = useParams();
@@ -145,13 +145,13 @@ export default function IncidentDetailPage() {
   const [resolution, setResolution] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Modal State: UC_16.2 Upload Evidence
+  // Modal State:  Upload Evidence
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadFile, setUploadFile] = useState(null);
   const [uploadCaption, setUploadCaption] = useState("");
   const [isUploading, setIsUploading] = useState(false);
 
-  // Modal State: UC_16.3 Update Incident
+  // Modal State:  Update Incident
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState({
     title: "",
@@ -164,12 +164,12 @@ export default function IncidentDetailPage() {
   });
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Modal State: UC_16.4 Escalate to Admin
+  // Modal State:  Escalate to Admin
   const [showEscalateModal, setShowEscalateModal] = useState(false);
   const [escalateReason, setEscalateReason] = useState("");
   const [isEscalating, setIsEscalating] = useState(false);
 
-  // Modal State: UC_16.5 Resolve Incident (Admin Action)
+  // Modal State:  Resolve Incident (Admin Action)
   const [showResolveModal, setShowResolveModal] = useState(false);
   const [resolveForm, setResolveForm] = useState({
     resolutionSummary: "",
@@ -374,8 +374,7 @@ export default function IncidentDetailPage() {
             <div className="inc-empty-icon">
               <ClockIcon />
             </div>
-            <div className="inc-empty-title">Loading incident #{id}...</div>
-            <div className="inc-empty-desc">Synchronizing dossier from Incident Command Center...</div>
+            <div className="inc-empty-title"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
           </div>
         </div>
       </Shell>
@@ -484,7 +483,7 @@ export default function IncidentDetailPage() {
           </div>
         </div>
 
-        {/* Escalation Banner (UC_16.4) */}
+        {/* Escalation Banner */}
         {incident.isEscalated && (
           <div className="inc-escalation-banner" style={{ marginBottom: "20px" }}>
             <div className="inc-escalation-content">
@@ -509,7 +508,7 @@ export default function IncidentDetailPage() {
           </div>
         )}
 
-        {/* Resolution Banner (UC_16.5) */}
+        {/* Resolution Banner */}
         {isResolvedOrClosed && (
           <div className="inc-resolution-card" style={{ marginBottom: "20px" }}>
             <div className="inc-resolution-header">
@@ -625,7 +624,7 @@ export default function IncidentDetailPage() {
               </div>
             </div>
 
-            {/* Evidence Gallery (UC_16.2) */}
+            {/* Evidence Gallery */}
             <div className="inc-card">
               <div className="inc-card-title">
                 <div className="inc-card-title-left">
@@ -634,13 +633,15 @@ export default function IncidentDetailPage() {
                     {evidences.length} {evidences.length === 1 ? "file" : "files"}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  className="inc-btn inc-btn-primary inc-btn-sm"
-                  onClick={() => setShowUploadModal(true)}
-                >
-                  Upload Evidence
-                </button>
+                {!isResolvedOrClosed && (
+                  <button
+                    type="button"
+                    className="inc-btn inc-btn-primary inc-btn-sm"
+                    onClick={() => setShowUploadModal(true)}
+                  >
+                    Upload Evidence
+                  </button>
+                )}
               </div>
 
               {evidences.length === 0 ? (
@@ -649,13 +650,15 @@ export default function IncidentDetailPage() {
                   <p className="inc-empty-desc">
                     Attach photos, video recordings, audio dispatches, or witness statements directly to this incident report.
                   </p>
-                  <button
-                    type="button"
-                    className="inc-btn inc-btn-secondary inc-btn-sm"
-                    onClick={() => setShowUploadModal(true)}
-                  >
-                    Attach Files
-                  </button>
+                  {!isResolvedOrClosed && (
+                    <button
+                      type="button"
+                      className="inc-btn inc-btn-secondary inc-btn-sm"
+                      onClick={() => setShowUploadModal(true)}
+                    >
+                      Attach Files
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="inc-evidence-grid">
@@ -724,14 +727,16 @@ export default function IncidentDetailPage() {
                           >
                             Inspect
                           </a>
-                          <button
-                            type="button"
-                            className="inc-btn inc-btn-danger inc-btn-sm"
-                            title="Delete evidence"
-                            onClick={() => handleDeleteEvidence(ev.id)}
-                          >
-                            Delete
-                          </button>
+                          {!isResolvedOrClosed && (
+                            <button
+                              type="button"
+                              className="inc-btn inc-btn-danger inc-btn-sm"
+                              title="Delete evidence"
+                              onClick={() => handleDeleteEvidence(ev.id)}
+                            >
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
@@ -792,7 +797,7 @@ export default function IncidentDetailPage() {
           </div>
         </div>
 
-        {/* MODAL: UC_16.2 Upload Evidence */}
+        {/* MODAL:  Upload Evidence */}
         {showUploadModal && (
           <div className="inc-modal-overlay">
             <div className="inc-modal-content">
@@ -849,7 +854,7 @@ export default function IncidentDetailPage() {
                     className="inc-btn inc-btn-primary"
                     disabled={isUploading}
                   >
-                    {isUploading ? "Uploading to Cloudinary..." : "Upload Evidence"}
+                    {isUploading ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Upload Evidence"}
                   </button>
                 </div>
               </form>
@@ -857,7 +862,7 @@ export default function IncidentDetailPage() {
           </div>
         )}
 
-        {/* MODAL: UC_16.3 Update Incident */}
+        {/* MODAL:  Update Incident */}
         {showEditModal && (
           <div className="inc-modal-overlay">
             <div className="inc-modal-content">
@@ -998,7 +1003,7 @@ export default function IncidentDetailPage() {
                     className="inc-btn inc-btn-primary"
                     disabled={isUpdating}
                   >
-                    {isUpdating ? "Saving..." : "Save Updates"}
+                    {isUpdating ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Save Updates"}
                   </button>
                 </div>
               </form>
@@ -1006,7 +1011,7 @@ export default function IncidentDetailPage() {
           </div>
         )}
 
-        {/* MODAL: UC_16.4 Escalate to Admin */}
+        {/* MODAL:  Escalate to Admin */}
         {showEscalateModal && (
           <div className="inc-modal-overlay">
             <div className="inc-modal-content">
@@ -1066,7 +1071,7 @@ export default function IncidentDetailPage() {
                     className="inc-btn inc-btn-danger"
                     disabled={isEscalating}
                   >
-                    {isEscalating ? "Escalating..." : "Confirm Escalation"}
+                    {isEscalating ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm Escalation"}
                   </button>
                 </div>
               </form>
@@ -1074,7 +1079,7 @@ export default function IncidentDetailPage() {
           </div>
         )}
 
-        {/* MODAL: UC_16.5 Resolve Incident */}
+        {/* MODAL:  Resolve Incident */}
         {showResolveModal && (
           <div className="inc-modal-overlay">
             <div className="inc-modal-content">
@@ -1151,7 +1156,7 @@ export default function IncidentDetailPage() {
                     className="inc-btn inc-btn-success"
                     disabled={isResolving}
                   >
-                    {isResolving ? "Submitting..." : "Confirm Resolution"}
+                    {isResolving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm Resolution"}
                   </button>
                 </div>
               </form>

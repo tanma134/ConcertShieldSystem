@@ -37,10 +37,19 @@ public sealed class TicketRiskService : ITicketRiskService
     public TicketRiskService(TicketDbContext db, IRiskGuard guard, IHoldService holds, ILogger<TicketRiskService> logger)
     { _db = db; _guard = guard; _holds = holds; _logger = logger; }
 
-    public async Task<RiskVerdict> CheckHoldAsync(HttpContext http, int userId, CreateHoldSessionRequest req, CancellationToken ct = default)
+    public async Task<RiskVerdict> CheckHoldAsync(
+        HttpContext http,
+        int userId,
+        CreateHoldSessionRequest req,
+        CancellationToken ct = default)
     {
+        var ekyc = _guard.CheckEkycAsync(http, "hold");
+        if (!ekyc.Allowed)
+            return ekyc;
+
         var pre = await _guard.PreCheckAsync(http, userId, ct);
-        if (!pre.Allowed) return pre;
+        if (!pre.Allowed)
+            return pre;
 
         var evt = new RiskEvent { UserId = userId, EventId = req.EventId };
         try
@@ -48,13 +57,21 @@ public sealed class TicketRiskService : ITicketRiskService
             var incoming = Math.Max(req.Tickets.Sum(t => t.Quantity), req.SeatIds.Count);
             await AddTicketRulesAsync(http, evt, userId, req.EventId, incoming, ct);
         }
-        catch (Exception ex) { _logger.LogWarning(ex, "Risk rule calculation failed for hold (ignored)"); }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Risk rule calculation failed for hold (ignored)");
+        }
 
         return await _guard.EvaluateAsync(http, evt, isBooking: true, ct);
     }
 
     public async Task<RiskVerdict> CheckOrderAsync(HttpContext http, int userId, CreateOrderDTO dto, CancellationToken ct = default)
     {
+        // Second gate: a hold can be created before verification completes, so the
+        // order step re-checks eKYC before any money is taken.
+        var ekyc = _guard.CheckEkycAsync(http);
+        if (!ekyc.Allowed) return ekyc;
+
         var pre = await _guard.PreCheckAsync(http, userId, ct);
         if (!pre.Allowed) return pre;
 
@@ -117,7 +134,7 @@ public sealed class TicketRiskService : ITicketRiskService
         return await _guard.EvaluateAsync(http, evt, isBooking: false, ct);
     }
 
-    // ------------------------------------------------------------------ helpers
+    // ----------------------------------------------------------------- helpers
 
     private async Task AddTicketRulesAsync(HttpContext http, RiskEvent evt, int userId, int eventId, int incoming, CancellationToken ct)
     {

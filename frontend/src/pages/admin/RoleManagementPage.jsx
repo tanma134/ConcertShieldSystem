@@ -144,7 +144,9 @@ export default function RoleManagementPage() {
         </div>
 
         {loading ? (
-          <div className="empty-state">Loading roles...</div>
+          <div className="empty-state">
+            <span className="app-loading-spinner" role="status" aria-label="Loading" />
+          </div>
         ) : filteredRoles.length === 0 ? (
           <div className="empty-state">No roles found.</div>
         ) : (

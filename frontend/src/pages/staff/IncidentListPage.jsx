@@ -95,7 +95,7 @@ export default function IncidentListPage() {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [onlyEscalated, setOnlyEscalated] = useState(false);
 
-  // Quick Escalation Modal (UC_16.4)
+  // Quick Escalation Modal
   const [escalateTarget, setEscalateTarget] = useState(null);
   const [escalateReason, setEscalateReason] = useState("");
   const [isEscalating, setIsEscalating] = useState(false);
@@ -311,7 +311,7 @@ export default function IncidentListPage() {
               <div className="inc-empty-icon">
                 <ClockIcon />
               </div>
-              <div className="inc-empty-title">Synchronizing incident database...</div>
+              <div className="inc-empty-title"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
             </div>
           ) : filteredIncidents.length === 0 ? (
             <div className="inc-empty-state">
@@ -427,7 +427,7 @@ export default function IncidentListPage() {
           )}
         </div>
 
-        {/* Modal: Escalate to Admin (UC_16.4) */}
+        {/* Modal: Escalate to Admin */}
         {escalateTarget && (
           <div className="inc-modal-overlay">
             <div className="inc-modal-content">
@@ -486,7 +486,7 @@ export default function IncidentListPage() {
                     className="inc-btn inc-btn-danger"
                     disabled={isEscalating}
                   >
-                    {isEscalating ? "Escalating..." : "Confirm Escalation"}
+                    {isEscalating ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm Escalation"}
                   </button>
                 </div>
               </form>

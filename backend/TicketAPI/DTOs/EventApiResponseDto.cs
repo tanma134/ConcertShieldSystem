@@ -9,6 +9,8 @@ namespace BookingAPI.DTOS
         public DateTime StartsAt { get; set; }
         public DateTime EndsAt { get; set; }
         public string Status { get; set; } = null!;
+        public int? MinTicketsPerAccount { get; set; }
+        public int? MaxTicketsPerAccount { get; set; }
         public int HoldTimeoutMinutes { get; set; } = 10;
         public string ReEntryPolicy { get; set; } = "NoReEntry";
         public int? ReEntryDurationMinutes { get; set; }

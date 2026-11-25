@@ -26,7 +26,7 @@ function EventsListPage() {
   const [events, setEvents] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
-  const pageSize = 12;
+  const pageSize = 8; // Hien thi 8 su kien tren moi trang (luoi 4 cot x 2 hang)
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -46,6 +46,7 @@ function EventsListPage() {
       pageSize,
       sortBy,
       sortOrder,
+      dateFrom: new Date().toISOString(), // Loc cac su kien sap dien ra tu backend
     };
 
     if (qParam.trim()) {
@@ -200,7 +201,7 @@ function EventsListPage() {
           </div>
 
           {/* Loading, Error, Empty States */}
-          {loading && <div className="tb-loading">Loading concerts...</div>}
+          {loading && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
           {!loading && error && <div className="tb-error">{error}</div>}
           {!loading && !error && displayedEvents.length === 0 && (
             <div className="tb-empty">

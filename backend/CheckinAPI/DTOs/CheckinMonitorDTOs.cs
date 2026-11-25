@@ -122,7 +122,7 @@ namespace CheckinAPI.DTOs
     }
 
     // ==========================================
-    // UC_15.2 Scan Dynamic QR Ticket DTOs
+    // Scan Dynamic QR Ticket DTOs
     // ==========================================
     public class ScanQrRequestDTO
     {
@@ -179,7 +179,7 @@ namespace CheckinAPI.DTOs
     }
 
     // ==========================================
-    // UC_15.3 Manual Check-in DTOs (BR-290, BR-292, BR-293)
+    // Manual Check-in DTOs (BR-290, BR-292, BR-293)
     // ==========================================
     public class ManualCheckinRequestDTO
     {
@@ -206,7 +206,7 @@ namespace CheckinAPI.DTOs
     }
 
     // ==========================================
-    // UC_15.4 Lookup Ticket DTOs (BR-154, BR-155, BR-156, BR-291, BR-294)
+    // Lookup Ticket DTOs (BR-154, BR-155, BR-156, BR-291, BR-294)
     // ==========================================
     public class LookupTicketRequestDTO
     {
@@ -272,7 +272,7 @@ namespace CheckinAPI.DTOs
     }
 
     // ==========================================
-    // UC_15.5 View Check-in Scan History DTOs (BR-295)
+    // View Check-in Scan History DTOs (BR-295)
     // ==========================================
     public class ScanHistoryResponseDTO
     {
@@ -296,7 +296,7 @@ namespace CheckinAPI.DTOs
     }
 
     // ==========================================
-    // UC_30 / UC-54 Gate Assignment Response DTO
+    // Gate Assignment Response DTO
     // ==========================================
     public class GateAssignmentResponseDTO
     {
@@ -329,6 +329,9 @@ namespace CheckinAPI.DTOs
 
         [JsonPropertyName("shiftEndTime")]
         public string ShiftEndTime { get; set; } = "23:00";
+
+        [JsonPropertyName("shiftDate")]
+        public string? ShiftDate { get; set; }
 
         [JsonPropertyName("totalScannedInShift")]
         public int TotalScannedInShift { get; set; } = 354;

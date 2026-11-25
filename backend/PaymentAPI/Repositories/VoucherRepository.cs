@@ -181,7 +181,7 @@ namespace PaymentAPI.Repositories
                     .FirstOrDefaultAsync(x => x.VoucherId == usage.VoucherId);
 
                 if (voucher == null)
-                    throw new KeyNotFoundException("Không tìm thấy voucher.");
+                    throw new KeyNotFoundException("Voucher not found.");
 
                 _context.VoucherUsages.Add(usage);
                 voucher.UsedQuantity++;

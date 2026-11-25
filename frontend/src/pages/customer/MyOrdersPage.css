@@ -49,12 +49,21 @@
   font-size: 14px;
 }
 
-.my-orders-tabs {
+.my-orders-toolbar {
   display: flex;
-  gap: 26px;
-  overflow-x: auto;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
   margin-bottom: 24px;
   border-bottom: 1px solid #d6d1db;
+}
+
+.my-orders-tabs {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 26px;
+  overflow-x: auto;
 }
 
 .my-orders-tabs button {
@@ -86,6 +95,73 @@
   color: #4d495a;
   background: #faf5ff;
   font-size: 12px;
+}
+
+.my-orders-date-filter {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+  gap: 12px;
+  padding-bottom: 8px;
+  margin: 0;
+}
+
+.my-orders-date-filter label {
+  display: grid;
+  gap: 6px;
+  color: #6e6788;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.my-orders-date-filter input {
+  width: 142px;
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid #d8d3dd;
+  border-radius: 8px;
+  color: #3c3552;
+  background: #fff;
+  font: inherit;
+}
+
+@media (max-width: 900px) {
+  .my-orders-toolbar {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .my-orders-tabs {
+    flex-basis: 100%;
+  }
+
+  .my-orders-date-filter {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .my-orders-date-filter {
+    width: 100%;
+    justify-content: flex-start;
+    margin-left: 0;
+  }
+
+  .my-orders-date-filter input {
+    width: min(142px, calc((100vw - 64px) / 2));
+  }
+}
+
+.my-orders-date-filter button {
+  min-height: 38px;
+  padding: 7px 12px;
+  border: 1px solid #d8b4fe;
+  border-radius: 8px;
+  color: #7e22ce;
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
 }
 
 .my-orders-list {

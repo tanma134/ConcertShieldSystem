@@ -48,7 +48,8 @@ function getTicketStatus(ticket) {
   if (
     orderStatus.includes("refundpending") ||
     orderStatus.includes("refundrequested") ||
-    ticketStatus.includes("refundpending")
+    ticketStatus.includes("refundpending") ||
+    ticketStatus.includes("returnpending")
   ) {
     return { label: "Refund processing", className: "processing" };
   }
@@ -56,7 +57,9 @@ function getTicketStatus(ticket) {
   if (
     orderStatus.includes("refunded") ||
     orderStatus.includes("refundcompleted") ||
-    ticketStatus.includes("cancel")
+    ticketStatus.includes("cancel") ||
+    ticketStatus.includes("returned") ||
+    ticketStatus.includes("revoked")
   ) {
     return { label: "Refunded", className: "cancelled" };
   }
@@ -73,6 +76,15 @@ function getTicketStatus(ticket) {
     label: ticket.status || ticket.orderStatus || "Pending",
     className: "other",
   };
+}
+
+function cleanEventTitle(title) {
+  if (!title) return "Event";
+  return String(title)
+    .replace(/\s*-\s*offline\s*sync\s*demo/gi, "")
+    .replace(/\s*offline\s*sync\s*demo/gi, "")
+    .replace(/\s*offlinesync\s*demo/gi, "")
+    .trim();
 }
 
 function getSeatDescription(ticket) {
@@ -129,7 +141,9 @@ export default function TicketDetailsPage() {
 
   const toast = useToast();
   const [returnModalOpen, setReturnModalOpen] = useState(false);
+  const [returnCategory, setReturnCategory] = useState("PersonalSchedule");
   const [returnReason, setReturnReason] = useState("");
+  const [returnProofUrl, setReturnProofUrl] = useState("");
   const [submittingReturn, setSubmittingReturn] = useState(false);
 
   const [qrOpen, setQrOpen] = useState(false);
@@ -297,23 +311,7 @@ export default function TicketDetailsPage() {
       <>
         <Header />
         <main className="ticket-detail-page">
-          <div className="ticket-detail-state">Loading ticket...</div>
-        </main>
-        <Footer />
-      </>
-    );
-  }
-
-  if (error || !ticket) {
-    return (
-      <>
-        <Header />
-        <main className="ticket-detail-page">
-          <div className="ticket-detail-state is-error" role="alert">
-            <strong>Could not open this ticket</strong>
-            <p>{error || "Ticket not found."}</p>
-            <Link to="/my-tickets">Back to My Tickets</Link>
-          </div>
+          <div className="ticket-detail-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
         </main>
         <Footer />
       </>
@@ -340,24 +338,43 @@ export default function TicketDetailsPage() {
     String(ticket.status || "").toLowerCase() === "active" &&
     !ticket.checkedInAt;
 
+  // Close return window if event starts within 24 hours (or in the past)
+  const isReturnWindowOpen =
+    ticket.startsAt &&
+    new Date(ticket.startsAt).getTime() - Date.now() >= 24 * 3600 * 1000;
+
   const canRequestReturn =
     String(ticket.orderStatus || "").toLowerCase() === "paid" &&
     String(ticket.status || "").toLowerCase() === "active" &&
-    !ticket.checkedInAt;
+    !ticket.checkedInAt &&
+    isReturnWindowOpen;
+
+  const REFUND_CATEGORIES = {
+    PersonalSchedule: "Personal schedule conflict / Unable to attend",
+    MedicalEmergency: "Medical emergency / Health issue / Hospitalization",
+    EventChanged: "Event schedule or venue changed",
+    AccidentalBooking: "Accidental booking / Wrong tier or quantity",
+    ForceMajeure: "Severe weather / Natural disaster / Travel disruption",
+    Other: "Other reason (detailed explanation required)",
+  };
 
   const handleSubmitReturn = async () => {
     if (returnReason.trim().length < 10) {
-      toast.error("Please enter a reason with at least 10 characters.");
+      toast.error("Please enter a detailed explanation of at least 10 characters.");
       return;
     }
     setSubmittingReturn(true);
     try {
-      await ticketReturnApi.submit(ticket.ticketId, returnReason.trim());
+      const categoryLabel = REFUND_CATEGORIES[returnCategory] || returnCategory;
+      const fullReason = `[${categoryLabel}] ${returnReason.trim()}`;
+      const proofUrl = returnProofUrl.trim() || null;
+      await ticketReturnApi.submit(ticket.ticketId, fullReason, proofUrl);
       toast.success("Refund request submitted successfully! Staff will review shortly.");
       setReturnModalOpen(false);
       window.location.reload();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Could not submit refund request.");
+      const errMsg = err.response?.data?.message || err.message || "Could not submit refund request.";
+      toast.error(errMsg);
     } finally {
       setSubmittingReturn(false);
     }
@@ -371,9 +388,6 @@ export default function TicketDetailsPage() {
 
       <main className="ticket-detail-page">
         <div className="ticket-detail-container">
-          <Link to="/my-tickets" className="ticket-detail-back">
-            ← Back to My Tickets
-          </Link>
 
           <section className="ticket-event-card">
             {ticket.posterUrl && (
@@ -384,7 +398,7 @@ export default function TicketDetailsPage() {
 
             <div className="ticket-event-info">
               <p className="ticket-detail-eyebrow">Event</p>
-              <h1>{ticket.eventName || "Event"}</h1>
+              <h1>{cleanEventTitle(ticket.eventName)}</h1>
 
               <div className="ticket-event-facts">
                 {eventStart && (
@@ -447,6 +461,42 @@ export default function TicketDetailsPage() {
                 <div className="ticket-detail-field">
                   <span>Ticket holder</span>
                   <strong>{ticket.ownerName}</strong>
+                </div>
+              )}
+
+              <div className="ticket-detail-field">
+                <span>Check-in Gate{ticket.permittedGates && ticket.permittedGates.length > 1 ? "s" : ""}</span>
+                {ticket.permittedGates && ticket.permittedGates.length > 0 ? (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "4px" }}>
+                    {ticket.permittedGates.map((g, idx) => (
+                      <span
+                        key={idx}
+                        style={{
+                          display: "inline-block",
+                          background: "rgba(236, 72, 153, 0.12)",
+                          color: "#ff2d75",
+                          border: "1px solid rgba(236, 72, 153, 0.3)",
+                          padding: "3px 10px",
+                          borderRadius: "6px",
+                          fontSize: "0.88rem",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {g}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <strong>
+                    {ticket.gateName || ticket.gateId || "Main Gate"}
+                  </strong>
+                )}
+              </div>
+
+              {ticket.checkedInGate && (
+                <div className="ticket-detail-field">
+                  <span>Admitted Gate</span>
+                  <strong style={{ color: "#10b981" }}>{ticket.checkedInGate}</strong>
                 </div>
               )}
 
@@ -528,8 +578,9 @@ export default function TicketDetailsPage() {
 
             {historyLoading ? (
               <p className="ticket-history-state">
-                Loading ticket history...
-              </p>
+                <span className="app-loading-spinner" role="status" aria-label="Loading" /></p>
+
+
             ) : historyError ? (
               <p className="ticket-history-state is-error" role="alert">
                 {historyError}
@@ -563,9 +614,9 @@ export default function TicketDetailsPage() {
 
                       {(item.oldStatus || item.newStatus) && (
                         <p className="ticket-history-status">
-                          {item.oldStatus || "—"}
+                          {item.oldStatus || "-"}
                           {" → "}
-                          {item.newStatus || "—"}
+                          {item.newStatus || "-"}
                         </p>
                       )}
 
@@ -617,12 +668,12 @@ export default function TicketDetailsPage() {
             <p className="ticket-detail-eyebrow">Entry pass</p>
             <h2 id="ticket-qr-title">Your ticket QR code</h2>
             <p className="ticket-qr-event">
-              {ticket.eventName || "Event"}
+              {cleanEventTitle(ticket.eventName)}
             </p>
 
             {qrLoading && !qrImage ? (
               <div className="ticket-qr-placeholder">
-                Generating QR code...
+                <span className="app-loading-spinner" role="status" aria-label="Loading" />
               </div>
             ) : (
               qrImage && (
@@ -682,19 +733,74 @@ export default function TicketDetailsPage() {
               </div>
             </div>
 
+            <div style={{ marginBottom: "14px" }}>
+              <label className="ticket-modal-label" style={{ marginBottom: "6px", display: "block" }}>
+                <span>Refund Reason Category *</span>
+              </label>
+              <select
+                className="ticket-modal-select"
+                value={returnCategory}
+                onChange={(e) => setReturnCategory(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid #d1d5db",
+                  background: "#ffffff",
+                  fontSize: "13px",
+                  fontWeight: 500,
+                  color: "#1f2937",
+                  outline: "none",
+                }}
+              >
+                <option value="PersonalSchedule">Personal schedule conflict / Unable to attend</option>
+                <option value="MedicalEmergency">Medical emergency / Health issue / Hospitalization</option>
+                <option value="EventChanged">Event schedule or venue changed</option>
+                <option value="AccidentalBooking">Accidental booking / Wrong tier or quantity</option>
+                <option value="ForceMajeure">Severe weather / Natural disaster / Travel disruption</option>
+                <option value="Other">Other reason (detailed explanation required)</option>
+              </select>
+            </div>
+
             <label className="ticket-modal-label">
-              <span>Reason for Refund *</span>
+              <span>Detailed Explanation / Notes *</span>
               <span className="ticket-modal-char-count">
                 {returnReason.trim().length}/10 min characters
               </span>
             </label>
             <textarea
               className="ticket-modal-textarea"
-              rows={4}
-              placeholder="e.g. Schedule conflict, family emergency, or unexpected travel..."
+              rows={3}
+              placeholder="Please describe your reason clearly to help staff review and approve your refund..."
               value={returnReason}
               onChange={(e) => setReturnReason(e.target.value)}
             />
+
+            <div style={{ marginTop: "12px", marginBottom: "14px" }}>
+              <label className="ticket-modal-label" style={{ marginBottom: "6px", display: "flex", justifyContent: "space-between" }}>
+                <span>Supporting Document / Evidence Link</span>
+                <span style={{ fontSize: "12px", color: "#6b7280" }}>(Optional)</span>
+              </label>
+              <input
+                type="url"
+                placeholder="https://... (Link to doctor's note, travel disruption notice...)"
+                value={returnProofUrl}
+                onChange={(e) => setReturnProofUrl(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "9px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid #d1d5db",
+                  background: "#ffffff",
+                  fontSize: "13px",
+                  color: "#1f2937",
+                  outline: "none",
+                }}
+              />
+              <small style={{ display: "block", marginTop: "4px", fontSize: "11px", color: "#6b7280" }}>
+                Providing valid evidence helps expedite the review process for medical or force majeure reasons.
+              </small>
+            </div>
 
             <div className="ticket-modal-actions">
               <button
@@ -711,7 +817,7 @@ export default function TicketDetailsPage() {
                 disabled={submittingReturn || returnReason.trim().length < 10}
                 onClick={handleSubmitReturn}
               >
-                {submittingReturn ? "Submitting..." : "Submit Refund Request"}
+                {submittingReturn ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Submit Refund Request"}
               </button>
             </div>
           </div>

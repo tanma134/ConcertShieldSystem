@@ -20,7 +20,7 @@ const money = (value, negative = false) => {
   return (negative ? "-" : "") + amount.toLocaleString("en-US");
 };
 
-// UC_13: revenue dashboard of one event with date / ticket type filters and CSV export.
+// revenue dashboard of one event with date / ticket type filters and CSV export.
 export default function RevenueDashboardPage() {
   const { id } = useParams();
   const [draft, setDraft] = useState(EMPTY_FILTERS);
@@ -31,7 +31,7 @@ export default function RevenueDashboardPage() {
   const [filterError, setFilterError] = useState("");
   const [exporting, setExporting] = useState(false);
 
-  // UC_13.1 / UC_13.2: loads the report for the filters that were applied.
+  // loads the report for the filters that were applied.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -60,7 +60,7 @@ export default function RevenueDashboardPage() {
     setFilterError("");
   };
 
-  // UC_13.2: validates the dates, then applies the draft filters.
+  // validates the dates, then applies the draft filters.
   const applyFilters = () => {
     if (draft.from && draft.to && draft.from > draft.to) {
       setFilterError("The start date must not be after the end date.");
@@ -76,7 +76,7 @@ export default function RevenueDashboardPage() {
     setFilterError("");
   };
 
-  // UC_13.3: downloads the CSV for the applied filters.
+  // downloads the CSV for the applied filters.
   const exportCsv = async () => {
     setExporting(true);
     try {
@@ -141,12 +141,12 @@ export default function RevenueDashboardPage() {
           </button>
           <span className="rp-toolbar-spacer" />
           <button type="button" className="tb-btn tb-btn-outline" disabled={exporting} onClick={exportCsv}>
-            {exporting ? "Exporting..." : "Export CSV"}
+            {exporting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Export CSV"}
           </button>
         </div>
         {filterError && <div className="tb-error" style={{ marginBottom: 14 }}>{filterError}</div>}
 
-        {loading && <div className="tb-loading">Loading...</div>}
+        {loading && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
         {!loading && error && <div className="tb-error">{error}</div>}
 
         {!loading && !error && summary && (

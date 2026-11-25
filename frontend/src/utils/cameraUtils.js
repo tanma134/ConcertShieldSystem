@@ -1,10 +1,10 @@
-// Tiện ích camera cho luồng eKYC: mở camera, cắt khung ảnh, kiểm tra chất lượng sơ bộ.
+// Camera utilities for the eKYC flow: open the camera, crop the frame, run a basic quality check.
 
 export const CAMERA_CONFIG = {
-  MAX_SIDE: 1600,        // cạnh dài tối đa của ảnh gửi đi (px)
+  MAX_SIDE: 1600,        // max length of the longest side of the uploaded image (px)
   JPEG_QUALITY: 0.92,
-  CARD_PADDING: 0.06,    // chừa thêm 6% quanh khung thẻ khi cắt ảnh
-  // Ngưỡng kiểm tra sơ bộ trên máy, chỉ là ước lượng: chỉnh theo thực tế
+  CARD_PADDING: 0.06,    // add 6% padding around the card frame when cropping
+  // On-device check thresholds, only an estimate: adjust based on real-world results
   MIN_BRIGHTNESS: 55,
   MAX_BRIGHTNESS: 215,
   MIN_SHARPNESS: 35,
@@ -12,23 +12,23 @@ export const CAMERA_CONFIG = {
 
 export const CAPTURE_KINDS = {
   front: {
-    label: "Mặt trước",
-    title: "Chụp mặt trước CCCD",
-    hint: "Đặt thẻ nằm gọn trong khung. Chụp nơi đủ sáng và tránh phản chiếu ánh đèn.",
+    label: "Front",
+    title: "Capture the front of your ID card",
+    hint: "Place the card fully inside the frame. Shoot in a well-lit place and avoid glare from lights.",
     facing: "environment",
     guide: "card",
   },
   back: {
-    label: "Mặt sau",
-    title: "Chụp mặt sau CCCD",
-    hint: "Lật thẻ lại và đặt mặt sau vào khung. Chữ trên thẻ phải đọc được.",
+    label: "Back",
+    title: "Capture the back of your ID card",
+    hint: "Flip the card and place the back inside the frame. The text on the card must be readable.",
     facing: "environment",
     guide: "card",
   },
   selfie: {
-    label: "Khuôn mặt",
-    title: "Chụp khuôn mặt của bạn",
-    hint: "Nhìn thẳng vào camera, bỏ khẩu trang và kính râm, để mặt nằm trong khung.",
+    label: "Face",
+    title: "Capture your face",
+    hint: "Look straight at the camera, remove any mask or sunglasses, and keep your face inside the frame.",
     facing: "user",
     guide: "oval",
   },
@@ -56,22 +56,22 @@ export async function openCamera(facing) {
 export function cameraErrorText(e) {
   switch (e && e.name) {
     case "InsecureContext":
-      return "Camera chỉ hoạt động trên HTTPS hoặc localhost. Hãy mở trang bằng địa chỉ bắt đầu bằng https://.";
+      return "The camera only works on HTTPS or localhost. Please open the page using an address that starts with https://.";
     case "NotAllowedError":
     case "SecurityError":
-      return "Trình duyệt chưa được cấp quyền dùng camera. Cho phép camera trong cài đặt của trang rồi tải lại.";
+      return "Camera access is blocked in your browser. Allow camera access in the site settings, then reload the page.";
     case "NotFoundError":
-      return "Không tìm thấy camera trên thiết bị này.";
+      return "No camera was found on this device.";
     case "NotReadableError":
-      return "Camera đang được ứng dụng khác sử dụng. Đóng ứng dụng đó rồi thử lại.";
+      return "The camera is being used by another application. Close that application and try again.";
     default:
-      return "Không mở được camera. Tải lại trang và thử lại.";
+      return "Couldn't open the camera. Reload the page and try again.";
   }
 }
 
-// Tính vùng cần cắt trong hệ tọa độ của video.
-// Video đang hiển thị dạng object-fit: cover trong khung (cw x ch) nên phải quy đổi ngược.
-// guideType "card": cắt theo khung thẻ (+ padding). Còn lại: lấy toàn bộ vùng đang nhìn thấy.
+// Compute the crop area in the video's coordinate system.
+// The video is displayed with object-fit: cover inside the frame (cw x ch), so the coordinates must be converted back.
+// guideType "card": crop to the card frame (+ padding). Otherwise: take the whole visible area.
 export function computeCropRect({ cw, ch, vw, vh, guide, stage, guideType, padding = CAMERA_CONFIG.CARD_PADDING }) {
   const scale = Math.max(cw / vw, ch / vh);
   const offX = (vw * scale - cw) / 2;
@@ -109,7 +109,7 @@ export function drawFrame(video, stageEl, guideEl, guideType) {
   return canvas;
 }
 
-// Ước lượng độ sáng + độ nét (phương sai Laplacian) trên bản thu nhỏ
+// Estimate brightness + sharpness (Laplacian variance) on a downscaled copy
 export function analyzeQuality(canvas) {
   const w = 320;
   const h = Math.max(1, Math.round(canvas.height * (w / canvas.width)));
@@ -145,14 +145,14 @@ export function analyzeQuality(canvas) {
 
 export function qualityChips(q) {
   const chips = [];
-  if (q.brightness < CAMERA_CONFIG.MIN_BRIGHTNESS) chips.push({ tone: "warn", text: "Ảnh hơi tối" });
-  else if (q.brightness > CAMERA_CONFIG.MAX_BRIGHTNESS) chips.push({ tone: "warn", text: "Ảnh hơi chói" });
-  else chips.push({ tone: "ok", text: "Đủ sáng" });
+  if (q.brightness < CAMERA_CONFIG.MIN_BRIGHTNESS) chips.push({ tone: "warn", text: "A bit dark" });
+  else if (q.brightness > CAMERA_CONFIG.MAX_BRIGHTNESS) chips.push({ tone: "warn", text: "A bit too bright" });
+  else chips.push({ tone: "ok", text: "Good lighting" });
 
   chips.push(
     q.sharpness < CAMERA_CONFIG.MIN_SHARPNESS
-      ? { tone: "warn", text: "Ảnh hơi mờ" }
-      : { tone: "ok", text: "Khá rõ nét" }
+      ? { tone: "warn", text: "A bit blurry" }
+      : { tone: "ok", text: "Fairly sharp" }
   );
   return chips;
 }

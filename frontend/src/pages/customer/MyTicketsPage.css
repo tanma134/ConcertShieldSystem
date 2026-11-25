@@ -46,12 +46,21 @@
   white-space: nowrap;
 }
 
-.mt-tabs {
+.mt-toolbar {
   display: flex;
-  gap: 8px;
-  overflow-x: auto;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
   margin-bottom: 22px;
   border-bottom: 1px solid #f1ecfa;
+}
+
+.mt-tabs {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 8px;
+  overflow-x: auto;
 }
 
 .mt-tabs button {
@@ -85,6 +94,73 @@
   background: #f1ecfa;
   font-size: 12px;
   text-align: center;
+}
+
+.mt-date-filter {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+  gap: 12px;
+  padding-bottom: 8px;
+  margin: 0;
+}
+
+.mt-date-filter label {
+  display: grid;
+  gap: 6px;
+  color: #6b6480;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mt-date-filter input {
+  width: 142px;
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid #ddd4e9;
+  border-radius: 8px;
+  color: #2a2438;
+  background: #fff;
+  font: inherit;
+}
+
+@media (max-width: 900px) {
+  .mt-toolbar {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .mt-tabs {
+    flex-basis: 100%;
+  }
+
+  .mt-date-filter {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .mt-date-filter {
+    width: 100%;
+    justify-content: flex-start;
+    margin-left: 0;
+  }
+
+  .mt-date-filter input {
+    width: min(142px, calc((100vw - 64px) / 2));
+  }
+}
+
+.mt-date-filter button {
+  min-height: 38px;
+  padding: 7px 12px;
+  border: 1px solid #d8b4fe;
+  border-radius: 8px;
+  color: #7e22ce;
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
 }
 
 .mt-orders {
@@ -252,6 +328,41 @@
   font-weight: 700;
 }
 
+.mt-status.restricted {
+  color: #b91c1c;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+}
+
+/* A ticket blocked by the risk engine: the customer needs a visible reason and
+   a direct route to the appeal form. */
+.mt-restriction-note {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+  font-size: 12px;
+  color: #9f1239;
+  white-space: normal;
+  text-align: right;
+}
+
+.mt-appeal-link {
+  color: #9f1239;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.mt-appeal-link:hover {
+  color: #4c0519;
+}
+
+.mt-appeal-link:focus-visible {
+  outline: 2px solid #9f1239;
+  outline-offset: 2px;
+
+}
+
 .mt-details-link {
   display: inline-flex;
   align-items: center;
@@ -378,4 +489,107 @@
   .mt-order-dates > span[aria-hidden="true"] {
     display: none;
   }
+}
+
+
+/* ==========================================================================
+   Batch Refund / Partial Return in My Tickets
+   ========================================================================== */
+.mt-batch-refund-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid #c084fc;
+  background: #fdf4ff;
+  color: #7e22ce;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mt-batch-refund-btn:hover {
+  background: #7e22ce;
+  color: #ffffff;
+}
+
+.bm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.bm-card {
+  width: 100%;
+  max-width: 580px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 24px 26px;
+  box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.25);
+}
+
+.bm-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.bm-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fdf4ff;
+  color: #7e22ce;
+  font-size: 20px;
+}
+
+.bm-ticket-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 12px 0;
+  padding: 6px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.bm-ticket-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bm-ticket-row.is-selected {
+  border-color: #a855f7;
+  background: #faf5ff;
+}
+
+.bm-ticket-row.is-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #f1f5f9;
 }

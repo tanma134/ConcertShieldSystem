@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using TicketAPI.Services;
 
@@ -7,6 +8,7 @@ namespace TicketAPI.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Route("api/admin/status-histories")]
+    [Authorize(Roles = "Admin")]
     public class AdminStatusHistoriesController : ControllerBase
     {
         private readonly IStatusHistoryService _statusHistoryService;

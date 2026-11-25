@@ -1,9 +1,9 @@
 // Validation FE báo sớm; backend luôn kiểm tra lại cùng quy tắc.
 export function validateChange(input, now = Date.now()) {
-  if (!['Postpone','Reschedule'].includes(input.type)) return 'Select a valid change type.';
+  if (!['Postpone','Reschedule','Cancel'].includes(input.type)) return 'Select a valid change type.';
   const reason = (input.reason || '').trim();
   if (reason.length < 10 || reason.length > 1000) return 'Reason must contain 10 to 1000 characters.';
-  if (input.type === 'Postpone') return '';
+  if (input.type === 'Postpone' || input.type === 'Cancel') return '';
   const start = Date.parse(input.newStartsAt), end = Date.parse(input.newEndsAt);
   if (!Number.isFinite(start) || !Number.isFinite(end)) return 'Enter the new start and end.';
   if (start <= now) return 'New start must be in the future.';

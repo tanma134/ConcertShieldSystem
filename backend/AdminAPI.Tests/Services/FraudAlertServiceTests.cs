@@ -3,6 +3,7 @@ using System.Security.Claims;
 using AdminAPI.Controllers;
 using AdminAPI.DTOs;
 using AdminAPI.Models;
+using AdminAPI.Repositories;
 using AdminAPI.Services;
 using AdminAPI.Services.Risks;
 using AdminAPI.Tests.Support;
@@ -19,7 +20,26 @@ public class FraudAlertServiceTests : DbTestBase
 {
     private const int Staff = 99;
     private const string Reason = "Verified the customer by phone";
-    private FraudAlertService Sut() => new(Db, Cfg.Object, new RiskScoreCalculator(), Mock.Of<IAiSummaryQueue>(), NullLogger<FraudAlertService>.Instance);
+    // Target validation needs TicketAPI and AuthenticationAPI. Tests stand in small
+    // fakes so the block logic itself is exercised without network calls.
+    private readonly Mock<ITicketRiskClient> TicketApi = new();
+    private readonly Mock<IStaffDirectoryClient> Directory = new();
+
+    // Defaults are installed in the constructor so a test can override them with a
+    // later Setup() call; Moq resolves the most recent setup first.
+    public FraudAlertServiceTests()
+    {
+        TicketApi.Setup(t => t.FindTicketAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((int id, CancellationToken _) => new TicketInfo(id, 7, 1, "Active", null));
+        Directory.Setup(d => d.FindAccountAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((int id, CancellationToken _) => new AccountInfo(id, true, new[] { "Customer" }));
+    }
+
+    private FraudAlertService Sut() => new(new FraudAlertRepository(Db), new RiskDecisionRepository(Db),
+        new RiskListRepository(Db), new RiskNotificationRepository(Db), new AuditLogRepository(Db),
+        new RiskAppealRepository(Db), Cfg.Object, new RiskScoreCalculator(),
+        Mock.Of<IAiSummaryQueue>(), NullLogger<FraudAlertService>.Instance,
+        TicketApi.Object, Directory.Object);
     private static BlockRequest BReq(string scope = "ACCOUNT", int hours = 24, string reason = "Suspicious refund abuse pattern", int? userId = 7, int? ticketId = 100, int? alertId = null, string? ip = null)
         => new() { Scope = scope, DurationHours = hours, Reason = reason, UserId = userId, TicketId = ticketId, FraudAlertId = alertId, IpAddress = ip };
 
@@ -242,6 +262,104 @@ public class FraudAlertServiceTests : DbTestBase
         Assert.Single(Db.RiskNotifications.ToList());
     }
 
+    [Fact] // A - a typo in the User ID must not create a block for a non-existent user
+    public async Task UTCID40_Block_UserDoesNotExist_Throws404()
+    {
+        Directory.Setup(d => d.FindAccountAsync(99999, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AccountInfo?)null);
+        await Err(() => Sut().BlockAsync(BReq(userId: 99999), Staff), 404, "does not exist");
+        Assert.Equal(0, Db.SaveCalls);
+    }
+
+    [Fact] // A - inactive accounts cannot be blocked
+    public async Task UTCID41_Block_UserInactive_Throws409()
+    {
+        Directory.Setup(d => d.FindAccountAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AccountInfo(7, false, new[] { "Customer" }));
+        await Err(() => Sut().BlockAsync(BReq(), Staff), 409, "not an active account");
+        Assert.Equal(0, Db.SaveCalls);
+    }
+
+    [Fact] // A - Admin/Staff accounts are out of scope for the fraud console
+    public async Task UTCID42_Block_TargetIsStaffAccount_Throws403()
+    {
+        Directory.Setup(d => d.FindAccountAsync(7, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AccountInfo(7, true, new[] { "Staff" }));
+        await Err(() => Sut().BlockAsync(BReq(), Staff), 403, "cannot be blocked from the fraud console");
+        Assert.Equal(0, Db.SaveCalls);
+    }
+
+    [Fact] // A - a TICKET block must target a ticket the named user actually owns
+    public async Task UTCID43_Block_TicketOwnedByAnotherUser_Throws400()
+    {
+        TicketApi.Setup(t => t.FindTicketAsync(100, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TicketInfo(100, 999, 1, "Active", null));
+        await Err(() => Sut().BlockAsync(BReq("TICKET"), Staff), 400, "belongs to user #999");
+        Assert.Equal(0, Db.SaveCalls);
+    }
+
+    [Fact] // A - unknown ticket ids are rejected instead of blocking nothing
+    public async Task UTCID44_Block_TicketDoesNotExist_Throws404()
+    {
+        TicketApi.Setup(t => t.FindTicketAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((TicketInfo?)null);
+        await Err(() => Sut().BlockAsync(BReq("TICKET"), Staff), 404, "does not exist");
+        Assert.Equal(0, Db.SaveCalls);
+    }
+
+    [Fact] // A - an already used ticket cannot be blocked
+    public async Task UTCID45_Block_TicketAlreadyCheckedIn_Throws409()
+    {
+        TicketApi.Setup(t => t.FindTicketAsync(100, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TicketInfo(100, 7, 1, "Active", DateTime.UtcNow.AddHours(-2)));
+        await Err(() => Sut().BlockAsync(BReq("TICKET"), Staff), 409, "already been checked in");
+        Assert.Equal(0, Db.SaveCalls);
+    }
+
+    [Fact] // A - one user may not accumulate blocks on every scope at once
+    public async Task UTCID46_Block_UserAlreadyBlockedOnTwoScopes_Throws409()
+    {
+        Decision(20, scope: "ACCOUNT", userId: 7);
+        Decision(21, scope: "DEVICE", userId: 7, device: "fp_blocked");
+        await Err(() => Sut().BlockAsync(BReq("IP", ip: "203.0.113.5"), Staff), 409,
+            "already has 2 active block scopes");
+        Assert.Equal(0, Db.SaveCalls);
+    }
+
+    [Fact] // N - a second scope is still allowed while below the limit
+    public async Task UTCID47_Block_UserBlockedOnOneScope_SecondScopeIsAllowed()
+    {
+        Decision(20, scope: "ACCOUNT", userId: 7);
+        var r = await Sut().BlockAsync(BReq("TICKET"), Staff);
+        Assert.Equal("TICKET", r.Scope);
+        Assert.Equal(1, Db.SaveCalls);
+    }
+
+    [Fact] // N - IP blocks are a supported manual scope
+    public async Task UTCID02b_Block_Ip_ValidRequest_CreatesActiveIpBlock()
+    {
+        var r = await Sut().BlockAsync(BReq("IP", ip: "203.0.113.9"), Staff);
+        var d = Db.RiskDecisions.Single(x => x.RiskDecisionId == r.RiskDecisionId);
+        Assert.Equal("IP", d.Scope);
+        Assert.Equal("203.0.113.9", d.IpAddress!.ToString());
+        Assert.Equal(1, Db.SaveCalls);
+        Assert.Single(Db.RiskNotifications.ToList());
+    }
+
+    [Fact] // A - an IP block must still name the owner so they can be notified and appeal
+    public async Task UTCID02c_Block_IpWithoutOwnerUserId_Throws400()
+    {
+        await Err(() => Sut().BlockAsync(BReq("IP", userId: null, ip: "203.0.113.9"), Staff), 400, "Blocking a ticket or an IP requires");
+        Assert.Equal(0, Db.SaveCalls);
+    }
+
+    [Fact] // A - an IP block without an address has no target
+    public async Task UTCID02d_Block_IpWithoutAddress_Throws400()
+    {
+        await Err(() => Sut().BlockAsync(BReq("IP", ip: null), Staff), 400, "Scope IP requires");
+        Assert.Equal(0, Db.SaveCalls);
+    }
+
     [Fact] // N
     public async Task UTCID03_Block_ScopeLowerCaseWithSpaces_IsNormalised()
     {
@@ -356,7 +474,7 @@ public class FraudAlertServiceTests : DbTestBase
     [Fact] // A
     public async Task UTCID16_Block_TicketWithoutOwnerUserId_Throws400()
     {
-        await Err(() => Sut().BlockAsync(BReq("TICKET", userId: null), Staff), 400, "Blocking a ticket requires");
+        await Err(() => Sut().BlockAsync(BReq("TICKET", userId: null), Staff), 400, "Blocking a ticket or an IP requires");
         Assert.Equal(0, Db.SaveCalls);
     }
 

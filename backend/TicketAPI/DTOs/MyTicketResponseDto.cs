@@ -19,5 +19,11 @@
         public DateTime? OrderDate { get; set; }
         public string? OrderStatus { get; set; }
         public long? UnitPrice { get; set; }
+        public string? GateName { get; set; }
+        public string? GateId { get; set; }
+        public string? CheckedInGate { get; set; }
+        public List<string> PermittedGates { get; set; } = new List<string>();
+        public bool HasOwner { get; set; }
+        public bool HasQrToken { get; set; }
     }
 }

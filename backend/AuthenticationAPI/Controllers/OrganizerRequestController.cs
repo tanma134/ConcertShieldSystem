@@ -1,4 +1,6 @@
-﻿using System.Security.Claims;
+using System;
+using System.Security.Claims;
+using System.Threading.Tasks;
 using AuthenticationAPI.DTOs;
 using AuthenticationAPI.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -18,14 +20,27 @@ namespace AuthenticationAPI.Controllers
             _service = service;
         }
 
-        private int CurrentUserId =>
-            int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        private int CurrentUserId
+        {
+            get
+            {
+                var raw = User.FindFirstValue(ClaimTypes.NameIdentifier) 
+                    ?? User.FindFirst("userId")?.Value 
+                    ?? User.FindFirst("sub")?.Value;
+                return int.TryParse(raw, out var id) ? id : 0;
+            }
+        }
 
         [HttpPost]
-        public async Task<IActionResult> CreateRequest([FromBody] CreateOrganizerRequestDTO dto)
+        public async Task<IActionResult> CreateRequest([FromForm] CreateOrganizerRequestDTO dto)
         {
             try
             {
+                if (CurrentUserId <= 0)
+                {
+                    return Unauthorized(new { message = "Invalid user session. Please log in again." });
+                }
+
                 var result = await _service.CreateRequestAsync(CurrentUserId, dto);
                 return CreatedAtAction(nameof(GetById), new { requestId = result.RequestId }, result);
             }
@@ -37,13 +52,120 @@ namespace AuthenticationAPI.Controllers
             {
                 return Conflict(new { message = ex.Message });
             }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
         }
 
         [HttpGet("me")]
         public async Task<IActionResult> GetMyRequests()
         {
+            if (CurrentUserId <= 0)
+            {
+                return Unauthorized(new { message = "Invalid user session. Please log in again." });
+            }
             var result = await _service.GetMyRequestsAsync(CurrentUserId);
             return Ok(result);
+        }
+
+        [HttpGet("notifications")]
+        public async Task<IActionResult> GetNotifications()
+        {
+            if (CurrentUserId <= 0)
+            {
+                return Unauthorized(new { message = "Invalid user session. Please log in again." });
+            }
+
+            var items = new List<object>();
+            try
+            {
+                using var conn = new Npgsql.NpgsqlConnection("Host=localhost;Port=5432;Database=notification_db;Username=postgres;Password=123456");
+                await conn.OpenAsync();
+                using var cmd = new Npgsql.NpgsqlCommand(
+                    "SELECT notification_id, user_id, title, message, category, target_url, is_read, created_at FROM notifications WHERE (user_id = @uid OR user_id = 0) AND is_deleted = false ORDER BY created_at DESC LIMIT 50;", conn);
+                cmd.Parameters.AddWithValue("uid", CurrentUserId);
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    items.Add(new
+                    {
+                        notificationId = reader.GetInt32(0),
+                        userId = reader.GetInt32(1),
+                        title = reader.GetString(2),
+                        message = reader.GetString(3),
+                        category = reader.IsDBNull(4) ? "event_new" : reader.GetString(4),
+                        targetUrl = reader.IsDBNull(5) ? null : reader.GetString(5),
+                        isRead = reader.GetBoolean(6),
+                        createdAt = reader.GetDateTime(7)
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching notifications from DB: {ex.Message}");
+            }
+
+            return Ok(new
+            {
+                items,
+                unreadCount = items.Count(x => !((dynamic)x).isRead)
+            });
+        }
+
+        [HttpPut("notifications/read-all")]
+        public async Task<IActionResult> MarkAllNotificationsRead()
+        {
+            if (CurrentUserId <= 0)
+            {
+                return Unauthorized(new { message = "Invalid user session. Please log in again." });
+            }
+
+            try
+            {
+                using var conn = new Npgsql.NpgsqlConnection("Host=localhost;Port=5432;Database=notification_db;Username=postgres;Password=123456");
+                await conn.OpenAsync();
+                using var cmd = new Npgsql.NpgsqlCommand(
+                    "UPDATE notifications SET is_read = true, read_at = NOW() WHERE (user_id = @uid OR user_id = 0) AND is_read = false AND is_deleted = false;", conn);
+                cmd.Parameters.AddWithValue("uid", CurrentUserId);
+                var rowsAffected = await cmd.ExecuteNonQueryAsync();
+                return Ok(new { success = true, unreadCount = 0, rowsAffected });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error marking all notifications read: {ex.Message}");
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
+        [HttpPut("notifications/{id:int}/read")]
+        public async Task<IActionResult> MarkNotificationRead(int id)
+        {
+            if (CurrentUserId <= 0)
+            {
+                return Unauthorized(new { message = "Invalid user session. Please log in again." });
+            }
+
+            try
+            {
+                using var conn = new Npgsql.NpgsqlConnection("Host=localhost;Port=5432;Database=notification_db;Username=postgres;Password=123456");
+                await conn.OpenAsync();
+                using var cmd = new Npgsql.NpgsqlCommand(
+                    "UPDATE notifications SET is_read = true, read_at = NOW() WHERE notification_id = @nid AND (user_id = @uid OR user_id = 0);", conn);
+                cmd.Parameters.AddWithValue("nid", id);
+                cmd.Parameters.AddWithValue("uid", CurrentUserId);
+                await cmd.ExecuteNonQueryAsync();
+                return Ok(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error marking notification read: {ex.Message}");
+                return StatusCode(500, new { message = ex.Message });
+            }
         }
 
         [HttpGet("{requestId:int}")]
@@ -61,14 +183,25 @@ namespace AuthenticationAPI.Controllers
             {
                 return NotFound(new { message = ex.Message });
             }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
         }
 
         [HttpGet]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAll([FromQuery] string? status)
         {
-            var result = await _service.GetAllRequestsAsync(status);
-            return Ok(result);
+            try
+            {
+                var result = await _service.GetAllRequestsAsync(status);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
         }
 
         [HttpPut("{requestId:int}/review")]
@@ -91,6 +224,10 @@ namespace AuthenticationAPI.Controllers
             catch (ArgumentException ex)
             {
                 return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
             }
         }
     }

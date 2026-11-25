@@ -1,7 +1,7 @@
 using System.Text.Json;
 using AuthenticationAPI.DTOs;
 using AuthenticationAPI.Models;
-using Microsoft.EntityFrameworkCore;
+using AuthenticationAPI.Repositories;
 
 namespace AuthenticationAPI.Services
 {
@@ -9,20 +9,23 @@ namespace AuthenticationAPI.Services
     {
         private static readonly JsonSerializerOptions ReadOptions = new() { PropertyNameCaseInsensitive = true };
 
-        private readonly AuthenticationDbContext _db;
+        private readonly IKycConsentRepository _repository;
         private readonly IKycSettingService _settings;
         private readonly IConfiguration _config;
+        private readonly IKycAccessLogService _accessLog;
 
-        public KycConsentService(AuthenticationDbContext db, IKycSettingService settings, IConfiguration config)
+        public KycConsentService(IKycConsentRepository repository, IKycSettingService settings,
+            IConfiguration config, IKycAccessLogService accessLog)
         {
-            _db = db;
+            _repository = repository;
             _settings = settings;
             _config = config;
+            _accessLog = accessLog;
         }
 
         public async Task<KycConsentPublicDto> GetActiveAsync()
         {
-            var active = await _db.KycConsentVersions.AsNoTracking().FirstOrDefaultAsync(x => x.IsActive)
+            var active = await _repository.GetActiveAsync()
                 ?? throw new InvalidOperationException("No active eKYC consent version is configured");
 
             var days = (await _settings.GetAsync()).RetentionDays.ToString();
@@ -45,31 +48,23 @@ namespace AuthenticationAPI.Services
 
         public async Task<string> GetActiveVersionAsync()
         {
-            return await _db.KycConsentVersions.AsNoTracking()
-                       .Where(x => x.IsActive).Select(x => x.Version).FirstOrDefaultAsync()
+            return await _repository.GetActiveVersionAsync()
                    ?? throw new InvalidOperationException("No active eKYC consent version is configured");
         }
 
         public async Task<List<KycConsentVersionDto>> ListAsync()
         {
-            var counts = await _db.EkycVerifications.AsNoTracking()
-                .Where(e => e.ConsentVersion != null)
-                .GroupBy(e => e.ConsentVersion!)
-                .Select(g => new { Version = g.Key, Count = g.Count() })
-                .ToDictionaryAsync(x => x.Version, x => x.Count);
-
-            var rows = await _db.KycConsentVersions.AsNoTracking()
-                .OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id)
-                .ToListAsync();
+            var counts = await _repository.GetConsentCountsAsync();
+            var rows = await _repository.GetAllAsync();
 
             return rows.Select(r => Map(r, counts.GetValueOrDefault(r.Version))).ToList();
         }
 
         public async Task<KycConsentVersionDto> GetAsync(int id)
         {
-            var row = await _db.KycConsentVersions.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id)
+            var row = await _repository.GetByIdAsync(id)
                 ?? throw new KeyNotFoundException("Consent version not found");
-            var count = await _db.EkycVerifications.CountAsync(e => e.ConsentVersion == row.Version);
+            var count = await _repository.CountConsentsAsync(row.Version);
             return Map(row, count);
         }
 
@@ -96,7 +91,7 @@ namespace AuthenticationAPI.Services
             if (!dto.Items.Any(i => (i.Content ?? "").Contains("{retentionDays}", StringComparison.Ordinal)))
                 throw new InvalidOperationException("The retention period must be stated: use the {retentionDays} placeholder in one section");
 
-            if (await _db.KycConsentVersions.AnyAsync(x => x.Version == version))
+            if (await _repository.VersionExistsAsync(version))
                 throw new InvalidOperationException($"Version '{version}' already exists");
 
             var items = dto.Items.Select(i => new ConsentItemDto
@@ -115,43 +110,61 @@ namespace AuthenticationAPI.Services
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = adminId
             };
-            _db.KycConsentVersions.Add(entity);
-            await _db.SaveChangesAsync();
+            await _repository.AddAsync(entity);
 
             if (dto.Activate)
-                await ActivateAsync(entity.Id);
+                await ActivateAsync(entity.Id, adminId);
 
             return await GetAsync(entity.Id);
         }
 
-        public async Task ActivateAsync(int id)
+        public async Task ActivateAsync(int id, int? adminId = null)
         {
-            var entity = await _db.KycConsentVersions.FirstOrDefaultAsync(x => x.Id == id)
+            var entity = await _repository.GetByIdForUpdateAsync(id)
                 ?? throw new KeyNotFoundException("Consent version not found");
             if (entity.IsActive)
                 return;
 
-            await using var tx = await _db.Database.BeginTransactionAsync();
-            // T?t b?n c? trý?c, r?i b?t b?n m?i (index unique m?t-b?n-active ? DB không b? vi ph?m)
-            await _db.KycConsentVersions.Where(x => x.IsActive)
-                .ExecuteUpdateAsync(s => s.SetProperty(x => x.IsActive, false));
+            await using var tx = await _repository.BeginTransactionAsync();
+            // Turn the old version off first, then the new one on (the unique 'one active version' index is never violated)
+            await _repository.DeactivateAllAsync();
             entity.IsActive = true;
-            await _db.SaveChangesAsync();
+            await _repository.SaveChangesAsync();
+            await RecordConfigChangeAsync(entity, adminId, "CONSENT_VERSION_ACTIVATED");
             await tx.CommitAsync();
         }
 
-        public async Task DeleteAsync(int id)
+        public async Task DeleteAsync(int id, int? adminId = null)
         {
-            var entity = await _db.KycConsentVersions.FirstOrDefaultAsync(x => x.Id == id)
+            var entity = await _repository.GetByIdForUpdateAsync(id)
                 ?? throw new KeyNotFoundException("Consent version not found");
 
             if (entity.IsActive)
                 throw new InvalidOperationException("Cannot delete the active version");
-            if (await _db.EkycVerifications.AnyAsync(e => e.ConsentVersion == entity.Version))
+            if (await _repository.HasConsentsAsync(entity.Version))
                 throw new InvalidOperationException("Cannot delete a version that users have already consented to");
 
-            _db.KycConsentVersions.Remove(entity);
-            await _db.SaveChangesAsync();
+            var version = entity.Version;
+            await _repository.DeleteAsync(entity);
+
+            // Deleting a consent version is a configuration change; keep evidence of it.
+            await SafeLogAsync(adminId, $"purpose=consent_config; action=CONSENT_VERSION_DELETED; version={version}; id={id}");
+        }
+
+        private Task RecordConfigChangeAsync(KycConsentVersion entity, int? adminId, string action) =>
+            SafeLogAsync(adminId, $"purpose=consent_config; action={action}; version={entity.Version}; id={entity.Id}");
+
+        /// <summary>Audit trail for consent configuration. Never blocks the change itself.</summary>
+        private async Task SafeLogAsync(int? adminId, string details)
+        {
+            try
+            {
+                await _accessLog.LogAsync(0, null, adminId, KycActorTypes.Admin, "CONSENT_CONFIG", null, details);
+            }
+            catch
+            {
+                // Logging failure must not roll back an administrative decision.
+            }
         }
 
         private static List<ConsentItemDto> ParseItems(string json)

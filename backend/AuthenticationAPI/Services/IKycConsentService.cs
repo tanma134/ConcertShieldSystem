@@ -11,8 +11,8 @@ namespace AuthenticationAPI.Services
         Task<List<KycConsentVersionDto>> ListAsync();
         Task<KycConsentVersionDto> GetAsync(int id);
         Task<KycConsentVersionDto> CreateAsync(CreateKycConsentVersionDto dto, int? adminId);
-        Task ActivateAsync(int id);
-        Task DeleteAsync(int id);
+        Task ActivateAsync(int id, int? adminId = null);
+        Task DeleteAsync(int id, int? adminId = null);
     }
 
 }

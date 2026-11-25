@@ -1,6 +1,84 @@
 {
     "Routes": [
         {
+            "Key": "event-gates-collection",
+            "DownstreamPathTemplate": "/api/events/{eventId}/gates",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7289
+                }
+            ],
+            "UpstreamPathTemplate": "/api/events/{eventId}/gates",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "event-gates-item",
+            "DownstreamPathTemplate": "/api/events/{eventId}/gates/{gateId}",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7289
+                }
+            ],
+            "UpstreamPathTemplate": "/api/events/{eventId}/gates/{gateId}",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Put",
+                "Delete"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "organizer-staff-collection",
+            "DownstreamPathTemplate": "/api/organizer/staff",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7058
+                }
+            ],
+            "UpstreamPathTemplate": "/api/organizer/staff",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "organizer-staff-item",
+            "DownstreamPathTemplate": "/api/organizer/staff/{staffUserId}",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7058
+                }
+            ],
+            "UpstreamPathTemplate": "/api/organizer/staff/{staffUserId}",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Put",
+                "Delete"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
             "Key": "organizer-event-orders-list",
             "DownstreamPathTemplate": "/api/organizer/events/{eventId}/orders",
             "DownstreamScheme": "https",
@@ -29,6 +107,24 @@
                 }
             ],
             "UpstreamPathTemplate": "/api/admin/failed-transaction-queue",
+            "UpstreamHttpMethod": [
+                "Get"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "ticket-issuance-recovery-queue",
+            "DownstreamPathTemplate": "/api/admin/ticket-issuance-recovery-queue",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7227
+                }
+            ],
+            "UpstreamPathTemplate": "/api/admin/ticket-issuance-recovery-queue",
             "UpstreamHttpMethod": [
                 "Get"
             ],
@@ -1484,6 +1580,24 @@
             "UpstreamHttpMethod": [
                 "Get",
                 "Post"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "organizer-request-notifications",
+            "DownstreamPathTemplate": "/api/organizer-requests/notifications",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7058
+                }
+            ],
+            "UpstreamPathTemplate": "/api/organizer-requests/notifications",
+            "UpstreamHttpMethod": [
+                "Get"
             ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"
@@ -4656,6 +4770,24 @@
             }
         },
         {
+            "Key": "event-staff-shift",
+            "DownstreamPathTemplate": "/api/events/{id}/staff/{staffUserId}/shift",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7289
+                }
+            ],
+            "UpstreamPathTemplate": "/api/events/{id}/staff/{staffUserId}/shift",
+            "UpstreamHttpMethod": [
+                "Put"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
             "Key": "vnpay-reconcile",
             "DownstreamPathTemplate": "/api/VnPay/reconcile/{orderId}",
             "DownstreamScheme": "https",
@@ -4900,6 +5032,38 @@
             }
         },
         {
+            "Key": "public-policies-active",
+            "DownstreamPathTemplate": "/api/admin/policies/active",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7076
+                }
+            ],
+            "UpstreamPathTemplate": "/api/admin/policies/active",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Options"
+            ]
+        },
+        {
+            "Key": "public-policies-pricing-terms",
+            "DownstreamPathTemplate": "/api/admin/policies/pricing-terms",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7076
+                }
+            ],
+            "UpstreamPathTemplate": "/api/admin/policies/pricing-terms",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Options"
+            ]
+        },
+        {
             "Key": "admin-policies-all",
             "DownstreamPathTemplate": "/api/admin/policies/{everything}",
             "DownstreamScheme": "https",
@@ -4932,94 +5096,6 @@
                 }
             ],
             "UpstreamPathTemplate": "/api/admin/policies",
-            "UpstreamHttpMethod": [
-                "Get",
-                "Post",
-                "Put",
-                "Delete",
-                "Options"
-            ],
-            "AuthenticationOptions": {
-                "AuthenticationProviderKey": "Bearer"
-            }
-        },
-        {
-            "Key": "organizer-verification-all",
-            "DownstreamPathTemplate": "/api/organizer/verification/{everything}",
-            "DownstreamScheme": "https",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "localhost",
-                    "Port": 7058
-                }
-            ],
-            "UpstreamPathTemplate": "/api/organizer/verification/{everything}",
-            "UpstreamHttpMethod": [
-                "Get",
-                "Post",
-                "Put",
-                "Delete",
-                "Options"
-            ],
-            "AuthenticationOptions": {
-                "AuthenticationProviderKey": "Bearer"
-            }
-        },
-        {
-            "Key": "organizer-verification-root",
-            "DownstreamPathTemplate": "/api/organizer/verification",
-            "DownstreamScheme": "https",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "localhost",
-                    "Port": 7058
-                }
-            ],
-            "UpstreamPathTemplate": "/api/organizer/verification",
-            "UpstreamHttpMethod": [
-                "Get",
-                "Post",
-                "Put",
-                "Delete",
-                "Options"
-            ],
-            "AuthenticationOptions": {
-                "AuthenticationProviderKey": "Bearer"
-            }
-        },
-        {
-            "Key": "admin-verification-all",
-            "DownstreamPathTemplate": "/api/admin/verification/{everything}",
-            "DownstreamScheme": "https",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "localhost",
-                    "Port": 7058
-                }
-            ],
-            "UpstreamPathTemplate": "/api/admin/verification/{everything}",
-            "UpstreamHttpMethod": [
-                "Get",
-                "Post",
-                "Put",
-                "Delete",
-                "Options"
-            ],
-            "AuthenticationOptions": {
-                "AuthenticationProviderKey": "Bearer"
-            }
-        },
-        {
-            "Key": "admin-verification-root",
-            "DownstreamPathTemplate": "/api/admin/verification",
-            "DownstreamScheme": "https",
-            "DownstreamHostAndPorts": [
-                {
-                    "Host": "localhost",
-                    "Port": 7058
-                }
-            ],
-            "UpstreamPathTemplate": "/api/admin/verification",
             "UpstreamHttpMethod": [
                 "Get",
                 "Post",
@@ -5131,16 +5207,16 @@
             }
         },
         {
-            "Key": "checkinops-governance-all",
-            "DownstreamPathTemplate": "/api/checkin/governance/{everything}",
+            "Key": "ticket-governance-all",
+            "DownstreamPathTemplate": "/api/tickets/governance/{everything}",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7330
+                    "Port": 7268
                 }
             ],
-            "UpstreamPathTemplate": "/api/checkin/governance/{everything}",
+            "UpstreamPathTemplate": "/api/tickets/governance/{everything}",
             "UpstreamHttpMethod": [
                 "Get",
                 "Post",

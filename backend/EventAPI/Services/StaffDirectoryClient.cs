@@ -19,9 +19,13 @@ namespace EventAPI.Services
         }
 
         // Staff accounts whose name or email contains the text (empty text lists the first page).
-        public Task<List<StaffDirectoryEntry>> SearchAsync(string? query, string? bearerToken, CancellationToken ct = default)
+        public Task<List<StaffDirectoryEntry>> SearchAsync(string? query, string? bearerToken, int? organizerId = null, CancellationToken ct = default)
         {
             var url = "api/users/staff?q=" + Uri.EscapeDataString(query ?? string.Empty);
+            if (organizerId.HasValue && organizerId.Value > 0)
+            {
+                url += "&organizerId=" + organizerId.Value;
+            }
             return FetchAsync(url, bearerToken, ct);
         }
 

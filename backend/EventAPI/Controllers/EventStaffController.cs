@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EventAPI.Controllers
 {
-    // UC_14.3 / UC_14.4: staff assigned to one concert. Organizer of the concert (or Admin) only.
+    // Quan ly nhan vien ho tro va phan cong soat ve tai concert danh cho Organizer va Admin
     [Route("api/events/{eventId:int}/staff")]
     [Authorize(Policy = "RequireOrganizer")]
     public class EventStaffController : BaseApiController
@@ -17,19 +17,20 @@ namespace EventAPI.Controllers
             _service = service;
         }
 
-        // UC_14.3: GET api/events/{eventId}/staff
+        // Lay danh sach nhan vien duoc phan cong lam viec tai su kien
         [HttpGet]
         public async Task<ActionResult> GetStaff(int eventId)
         {
             try
             {
+                // Luu y: Kiem tra quyen Organizer hoac Admin truoc khi lay danh sach nhan vien
                 var result = await _service.ListAsync(eventId, CurrentUserId, IsAdmin, BearerToken);
                 return Ok(ApiResponseDTO<List<EventStaffDTO>>.SuccessResponse(result));
             }
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        // UC_14.4: GET api/events/{eventId}/staff/candidates?q=an
+        // Tim kiem nhan vien ung vien tu danh ba he thong de phan cong vao su kien
         [HttpGet("candidates")]
         public async Task<ActionResult> GetCandidates(int eventId, [FromQuery] string? q)
         {
@@ -41,14 +42,39 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
-        // UC_14.4: POST api/events/{eventId}/staff   { "staffUserId": 12 }
+        // UC_14.4: POST api/events/{eventId}/staff   { "staffUserId": 12, "gateName": "Gate A", "shiftStartTime": "08:00", "shiftEndTime": "17:00" }
         [HttpPost]
         public async Task<ActionResult> Assign(int eventId, [FromBody] AssignStaffDTO dto)
         {
             try
             {
-                var result = await _service.AssignAsync(eventId, dto.StaffUserId, dto.GateName, CurrentUserId, IsAdmin, BearerToken, dto.CanReviewReturns);
+                var result = await _service.AssignAsync(
+                    eventId,
+                    dto.StaffUserId,
+                    dto.GateName,
+                    CurrentUserId,
+                    IsAdmin,
+                    BearerToken,
+                    dto.CanReviewReturns,
+                    dto.ShiftStartTime,
+                    dto.ShiftEndTime,
+                    dto.ShiftDate,
+                    dto.CanManageIncidents,
+                    dto.CanManageSupportCases,
+                    dto.CanCheckin);
                 return Ok(ApiResponseDTO<EventStaffDTO>.SuccessResponse(result, "Staff member assigned."));
+            }
+            catch (Exception ex) { return HandleException(ex); }
+        }
+
+        // PUT api/events/{eventId}/staff/{staffUserId}/shift   { "gateName": "Gate A", "shiftStartTime": "08:00", "shiftEndTime": "17:00" }
+        [HttpPut("{staffUserId:int}/shift")]
+        public async Task<ActionResult> UpdateShift(int eventId, int staffUserId, [FromBody] UpdateStaffShiftDTO dto)
+        {
+            try
+            {
+                var result = await _service.UpdateShiftAsync(eventId, staffUserId, dto.GateName, dto.ShiftStartTime, dto.ShiftEndTime, CurrentUserId, IsAdmin, BearerToken, dto.ShiftDate);
+                return Ok(ApiResponseDTO<EventStaffDTO>.SuccessResponse(result, "Staff shift assignment updated."));
             }
             catch (Exception ex) { return HandleException(ex); }
         }
@@ -65,12 +91,37 @@ namespace EventAPI.Controllers
             catch (Exception ex) { return HandleException(ex); }
         }
 
+        // PUT api/events/{eventId}/staff/{staffUserId}/duties   { "canReviewReturns": true, "canManageIncidents": true, "canManageSupportCases": false }
+        [HttpPut("{staffUserId:int}/duties")]
+        public async Task<ActionResult> UpdateDuties(int eventId, int staffUserId, [FromBody] UpdateStaffDutiesDTO dto)
+        {
+            try
+            {
+                var result = await _service.UpdateDutiesAsync(eventId, staffUserId, dto, CurrentUserId, IsAdmin, BearerToken);
+                return Ok(ApiResponseDTO<EventStaffDTO>.SuccessResponse(result, "Staff duties updated."));
+            }
+            catch (Exception ex) { return HandleException(ex); }
+        }
+
+        // PUT api/events/{eventId}/staff/{staffUserId}/duty/{dutyType}?enabled=true
+        [HttpPut("{staffUserId:int}/duty/{dutyType}")]
+        public async Task<ActionResult> SetDuty(int eventId, int staffUserId, string dutyType, [FromQuery] bool enabled = true)
+        {
+            try
+            {
+                var result = await _service.SetDutyAsync(eventId, staffUserId, dutyType, enabled, CurrentUserId, IsAdmin, BearerToken);
+                return Ok(ApiResponseDTO<EventStaffDTO>.SuccessResponse(result, $"Staff duty '{dutyType}' updated."));
+            }
+            catch (Exception ex) { return HandleException(ex); }
+        }
+
         // UC_14.4: DELETE api/events/{eventId}/staff/{staffUserId}
         [HttpDelete("{staffUserId:int}")]
         public async Task<ActionResult> Unassign(int eventId, int staffUserId)
         {
             try
             {
+                // Luu y: Xoa quyen soat ve va truy cap cua nhan vien vao su kien nay
                 await _service.UnassignAsync(eventId, staffUserId, CurrentUserId, IsAdmin);
                 return Ok(ApiResponseDTO<object>.SuccessResponse(new { eventId, staffUserId }, "Staff member removed."));
             }

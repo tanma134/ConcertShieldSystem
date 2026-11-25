@@ -115,7 +115,7 @@ function renderStageVisual(stageType, pw, ph, stageWidthM, stageHeightM, stageNa
 
         {/* Nhãn Main Stage */}
         <Text
-          text={`🎤 ${title}\n(MAIN STAGE)`}
+          text={`${title}\n(MAIN STAGE)`}
           x={0}
           y={0}
           width={pw}
@@ -207,7 +207,7 @@ function renderStageVisual(stageType, pw, ph, stageWidthM, stageHeightM, stageNa
           strokeWidth={1.5}
         />
         <Text
-          text={`🎤 ${title}\n(${stageWidthM}m × ${stageHeightM}m)`}
+          text={`${title}\n(${stageWidthM}m × ${stageHeightM}m)`}
           x={mainX}
           y={0}
           width={mainW}
@@ -240,7 +240,7 @@ function renderStageVisual(stageType, pw, ph, stageWidthM, stageHeightM, stageNa
           strokeWidth={selected ? 2.5 : 1.4}
         />
         <Text
-          text={`🌐 ${title}\n(360° CENTER STAGE)\n${stageWidthM}m × ${stageHeightM}m`}
+          text={`${title}\n(360° CENTER STAGE)\n${stageWidthM}m × ${stageHeightM}m`}
           width={pw}
           height={ph}
           align="center"
@@ -273,7 +273,7 @@ function renderStageVisual(stageType, pw, ph, stageWidthM, stageHeightM, stageNa
         shadowOffset={{ x: 0, y: 3 }}
       />
       <Text
-        text={`🎤 ${title}\n(${stageWidthM} m × ${stageHeightM} m)`}
+        text={`${title}\n(${stageWidthM} m × ${stageHeightM} m)`}
         width={pw}
         height={ph}
         align="center"
@@ -453,7 +453,7 @@ function FohItem({ shape, stageWidth, stageHeight, readOnly, selected, onSelect,
           shadowOffset={{ x: 0, y: 2 }}
         />
         <Text
-          text={`🎛️ F O H\n(Sound & Light)\n${fohWidthM} m × ${fohHeightM} m`}
+          text={`F O H\n(Sound & Light)\n${fohWidthM} m × ${fohHeightM} m`}
           width={pw}
           height={ph}
           align="center"
@@ -770,7 +770,7 @@ export default function ZoneMapCanvas({
     setStageShape(next);
     try {
       localStorage.setItem("concertshield_venue_stage", JSON.stringify(next));
-    } catch {}
+    } catch { }
     if (onLayoutChange) {
       const curr = parsedLayout || {};
       onLayoutChange({
@@ -785,7 +785,7 @@ export default function ZoneMapCanvas({
     setFohShape(next);
     try {
       localStorage.setItem("concertshield_venue_foh", JSON.stringify(next));
-    } catch {}
+    } catch { }
     if (onLayoutChange) {
       const curr = parsedLayout || {};
       onLayoutChange({
@@ -925,7 +925,7 @@ export default function ZoneMapCanvas({
   return (
     <div className="ow-zonemap-wrap">
       <div className="ow-zonemap-scale-bar">
-        <span className="ow-scale-badge">📏 Scale convention:</span>
+        <span className="ow-scale-badge">Scale convention:</span>
         <span className="ow-scale-desc">
           1 px = 0.1 m · venue 160 m × 100 m · positions are saved as %
         </span>
@@ -940,7 +940,7 @@ export default function ZoneMapCanvas({
               }}
               title="Select STAGE to drag or resize"
             >
-              🎤 STAGE
+              STAGE
             </button>
             <button
               type="button"
@@ -951,7 +951,7 @@ export default function ZoneMapCanvas({
               }}
               title="Select FOH (Front of House) console booth to drag or resize"
             >
-              🎛️ FOH
+              FOH
             </button>
             <button
               type="button"
@@ -962,7 +962,7 @@ export default function ZoneMapCanvas({
               }}
               title="Reset STAGE and FOH to default positions"
             >
-              ↺ Reset
+              Reset
             </button>
           </div>
         )}
@@ -971,34 +971,34 @@ export default function ZoneMapCanvas({
       {!readOnly && selectedSpecial === "stage" && (
         <div className="ow-zonemap-shape-tools" style={{ background: "#faf5ff", borderColor: "#d8b4fe", flexDirection: "column", alignItems: "stretch", gap: "8px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", width: "100%" }}>
-            <span className="ow-shape-label" style={{ color: "#7e22ce" }}>🎤 Stage Style:</span>
+            <span className="ow-shape-label" style={{ color: "#7e22ce" }}>Stage Style:</span>
             <button
               type="button"
               className={"ow-shape-pill" + (!stageShape.stageType || stageShape.stageType === "standard" ? " active" : "")}
               onClick={() => handleStageChange({ ...stageShape, stageType: "standard" })}
             >
-              ▭ Standard Box
+              Standard Box
             </button>
             <button
               type="button"
               className={"ow-shape-pill" + (stageShape.stageType === "t-stage" ? " active" : "")}
               onClick={() => handleStageChange({ ...stageShape, stageType: "t-stage", h: Math.max(stageShape.h, 24) })}
             >
-              🔲 T-Stage (Runway + Catwalk)
+              T-Stage (Runway + Catwalk)
             </button>
             <button
               type="button"
               className={"ow-shape-pill" + (stageShape.stageType === "wings" ? " active" : "")}
               onClick={() => handleStageChange({ ...stageShape, stageType: "wings", h: Math.max(stageShape.h, 20) })}
             >
-              👐 U-Stage (Extended Wings)
+              U-Stage (Extended Wings)
             </button>
             <button
               type="button"
               className={"ow-shape-pill" + (stageShape.stageType === "center" ? " active" : "")}
               onClick={() => handleStageChange({ ...stageShape, stageType: "center" })}
             >
-              🌐 360° Arena Center
+              360° Arena Center
             </button>
             <button
               type="button"
@@ -1006,12 +1006,12 @@ export default function ZoneMapCanvas({
               style={{ marginLeft: "auto" }}
               onClick={() => handleStageChange(defaultStage)}
             >
-              ↺ Center Stage
+              Center Stage
             </button>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "10px", width: "100%", fontSize: "12px" }}>
             <span className="ow-hint" style={{ color: "#581c87" }}>
-              💡 Drag to move anywhere. Drag handles to resize runway depth or stage width. Non-ticketing landmark.
+              Drag to move anywhere. Drag handles to resize runway depth or stage width. Non-ticketing landmark.
             </span>
           </div>
         </div>
@@ -1019,7 +1019,7 @@ export default function ZoneMapCanvas({
 
       {!readOnly && selectedSpecial === "foh" && (
         <div className="ow-zonemap-shape-tools" style={{ background: "#f8fafc", borderColor: "#94a3b8" }}>
-          <span className="ow-shape-label" style={{ color: "#0f172a" }}>🎛️ FOH (Front of House):</span>
+          <span className="ow-shape-label" style={{ color: "#0f172a" }}>FOH (Front of House):</span>
           <span className="ow-hint" style={{ color: "#334155" }}>
             Sound & lighting technical booth. Click & drag to place between audience zones, or resize.
           </span>
@@ -1029,7 +1029,7 @@ export default function ZoneMapCanvas({
             style={{ marginLeft: "auto" }}
             onClick={() => handleFohChange(defaultFoh)}
           >
-            ↺ Center FOH
+            Center FOH
           </button>
         </div>
       )}
@@ -1039,7 +1039,7 @@ export default function ZoneMapCanvas({
           <span className="ow-shape-label">Zone shape:</span>
           {selected.zone.zoneType === "Seated" ? (
             <span className="ow-hint" style={{ color: "#0369a1", fontWeight: 500 }}>
-              ▭ Seated zone: Fixed rectangular block (drag to position, use corners to resize or rotate).
+              Seated zone: Fixed rectangular block (drag to position, use corners to resize or rotate).
             </span>
           ) : (
             <div className="ow-shape-button-group">
@@ -1048,14 +1048,14 @@ export default function ZoneMapCanvas({
                 className={"ow-shape-pill" + (selected.shape.type === "rectangle" ? " active" : "")}
                 onClick={() => convertSelected("rectangle")}
               >
-                ▭ Rectangle
+                Rectangle
               </button>
               <button
                 type="button"
                 className={"ow-shape-pill" + (selected.shape.type === "polygon" ? " active" : "")}
                 onClick={startDrawing}
               >
-                ✏️ Draw custom shape
+                Draw custom shape
               </button>
               {selected.shape.type === "polygon" && (
                 <span className="ow-hint">Drag a point to move it • Double-click an edge to add a point • Right-click a point to remove it</span>
@@ -1067,104 +1067,104 @@ export default function ZoneMapCanvas({
 
       {draw && (
         <div className="ow-zonemap-shape-tools ow-zonemap-drawing-bar">
-          <span className="ow-hint">✏️ Drawing mode — click to place points, click the first point (or press Enter) to close the shape.</span>
-          <button type="button" className="ow-shape-pill" disabled={draw.points.length < 3} onClick={finishDrawing}>✓ Done</button>
-          <button type="button" className="ow-shape-pill" onClick={cancelDrawing}>✕ Cancel</button>
+          <span className="ow-hint">Drawing mode — click to place points, click the first point (or press Enter) to close the shape.</span>
+          <button type="button" className="ow-shape-pill" disabled={draw.points.length < 3} onClick={finishDrawing}>Done</button>
+          <button type="button" className="ow-shape-pill" onClick={cancelDrawing}>Cancel</button>
         </div>
       )}
 
       <div className="ow-zonemap">
-      <div className="ow-zonemap-canvas" ref={wrapperRef}>
-        {stageWidth > 0 && stageHeight > 0 && (
-          <Stage
-            width={stageWidth} height={stageHeight}
-            onMouseMove={handleStageMouseMove}
-            onClick={handleStageClick}
-            onTap={handleStageClick}
-            style={{ cursor: draw ? "crosshair" : "default" }}
-          >
-            <Layer>
-              <StageFloor width={stageWidth} height={stageHeight} />
+        <div className="ow-zonemap-canvas" ref={wrapperRef}>
+          {stageWidth > 0 && stageHeight > 0 && (
+            <Stage
+              width={stageWidth} height={stageHeight}
+              onMouseMove={handleStageMouseMove}
+              onClick={handleStageClick}
+              onTap={handleStageClick}
+              style={{ cursor: draw ? "crosshair" : "default" }}
+            >
+              <Layer>
+                <StageFloor width={stageWidth} height={stageHeight} />
 
-              {/* Movable & Resizable STAGE */}
-              <StageItem
-                shape={stageShape}
-                stageWidth={stageWidth}
-                stageHeight={stageHeight}
-                readOnly={readOnly || !!draw}
-                selected={selectedSpecial === "stage"}
-                onSelect={() => {
-                  setSelectedId(null);
-                  setSelectedSpecial("stage");
-                }}
-                onChange={handleStageChange}
-              />
-
-              {/* Movable & Resizable FOH Technical Booth */}
-              <FohItem
-                shape={fohShape}
-                stageWidth={stageWidth}
-                stageHeight={stageHeight}
-                readOnly={readOnly || !!draw}
-                selected={selectedSpecial === "foh"}
-                onSelect={() => {
-                  setSelectedId(null);
-                  setSelectedSpecial("foh");
-                }}
-                onChange={handleFohChange}
-              />
-
-              {shapes.filter(({ zone }) => !(draw && draw.seatZoneId === zone.seatZoneId)).map(({ zone, shape }) => shape.type === "polygon" ? (
-                <PolygonZoneShape
-                  key={zone.seatZoneId}
-                  zone={zone}
-                  shape={shape}
+                {/* Movable & Resizable STAGE */}
+                <StageItem
+                  shape={stageShape}
                   stageWidth={stageWidth}
                   stageHeight={stageHeight}
-                  color={colorForTicketType(zone.ticketTypeId)}
-                  ticketType={ticketTypeById(zone.ticketTypeId)}
                   readOnly={readOnly || !!draw}
-                  selected={selectedId === zone.seatZoneId}
+                  selected={selectedSpecial === "stage"}
                   onSelect={() => {
-                    setSelectedId(zone.seatZoneId);
-                    setSelectedSpecial(null);
+                    setSelectedId(null);
+                    setSelectedSpecial("stage");
                   }}
-                  onChange={(next) => commitShape(zone.seatZoneId, next)}
+                  onChange={handleStageChange}
                 />
-              ) : (
-                <RectangleZoneShape
-                  key={zone.seatZoneId}
-                  zone={zone}
-                  shape={shape}
+
+                {/* Movable & Resizable FOH Technical Booth */}
+                <FohItem
+                  shape={fohShape}
                   stageWidth={stageWidth}
                   stageHeight={stageHeight}
-                  color={colorForTicketType(zone.ticketTypeId)}
-                  ticketType={ticketTypeById(zone.ticketTypeId)}
                   readOnly={readOnly || !!draw}
-                  selected={selectedId === zone.seatZoneId}
+                  selected={selectedSpecial === "foh"}
                   onSelect={() => {
-                    setSelectedId(zone.seatZoneId);
-                    setSelectedSpecial(null);
+                    setSelectedId(null);
+                    setSelectedSpecial("foh");
                   }}
-                  onChange={(next) => commitShape(zone.seatZoneId, next)}
+                  onChange={handleFohChange}
                 />
-              ))}
 
-              {draw && <DrawingOverlay points={draw.points} cursor={cursorPos} stageWidth={stageWidth} stageHeight={stageHeight} color={drawingColor} seatPositions={drawSeatPositions} />}
-            </Layer>
-          </Stage>
-        )}
-        {zones.length === 0 && <div className="ow-zonemap-empty">Add a zone below, then select it here to draw its shape freely on the map.</div>}
-      </div>
+                {shapes.filter(({ zone }) => !(draw && draw.seatZoneId === zone.seatZoneId)).map(({ zone, shape }) => shape.type === "polygon" ? (
+                  <PolygonZoneShape
+                    key={zone.seatZoneId}
+                    zone={zone}
+                    shape={shape}
+                    stageWidth={stageWidth}
+                    stageHeight={stageHeight}
+                    color={colorForTicketType(zone.ticketTypeId)}
+                    ticketType={ticketTypeById(zone.ticketTypeId)}
+                    readOnly={readOnly || !!draw}
+                    selected={selectedId === zone.seatZoneId}
+                    onSelect={() => {
+                      setSelectedId(zone.seatZoneId);
+                      setSelectedSpecial(null);
+                    }}
+                    onChange={(next) => commitShape(zone.seatZoneId, next)}
+                  />
+                ) : (
+                  <RectangleZoneShape
+                    key={zone.seatZoneId}
+                    zone={zone}
+                    shape={shape}
+                    stageWidth={stageWidth}
+                    stageHeight={stageHeight}
+                    color={colorForTicketType(zone.ticketTypeId)}
+                    ticketType={ticketTypeById(zone.ticketTypeId)}
+                    readOnly={readOnly || !!draw}
+                    selected={selectedId === zone.seatZoneId}
+                    onSelect={() => {
+                      setSelectedId(zone.seatZoneId);
+                      setSelectedSpecial(null);
+                    }}
+                    onChange={(next) => commitShape(zone.seatZoneId, next)}
+                  />
+                ))}
 
-      <div className="ow-zonemap-legend">
-        <div className="ow-zonemap-legend-title">Ticket prices</div>
-        {zones.length === 0 && <div className="ow-hint">No zones yet.</div>}
-        {zones.map((zone) => {
-          const tt = ticketTypeById(zone.ticketTypeId);
-          return <div key={zone.seatZoneId} className="ow-zonemap-legend-row"><span className="ow-zonemap-legend-swatch" style={{ background: colorForTicketType(zone.ticketTypeId) }} /><span className="ow-zonemap-legend-name">{zone.zoneName} <span className="ow-hint">({zone.zoneType})</span></span><span className="ow-zonemap-legend-price">{tt ? formatPrice(tt.price) : "—"}</span></div>;
-        })}
-      </div>
+                {draw && <DrawingOverlay points={draw.points} cursor={cursorPos} stageWidth={stageWidth} stageHeight={stageHeight} color={drawingColor} seatPositions={drawSeatPositions} />}
+              </Layer>
+            </Stage>
+          )}
+          {zones.length === 0 && <div className="ow-zonemap-empty">Add a zone below, then select it here to draw its shape freely on the map.</div>}
+        </div>
+
+        <div className="ow-zonemap-legend">
+          <div className="ow-zonemap-legend-title">Ticket prices</div>
+          {zones.length === 0 && <div className="ow-hint">No zones yet.</div>}
+          {zones.map((zone) => {
+            const tt = ticketTypeById(zone.ticketTypeId);
+            return <div key={zone.seatZoneId} className="ow-zonemap-legend-row"><span className="ow-zonemap-legend-swatch" style={{ background: colorForTicketType(zone.ticketTypeId) }} /><span className="ow-zonemap-legend-name">{zone.zoneName} <span className="ow-hint">({zone.zoneType})</span></span><span className="ow-zonemap-legend-price">{tt ? formatPrice(tt.price) : "—"}</span></div>;
+          })}
+        </div>
       </div>
     </div>
   );

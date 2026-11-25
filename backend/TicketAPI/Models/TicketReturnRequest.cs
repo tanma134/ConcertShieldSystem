@@ -1,6 +1,6 @@
 namespace TicketAPI.Models;
 
-// One customer request to return a ticket (UC_9). Status values live in ReturnRequestStatuses.
+// One customer request to return a ticket. Status values live in ReturnRequestStatuses.
 public partial class TicketReturnRequest
 {
     public int TicketReturnRequestId { get; set; }

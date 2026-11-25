@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import AdminShell from "./AdminShell";
 import eventApi from "../../api/eventApi";
-import { formatDateRange } from "../../utils/format";
+import { formatDateRange, cleanReason } from "../../utils/format";
 import { useToast } from "../../components/ToastProvider";
 import "../organizer/OrganizerWizard.css";
 import "./AdminPages.css";
@@ -100,6 +100,41 @@ export default function AdminEventDetailPage() {
     }
   };
 
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelEvidenceFile, setCancelEvidenceFile] = useState(null);
+
+  const handleConfirmCancelEvent = async () => {
+    if (cancelReason.trim().length < 10) {
+      setError("Cancellation reason must contain at least 10 characters.");
+      return;
+    }
+    if (!cancelEvidenceFile) {
+      setError("Official legal evidence or notarized document (PDF/Image) is required to cancel this event.");
+      return;
+    }
+    setSubmitting(true);
+    setError("");
+    try {
+      const formData = new FormData();
+      formData.append("reason", cancelReason.trim());
+      formData.append("evidenceFile", cancelEvidenceFile);
+      const res = await eventApi.cancel(id, formData);
+      setEvent(res.data?.data || { ...event, status: "Cancelled" });
+      setResult({
+        type: "cancelled",
+        title: "Concert Cancelled",
+        message: "The concert has been cancelled. Ticket sales are closed."
+      });
+      setShowCancelModal(false);
+      toast.info("Concert has been cancelled.");
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not cancel this event.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const isPending = event?.status === "Pending";
 
   const pageTitle = isPending
@@ -132,13 +167,10 @@ export default function AdminEventDetailPage() {
         </div>
 
         {error && <div className="ow-error">{error}</div>}
-        {loading && <div className="tb-loading">Loading...</div>}
+        {loading && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
 
         {result && (
           <div className={`admin-result-banner is-${result.type === "approved" ? "success" : result.type === "warning" ? "warning" : "danger"}`}>
-            <div className="admin-result-icon">
-              {result.type === "approved" ? "✅" : result.type === "warning" ? "⚠️" : "❌"}
-            </div>
             <div className="admin-result-content">
               <strong>{result.title}</strong>
               <span>{result.message}</span>
@@ -172,7 +204,7 @@ export default function AdminEventDetailPage() {
                 </p>
                 {event.rejectedReason && (
                   <p className="ow-hint">
-                    Previous rejection reason: {event.rejectedReason}
+                    Previous rejection / cancellation reason: {cleanReason(event.rejectedReason)}
                   </p>
                 )}
               </div>
@@ -209,6 +241,41 @@ export default function AdminEventDetailPage() {
               </section>
             )}
 
+            <section className="ow-section admin-event-policies">
+              <h3>Admission, Seat Hold &amp; Re-entry Policies</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginTop: '12px' }}>
+                <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Seat Hold Timeout</div>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginTop: '4px' }}>
+                    {event.holdTimeoutMinutes || 10} minutes
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                    Seats held during selection before auto-release
+                  </div>
+                </div>
+
+                <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Re-entry Policy</div>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginTop: '4px' }}>
+                    {event.reEntryPolicy === 'TimeLimited' ? `Time-limited (${event.reEntryDurationMinutes || 30} mins)` : event.reEntryPolicy === 'Unlimited' ? 'Unlimited Re-entry' : 'No Re-entry'}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                    {event.reEntryPolicy === 'TimeLimited' ? `Attendee can exit and return within ${event.reEntryDurationMinutes || 30} mins` : event.reEntryPolicy === 'Unlimited' ? 'Attendee can exit and re-enter freely' : 'Once scanned in, attendee cannot re-enter if they exit'}
+                  </div>
+                </div>
+
+                <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Purchase Limit</div>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginTop: '4px' }}>
+                    Max {event.maxTicketsPerAccount || 4} tickets / account
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                    Anti-scalping quota per customer account
+                  </div>
+                </div>
+              </div>
+            </section>
+
             <section className="ow-section admin-seating-editor">
               <h3>Seating Chart, Tickets &amp; Pricing</h3>
               <p className="ow-hint">
@@ -225,6 +292,280 @@ export default function AdminEventDetailPage() {
             </section>
 
             <GovernancePanel event={event} admin onUpdated={load} onCompliance={setComplianceReady} />
+            {(event?.status === "Published" || event?.status === "Postponed") && (
+              <div className="ow-actions" style={{ marginTop: '20px' }}>
+                <button
+                  type="button"
+                  style={{
+                    backgroundColor: "#dc2626",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: "8px",
+                    padding: "9px 18px",
+                    fontWeight: 600,
+                    fontSize: "14px",
+                    cursor: "pointer"
+                  }}
+                  onClick={() => { setShowCancelModal(true); setCancelReason(""); setError(""); }}
+                  disabled={submitting}
+                >
+                  Cancel Concert
+                </button>
+              </div>
+            )}
+
+            {showCancelModal && (
+              <div
+                className="admin-confirm-modal-overlay"
+                onClick={() => !submitting && setShowCancelModal(false)}
+              >
+                <div
+                  className="admin-confirm-modal"
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ maxWidth: "520px" }}
+                >
+                  <div className="admin-confirm-modal-header">
+                    <div>
+                      <h3
+                        className="admin-confirm-modal-title"
+                        style={{ color: "#991b1b" }}
+                      >
+                        Cancel Concert Confirmation
+                      </h3>
+                      <p className="admin-confirm-modal-body" style={{ margin: 0 }}>
+                        Are you sure you want to cancel <strong>"{event.title}"</strong>?
+                      </p>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      background: "#fef2f2",
+                      border: "1px solid #fecaca",
+                      borderRadius: "10px",
+                      padding: "12px 14px",
+                      margin: "16px 0",
+                      fontSize: "13px",
+                      color: "#991b1b",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    <p style={{ margin: "0 0 6px 0", fontWeight: 700 }}>
+                      Administrative Cancellation Consequences:
+                    </p>
+                    <ul style={{ margin: 0, paddingLeft: "18px" }}>
+                      <li>Ticket sales will be closed permanently.</li>
+                      <li>
+                        All active tickets will be revoked and queued for full refund.
+                      </li>
+                      <li>
+                        Official cancellation notice will be emailed to all attendees.
+                      </li>
+                      <li>This action is permanent and cannot be undone.</li>
+                    </ul>
+                  </div>
+
+                  <div className="ow-field" style={{ margin: "16px 0" }}>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        color: "#374151",
+                        marginBottom: "6px",
+                      }}
+                    >
+                      Cancellation Reason * (minimum 10 characters)
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={cancelReason}
+                      onChange={(e) => setCancelReason(e.target.value)}
+                      placeholder="Explain the official reason for administrative cancellation..."
+                      maxLength={1000}
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        border: "1px solid #d1d5db",
+                        borderRadius: "8px",
+                        boxSizing: "border-box",
+                        fontSize: "14px",
+                        resize: "vertical",
+                      }}
+                    />
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: "12px",
+                        color:
+                          cancelReason.trim().length < 10 ? "#ef4444" : "#16a34a",
+                        marginTop: "4px",
+                      }}
+                    >
+                      <span>
+                        {cancelReason.trim().length < 10
+                          ? `Need at least ${
+                              10 - cancelReason.trim().length
+                            } more characters`
+                          : "Valid reason"}
+                      </span>
+                      <span>{cancelReason.length} / 1000</span>
+                    </div>
+                  </div>
+
+                  {/* Bằng chứng pháp lý / Công văn có mộc đỏ hoặc công chứng */}
+                  <div className="ow-field" style={{ margin: "16px 0" }}>
+                    <label
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        color: "#374151",
+                        marginBottom: "6px",
+                      }}
+                    >
+                      <span>Supporting Legal Evidence / Notarized Proof *</span>
+                      <span style={{ fontSize: "11px", color: "#6b7280" }}>PDF, PNG, JPG (Max 15MB)</span>
+                    </label>
+                    {!cancelEvidenceFile ? (
+                      <label
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          padding: "18px 16px",
+                          border: "2px dashed #d1d5db",
+                          borderRadius: "10px",
+                          background: "#f9fafb",
+                          cursor: "pointer",
+                          transition: "all 0.2s ease",
+                          textAlign: "center",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#93c5fd")}
+                        onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#d1d5db")}
+                      >
+                        <input
+                          type="file"
+                          accept=".pdf,image/png,image/jpeg,image/jpg"
+                          style={{ display: "none" }}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              if (file.size > 15 * 1024 * 1024) {
+                                toast.error("File exceeds maximum allowed size (15MB).");
+                                return;
+                              }
+                              setCancelEvidenceFile(file);
+                            }
+                          }}
+                        />
+                        <div style={{ fontSize: "13px", fontWeight: 600, color: "#1f2937", marginTop: "4px" }}>
+                          Click to attach notarized notice / official decision
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "2px" }}>
+                          Official authority notice, health certificate, or ministerial decree
+                        </div>
+                      </label>
+                    ) : (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "10px 14px",
+                          background: "#eff6ff",
+                          border: "1px solid #bfdbfe",
+                          borderRadius: "10px",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", overflow: "hidden" }}>
+                          <span
+                            style={{
+                              background: cancelEvidenceFile.name.toLowerCase().endsWith(".pdf") ? "#ef4444" : "#3b82f6",
+                              color: "#fff",
+                              fontSize: "11px",
+                              fontWeight: 700,
+                              padding: "3px 7px",
+                              borderRadius: "5px",
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            {cancelEvidenceFile.name.split(".").pop()}
+                          </span>
+                          <div style={{ overflow: "hidden" }}>
+                            <div
+                              style={{
+                                fontSize: "13px",
+                                fontWeight: 600,
+                                color: "#1e3a8a",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                maxWidth: "280px",
+                              }}
+                              title={cancelEvidenceFile.name}
+                            >
+                              {cancelEvidenceFile.name}
+                            </div>
+                            <div style={{ fontSize: "11px", color: "#2563eb" }}>
+                              {(cancelEvidenceFile.size / (1024 * 1024)).toFixed(2)} MB • Ready for legal verification
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#dc2626",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            padding: "4px 8px",
+                          }}
+                          onClick={() => setCancelEvidenceFile(null)}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
+                    {!cancelEvidenceFile && (
+                      <div style={{ fontSize: "12px", color: "#ef4444", marginTop: "4px" }}>
+                        * Official notarized/stamped legal document is required to proceed.
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="admin-confirm-modal-actions">
+                    <button
+                      type="button"
+                      className="tb-btn tb-btn-outline ow-btn-sm"
+                      onClick={() => setShowCancelModal(false)}
+                      disabled={submitting}
+                    >
+                      Keep Concert
+                    </button>
+                    <button
+                      type="button"
+                      className="tb-btn tb-btn-primary ow-btn-sm"
+                      style={{
+                        background: (!cancelEvidenceFile || cancelReason.trim().length < 10) ? "#9ca3af" : "#dc2626",
+                        borderColor: (!cancelEvidenceFile || cancelReason.trim().length < 10) ? "#9ca3af" : "#dc2626"
+                      }}
+                      onClick={handleConfirmCancelEvent}
+                      disabled={
+                        submitting || cancelReason.trim().length < 10 || !cancelEvidenceFile
+                      }
+                    >
+                      {submitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm Cancellation"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             {canDecide && (
               <div className="ow-actions">
                 <button
@@ -240,7 +581,7 @@ export default function AdminEventDetailPage() {
                   onClick={() => setShowReject((v) => !v)}
                   disabled={submitting}
                 >
-                  {showReject ? "Close" : "✕ Reject"}
+                  {showReject ? "Close" : "Reject"}
                 </button>
                 <button
                   type="button"
@@ -248,7 +589,7 @@ export default function AdminEventDetailPage() {
                   onClick={requestApprove}
                   disabled={submitting || !complianceReady}
                 >
-                  {submitting ? "Working..." : "✓ Approve & Publish"}
+                  {submitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Approve & Publish"}
                 </button>
               </div>
             )}
@@ -257,7 +598,6 @@ export default function AdminEventDetailPage() {
               <div className="admin-confirm-modal-overlay" onClick={() => setShowApproveConfirm(false)}>
                 <div className="admin-confirm-modal" onClick={(e) => e.stopPropagation()}>
                   <div className="admin-confirm-modal-header">
-                    <div className="admin-confirm-modal-icon">🎉</div>
                     <div>
                       <h3 className="admin-confirm-modal-title">Publish Event Confirmation</h3>
                       <p className="admin-confirm-modal-body" style={{ margin: 0 }}>
@@ -283,7 +623,7 @@ export default function AdminEventDetailPage() {
                       onClick={handleApprove}
                       disabled={submitting}
                     >
-                      {submitting ? "Publishing..." : "Yes, Approve & Publish"}
+                      {submitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Yes, Approve & Publish"}
                     </button>
                   </div>
                 </div>
@@ -307,7 +647,7 @@ export default function AdminEventDetailPage() {
                   className="tb-btn tb-btn-primary ow-btn-sm admin-btn-danger"
                   disabled={submitting}
                 >
-                  {submitting ? "Sending..." : "Confirm rejection"}
+                  {submitting ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm rejection"}
                 </button>
               </form>
             )}

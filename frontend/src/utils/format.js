@@ -35,3 +35,12 @@ export function formatPrice(value) {
   if (value === 0) return "Free";
   return `${Number(value).toLocaleString("en-US")} VND`;
 }
+
+// Strip internal storage tags like [Official Proof: ...] from user-facing reasons
+export function cleanReason(value) {
+  if (!value) return "";
+  return String(value)
+    .replace(/\s*\[Official Proof:.*?\]/gi, "")
+    .replace(/\s*\[Official Proof Document:.*?\]/gi, "")
+    .trim();
+}

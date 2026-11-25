@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using AdminAPI.DTOs;
+using AdminAPI.Repositories;
 using AdminAPI.Services.Risks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,13 +16,15 @@ namespace AdminAPI.Controllers
         private readonly IAppealService _service;
         private readonly ILogger<RiskDecisionController> _logger;
         private readonly IAuthorizationService _authz;
+        private readonly IFraudAlertRepository _alerts;
 
         public RiskDecisionController(IAppealService service, IAuthorizationService authz,
-            ILogger<RiskDecisionController> logger)
+            ILogger<RiskDecisionController> logger, IFraudAlertRepository alerts)
         {
             _service = service;
             _authz = authz;
             _logger = logger;
+            _alerts = alerts;
         }
 
         // GET api/risk/decisions/me - decision của chính user đang đăng nhập (My Profile -> Account Restrictions)
@@ -45,9 +48,24 @@ namespace AdminAPI.Controllers
         {
             try
             {
-                var canViewFull = (await _authz.AuthorizeAsync(User, "CanReviewFraud")).Succeeded;
+                // Staff reviewing a fraud case need the full decision (not the customer view).
+                var canViewFull = (await _authz.AuthorizeAsync(User, "CanReviewFraudCases")).Succeeded;
                 if (canViewFull)
-                    return Ok(await _service.GetAdminDecisionAsync(id, ct));
+                {
+                    var dto = await _service.GetAdminDecisionAsync(id, ct);
+
+                    // BR-236: Staff only see the full decision of a case assigned to them.
+                    if (User.IsInRole("Staff") && !User.IsInRole("Admin"))
+                    {
+                        var me = GetCurrentUserId();
+                        var assigned = dto.FraudAlertId is int alertId
+                            && await _alerts.IsAssignedToAsync(alertId, me, ct);
+                        if (!assigned)
+                            return StatusCode(403, new { message = "This decision belongs to a case not assigned to you." });
+                    }
+
+                    return Ok(dto);
+                }
 
                 var userId = GetCurrentUserId();
                 return Ok(await _service.GetPublicDecisionAsync(id, userId, ct));

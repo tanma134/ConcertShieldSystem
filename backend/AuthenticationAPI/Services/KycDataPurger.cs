@@ -1,16 +1,16 @@
-﻿
-using AuthenticationAPI.Models;
+﻿using AuthenticationAPI.Models;
+using AuthenticationAPI.Repositories;
 
 namespace AuthenticationAPI.Services
 {
     public class KycDataPurger : IKycDataPurger
     {
-        private readonly AuthenticationDbContext _db;
+        private readonly IEkycRepository _repository;
         private readonly IObjectStorage _storage;
 
-        public KycDataPurger(AuthenticationDbContext db, IObjectStorage storage)
+        public KycDataPurger(IEkycRepository repository, IObjectStorage storage)
         {
-            _db = db;
+            _repository = repository;
             _storage = storage;
         }
 
@@ -38,7 +38,7 @@ namespace AuthenticationAPI.Services
                 record.CccdNumberEncrypted = null;
             }
 
-            await _db.SaveChangesAsync(ct);
+            await _repository.SaveChangesAsync(ct);
         }
     }
 }

@@ -56,6 +56,26 @@ const ticketApi = {
       `/admin/tickets/${encodeURIComponent(ticketId)}/reissue`,
       { reason }
     ),
+
+  // Ticket Governance (Bulk Revocation, Traceability & Audit)
+  bulkRevokeTickets: (payload) =>
+    axiosClient.post("/tickets/governance/bulk-revoke", payload),
+
+  getRevocationHistory: (params = {}) =>
+    axiosClient.get("/tickets/governance/revocations", { params }),
+
+  getReissueHistory: (params = {}) =>
+    axiosClient.get("/tickets/governance/reissues", { params }),
+
+  getReconciliationRecords: (eventId) =>
+    axiosClient.get(eventId ? `/tickets/governance/reconciliations?eventId=${eventId}` : "/tickets/governance/reconciliations"),
+
+  getGovernanceStats: () =>
+    axiosClient.get("/tickets/governance/stats"),
+
+  getGovernanceEvents: () =>
+    axiosClient.get("/tickets/governance/events"),
+    getActiveHoldSession: () => axiosClient.get("/Holds/session/active"),
 };
 
 export default ticketApi;

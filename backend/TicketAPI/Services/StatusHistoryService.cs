@@ -18,19 +18,19 @@ namespace TicketAPI.Services
             ArgumentNullException.ThrowIfNull(history);
 
             if (string.IsNullOrWhiteSpace(history.TargetType))
-                throw new ArgumentException("TargetType không được để trống.");
+                throw new ArgumentException("TargetType cannot be empty.");
 
             if (history.TargetId <= 0)
-                throw new ArgumentException("TargetId không hợp lệ.");
+                throw new ArgumentException("Invalid TargetId.");
 
             if (history.EventId <= 0)
-                throw new ArgumentException("EventId không hợp lệ.");
+                throw new ArgumentException("Invalid EventId.");
 
             if (string.IsNullOrWhiteSpace(history.Action))
-                throw new ArgumentException("Action không được để trống.");
+                throw new ArgumentException("Action cannot be empty.");
 
             if (history.Quantity is <= 0)
-                throw new ArgumentException("Quantity phải lớn hơn 0.");
+                throw new ArgumentException("Quantity must be greater than 0.");
 
             await _repository.AddAsync(history);
         }
@@ -49,19 +49,19 @@ namespace TicketAPI.Services
                 ArgumentNullException.ThrowIfNull(history);
 
                 if (string.IsNullOrWhiteSpace(history.TargetType))
-                    throw new ArgumentException("TargetType không được để trống.");
+                    throw new ArgumentException("TargetType cannot be empty.");
 
                 if (history.TargetId <= 0)
-                    throw new ArgumentException("TargetId không hợp lệ.");
+                    throw new ArgumentException("Invalid TargetId.");
 
                 if (history.EventId <= 0)
-                    throw new ArgumentException("EventId không hợp lệ.");
+                    throw new ArgumentException("Invalid EventId.");
 
                 if (string.IsNullOrWhiteSpace(history.Action))
-                    throw new ArgumentException("Action không được để trống.");
+                    throw new ArgumentException("Action cannot be empty.");
 
                 if (history.Quantity is <= 0)
-                    throw new ArgumentException("Quantity phải lớn hơn 0.");
+                    throw new ArgumentException("Quantity must be greater than 0.");
             }
 
             await _repository.AddRangeAsync(items);
@@ -72,10 +72,10 @@ namespace TicketAPI.Services
             int customerId)
         {
             if (ticketId <= 0)
-                throw new ArgumentException("TicketId không hợp lệ.");
+                throw new ArgumentException("Invalid TicketId.");
 
             if (customerId <= 0)
-                throw new ArgumentException("CustomerId không hợp lệ.");
+                throw new ArgumentException("Invalid CustomerId.");
 
             var histories = await _repository.GetMyTicketHistoryAsync(
                 ticketId,
@@ -96,10 +96,10 @@ namespace TicketAPI.Services
             int pageSize)
         {
             if (eventId is <= 0)
-                throw new ArgumentException("EventId không hợp lệ.");
+                throw new ArgumentException("Invalid EventId.");
 
             if (from.HasValue && to.HasValue && from.Value > to.Value)
-                throw new ArgumentException("From phải nhỏ hơn hoặc bằng To.");
+                throw new ArgumentException("From must be less than or equal to To.");
 
             page = Math.Max(page, 1);
             pageSize = Math.Clamp(pageSize, 1, 100);

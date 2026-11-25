@@ -10,6 +10,8 @@ public static class TicketStatuses
     public const string ReturnPending = "ReturnPending";
     public const string Returned = "Returned";
     public const string Revoked = "Revoked";
+    // Risk Engine: temporarily blocked while a fraud review / appeal is open.
+    public const string Blocked = "Blocked";
 }
 
 // Status values stored in ticket_return_requests.status.

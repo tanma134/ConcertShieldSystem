@@ -44,7 +44,7 @@ namespace EventAPI.Services
             bool requireBanner = _configuration.GetValue("Publication:RequireBanner", false);
             bool requireRefundPolicy = _configuration.GetValue("Publication:RequireRefundPolicy", true);
 
-            // ---- Core text ----
+            // --- Core text ----
             if (string.IsNullOrWhiteSpace(ev.Title))
                 result.Errors.Add("Title is required.");
 
@@ -64,7 +64,7 @@ namespace EventAPI.Services
                     result.Errors.Add($"Slug '{ev.Slug}' is already used by another concert.");
             }
 
-            // ---- Venue / location ----
+            // --- Venue / location ----
             if (string.IsNullOrWhiteSpace(ev.LocationName))
                 result.Errors.Add("Venue name (LocationName) is required.");
 
@@ -77,7 +77,7 @@ namespace EventAPI.Services
             if (!ev.Latitude.HasValue || !ev.Longitude.HasValue)
                 result.Warnings.Add("Latitude/Longitude are not set — the venue won't show on a map.");
 
-            // ---- Schedule ----
+            // --- Schedule ----
             if (ev.StartsAt == default)
                 result.Errors.Add("Start time (StartsAt) is required.");
 
@@ -90,7 +90,7 @@ namespace EventAPI.Services
             if (ev.StartsAt != default && ev.StartsAt <= DateTime.UtcNow)
                 result.Errors.Add("StartsAt must be in the future.");
 
-            // ---- Artwork ----
+            // --- Artwork ----
             if (requirePoster && string.IsNullOrWhiteSpace(ev.PosterUrl))
                 result.Errors.Add("A poster image is required before submitting.");
 
@@ -100,7 +100,7 @@ namespace EventAPI.Services
             if (!requireBanner && string.IsNullOrWhiteSpace(ev.BannerUrl))
                 result.Warnings.Add("No banner image uploaded — the concert detail page will fall back to the poster.");
 
-            // ---- Ticket types ----
+            // --- Ticket types ----
             var ticketTypes = await _ticketTypeRepository.GetByEventIdAsync(eventId);
             var sellableTicketTypes = ticketTypes.Where(t => t.Status == "Active").ToList();
 
@@ -173,7 +173,7 @@ namespace EventAPI.Services
                 result.Errors.Add("MinTicketsPerAccount cannot be greater than MaxTicketsPerAccount.");
             }
 
-            // ---- Refund policy ----
+            // --- Refund policy ----
             var refundPolicies = await _refundPolicyRepository.GetByEventIdAsync(eventId);
             if (refundPolicies.Count == 0)
             {
@@ -192,7 +192,7 @@ namespace EventAPI.Services
                     result.Errors.Add($"Refund policy '{p.PolicyName}': DeadlineBeforeEventHours must be greater than 0.");
             }
 
-            // ---- Seating ----
+            // --- Seating ----
             var seatMap = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: true);
 
             if (ev.HasSeatingChart)

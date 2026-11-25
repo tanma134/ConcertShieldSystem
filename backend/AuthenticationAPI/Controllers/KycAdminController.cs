@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using AuthenticationAPI.DTOs;
-using AuthenticationAPI.Repositories;
 using AuthenticationAPI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,19 +15,11 @@ namespace AuthenticationAPI.Controllers
     [Authorize(Policy = "CanManageUsers")]
     public class KycAdminController : ControllerBase
     {
-        private readonly IEkycRepository _repository;
-        private readonly IObjectStorage _storage;
-        private readonly IKycAccessLogService _accessLog;
         private readonly IKycReviewService _review;
         private readonly ILogger<KycAdminController> _logger;
 
-        public KycAdminController(IEkycRepository repository, IObjectStorage storage,
-                                  IKycAccessLogService accessLog, IKycReviewService review,
-                                  ILogger<KycAdminController> logger)
+        public KycAdminController(IKycReviewService review, ILogger<KycAdminController> logger)
         {
-            _repository = repository;
-            _storage = storage;
-            _accessLog = accessLog;
             _review = review;
             _logger = logger;
         }
@@ -102,40 +93,56 @@ namespace AuthenticationAPI.Controllers
         [HttpGet("{ekycId:int}/images/{kind}")]
         public async Task<IActionResult> GetImage(int ekycId, string kind)
         {
-            var record = await _repository.GetByIdAsync(ekycId);
-            if (record is null)
-                return NotFound();
-
-            // images may be viewed only to review a request that is waiting for review
-            if (record.Status != "ManualReview")
-                return StatusCode(403, new { message = "Images can only be viewed while the request is waiting for review" });
-
-            var normalizedKind = kind.ToLowerInvariant();
-            var key = normalizedKind switch
+            try
             {
-                "front" => record.CccdFrontObjectKey,
-                "back" => record.CccdBackObjectKey,
-                "selfie" => record.FaceCaptureObjectKey,
-                _ => null
-            };
-            if (key is null)
-                return NotFound();
+                var result = await _review.GetReviewImageAsync(ekycId, kind, GetCurrentUserId(), GetClientIp());
+                return result.Outcome switch
+                {
+                    KycImageOutcome.Ok => ImageFile(result.Content!),
+                    KycImageOutcome.NotInReview => StatusCode(403, new { message = "Images can only be viewed while the request is waiting for review" }),
+                    _ => NotFound()
+                };
+            }
+            catch (Exception ex)
+            {
+                return ServerError(ex, "viewing an eKYC image");
+            }
+        }
 
-            var stream = await _storage.DownloadAsync(key);
-            if (stream is null)
-                return NotFound();
-
+        // GET api/admin/kyc/{ekycId}/evidence/front|back|selfie?reason=...
+        // Evidence access for cases that are no longer waiting for review (appeals,
+        // authority requests, re-checking an approved submission). The reason is
+        // mandatory and every view is logged, so the customer can see who looked.
+        [HttpGet("{ekycId:int}/evidence/{kind}")]
+        public async Task<IActionResult> GetEvidence(int ekycId, string kind, [FromQuery] string? reason)
+        {
             var adminId = GetCurrentUserId();
-            var ip = GetClientIp();
+            if (adminId is null) return Unauthorized(new { message = "Invalid token" });
 
-            // Ghi log TRÝ?C khi tr? ?nh: không ghi ðý?c log th? không cho xem
-            await _accessLog.LogAsync(record.UserId, record.EkycId, adminId, KycActorTypes.Admin,
-                KycAccessActions.ViewImage, ip, $"purpose=manual_review; kind={normalizedKind}");
-            _logger.LogWarning("KYC image access: admin {AdminId} xem {Kind} c?a ekyc {EkycId} (user {UserId})",
-                adminId, normalizedKind, ekycId, record.UserId);
+            reason = (reason ?? "").Trim();
+            if (reason.Length < 10 || reason.Length > 300)
+                return BadRequest(new { message = "A reason of 10-300 characters is required to view eKYC evidence" });
 
+            try
+            {
+                var result = await _review.GetEvidenceImageAsync(ekycId, kind, reason, adminId, GetClientIp());
+                return result.Outcome switch
+                {
+                    KycImageOutcome.Ok => ImageFile(result.Content!),
+                    KycImageOutcome.Purged => StatusCode(410, new { message = "The data of this record has already been deleted" }),
+                    _ => NotFound()
+                };
+            }
+            catch (Exception ex)
+            {
+                return ServerError(ex, "viewing eKYC evidence");
+            }
+        }
+
+        private IActionResult ImageFile(Stream content)
+        {
             Response.Headers["Cache-Control"] = "no-store";
-            return File(stream, "image/jpeg");
+            return File(content, "image/jpeg");
         }
 
         private int? GetCurrentUserId() =>

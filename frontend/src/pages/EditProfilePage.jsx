@@ -53,128 +53,99 @@ export default function EditProfilePage() {
     }
   };
 
-return (
+  return (
     <div className="profile-page">
-        <div className="profile-container profile-form-container">
-            <div className="profile-page-heading">
-                <div>
-                    <p className="profile-eyebrow">Account</p>
-                    <h1>Edit Profile</h1>
-                </div>
+      <div className="profile-container profile-form-container">
+        <div className="profile-page-heading">
+          <div>
+            <p className="profile-eyebrow">Account</p>
+            <h1>Edit Profile</h1>
+          </div>
+          <Link className="profile-button secondary" to="/profile">
+            Cancel
+          </Link>
+        </div>
 
-                <Link className="profile-button secondary" to="/profile">
-                    Cancel
-                </Link>
+        {error && <div className="profile-alert error">{error}</div>}
+        {success && <div className="profile-alert success">{success}</div>}
+
+        {loading ? (
+          <div className="profile-loading">
+            <span className="app-loading-spinner" role="status" aria-label="Loading" />
+          </div>
+        ) : (
+          <form className="profile-card edit-profile-form" onSubmit={save}>
+            <div className="avatar-upload">
+              <div className="profile-avatar large">
+                {preview ? <img src={preview} alt="Avatar preview" /> : <span>U</span>}
+              </div>
+
+              <label className="profile-button secondary" htmlFor="avatar-file">
+                Choose Avatar
+                <input
+                  id="avatar-file"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={chooseAvatar}
+                  hidden
+                />
+              </label>
+
+              <small>JPG, PNG, or WEBP. Maximum 5 MB.</small>
             </div>
 
-            {error && (
-                <div className="profile-alert error">
-                    {error}
-                </div>
-            )}
+            <label>
+              <span>Full Name</span>
+              <input
+                name="fullName"
+                value={form.fullName}
+                onChange={change}
+                required
+                maxLength={200}
+              />
+            </label>
 
-            {success && (
-                <div className="profile-alert success">
-                    {success}
-                </div>
-            )}
+            <label>
+              <span>Email</span>
+              <input
+                name="email"
+                type="email"
+                value={form.email}
+                onChange={change}
+                required
+              />
+            </label>
 
-            {loading ? (
-                <div className="profile-loading">
-                    Loading profile...
-                </div>
-            ) : (
-                <form
-                    className="profile-card edit-profile-form"
-                    onSubmit={save}
-                >
-                    <div className="avatar-upload">
-                        <div className="profile-avatar large">
-                            {preview ? (
-                                <img
-                                    src={preview}
-                                    alt="Avatar preview"
-                                />
-                            ) : (
-                                <span>U</span>
-                            )}
-                        </div>
+            <label>
+              <span>Phone Number</span>
+              <input
+                name="phoneNumber"
+                value={form.phoneNumber}
+                onChange={change}
+                maxLength={30}
+              />
+            </label>
 
-                        <label
-                            className="profile-button secondary"
-                            htmlFor="avatar-file"
-                        >
-                            Choose Avatar
+            <div className="edit-profile-actions">
+              <Link className="profile-button secondary" to="/profile">
+                Cancel
+              </Link>
 
-                            <input
-                                id="avatar-file"
-                                type="file"
-                                accept="image/jpeg,image/png,image/webp"
-                                onChange={chooseAvatar}
-                                hidden
-                            />
-                        </label>
-
-                        <small>
-                            JPG, PNG, or WEBP. Maximum 5 MB.
-                        </small>
-                    </div>
-
-                    <label>
-                        <span>Full Name</span>
-                        <input
-                            name="fullName"
-                            value={form.fullName}
-                            onChange={change}
-                            required
-                            maxLength={200}
-                        />
-                    </label>
-
-                    <label>
-                        <span>Email</span>
-                        <input
-                            name="email"
-                            type="email"
-                            value={form.email}
-                            onChange={change}
-                            required
-                        />
-                    </label>
-
-                    <label>
-                        <span>Phone Number</span>
-                        <input
-                            name="phoneNumber"
-                            value={form.phoneNumber}
-                            onChange={change}
-                            maxLength={30}
-                        />
-                    </label>
-
-                    <div className="edit-profile-actions">
-                        <Link
-                            className="profile-button secondary"
-                            to="/profile"
-                        >
-                            Cancel
-                        </Link>
-
-                        <button
-                            className="profile-button primary"
-                            type="submit"
-                            disabled={saving}
-                        >
-                            {uploading
-                                ? "Uploading..."
-                                : saving
-                                    ? "Saving..."
-                                    : "Save Changes"}
-                        </button>
-                    </div>
-                </form>
-            )}
-        </div>
+              <button
+                className="profile-button primary"
+                type="submit"
+                disabled={saving}
+              >
+                {uploading || saving ? (
+                  <span className="app-loading-spinner" role="status" aria-label="Loading" />
+                ) : (
+                  "Save Changes"
+                )}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </div>
-);
+  );
 }

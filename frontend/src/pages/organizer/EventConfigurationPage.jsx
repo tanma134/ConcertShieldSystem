@@ -27,7 +27,7 @@ export default function EventConfigurationPage({ section }) {
   return <OrganizerShell title="Concert Setup"><div className="tb-container ow-wrap">
     <div className="ow-head"><div><h1>{titles[section]}</h1><p className="ow-sub">{event?.title}</p></div>
       <Link className="tb-btn tb-btn-outline" to={`/organizer/events/${id}/edit`}>← Event editor</Link></div>
-    {loading && <div className="tb-loading">Loading...</div>}
+    {loading && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
     {error && <div className="ow-error">{error}</div>}
     {!loading && event && <div className="ow-panel"><StepTicketsSeating eventId={Number(id)} event={event} only={section} standalone onRefresh={load} onSaved={() => {}} /></div>}
   </div></OrganizerShell>;

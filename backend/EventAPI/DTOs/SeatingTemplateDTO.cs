@@ -2,11 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace EventAPI.DTOs
 {
-    /// <summary>
-    /// One zone inside a template — the same shape/rows/capacity fields as
-    /// CreateSeatZoneDTO, minus TicketTypeId (a template is event-agnostic; the
-    /// ticket type is chosen again each time the template is applied).
-    /// </summary>
+// Thong tin mot khu vuc trong mau so do ghe tai su dung
     public class SeatingTemplateZoneDTO
     {
         [Required]
@@ -18,16 +14,16 @@ namespace EventAPI.DTOs
         [MaxLength(20)]
         public string ZoneType { get; set; } = "Seated";
 
-        // ---- Seated zones only ----
+        // --- Seated zones only ----
         public int Rows { get; set; } = 1;
         public int SeatsPerRow { get; set; } = 10;
         public string RowLabelPrefix { get; set; } = "A";
 
-        // ---- Standing zones only ----
+        // --- Standing zones only ----
         public int? Capacity { get; set; }
     }
 
-    /// <summary>UC_26.3 — Save Seating Chart as Template: snapshot an already-built concert layout.</summary>
+    // Yeu cau luu layout hien tai cua concert thanh mau mau de tai su dung
     public class SaveSeatingTemplateDTO
     {
         [Required]
@@ -40,11 +36,11 @@ namespace EventAPI.DTOs
         [MaxLength(500)]
         public string? Description { get; set; }
 
-        /// <summary>Only honored when the caller is an Admin.</summary>
+        // Quyen cong khai mau so do ghe (chi danh cho Admin)
         public bool IsPublic { get; set; } = false;
     }
 
-    /// <summary>Draw-from-scratch template, built directly in the editor without a source concert.</summary>
+    // Yeu cau tao mau so do ghe moi truc tiep tu canvas khong gan voi concert cu the
     public class CreateSeatingTemplateDTO
     {
         [Required]
@@ -59,7 +55,7 @@ namespace EventAPI.DTOs
         [Required]
         public List<SeatingTemplateZoneDTO> Zones { get; set; } = new();
 
-        /// <summary>Only honored when the caller is an Admin.</summary>
+        // Quyen cong khai mau so do ghe (chi danh cho Admin)
         public bool IsPublic { get; set; } = false;
     }
 
@@ -75,21 +71,21 @@ namespace EventAPI.DTOs
 
         public string? LayoutJson { get; set; }
 
-        /// <summary>Only honored when the caller is an Admin.</summary>
+        // Quyen cong khai mau so do ghe (chi danh cho Admin)
         public bool? IsPublic { get; set; }
     }
 
-    /// <summary>One entry in an organizer's zone-to-ticket-type mapping for UC_26.2 — Apply Seating Template.</summary>
+    // Anh xa khu vuc trong mau voi hang ve cua concert khi ap dung template
     public class TemplateZoneMappingDTO
     {
-        /// <summary>Index into the template's Zones list.</summary>
+        // Chi so index cua khu vuc trong template
         [Required]
         public int ZoneIndex { get; set; }
 
         [Required]
         public int TicketTypeId { get; set; }
 
-        /// <summary>Editable copy values. Template defaults are used when omitted.</summary>
+        // Cac gia tri tuy bien ghi de neu co
         [MaxLength(100)] public string? ZoneName { get; set; }
         [MaxLength(20)] public string? ZoneType { get; set; }
         public int? Rows { get; set; }
@@ -120,7 +116,7 @@ namespace EventAPI.DTOs
         public DateTime UpdatedAt { get; set; }
     }
 
-    /// <summary>Lightweight row for the template picker (UC_26.2's "Seating Template List" screen).</summary>
+    // Danh sach tom tat mau so do ghe de hien thi trong bo chon template
     public class SeatingTemplateListDTO
     {
         public int SeatingTemplateId { get; set; }

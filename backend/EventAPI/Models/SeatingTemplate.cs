@@ -4,7 +4,7 @@ namespace EventAPI.Models
 {
     /// <summary>
     /// A reusable venue layout an organizer can apply to a new concert instead of
-    /// drawing zones from scratch (UC_26.2 Apply Seating Template / UC_26.3 Save
+    /// drawing zones from scratch (Apply Seating Template / Save
     /// Seating Chart as Template).
     ///
     /// Deliberately NOT linked to any TicketType — a template is reused across

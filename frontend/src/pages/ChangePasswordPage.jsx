@@ -111,7 +111,7 @@ export default function ChangePasswordPage() {
                 Cancel
               </Link>
               <button className="profile-button primary" type="submit" disabled={saving}>
-                {saving ? "Saving..." : "Change Password"}
+                {saving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Change Password"}
               </button>
             </div>
           </form>

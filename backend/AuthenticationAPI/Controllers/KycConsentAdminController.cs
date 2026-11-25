@@ -73,7 +73,7 @@ namespace AuthenticationAPI.Controllers
         {
             try
             {
-                await _service.ActivateAsync(id);
+                await _service.ActivateAsync(id, GetCurrentUserId());
                 return Ok(new { message = "Consent version activated. Users must consent again on their next submission." });
             }
             catch (KeyNotFoundException ex)
@@ -91,7 +91,7 @@ namespace AuthenticationAPI.Controllers
         {
             try
             {
-                await _service.DeleteAsync(id);
+                await _service.DeleteAsync(id, GetCurrentUserId());
                 return Ok(new { message = "Consent version deleted." });
             }
             catch (KeyNotFoundException ex)

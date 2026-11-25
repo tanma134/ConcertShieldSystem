@@ -5,9 +5,7 @@ using AuthenticationAPI.DTOs;
 using AuthenticationAPI.Models;
 using AuthenticationAPI.Providers;
 using AuthenticationAPI.Repositories;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Npgsql;
 
 namespace AuthenticationAPI.Services
 {
@@ -36,8 +34,11 @@ namespace AuthenticationAPI.Services
         private readonly ICccdDataProtector _cccdProtector;
         private readonly IConfiguration _config;
         private readonly IKycAccessLogService _accessLog;
+        private readonly ILogger<KycService> _logger;
 
         private const decimal MatchScoreThreshold = 90m;
+        private const string OcrFailedMessage = "We could not read your ID card. Please retake the photos with good lighting and no glare.";
+        private const string FaceFailedMessage = "We could not confirm that the photo matches your ID card. Please retake the selfie in a well-lit place.";
         private const decimal ManualReviewThreshold = 70m;
         private const string DuplicateCccdMessage = "This document has already been used to verify another account";
 
@@ -47,9 +48,11 @@ namespace AuthenticationAPI.Services
             IObjectStorage objectStorage,
             ICccdDataProtector cccdProtector,
             IConfiguration config,
-            IKycAccessLogService accessLog)
+            IKycAccessLogService accessLog,
+            ILogger<KycService> logger)
         {
             _accessLog = accessLog;
+            _logger = logger;
             _provider = provider;
             _repository = repository;
             _objectStorage = objectStorage;
@@ -116,7 +119,7 @@ namespace AuthenticationAPI.Services
             await _accessLog.LogAsync(record.UserId, record.EkycId, record.UserId, KycActorTypes.User,
                 KycAccessActions.Submit, ip, $"purpose=identity_verification; consentVersion={record.ConsentVersion}");
 
-            // --- Upload original images to object storage ---
+            // -- Upload original images to object storage ---
             frontStream.Position = 0;
             record.CccdFrontObjectKey = await _objectStorage.UploadAsync(frontStream, $"kyc/{record.EkycId}/front.jpg");
 
@@ -126,7 +129,7 @@ namespace AuthenticationAPI.Services
             selfieStream.Position = 0;
             record.FaceCaptureObjectKey = await _objectStorage.UploadAsync(selfieStream, $"kyc/{record.EkycId}/selfie.jpg");
 
-            // --- Card liveness + CCCD OCR (VNPT) ---
+            // -- Card liveness + CCCD OCR (VNPT) ---
             frontStream.Position = 0;
             backStream.Position = 0;
             await _accessLog.LogAsync(record.UserId, record.EkycId, null, KycActorTypes.System,
@@ -134,7 +137,11 @@ namespace AuthenticationAPI.Services
             var ocrResult = await _provider.ExtractIdCardInfoAsync(frontStream, backStream);
 
             if (!ocrResult.Success)
-                return await FailAsync(record, $"OCR failed: {ocrResult.ErrorMessage}");
+            {
+                // Provider error text stays in the log; the customer gets a stable message.
+                _logger.LogWarning("OCR failed for eKYC {EkycId}: {Error}", record.EkycId, ocrResult.ErrorMessage);
+                return await FailAsync(record, OcrFailedMessage);
+            }
 
             var idNumber = ocrResult.IdNumber ?? string.Empty;
             // identity comes from the ID card only; the user just reviews it (ID number masked)
@@ -148,11 +155,11 @@ namespace AuthenticationAPI.Services
             record.CccdNumberHash = _cccdProtector.Hash(idNumber);
             record.OcrRawData = OcrDataSanitizer.Sanitize(ocrResult.RawResponseJson); // CCCD number already masked
 
-            // --- Block one CCCD from being used for multiple accounts (checked first to save VNPT face API calls) ---
+            // -- Block one CCCD from being used for multiple accounts (checked first to save VNPT face API calls) ---
             if (await _repository.IsCccdUsedByAnotherUserAsync(record.CccdNumberHash, record.UserId))
                 return await FailAsync(record, DuplicateCccdMessage, identity);
 
-            // --- Face liveness + Face matching (VNPT) ---
+            // -- Face liveness + Face matching (VNPT) ---
             frontStream.Position = 0;
             selfieStream.Position = 0;
             await _accessLog.LogAsync(record.UserId, record.EkycId, null, KycActorTypes.System,
@@ -160,7 +167,13 @@ namespace AuthenticationAPI.Services
             var faceResult = await _provider.CompareFaceAsync(frontStream, selfieStream);
 
             if (!faceResult.Success)
-                return await FailAsync(record, $"Face match failed: {faceResult.ErrorMessage}", identity);
+            {
+                // CompareFaceAsync only reports Success = false on a provider/timeout error,
+                // i.e. a system fault. It must not count towards the user's 3 failed attempts
+                // (EnsureNotLockedAsync ignores SystemErrorReason), so it is recorded as such.
+                _logger.LogWarning("Face match failed for eKYC {EkycId}: {Error}", record.EkycId, faceResult.ErrorMessage);
+                return await FailAsync(record, SystemErrorReason, identity);
+            }
 
             record.FaceMatchScore = faceResult.MatchScore;
             record.LivenessScore = faceResult.LivenessScore;
@@ -187,7 +200,7 @@ namespace AuthenticationAPI.Services
                 // Update the record + User.EkycStatus in a single save (same transaction)
                 await _repository.UpdateAsync(record, record.Status);
             }
-            catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+            catch (DuplicateRecordException)
             {
                 // Two accounts passed the duplicate check at the same time: the DB unique index blocks the later one
                 return await FailAsync(record, DuplicateCccdMessage, identity);
@@ -229,9 +242,6 @@ namespace AuthenticationAPI.Services
             return dto;
         }
 
-        private static bool IsUniqueViolation(DbUpdateException ex) =>
-            ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation };
-
         /// <summary>
         /// counts consecutive failed submissions (newest first). Every 3rd consecutive failure locks the
         /// function for 24h; after the lock expires the counter starts again (a 4th failure alone does not re-lock).
@@ -262,8 +272,31 @@ namespace AuthenticationAPI.Services
             record.Status = "Failed";
             record.FailReason = reason;
             record.VerifiedAt = null;
+
+            // A failed submission is not a verification: keeping the ID photos for the
+            // whole retention window would be more data than the purpose requires.
+            // Delete them now; the record keeps only the outcome and (optionally)
+            // the document hash used for duplicate detection.
+            await PurgeImagesAsync(record);
+
             await _repository.UpdateAsync(record, "Failed");
             return new EkycSubmitResponseDto { EkycId = record.EkycId, Status = "Failed", Message = reason, Identity = identity };
+        }
+
+        private async Task PurgeImagesAsync(EkycVerification record)
+        {
+            foreach (var key in new[] { record.CccdFrontObjectKey, record.CccdBackObjectKey, record.FaceCaptureObjectKey })
+            {
+                if (string.IsNullOrEmpty(key)) continue;
+                try { await _objectStorage.DeleteAsync(key); }
+                catch (Exception ex) { _logger.LogWarning(ex, "Could not delete image {Key} of failed eKYC {EkycId}", key, record.EkycId); }
+            }
+
+            record.CccdFrontObjectKey = null;
+            record.CccdBackObjectKey = null;
+            record.FaceCaptureObjectKey = null;
+            record.OcrRawData = null;
+            record.FaceVector = null;
         }
 
         private async Task MarkFailedSafeAsync(EkycVerification record, string reason)
@@ -282,7 +315,7 @@ namespace AuthenticationAPI.Services
 
         private string GenerateVerifiedToken(int userId, int ekycId)
         {
-            // Shares the secret with AuthenticationAPI's JWT (JwtSettings:SecretKey in appsettings) —
+            // Shares the secret with AuthenticationAPI's JWT (JwtSettings:SecretKey in appsettings) 
             // so TicketingService can verify it with the same key.
             var secret = _config["JwtSettings:SecretKey"]
                 ?? throw new InvalidOperationException("Missing configuration JwtSettings:SecretKey");

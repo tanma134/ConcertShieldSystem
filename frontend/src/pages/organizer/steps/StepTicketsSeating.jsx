@@ -74,8 +74,31 @@ export default function StepTicketsSeating({
         </div>
       )}
 
-      {error && <div className="ow-error">{error}</div>}
-      {loading && <div className="tb-loading">Loading...</div>}
+      {error && (
+        <div className="ow-error" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => setError("")}
+            style={{
+              background: "none",
+              border: "none",
+              color: "inherit",
+              cursor: "pointer",
+              fontWeight: "bold",
+              fontSize: "18px",
+              lineHeight: "1",
+              padding: "2px 8px",
+              marginLeft: "12px",
+              opacity: 0.85,
+            }}
+            title="Đóng thông báo"
+          >
+            ×
+          </button>
+        </div>
+      )}
+      {loading && <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>}
 
       {!loading && (
         <>
@@ -115,13 +138,13 @@ export default function StepTicketsSeating({
 
       {!standalone && <div className="ow-actions">
         <button type="button" className="tb-btn tb-btn-outline" onClick={onBack}>
-          ← Back
+          Back
         </button>
         <button type="button" className="tb-btn tb-btn-outline" onClick={handleSaveDraft}>
-          💾 Save draft
+          Save draft
         </button>
         <button type="button" className="tb-btn tb-btn-primary" onClick={onNext}>
-          Next →
+          Next
         </button>
       </div>}
     </div>
@@ -353,16 +376,16 @@ function DynamicPricingSection({ ticketTypes, event, readOnly }) {
         <div className="ow-grid">
           {isPublished && (
             <div className="ow-span-2" style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: "8px", padding: "10px 14px", color: "#1e40af", fontSize: "12.5px" }}>
-              💡 <strong>Concert is Published:</strong> You can add or adjust discount promotions (Early Bird, Flash Sale, Last Minute) to boost ticket sales. Ticket price increases are disabled for public events.
+              <strong>Concert is Published:</strong> You can add or adjust discount promotions (Early Bird, Flash Sale, Last Minute) to boost ticket sales. Ticket price increases are disabled for public events.
             </div>
           )}
           {selectedTicket && (
             <div className="ow-span-2" style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "8px", padding: "10px 14px", color: "#166534", fontSize: "12.5px" }}>
-              🎟️ <strong>Ticket sales window ({selectedTicket.typeName}):</strong>{" "}
+              <strong>Ticket sales window ({selectedTicket.typeName}):</strong>{" "}
               {selectedTicket.salesStartsAt ? new Date(selectedTicket.salesStartsAt).toLocaleString() : "Immediately upon publish"}{" "}
               → {selectedTicket.salesEndsAt ? new Date(selectedTicket.salesEndsAt).toLocaleString() : (event?.startsAt ? `Showtime (${new Date(event.startsAt).toLocaleString()})` : "Showtime")}.
               <br />
-              ⚡ <strong>Allowed discount window:</strong>{" "}
+              <strong>Allowed discount window:</strong>{" "}
               From <strong>{ruleMinStart ? new Date(ruleMinStart).toLocaleString() : "now"}</strong>{" "}
               until <strong>{ruleMaxEnd ? new Date(ruleMaxEnd).toLocaleString() : "showtime"}</strong> (dynamically restricted within ticket sales and before concert start).
             </div>
@@ -518,7 +541,7 @@ function DynamicPricingSection({ ticketTypes, event, readOnly }) {
             className="tb-btn tb-btn-primary ow-btn-sm"
             disabled={saving}
           >
-            {saving ? "Saving..." : editingRuleId ? "Save changes" : "Add rule"}
+            {saving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : editingRuleId ? "Save changes" : "Add rule"}
           </button>
           {editingRuleId && (
             <button
@@ -761,8 +784,8 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
       const apiErrors = err.response?.data?.errors;
       setError(
         (apiErrors && apiErrors.join(" ")) ||
-          err.response?.data?.message ||
-          `Could not ${editingId ? "update" : "add"} the ticket type.`
+        err.response?.data?.message ||
+        `Could not ${editingId ? "update" : "add"} the ticket type.`
       );
     } finally {
       setSaving(false);
@@ -827,7 +850,7 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
               style={{ borderColor: "#a855f7", color: "#7e22ce" }}
               onClick={openBatchSale}
             >
-              {showBatchSale ? "Close sales phase" : "⚡ Schedule sales phase"}
+              {showBatchSale ? "Close sales phase" : "Schedule sales phase"}
             </button>
           )}
           {!readOnly && (
@@ -836,7 +859,7 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
               className="tb-btn tb-btn-outline ow-btn-sm"
               onClick={() => (showForm ? cancelEdit() : setShowForm(true))}
             >
-              {showForm ? "Close" : "+ Add ticket type"}
+              {showForm ? "Close" : "Add ticket type"}
             </button>
           )}
         </div>
@@ -845,7 +868,7 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
       {canEditSales && showBatchSale && (
         <div style={{ background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: "10px", padding: "16px", marginBottom: "18px" }}>
           <div style={{ fontWeight: 600, color: "#1e293b", marginBottom: "8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span>⚡ Schedule sales window ({batchSelectedIds.length}/{ticketTypes.length} tickets selected)</span>
+            <span>Schedule sales window ({batchSelectedIds.length}/{ticketTypes.length} tickets selected)</span>
             {twoHoursBeforeShow && (
               <button
                 type="button"
@@ -853,7 +876,7 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
                 style={{ fontSize: "11px", borderColor: "#6366f1", color: "#4f46e5" }}
                 onClick={() => setBatchSaleEnd(twoHoursBeforeShow)}
               >
-                ⏱️ Auto-close 2h before show
+                Auto-close 2h before show
               </button>
             )}
           </div>
@@ -939,7 +962,7 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
                 disabled={batchSaving || !batchSaleStart || batchSelectedIds.length === 0}
                 onClick={applyBatchSalesWindow}
               >
-                {batchSaving ? "Applying..." : `Apply to ${batchSelectedIds.length} tickets`}
+                {batchSaving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : `Apply to ${batchSelectedIds.length} tickets`}
               </button>
               <button
                 type="button"
@@ -951,7 +974,7 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
             </div>
           </div>
           <span className="ow-hint" style={{ marginTop: "8px", display: "block", color: "#64748b" }}>
-            💡 To sell tickets in separate phases (e.g. Day 11 vs Day 12), select tickets for Phase 1 and apply, then select the remaining tickets for Phase 2. Ticket sales safely close 2 hours before showtime.
+            To sell tickets in separate phases (e.g. Day 11 vs Day 12), select tickets for Phase 1 and apply, then select the remaining tickets for Phase 2. Ticket sales safely close 2 hours before showtime.
           </span>
         </div>
       )}
@@ -963,7 +986,30 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
         </p>
       )}
 
-      {error && <div className="ow-error">{error}</div>}
+      {error && (
+        <div className="ow-error" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => setError("")}
+            style={{
+              background: "none",
+              border: "none",
+              color: "inherit",
+              cursor: "pointer",
+              fontWeight: "bold",
+              fontSize: "18px",
+              lineHeight: "1",
+              padding: "2px 8px",
+              marginLeft: "12px",
+              opacity: 0.85,
+            }}
+            title="Đóng thông báo"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {ticketTypes.length === 0 && (
         <div className="ow-empty-row">No ticket types yet.</div>
@@ -990,7 +1036,7 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
                   )}
                   {t.salesStartsAt && (
                     <div className="ow-td-sub" style={{ color: "#7e22ce", fontSize: "11.5px", marginTop: "3px", fontWeight: 500 }}>
-                      🕒 Sales window: {new Date(t.salesStartsAt).toLocaleString()} {t.salesEndsAt ? `→ ${new Date(t.salesEndsAt).toLocaleString()}` : "→ Showtime"}
+                      Sales window: {new Date(t.salesStartsAt).toLocaleString()} {t.salesEndsAt ? `→ ${new Date(t.salesEndsAt).toLocaleString()}` : "→ Showtime"}
                     </div>
                   )}
                 </td>
@@ -1036,7 +1082,7 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
         <form className="ow-inline-form" onSubmit={handleAdd}>
           {isPublished && (
             <div style={{ background: "#f5f3ff", border: "1px solid #ddd6fe", borderRadius: "8px", padding: "10px 14px", marginBottom: "14px", color: "#6b21a8", fontSize: "12.5px" }}>
-              🔒 <strong>Concert is Published:</strong> Ticket price, quantity, and name are locked. You can adjust the sales window (start/end dates) below.
+              <strong>Concert is Published:</strong> Ticket price, quantity, and name are locked. You can adjust the sales window (start/end dates) below.
             </div>
           )}
           <div className="ow-grid">
@@ -1176,7 +1222,7 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
                     style={{ background: "none", border: "none", color: "#6366f1", padding: 0, cursor: "pointer", textDecoration: "underline", fontSize: "11px" }}
                     onClick={() => setForm((f) => ({ ...f, salesEndsAt: twoHoursBeforeShow }))}
                   >
-                    ⏱️ Auto-close 2h before show
+                    Auto-close 2h before show
                   </button>
                 ) : (
                   "Leave blank to keep sales open until concert starts."
@@ -1190,7 +1236,7 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
               className="tb-btn tb-btn-primary ow-btn-sm"
               disabled={saving || hasBlockingErrors}
             >
-              {saving ? "Saving..." : editingId ? "Save changes" : "Add ticket type"}
+              {saving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : editingId ? "Save changes" : "Add ticket type"}
             </button>
             {editingId && (
               <button
@@ -1274,7 +1320,19 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
   // waiting for submit and surfacing a single generic banner.
   const fieldErrors = useMemo(() => {
     const errors = {};
-    if (!form.zoneName.trim()) errors.zoneName = "Please enter a zone name.";
+    const trimmedName = (form.zoneName || "").trim();
+    if (!trimmedName) {
+      errors.zoneName = "Please enter a zone name.";
+    } else {
+      const isDuplicate = (chart?.zones || []).some(
+        (z) =>
+          z.seatZoneId !== editingZoneId &&
+          z.zoneName.trim().toLowerCase() === trimmedName.toLowerCase()
+      );
+      if (isDuplicate) {
+        errors.zoneName = `Zone name '${trimmedName}' is already in use. Please enter a unique name.`;
+      }
+    }
     if (!form.ticketTypeId) errors.ticketTypeId = "Please select a ticket type for this zone.";
     if (form.zoneType === "Standing") {
       if (form.capacity === "" || Number(form.capacity) <= 0) {
@@ -1294,7 +1352,7 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
       }
     }
     return errors;
-  }, [form, selectedTicket, isExceedingTicketQuota, totalAssignedForTicket]);
+  }, [form, selectedTicket, isExceedingTicketQuota, totalAssignedForTicket, chart?.zones, editingZoneId]);
 
   const hasBlockingErrors = Object.keys(fieldErrors).length > 0;
 
@@ -1365,7 +1423,9 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
       seatsPerRow: true,
     });
     if (hasBlockingErrors || isExceedingTicketQuota) {
-      if (isExceedingTicketQuota) {
+      if (fieldErrors.zoneName) {
+        setError(fieldErrors.zoneName);
+      } else if (isExceedingTicketQuota) {
         setError(
           `Cannot save zone: Total capacity (${totalAssignedForTicket.toLocaleString()}) exceeds the quota for ticket type '${selectedTicket?.typeName}' (${selectedTicket?.quantity.toLocaleString()}). Please reduce the capacity.`
         );
@@ -1401,8 +1461,8 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
           ticketTypeId: zoneDto.ticketTypeId,
           ...(zoneDto.zoneType === "Seated"
             ? (seatedShapeChanged
-                ? { rows: zoneDto.rows, seatsPerRow: zoneDto.seatsPerRow, rowLabelPrefix: zoneDto.rowLabelPrefix }
-                : {})
+              ? { rows: zoneDto.rows, seatsPerRow: zoneDto.seatsPerRow, rowLabelPrefix: zoneDto.rowLabelPrefix }
+              : {})
             : { capacity: zoneDto.capacity }),
         });
       } else if (!chart) {
@@ -1441,9 +1501,13 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
   // EventAPI đã dùng jsonb nên không cần đổi schema khi thêm loại hình mới.
   const handleZoneShapeChange = async (seatZoneId, shape) => {
     try {
+      const payloadShape = { ...shape };
+      if (payloadShape.w !== undefined && payloadShape.width === undefined) payloadShape.width = payloadShape.w;
+      if (payloadShape.h !== undefined && payloadShape.height === undefined) payloadShape.height = payloadShape.h;
       await seatingApi.updateZone(seatZoneId, {
-        shapeJson: JSON.stringify(shape),
+        shapeJson: JSON.stringify(payloadShape),
       });
+      setError("");
       await onSilentRefresh();
     } catch (err) {
       setError(err.response?.data?.message || "Could not save the zone shape.");
@@ -1457,12 +1521,12 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
       setChart((prev) =>
         prev
           ? {
-              ...prev,
-              layoutJson:
-                typeof newLayout === "string"
-                  ? newLayout
-                  : JSON.stringify(newLayout),
-            }
+            ...prev,
+            layoutJson:
+              typeof newLayout === "string"
+                ? newLayout
+                : JSON.stringify(newLayout),
+          }
           : prev
       );
     } catch (err) {
@@ -1485,7 +1549,30 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
         (headcount only) in the same chart.
       </p>
 
-      {error && <div className="ow-error">{error}</div>}
+      {error && (
+        <div className="ow-error" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => setError("")}
+            style={{
+              background: "none",
+              border: "none",
+              color: "inherit",
+              cursor: "pointer",
+              fontWeight: "bold",
+              fontSize: "18px",
+              lineHeight: "1",
+              padding: "2px 8px",
+              marginLeft: "12px",
+              opacity: 0.85,
+            }}
+            title="Đóng thông báo"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       <div className="ow-mode-toggle">
         <button
@@ -1646,10 +1733,13 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
                         onBlur={handleBlur}
                         placeholder="e.g. VIP Stand"
                         maxLength={100}
-                        aria-invalid={!!(touched.zoneName && fieldErrors.zoneName)}
+                        aria-invalid={!!(fieldErrors.zoneName && (touched.zoneName || form.zoneName.trim().length > 0))}
+                        className={fieldErrors.zoneName && (touched.zoneName || form.zoneName.trim().length > 0) ? "is-invalid" : ""}
                       />
-                      {touched.zoneName && fieldErrors.zoneName && (
-                        <span className="ow-field-error">{fieldErrors.zoneName}</span>
+                      {fieldErrors.zoneName && (touched.zoneName || form.zoneName.trim().length > 0) && (
+                        <span className="ow-field-error">
+                          {fieldErrors.zoneName}
+                        </span>
                       )}
                     </label>
 
@@ -1767,7 +1857,7 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
 
                   {isExceedingTicketQuota ? (
                     <div className="ow-error" style={{ margin: "10px 0" }}>
-                      ⚠️ <strong>Quota Exceeded:</strong> Total capacity for <strong>{selectedTicket.typeName}</strong> would be <strong>{totalAssignedForTicket.toLocaleString()}</strong>, which exceeds the configured ticket quota of <strong>{selectedTicket.quantity.toLocaleString()}</strong>. Please reduce the capacity or increase the ticket quota in Step 3.
+                      <strong>Quota Exceeded:</strong> Total capacity for <strong>{selectedTicket.typeName}</strong> would be <strong>{totalAssignedForTicket.toLocaleString()}</strong>, which exceeds the configured ticket quota of <strong>{selectedTicket.quantity.toLocaleString()}</strong>. Please reduce the capacity or increase the ticket quota in Step 3.
                     </div>
                   ) : (
                     <div className="ow-hint" style={{ margin: "8px 0" }}>
@@ -1799,7 +1889,7 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
                       className="tb-btn tb-btn-primary ow-btn-sm"
                       disabled={saving || hasBlockingErrors || isExceedingTicketQuota}
                     >
-                      {saving ? "Saving..." : editingZoneId ? "Save zone" : "Add zone"}
+                      {saving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : editingZoneId ? "Save zone" : "Add zone"}
                     </button>
                   </div>
                 </form>
@@ -1813,7 +1903,7 @@ function SeatingSection({ eventId, chart, ticketTypes, readOnly, onChanged, onSi
 }
 
 // =============================================================================
-// Seating templates (UC_26.2 Apply Seating Template / UC_26.3 Save as Template)
+// Seating templates ( Apply Seating Template /  Save as Template)
 // =============================================================================
 
 /**
@@ -1837,7 +1927,7 @@ function SeatingTemplateBar({ eventId, chart, ticketTypes, onChanged }) {
             className="tb-btn tb-btn-outline ow-btn-sm"
             onClick={() => setPickerOpen((v) => !v)}
           >
-            {pickerOpen ? "Close template picker" : "📐 Use a saved template"}
+            {pickerOpen ? "Close template picker" : "Use a saved template"}
           </button>
         )}
         {hasZones && (
@@ -1846,7 +1936,7 @@ function SeatingTemplateBar({ eventId, chart, ticketTypes, onChanged }) {
             className="tb-btn tb-btn-outline ow-btn-sm"
             onClick={() => setSaveOpen((v) => !v)}
           >
-            {saveOpen ? "Close" : "💾 Save this layout as a template"}
+            {saveOpen ? "Close" : "Save this layout as a template"}
           </button>
         )}
       </div>
@@ -1920,12 +2010,28 @@ function TemplatePicker({ eventId, ticketTypes, onApplied }) {
 
   const handleApply = async () => {
     if (!selected) return;
-    const zoneMappings = selected.zones.map((_, index) => ({ zoneIndex: index,
-      ...mappings[index], ticketTypeId: Number(mappings[index]?.ticketTypeId) || 0,
-      rows: Number(mappings[index]?.rows) || 1,
-      seatsPerRow: Number(mappings[index]?.seatsPerRow) || 1,
-      capacity: Number(mappings[index]?.capacity) || 1,
-    }));
+    const zoneMappings = selected.zones.map((_, index) => {
+      let shapeJson = mappings[index]?.shapeJson;
+      if (shapeJson) {
+        try {
+          const parsed = typeof shapeJson === "string" ? JSON.parse(shapeJson) : { ...shapeJson };
+          if (parsed && typeof parsed === "object") {
+            if (parsed.w !== undefined && parsed.width === undefined) parsed.width = parsed.w;
+            if (parsed.h !== undefined && parsed.height === undefined) parsed.height = parsed.h;
+            shapeJson = JSON.stringify(parsed);
+          }
+        } catch (_) { }
+      }
+      return {
+        zoneIndex: index,
+        ...mappings[index],
+        shapeJson,
+        ticketTypeId: Number(mappings[index]?.ticketTypeId) || 0,
+        rows: Number(mappings[index]?.rows) || 1,
+        seatsPerRow: Number(mappings[index]?.seatsPerRow) || 1,
+        capacity: Number(mappings[index]?.capacity) || 1,
+      };
+    });
 
     if (zoneMappings.some((m) => !m.ticketTypeId)) {
       setError("Map every zone to a ticket type before applying the template.");
@@ -1960,8 +2066,8 @@ function TemplatePicker({ eventId, ticketTypes, onApplied }) {
       const apiErrors = err.response?.data?.errors;
       setError(
         (apiErrors && apiErrors.join(" ")) ||
-          err.response?.data?.message ||
-          "Could not apply the template."
+        err.response?.data?.message ||
+        "Could not apply the template."
       );
     } finally {
       setApplying(false);
@@ -1980,11 +2086,50 @@ function TemplatePicker({ eventId, ticketTypes, onApplied }) {
     return currentCap > selectedTt.quantity;
   });
 
-  if (loading) return <div className="tb-loading">Loading templates...</div>;
+  const duplicateNamesList = useMemo(() => {
+    if (!selected?.zones) return new Set();
+    const counts = {};
+    selected.zones.forEach((_, idx) => {
+      const name = (mappings[idx]?.zoneName || "").trim().toLowerCase();
+      if (name) counts[name] = (counts[name] || 0) + 1;
+    });
+    const dupes = new Set();
+    Object.entries(counts).forEach(([name, count]) => {
+      if (count > 1) dupes.add(name);
+    });
+    return dupes;
+  }, [selected?.zones, mappings]);
+
+  const hasDuplicateTemplateZoneNames = duplicateNamesList.size > 0;
+
+  if (loading) return <div className="tb-loading"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>;
 
   return (
     <div className="ow-template-picker">
-      {error && <div className="ow-error">{error}</div>}
+      {error && (
+        <div className="ow-error" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => setError("")}
+            style={{
+              background: "none",
+              border: "none",
+              color: "inherit",
+              cursor: "pointer",
+              fontWeight: "bold",
+              fontSize: "18px",
+              lineHeight: "1",
+              padding: "2px 8px",
+              marginLeft: "12px",
+              opacity: 0.85,
+            }}
+            title="Đóng thông báo"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {!selected && (
         <>
@@ -2037,7 +2182,7 @@ function TemplatePicker({ eventId, ticketTypes, onApplied }) {
 
           {anyQuotaExceeded && (
             <div className="ow-error" style={{ marginBottom: "12px" }}>
-              ⚠️ One or more zones exceed their mapped ticket type quota. Please reduce zone capacity or increase the ticket quantity.
+              One or more zones exceed their mapped ticket type quota. Please reduce zone capacity or increase the ticket quantity.
             </div>
           )}
 
@@ -2061,11 +2206,14 @@ function TemplatePicker({ eventId, ticketTypes, onApplied }) {
                     : Number(mappings[index]?.capacity) || 1;
                 const isQuotaExceeded = selectedTt && currentCap > selectedTt.quantity;
 
+                const currentZoneNameTrim = (mappings[index]?.zoneName || "").trim().toLowerCase();
+                const isNameDuplicate = !!currentZoneNameTrim && duplicateNamesList.has(currentZoneNameTrim);
+
                 return (
-                  <tr key={index} className={isQuotaExceeded ? "ow-tr-warning" : ""}>
+                  <tr key={index} className={isQuotaExceeded || isNameDuplicate ? "ow-tr-warning" : ""}>
                     <td>
                       <input
-                        className="ow-template-input"
+                        className={`ow-template-input ${isNameDuplicate ? "is-invalid" : ""}`}
                         placeholder="Zone name (e.g. Zone A)"
                         value={mappings[index]?.zoneName || ""}
                         onChange={(e) =>
@@ -2075,14 +2223,18 @@ function TemplatePicker({ eventId, ticketTypes, onApplied }) {
                           }))
                         }
                       />
+                      {isNameDuplicate && (
+                        <div className="ow-field-error" style={{ marginTop: "4px" }}>
+                          Duplicate zone name
+                        </div>
+                      )}
                     </td>
                     <td>
                       <select
-                        className={`ow-template-select ow-template-type-select ${
-                          mappings[index]?.zoneType === "Seated"
-                            ? "is-seated"
-                            : "is-standing"
-                        }`}
+                        className={`ow-template-select ow-template-type-select ${mappings[index]?.zoneType === "Seated"
+                          ? "is-seated"
+                          : "is-standing"
+                          }`}
                         value={mappings[index]?.zoneType || z.zoneType}
                         onChange={(e) =>
                           setMappings((m) => ({
@@ -2091,8 +2243,8 @@ function TemplatePicker({ eventId, ticketTypes, onApplied }) {
                           }))
                         }
                       >
-                        <option value="Seated">💺 Seated</option>
-                        <option value="Standing">🧍 Standing</option>
+                        <option value="Seated">Seated</option>
+                        <option value="Standing">Standing</option>
                       </select>
                     </td>
                     <td>
@@ -2134,7 +2286,7 @@ function TemplatePicker({ eventId, ticketTypes, onApplied }) {
                           </div>
                           {isQuotaExceeded && (
                             <div className="ow-field-error" style={{ marginTop: "4px" }}>
-                              ⚠️ Exceeds quota ({currentCap.toLocaleString()} &gt; {selectedTt.quantity.toLocaleString()})
+                              Exceeds quota ({currentCap.toLocaleString()} &gt; {selectedTt.quantity.toLocaleString()})
                             </div>
                           )}
                         </div>
@@ -2159,7 +2311,7 @@ function TemplatePicker({ eventId, ticketTypes, onApplied }) {
                           </div>
                           {isQuotaExceeded && (
                             <div className="ow-field-error" style={{ marginTop: "4px" }}>
-                              ⚠️ Exceeds quota ({currentCap.toLocaleString()} &gt; {selectedTt.quantity.toLocaleString()})
+                              Exceeds quota ({currentCap.toLocaleString()} &gt; {selectedTt.quantity.toLocaleString()})
                             </div>
                           )}
                         </div>
@@ -2202,9 +2354,9 @@ function TemplatePicker({ eventId, ticketTypes, onApplied }) {
               type="button"
               className="tb-btn tb-btn-primary ow-btn-sm"
               onClick={handleApply}
-              disabled={applying || ticketTypes.length === 0 || anyQuotaExceeded}
+              disabled={applying || ticketTypes.length === 0 || anyQuotaExceeded || hasDuplicateTemplateZoneNames}
             >
-              {applying ? "Applying..." : "Apply template"}
+              {applying ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Apply template"}
             </button>
           </div>
         </div>
@@ -2249,7 +2401,30 @@ function SaveAsTemplateForm({ eventId, onSaved }) {
 
   return (
     <form className="ow-inline-form" onSubmit={handleSave}>
-      {error && <div className="ow-error">{error}</div>}
+      {error && (
+        <div className="ow-error" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => setError("")}
+            style={{
+              background: "none",
+              border: "none",
+              color: "inherit",
+              cursor: "pointer",
+              fontWeight: "bold",
+              fontSize: "18px",
+              lineHeight: "1",
+              padding: "2px 8px",
+              marginLeft: "12px",
+              opacity: 0.85,
+            }}
+            title="Đóng thông báo"
+          >
+            ×
+          </button>
+        </div>
+      )}
       {success && <div className="ow-banner ow-banner-pending">{success}</div>}
       <div className="ow-grid">
         <label className="ow-field ow-span-2">
@@ -2275,7 +2450,7 @@ function SaveAsTemplateForm({ eventId, onSaved }) {
         className="tb-btn tb-btn-primary ow-btn-sm"
         disabled={saving}
       >
-        {saving ? "Saving..." : "Save as template"}
+        {saving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Save as template"}
       </button>
     </form>
   );
@@ -2302,9 +2477,11 @@ function RefundPolicySection({ eventId, refundPolicies, readOnly, onChanged }) {
 
   const startEdit = (policy) => {
     setEditingId(policy.refundPolicyId);
-    setForm({ policyName: policy.policyName, description: policy.description || "",
+    setForm({
+      policyName: policy.policyName, description: policy.description || "",
       deadlineBeforeEventHours: policy.deadlineBeforeEventHours, refundPercent: policy.refundPercent,
-      requiresOrganizerApproval: !!policy.requiresOrganizerApproval });
+      requiresOrganizerApproval: !!policy.requiresOrganizerApproval
+    });
     setShowForm(true); setError("");
   };
 
@@ -2344,8 +2521,8 @@ function RefundPolicySection({ eventId, refundPolicies, readOnly, onChanged }) {
       const apiErrors = err.response?.data?.errors;
       setError(
         (apiErrors && apiErrors.join(" ")) ||
-          err.response?.data?.message ||
-          "Could not add the refund policy."
+        err.response?.data?.message ||
+        "Could not add the refund policy."
       );
     } finally {
       setSaving(false);
@@ -2379,7 +2556,30 @@ function RefundPolicySection({ eventId, refundPolicies, readOnly, onChanged }) {
 
       <p className="ow-hint">At least one policy is required before submitting for review.</p>
 
-      {error && <div className="ow-error">{error}</div>}
+      {error && (
+        <div className="ow-error" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => setError("")}
+            style={{
+              background: "none",
+              border: "none",
+              color: "inherit",
+              cursor: "pointer",
+              fontWeight: "bold",
+              fontSize: "18px",
+              lineHeight: "1",
+              padding: "2px 8px",
+              marginLeft: "12px",
+              opacity: 0.85,
+            }}
+            title="Đóng thông báo"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {refundPolicies.length === 0 && (
         <div className="ow-empty-row">No refund policies yet.</div>
@@ -2482,7 +2682,7 @@ function RefundPolicySection({ eventId, refundPolicies, readOnly, onChanged }) {
             className="tb-btn tb-btn-primary ow-btn-sm"
             disabled={saving}
           >
-            {saving ? "Saving..." : editingId ? "Save policy" : "Add policy"}
+            {saving ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : editingId ? "Save policy" : "Add policy"}
           </button>
         </form>
       )}

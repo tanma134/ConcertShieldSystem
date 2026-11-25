@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
-using AdminAPI.Data;
 using AdminAPI.DTOs;
+using AdminAPI.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace AdminAPI.Services.Risks;
@@ -14,30 +14,30 @@ public sealed class RiskPolicyService : IRiskPolicyService
     private const string VersionKey = "risk.rule_version";
     private const string RulePrefix = "risk.rule.";
 
-    private readonly AdminDbContext _db;
+    private readonly ISystemParameterRepository _parameters;
     private readonly IRiskConfigProvider _config;
 
-    public RiskPolicyService(AdminDbContext db, IRiskConfigProvider config)
+    public RiskPolicyService(ISystemParameterRepository parameters, IRiskConfigProvider config)
     {
-        _db = db; _config = config;
+        _parameters = parameters; _config = config;
     }
 
     public async Task<List<RiskPolicyItemDto>> GetAsync(string? category)
     {
         if (!string.IsNullOrWhiteSpace(category) && !Categories.Contains(category))
             throw new RiskServiceException(400, "Category must be risk_config or risk_rule.");
-        var q = _db.SystemParameters.AsNoTracking().Where(p => Categories.Contains(p.Category));
-        if (!string.IsNullOrWhiteSpace(category)) q = q.Where(p => p.Category == category);
-        return await q.OrderBy(p => p.Category).ThenBy(p => p.ParamKey)
-            .Select(p => new RiskPolicyItemDto
-            {
-                Key = p.ParamKey,
-                Value = p.ParamValue,
-                Category = p.Category,
-                Description = p.Description,
-                UpdatedBy = p.UpdatedBy,
-                UpdatedAt = p.UpdatedAt
-            }).ToListAsync();
+
+        var rows = await _parameters.GetOrderedAsync(Categories, category);
+
+        return rows.Select(p => new RiskPolicyItemDto
+        {
+            Key = p.ParamKey,
+            Value = p.ParamValue,
+            Category = p.Category,
+            Description = p.Description,
+            UpdatedBy = p.UpdatedBy,
+            UpdatedAt = p.UpdatedAt
+        }).ToList();
     }
 
     public async Task<UpdateRiskPolicyResult> UpdateAsync(UpdateRiskPolicyRequest req, int adminId)
@@ -51,8 +51,7 @@ public sealed class RiskPolicyService : IRiskPolicyService
         var dup = req.Items.GroupBy(i => (i.Key ?? "").Trim(), StringComparer.OrdinalIgnoreCase).FirstOrDefault(g => g.Count() > 1);
         if (dup != null) throw new RiskServiceException(400, $"Key {dup.Key} appears more than once.");
 
-        var keys = req.Items.Select(i => (i.Key ?? "").Trim()).ToList();
-        var rows = await _db.SystemParameters.Where(p => Categories.Contains(p.Category)).ToListAsync();
+        var rows = await _parameters.GetForUpdateAsync(Categories);
         var byKey = rows.ToDictionary(r => r.ParamKey, StringComparer.OrdinalIgnoreCase);
 
         var changes = new List<RiskPolicyChangeDto>();
@@ -100,7 +99,7 @@ public sealed class RiskPolicyService : IRiskPolicyService
             row.UpdatedAt = now;
         }
 
-        try { await _db.SaveChangesAsync(); }
+        try { await _parameters.SaveChangesAsync(); }
         catch (DbUpdateConcurrencyException)
         {
             throw new RiskServiceException(409, "The data was just updated by someone else. Please reload and try again.");
@@ -126,12 +125,17 @@ public sealed class RiskPolicyService : IRiskPolicyService
             throw new RiskServiceException(400, "Thresholds must satisfy 0 < medium < high < critical <= 100.");
         if (c.CapGroup is < 1 or > 100 || c.CapTrust is < 0 or > 100 || c.BonusCombo is < 0 or > 100)
             throw new RiskServiceException(400, "Score caps and combo bonus must be between 0 and 100.");
-        if (c.ComboMinGroups < 2 || c.CriticalMinGroups < 1)
-            throw new RiskServiceException(400, "Minimum group counts are out of range.");
+        if (c.ComboMinGroups < 2)
+            throw new RiskServiceException(400, "Minimum group count for the combo bonus must be at least 2.");
+        // BR-272: a Critical verdict must need signals from at least two independent groups;
+        // a single group can never reach Critical on its own.
+        if (c.CriticalMinGroups < 2)
+            throw new RiskServiceException(400,
+                "risk.critical.min_groups must be at least 2: a Critical block needs signals from two independent groups.");
         if (c.BlockHoursLevel1 < 1 || c.BlockHoursLevel2 < c.BlockHoursLevel1 || c.BlockHoursLevel2 > 24 * 30)
             throw new RiskServiceException(400, "Block hours must satisfy 1 <= level1 <= level2 <= 720.");
         if (c.EscalationWindowDays < 1 || c.TrustRestoreDays < 1 || c.AlertSlaHours < 1
-            || c.AppealDeadlineDays < 1 || c.AppealSlaHours < 1)
+            || c.AppealDeadlineDays < 1 || c.TicketAppealDeadlineHours < 1 || c.AppealSlaHours < 1)
             throw new RiskServiceException(400, "Day and hour parameters must be positive.");
         if (c.AppealMaxEvidenceFiles is < 0 or > 20 || c.AppealMaxEvidenceMb is < 1 or > 50)
             throw new RiskServiceException(400, "Evidence limits are out of range.");

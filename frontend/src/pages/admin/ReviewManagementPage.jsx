@@ -94,7 +94,7 @@ export default function ReviewManagementPage() {
             <button type="submit" className="admin-button-secondary">Search</button>
           </form>
           {loading ? (
-            <div className="empty-state">Loading reviews...</div>
+            <div className="empty-state"><span className="app-loading-spinner" role="status" aria-label="Loading" /></div>
           ) : reviews.length === 0 ? (
             <div className="empty-state">No reviews found.</div>
           ) : (
@@ -265,7 +265,7 @@ export default function ReviewManagementPage() {
                     Cancel
                   </button>
                   <button type="submit" className="admin-button" disabled={sending}>
-                    {sending ? "Sending..." : "Send Reply"}
+                    {sending ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Send Reply"}
                   </button>
                 </div>
               </form>

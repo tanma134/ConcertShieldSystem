@@ -6,7 +6,7 @@ const reviewApi = {
   update: (reviewId, payload) => axiosClient.put(`/reviews/${reviewId}`, payload),
   remove: (reviewId) => axiosClient.delete(`/reviews/${reviewId}`),
   getAdmin: (params = {}) => axiosClient.get("/reviews/admin", { params }),
-  setVisibility: (reviewId, hidden) => axiosClient.put(`/reviews/admin/${reviewId}`, { hidden }),
+  setVisibility: (reviewId, hidden) => axiosClient.put(`/reviews/admin/${reviewId}/visibility`, { hidden }),
   reply: (reviewId, comment) => axiosClient.post(`/reviews/${reviewId}/replies`, { comment }),
 };
 
