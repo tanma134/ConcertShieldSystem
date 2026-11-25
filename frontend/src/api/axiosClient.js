@@ -51,9 +51,11 @@ axiosClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    const invalidQueueToken = error.response?.data?.code === "TOKEN_INVALID";
 
     const shouldTryRefresh =
       error.response?.status === 401 &&
+      !invalidQueueToken &&
       !originalRequest._retry &&
       !isPublicEndpoint(originalRequest.url);
 

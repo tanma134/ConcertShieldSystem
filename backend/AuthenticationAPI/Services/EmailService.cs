@@ -151,11 +151,11 @@ namespace AuthenticationAPI.Services
             message.Body = new TextPart("html")
             {
                 Text = $@"<div style='font-family: Arial, sans-serif; max-width: 600px; margin: auto; color: #333;'>
-                    <h2>Sự kiện bạn yêu thích sắp diễn ra</h2>
-                    <p>Xin chào {safeName},</p>
-                    <p>Sự kiện <strong>{safeTitle}</strong> trong wishlist của bạn sẽ bắt đầu sau khoảng 1 ngày.</p>
-                    <p>Thời gian: <strong>{localStartsAt} ({safeTimezone})</strong></p>
-                    <p><a href='{safeEventUrl}'>Xem thông tin sự kiện</a></p>
+                 <h2>Your Favorite Event Is Coming Soon!</h2>
+                <p>Hello {safeName},</p>
+                 <p>The event <strong>{safeTitle}</strong> in your wishlist is scheduled to start in approximately 1 day.</p>
+                 <p>Event Time: <strong>{localStartsAt} ({safeTimezone})</strong></p>
+                 <p><a href='{safeEventUrl}'>View Event Details</a></p>
                 </div>"
             };
 
