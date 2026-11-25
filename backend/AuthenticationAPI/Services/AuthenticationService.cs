@@ -5,12 +5,22 @@ using System.Text;
 using AuthenticationAPI.DTOs;
 using AuthenticationAPI.Models;
 using AuthenticationAPI.Repositories;
+using AuthenticationAPI.Risk;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
 using Google.Apis.Auth;
 
 namespace AuthenticationAPI.Services
 {
+    /// <summary>
+    /// BR-112: the account is under an active risk block, so no new session may start.
+    /// The controller turns this into 403 RISK_BLOCKED.
+    /// </summary>
+    public sealed class AccountRiskBlockedException : Exception
+    {
+        public AccountRiskBlockedException(string message) : base(message) { }
+    }
+
     public class AuthenticationService : IAuthenticationService
     {
         private readonly IUserRepository _userRepository;
@@ -19,6 +29,7 @@ namespace AuthenticationAPI.Services
         private readonly IMemoryCache _cache;
         private readonly ILogger<AuthenticationService> _logger;
         private readonly IAuditLogClient _auditLog;
+        private readonly IRiskClient _riskClient;
 
         private const string DefaultRoleName = "Customer";
         private const string AdminRoleName = "Admin";
@@ -36,7 +47,8 @@ namespace AuthenticationAPI.Services
             IConfiguration configuration,
             IMemoryCache cache,
             ILogger<AuthenticationService> logger,
-            IAuditLogClient auditLog)
+            IAuditLogClient auditLog,
+            IRiskClient riskClient)
         {
             _userRepository = userRepository;
             _emailService = emailService;
@@ -44,6 +56,7 @@ namespace AuthenticationAPI.Services
             _cache = cache;
             _logger = logger;
             _auditLog = auditLog;
+            _riskClient = riskClient;
         }
 
         // Xác định actor_type ghi vào audit log dựa theo role THẬT của user, thay vì hardcode "user".
@@ -67,6 +80,16 @@ namespace AuthenticationAPI.Services
             }
 
             string cacheKey = $"pending_register:{dto.Email}";
+
+            // BR-22: wrong-OTP attempts belong to the email's registration round, not to
+            // one particular code. Requesting a new code must not reset the counter.
+            // The counter starts over only when the round is gone: 5 wrong codes cancel
+            // the round, and an expired round is dropped from the cache.
+            var carriedAttempts =
+                _cache.TryGetValue(cacheKey, out PendingRegistration? previous) && previous != null
+                    ? previous.FailedOtpAttempts
+                    : 0;
+
             string otp = GenerateOTP();
             string passwordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
 
@@ -77,7 +100,8 @@ namespace AuthenticationAPI.Services
                 PhoneNumber = dto.PhoneNumber,
                 PasswordHash = passwordHash,
                 OtpCode = otp,
-                ExpiredAt = DateTime.UtcNow.AddMinutes(5)
+                ExpiredAt = DateTime.UtcNow.AddMinutes(5),
+                FailedOtpAttempts = carriedAttempts
             };
             _cache.Set(cacheKey, pending, TimeSpan.FromMinutes(5));
 
@@ -216,6 +240,9 @@ namespace AuthenticationAPI.Services
 
             ClearLoginFailures(user.UserId);
 
+            // BR-112: the password is right, but an active risk block still refuses a new session.
+            await EnsureNotRiskBlockedAsync(user.UserId);
+
             var (accessToken, accessTokenExpiry) = GenerateAccessToken(user);
             string refreshToken = GenerateRefreshToken();
 
@@ -291,6 +318,9 @@ namespace AuthenticationAPI.Services
 
                 throw new UnauthorizedAccessException("Your account has been locked. Please contact the administrator.");
             }
+
+            // BR-112: an expired access token of a blocked account must not be renewed.
+            await EnsureNotRiskBlockedAsync(tokenEntity.UserId);
 
             var (accessToken, accessTokenExpiry) = GenerateAccessToken(tokenEntity.User);
 
@@ -419,6 +449,25 @@ namespace AuthenticationAPI.Services
                 ipAddress: ipAddress, userAgent: userAgent);
         }
 
+        /// <summary>
+        /// BR-112: asks AdminAPI whether the user is under an active block.
+        /// Fail-open: when AdminAPI is unreachable the check returns null and the login
+        /// proceeds, so a risk-service outage never locks everybody out.
+        /// </summary>
+        private async Task EnsureNotRiskBlockedAsync(int userId)
+        {
+            if (!_configuration.GetValue("Risk:Enabled", true))
+                return;
+
+            var check = await _riskClient.CheckBlockAsync(userId, null, null, null);
+            if (check is { Blocked: true })
+            {
+                _logger.LogWarning("Login/refresh refused: UserId={UserId} is under an active risk block.", userId);
+                throw new AccountRiskBlockedException(
+                    check.Message ?? "Your account is temporarily restricted due to unusual activity.");
+            }
+        }
+
         private (string token, DateTime expiry) GenerateAccessToken(User user)
         {
             var jwtSettings = _configuration.GetSection("JwtSettings");
@@ -524,6 +573,9 @@ namespace AuthenticationAPI.Services
 
                     throw new UnauthorizedAccessException("Your account has been locked. Please contact the administrator.");
                 }
+
+                // BR-112: Google proves identity, not that the account is not risk-blocked.
+                await EnsureNotRiskBlockedAsync(user.UserId);
 
                 if (!user.IsVerified)
                 {

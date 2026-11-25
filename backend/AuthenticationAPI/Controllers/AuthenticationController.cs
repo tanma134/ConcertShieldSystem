@@ -100,6 +100,10 @@ namespace AuthenticationAPI.Controllers
             {
                 return Unauthorized(new { message = ex.Message });
             }
+            catch (AccountRiskBlockedException ex)
+            {
+                return StatusCode(403, new { success = false, code = "RISK_BLOCKED", message = ex.Message });
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error during login for email {Email}", dto?.Email);
@@ -122,6 +126,10 @@ namespace AuthenticationAPI.Controllers
             catch (UnauthorizedAccessException ex)
             {
                 return Unauthorized(new { message = ex.Message });
+            }
+            catch (AccountRiskBlockedException ex)
+            {
+                return StatusCode(403, new { success = false, code = "RISK_BLOCKED", message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -225,6 +233,10 @@ namespace AuthenticationAPI.Controllers
             catch (InvalidOperationException ex)
             {
                 return BadRequest(new { message = ex.Message });
+            }
+            catch (AccountRiskBlockedException ex)
+            {
+                return StatusCode(403, new { success = false, code = "RISK_BLOCKED", message = ex.Message });
             }
             catch (Exception ex)
             {

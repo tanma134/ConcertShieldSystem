@@ -58,7 +58,6 @@ public sealed class RiskConfig
 
     public int AlertSlaHours { get; set; } = 2;
     public int AppealDeadlineDays { get; set; } = 7;
-    // Ticket-scope blocks are short-lived, so their appeal window is measured in hours.
     public int TicketAppealDeadlineHours { get; set; } = 24;
     public int AppealSlaHours { get; set; } = 48;
     public int AppealMaxEvidenceFiles { get; set; } = 5;

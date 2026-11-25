@@ -5,9 +5,7 @@ using AuthenticationAPI.DTOs;
 using AuthenticationAPI.Models;
 using AuthenticationAPI.Providers;
 using AuthenticationAPI.Repositories;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Npgsql;
 
 namespace AuthenticationAPI.Services
 {
@@ -139,9 +137,11 @@ namespace AuthenticationAPI.Services
             var ocrResult = await _provider.ExtractIdCardInfoAsync(frontStream, backStream);
 
             if (!ocrResult.Success)
+            {
                 // Provider error text stays in the log; the customer gets a stable message.
                 _logger.LogWarning("OCR failed for eKYC {EkycId}: {Error}", record.EkycId, ocrResult.ErrorMessage);
                 return await FailAsync(record, OcrFailedMessage);
+            }
 
             var idNumber = ocrResult.IdNumber ?? string.Empty;
             // identity comes from the ID card only; the user just reviews it (ID number masked)
@@ -167,8 +167,13 @@ namespace AuthenticationAPI.Services
             var faceResult = await _provider.CompareFaceAsync(frontStream, selfieStream);
 
             if (!faceResult.Success)
+            {
+                // CompareFaceAsync only reports Success = false on a provider/timeout error,
+                // i.e. a system fault. It must not count towards the user's 3 failed attempts
+                // (EnsureNotLockedAsync ignores SystemErrorReason), so it is recorded as such.
                 _logger.LogWarning("Face match failed for eKYC {EkycId}: {Error}", record.EkycId, faceResult.ErrorMessage);
-                return await FailAsync(record, FaceFailedMessage, identity);
+                return await FailAsync(record, SystemErrorReason, identity);
+            }
 
             record.FaceMatchScore = faceResult.MatchScore;
             record.LivenessScore = faceResult.LivenessScore;
@@ -195,7 +200,7 @@ namespace AuthenticationAPI.Services
                 // Update the record + User.EkycStatus in a single save (same transaction)
                 await _repository.UpdateAsync(record, record.Status);
             }
-            catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+            catch (DuplicateRecordException)
             {
                 // Two accounts passed the duplicate check at the same time: the DB unique index blocks the later one
                 return await FailAsync(record, DuplicateCccdMessage, identity);
@@ -236,9 +241,6 @@ namespace AuthenticationAPI.Services
 
             return dto;
         }
-
-        private static bool IsUniqueViolation(DbUpdateException ex) =>
-            ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation };
 
         /// <summary>
         /// counts consecutive failed submissions (newest first). Every 3rd consecutive failure locks the

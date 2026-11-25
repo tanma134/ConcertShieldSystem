@@ -1,7 +1,7 @@
 
 using AuthenticationAPI.DTOs;
 using AuthenticationAPI.Models;
-using Microsoft.EntityFrameworkCore;
+using AuthenticationAPI.Repositories;
 
 namespace AuthenticationAPI.Services
 {
@@ -31,14 +31,14 @@ namespace AuthenticationAPI.Services
 
     public class KycAccessLogService : IKycAccessLogService
     {
-        private readonly AuthenticationDbContext _db;
+        private readonly IKycAccessLogRepository _repository;
 
-        public KycAccessLogService(AuthenticationDbContext db) => _db = db;
+        public KycAccessLogService(IKycAccessLogRepository repository) => _repository = repository;
 
         public async Task LogAsync(int subjectUserId, int? ekycId, int? actorUserId, string actorType,
                                    string action, string? ipAddress = null, string? details = null)
         {
-            _db.KycAccessLogs.Add(new KycAccessLog
+            await _repository.CreateAsync(new KycAccessLog
             {
                 SubjectUserId = subjectUserId,
                 EkycId = ekycId,
@@ -49,7 +49,6 @@ namespace AuthenticationAPI.Services
                 Details = details,
                 CreatedAt = DateTime.UtcNow
             });
-            await _db.SaveChangesAsync();
         }
 
         public async Task<KycPagedResult<KycAccessLogDto>> SearchAsync(KycAccessLogQuery query)
@@ -60,50 +59,30 @@ namespace AuthenticationAPI.Services
             if (query.From.HasValue && query.To.HasValue && ToUtc(query.From.Value) > ToUtc(query.To.Value))
                 throw new InvalidOperationException("'From' must not be later than 'To'");
 
-            var q = _db.KycAccessLogs.AsNoTracking().AsQueryable();
+            var filter = new KycAccessLogFilter
+            {
+                SubjectUserId = query.SubjectUserId,
+                ActorUserId = query.ActorUserId,
+                ActorType = string.IsNullOrWhiteSpace(query.ActorType) ? null : query.ActorType.Trim(),
+                Action = string.IsNullOrWhiteSpace(query.Action) ? null : query.Action.Trim().ToUpperInvariant(),
+                FromUtc = query.From.HasValue ? ToUtc(query.From.Value) : null,
+                ToUtc = query.To.HasValue ? ToUtc(query.To.Value) : null
+            };
 
-            if (query.SubjectUserId.HasValue)
-                q = q.Where(x => x.SubjectUserId == query.SubjectUserId.Value);
-            if (query.ActorUserId.HasValue)
-                q = q.Where(x => x.ActorUserId == query.ActorUserId.Value);
-            if (!string.IsNullOrWhiteSpace(query.ActorType))
-            {
-                var actorType = query.ActorType.Trim();
-                q = q.Where(x => x.ActorType == actorType);
-            }
-            if (!string.IsNullOrWhiteSpace(query.Action))
-            {
-                var action = query.Action.Trim().ToUpperInvariant();
-                q = q.Where(x => x.Action == action);
-            }
-            if (query.From.HasValue)
-            {
-                var from = ToUtc(query.From.Value);
-                q = q.Where(x => x.CreatedAt >= from);
-            }
-            if (query.To.HasValue)
-            {
-                var to = ToUtc(query.To.Value);
-                q = q.Where(x => x.CreatedAt <= to);
-            }
+            var (rows, total) = await _repository.SearchAsync(filter, page, pageSize);
 
-            var total = await q.CountAsync();
-            var items = await q
-                .OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id)
-                .Skip((page - 1) * pageSize).Take(pageSize)
-                .Select(x => new KycAccessLogDto
-                {
-                    Id = x.Id,
-                    SubjectUserId = x.SubjectUserId,
-                    EkycId = x.EkycId,
-                    ActorUserId = x.ActorUserId,
-                    ActorType = x.ActorType,
-                    Action = x.Action,
-                    IpAddress = x.IpAddress,
-                    Details = x.Details,
-                    CreatedAt = x.CreatedAt
-                })
-                .ToListAsync();
+            var items = rows.Select(x => new KycAccessLogDto
+            {
+                Id = x.Id,
+                SubjectUserId = x.SubjectUserId,
+                EkycId = x.EkycId,
+                ActorUserId = x.ActorUserId,
+                ActorType = x.ActorType,
+                Action = x.Action,
+                IpAddress = x.IpAddress,
+                Details = x.Details,
+                CreatedAt = x.CreatedAt
+            }).ToList();
 
             return new KycPagedResult<KycAccessLogDto> { Items = items, Total = total, Page = page, PageSize = pageSize };
         }
@@ -113,13 +92,8 @@ namespace AuthenticationAPI.Services
             page = Math.Max(1, page);
             pageSize = Math.Clamp(pageSize, 1, 100);
 
-            var q = _db.KycAccessLogs.AsNoTracking().Where(x => x.SubjectUserId == userId);
-            var total = await q.CountAsync();
-            var rows = await q
-                .OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id)
-                .Skip((page - 1) * pageSize).Take(pageSize)
-                .Select(x => new { x.Id, x.ActorType, x.Action, x.Details, x.CreatedAt })
-                .ToListAsync();
+            var (rows, total) = await _repository.SearchAsync(
+                new KycAccessLogFilter { SubjectUserId = userId }, page, pageSize);
 
             return new KycPagedResult<KycMyAccessLogDto>
             {
