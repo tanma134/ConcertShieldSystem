@@ -30,6 +30,12 @@ namespace PaymentAPI.Controllers
             || User.HasClaim("role", "Organizer")
             || User.Claims.Any(c => (c.Type == "role" || c.Type == ClaimTypes.Role || c.Type.EndsWith("/role")) && c.Value.Equals("Organizer", StringComparison.OrdinalIgnoreCase));
 
+        protected string AuditActorType => IsAdmin ? "admin"
+            : IsOrganizer ? "organizer"
+            : User.Claims.Any(c => (c.Type == "role" || c.Type == ClaimTypes.Role || c.Type.EndsWith("/role")) &&
+                c.Value.Contains("Staff", StringComparison.OrdinalIgnoreCase)) ? "staff"
+            : "user";
+
         protected ActionResult HandleException(Exception ex)
         {
             return ex switch

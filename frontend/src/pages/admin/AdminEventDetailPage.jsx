@@ -151,7 +151,7 @@ export default function AdminEventDetailPage() {
 
   return (
     <AdminShell title={pageTitle} activeSubnavPath={activeSubnav}>
-      <div className="ow-wrap">
+      <div className="ow-wrap admin-event-review-page">
         <div className="ow-head">
           <div>
             <h1>{pageTitle}</h1>

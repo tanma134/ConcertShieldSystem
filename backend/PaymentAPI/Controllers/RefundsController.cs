@@ -17,10 +17,12 @@ namespace PaymentAPI.Controllers
     public class RefundsController : BaseApiController
     {
         private readonly IRefundService _refundService;
+        private readonly IAuditLogClient _auditLog;
 
-        public RefundsController(IRefundService refundService)
+        public RefundsController(IRefundService refundService, IAuditLogClient auditLog)
         {
             _refundService = refundService;
+            _auditLog = auditLog;
         }
 
         private string CurrentUserName
@@ -54,6 +56,10 @@ namespace PaymentAPI.Controllers
                 var result = await _refundService.ProcessRefundAsync(request, CurrentUserId, CurrentUserName, ct);
                 if (result.Status == "Refunded")
                 {
+                    _ = _auditLog.LogAsync(CurrentUserId, AuditActorType, "REFUND_PROCESSED", "PaymentRefund",
+                        result.RefundId?.ToString(), null,
+                        new { request.OrderId, request.RefundType, request.Amount, request.Reason, result.Status, result.Reference },
+                        HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString(), HttpContext.TraceIdentifier);
                     return Ok(ApiResponseDTO<RefundResultDto>.SuccessResponse(result, "Refund processed successfully."));
                 }
                 else
@@ -85,6 +91,10 @@ namespace PaymentAPI.Controllers
                 var result = await _refundService.RetryRefundAsync(id, strategy, CurrentUserId, CurrentUserName, ct);
                 if (result.Status == "Refunded")
                 {
+                    _ = _auditLog.LogAsync(CurrentUserId, AuditActorType, "REFUND_RETRIED", "PaymentRefund",
+                        id.ToString(), new { Status = "Failed" },
+                        new { Strategy = strategy, result.Status, result.Reference },
+                        HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString(), HttpContext.TraceIdentifier);
                     return Ok(ApiResponseDTO<RefundResultDto>.SuccessResponse(result, "Refund retry succeeded."));
                 }
                 else

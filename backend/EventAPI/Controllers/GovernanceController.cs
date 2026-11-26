@@ -7,7 +7,7 @@ namespace EventAPI.Controllers;
 
 [Route("api/events/{eventId:int}/governance")]
 [Authorize(Roles = "Organizer,Admin")]
-public class GovernanceController(GovernanceService service) : BaseApiController
+public class GovernanceController(GovernanceService service, IAuditLogClient audit) : BaseApiController
 {
     private IActionResult Data(object value) => Ok(new { success = true, data = value });
 
@@ -37,6 +37,7 @@ public class GovernanceController(GovernanceService service) : BaseApiController
     public async Task<IActionResult> ReviewCompliance(int eventId, ComplianceReviewInput input, CancellationToken ct)
     {
         await service.ReviewComplianceAsync(eventId, CurrentUserId, input, ct);
+        await AuditAsync(audit, "COMPLIANCE_REVIEWED", "Event", eventId, newValue: new { decision = input.Decision, version = input.Version });
         return Data(await service.ComplianceAsync(eventId, CurrentUserId, true, ct));
     }
 
@@ -61,6 +62,7 @@ public class GovernanceController(GovernanceService service) : BaseApiController
     public async Task<IActionResult> ReviewChange(int eventId, long requestId, ChangeReviewInput input, CancellationToken ct)
     {
         await service.ReviewChangeAsync(eventId, requestId, CurrentUserId, input, ct);
+        await AuditAsync(audit, "EVENT_CHANGE_REVIEWED", "EventChangeRequest", requestId, newValue: new { eventId, decision = input.Decision });
         return Data(await service.ChangesAsync(eventId, CurrentUserId, true, ct));
     }
 

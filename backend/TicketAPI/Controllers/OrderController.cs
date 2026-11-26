@@ -17,9 +17,11 @@ namespace TicketAPI.Controllers
         private readonly ILogger<OrdersController> _logger;
         private readonly IPaymentAPIClient _paymentApiClient;
         private readonly ITicketRiskService _risk;
+        private readonly IAuditLogClient _auditLog;
 
-        public OrdersController(IOrderService orderService, ILogger<OrdersController> logger, IPaymentAPIClient paymentApiClient, ITicketRiskService risk)
+        public OrdersController(IOrderService orderService, ILogger<OrdersController> logger, IPaymentAPIClient paymentApiClient, ITicketRiskService risk, IAuditLogClient auditLog)
         {
+            _auditLog = auditLog;
             _risk = risk;
             _orderService = orderService;
             _logger = logger;
@@ -217,6 +219,9 @@ namespace TicketAPI.Controllers
                     orderId,
                     request.Amount,
                     request.TransactionRef);
+
+                await _auditLog.LogAsync(null, "system", "ORDER_PAYMENT_CONFIRMED", "Order", orderId.ToString(),
+                    newValue: new { status = "Paid", amount = request.Amount }, ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString());
 
                 return Ok(new
                 {

@@ -373,6 +373,9 @@ database/schema_dumps/
 *.sql.bak
 *.dmp
 
+# Private local demo data (credentials and documents)
+/demo/local/
+
 # Public uploads
 frontend/public/uploads/*
 !frontend/public/uploads/.gitkeep

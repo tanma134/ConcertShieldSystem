@@ -14,10 +14,18 @@ namespace PaymentAPI.Controllers
     public class VouchersController : BaseApiController
     {
         private readonly IVoucherService _voucherService;
+        private readonly IAuditLogClient _auditLog;
 
-        public VouchersController(IVoucherService voucherService)
+        public VouchersController(IVoucherService voucherService, IAuditLogClient auditLog)
         {
             _voucherService = voucherService;
+            _auditLog = auditLog;
+        }
+
+        private void Audit(string action, int? voucherId, object? oldValue, object? newValue)
+        {
+            _ = _auditLog.LogAsync(CurrentUserId, AuditActorType, action, "Voucher", voucherId?.ToString(), oldValue, newValue,
+                HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString(), HttpContext.TraceIdentifier);
         }
 
         // Tao voucher giam gia moi danh cho Admin va Organizer
@@ -28,6 +36,7 @@ namespace PaymentAPI.Controllers
             try
             {
                 var result = await _voucherService.CreateVoucherAsync(dto, CurrentUserId, IsAdmin, IsOrganizer);
+                Audit("VOUCHER_CREATED", result.VoucherId, null, result);
                 return StatusCode(201, ApiResponseDTO<VoucherResponseDTO>.SuccessResponse(result, "Voucher created successfully."));
             }
             catch (Exception ex)
@@ -107,19 +116,12 @@ namespace PaymentAPI.Controllers
         {
             try
             {
-                bool newStatus;
-                if (dto != null)
-                {
-                    newStatus = dto.IsActive;
-                }
-                else
-                {
-                    // If no body provided, toggle current status
-                    var current = await _voucherService.GetVoucherByIdAsync(id, CurrentUserId, IsAdmin, IsOrganizer);
-                    newStatus = !current.IsActive;
-                }
+                var current = await _voucherService.GetVoucherByIdAsync(id, CurrentUserId, IsAdmin, IsOrganizer);
+                // If no body provided, toggle current status
+                var newStatus = dto != null ? dto.IsActive : !current.IsActive;
 
                 var result = await _voucherService.UpdateVoucherStatusAsync(id, newStatus, CurrentUserId, IsAdmin, IsOrganizer);
+                Audit("VOUCHER_STATUS_CHANGED", id, new { current.IsActive }, new { result.IsActive });
                 return Ok(ApiResponseDTO<VoucherResponseDTO>.SuccessResponse(result, "Voucher status updated successfully."));
             }
             catch (Exception ex)
@@ -135,7 +137,9 @@ namespace PaymentAPI.Controllers
         {
             try
             {
+                var before = await _voucherService.GetVoucherByIdAsync(id, CurrentUserId, IsAdmin, IsOrganizer);
                 var result = await _voucherService.UpdateVoucherAsync(id, dto, CurrentUserId, IsAdmin, IsOrganizer);
+                Audit("VOUCHER_UPDATED", id, before, result);
                 return Ok(ApiResponseDTO<VoucherResponseDTO>.SuccessResponse(result, "Voucher updated successfully."));
             }
             catch (Exception ex)
@@ -151,7 +155,9 @@ namespace PaymentAPI.Controllers
         {
             try
             {
+                var before = await _voucherService.GetVoucherByIdAsync(id, CurrentUserId, IsAdmin, IsOrganizer);
                 await _voucherService.SoftDeleteVoucherAsync(id, CurrentUserId, IsAdmin, IsOrganizer);
+                Audit("VOUCHER_DELETED", id, before, null);
                 return Ok(ApiResponseDTO<object>.SuccessResponse(new { id }, "Voucher marked as deleted successfully."));
             }
             catch (Exception ex)

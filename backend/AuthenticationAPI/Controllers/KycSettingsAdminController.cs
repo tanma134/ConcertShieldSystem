@@ -14,11 +14,13 @@ namespace AuthenticationAPI.Controllers
     {
         private readonly IKycSettingService _service;
         private readonly ILogger<KycSettingsAdminController> _logger;
+        private readonly IAuditLogClient _auditLog;
 
-        public KycSettingsAdminController(IKycSettingService service, ILogger<KycSettingsAdminController> logger)
+        public KycSettingsAdminController(IKycSettingService service, ILogger<KycSettingsAdminController> logger, IAuditLogClient auditLog)
         {
             _service = service;
             _logger = logger;
+            _auditLog = auditLog;
         }
 
         [HttpGet]
@@ -43,7 +45,11 @@ namespace AuthenticationAPI.Controllers
                 var adminId = int.TryParse((User.FindFirst("userId") ?? User.FindFirst(ClaimTypes.NameIdentifier))?.Value, out var id)
                     ? id
                     : (int?)null;
-                return Ok(await _service.UpdateAsync(dto, adminId));
+                var updated = await _service.UpdateAsync(dto, adminId);
+                await _auditLog.LogAsync(adminId, "admin", "KYC_SETTINGS_UPDATED", "KycSetting", null,
+                    newValue: dto, ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    userAgent: Request.Headers.UserAgent.ToString());
+                return Ok(updated);
             }
             catch (InvalidOperationException ex)
             {

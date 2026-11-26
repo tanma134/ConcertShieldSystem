@@ -1,3 +1,17 @@
+/* Let the event review use the browser's page scrollbar so every section remains reachable. */
+@media (min-width: 851px) {
+  .admin-shell:has(.admin-event-review-page) {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+  .admin-main:has(.admin-event-review-page) {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+}
+
 .admin-queue-table td {
   vertical-align: middle;
 }

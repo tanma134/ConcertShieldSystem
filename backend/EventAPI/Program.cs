@@ -51,6 +51,12 @@ foreach (var service in new[] { "Ticket", "Notification" })
     });
 }
 
+builder.Services.AddHttpClient<IAuditLogClient, AuditLogClient>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["AdminApi:BaseUrl"] ?? "https://localhost:7076");
+    client.Timeout = TimeSpan.FromSeconds(5);
+    client.DefaultRequestHeaders.Add("X-Internal-Api-Key", builder.Configuration["InternalApi:Key"]);
+});
 builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<ITicketTypeService, TicketTypeService>();
 builder.Services.AddScoped<IEventImageService, EventImageService>();

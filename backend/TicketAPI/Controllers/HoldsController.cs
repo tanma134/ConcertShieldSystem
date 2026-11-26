@@ -42,8 +42,8 @@ namespace TicketAPI.Controllers
                 });
 
             // eKYC gate + fraud rules before any seat is reserved.
-            //var verdict = await _risk.CheckHoldAsync(HttpContext, userId.Value, request);
-            //if (!verdict.Allowed) return verdict.ToActionResult();
+            var verdict = await _risk.CheckHoldAsync(HttpContext, userId.Value, request);
+            if (!verdict.Allowed) return verdict.ToActionResult();
 
             try
             {
