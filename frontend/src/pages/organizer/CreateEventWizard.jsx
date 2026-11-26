@@ -61,10 +61,11 @@ export default function CreateEventWizard() {
   // First save of step 1 creates the draft and switches this wizard into edit
   // mode (so every step after that PUTs the same concert instead of creating
   // a new one each time).
-  const handleCreated = (newEvent) => {
+  const handleCreated = (newEvent, nextStep = 1) => {
     setEventId(newEvent.eventId);
     setEvent(newEvent);
-    navigate(`/organizer/events/${newEvent.eventId}/edit?step=1`, {
+    setStep(nextStep);
+    navigate(`/organizer/events/${newEvent.eventId}/edit?step=${nextStep}`, {
       replace: true,
     });
   };

@@ -575,7 +575,7 @@ export default function Header() {
                               <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.5" />
                               <path d="m6.8 10.2 2 2 4.4-4.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
-                            eKYC Verified
+                            eKYC Verify
                           </span>
                         </span>
                       </>

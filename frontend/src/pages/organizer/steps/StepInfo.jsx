@@ -218,7 +218,7 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
       if (!eventId) {
         const res = await eventApi.create(dto);
         const created = res.data?.data;
-        onCreated(created);
+        onCreated(created, mode === "next" ? 2 : 1);
         toast.success("Draft created. You can keep configuring the concert.");
         return created;
       }
@@ -250,7 +250,8 @@ export default function StepInfo({ eventId, event, onCreated, onSaved, onNext })
       return;
     }
     const result = await save("next");
-    if (result) onNext();
+    // Creating a draft already navigates directly to step 2 via onCreated.
+    if (result && eventId) onNext();
   };
 
   return (

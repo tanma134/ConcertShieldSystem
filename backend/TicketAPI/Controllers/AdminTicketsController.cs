@@ -14,9 +14,12 @@ namespace TicketAPI.Controllers
     {
         private readonly ITicketService _ticketService;
 
-        public AdminTicketsController(ITicketService ticketService)
+        private readonly IAuditLogClient _auditLog;
+
+        public AdminTicketsController(ITicketService ticketService, IAuditLogClient auditLog)
         {
             _ticketService = ticketService;
+            _auditLog = auditLog;
         }
 
         [HttpGet]
@@ -68,6 +71,9 @@ namespace TicketAPI.Controllers
                     CurrentUserId,
                     request.Reason);
 
+                await _auditLog.LogAsync(CurrentUserId, AuditActorType, "TICKET_REISSUED", "Ticket", ticketId.ToString(),
+                    newValue: new { reason = request.Reason }, ipAddress: ClientIp);
+
                 return Success(
                     replacement,
                     "Replacement ticket issued successfully.");
@@ -89,6 +95,9 @@ namespace TicketAPI.Controllers
                     ticketId,
                     CurrentUserId,
                     request.Reason);
+
+                await _auditLog.LogAsync(CurrentUserId, AuditActorType, "TICKET_REVOKED", "Ticket", ticketId.ToString(),
+                    newValue: new { status = "Revoked", reason = request.Reason }, ipAddress: ClientIp);
 
                 return Success(
                     new { ticketId, status = "Revoked" },

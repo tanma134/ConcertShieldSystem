@@ -59,7 +59,19 @@ namespace EventAPI.Controllers
             }
         }
 
-        // 
+        // Actor type string matching AuthenticationAPI audit logs.
+        protected string AuditActorType => IsAdmin ? "admin" : IsOrganizer ? "organizer" : "user";
+
+        // Writes an audit entry for the current caller. Never throws (client swallows errors).
+        protected Task AuditAsync(IAuditLogClient audit, string action, string entityType, object? entityId,
+            object? oldValue = null, object? newValue = null)
+            => audit.LogAsync(CurrentUserIdOrNull, AuditActorType, action, entityType, entityId?.ToString(),
+                oldValue, newValue,
+                HttpContext.Connection.RemoteIpAddress?.ToString(),
+                Request.Headers.UserAgent.ToString(),
+                Request.Headers["X-Request-Id"].FirstOrDefault() ?? HttpContext.TraceIdentifier);
+
+        //
         // Maps a service-layer exception to the correct HTTP status code + ApiResponseDTO body.
         // Keeps controllers free of repeated try/catch boilerplate.
         // 

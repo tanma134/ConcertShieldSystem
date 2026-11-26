@@ -77,12 +77,18 @@ namespace AuthenticationAPI.Controllers
     {
         private readonly IKycDeletionService _service;
         private readonly ILogger<KycDeletionAdminController> _logger;
+        private readonly IAuditLogClient _auditLog;
 
-        public KycDeletionAdminController(IKycDeletionService service, ILogger<KycDeletionAdminController> logger)
+        public KycDeletionAdminController(IKycDeletionService service, ILogger<KycDeletionAdminController> logger, IAuditLogClient auditLog)
         {
             _service = service;
             _logger = logger;
+            _auditLog = auditLog;
         }
+
+        private Task AuditAsync(string action, int id, object? newValue = null) =>
+            _auditLog.LogAsync(GetCurrentUserId(), "admin", action, "KycDeletionRequest", id.ToString(),
+                newValue: newValue, ipAddress: GetClientIp(), userAgent: Request.Headers.UserAgent.ToString());
 
         // GET api/admin/kyc/deletion-requests?status=Pending&page=1&pageSize=20
         [HttpGet]
@@ -108,7 +114,9 @@ namespace AuthenticationAPI.Controllers
         {
             try
             {
-                return Ok(await _service.ApproveAsync(id, GetCurrentUserId(), GetClientIp()));
+                var approved = await _service.ApproveAsync(id, GetCurrentUserId(), GetClientIp());
+                await AuditAsync("KYC_DELETION_APPROVED", id);
+                return Ok(approved);
             }
             catch (KeyNotFoundException ex)
             {
@@ -130,7 +138,9 @@ namespace AuthenticationAPI.Controllers
         {
             try
             {
-                return Ok(await _service.RejectAsync(id, GetCurrentUserId(), dto.ReasonCode, dto.Note, GetClientIp()));
+                var rejected = await _service.RejectAsync(id, GetCurrentUserId(), dto.ReasonCode, dto.Note, GetClientIp());
+                await AuditAsync("KYC_DELETION_REJECTED", id, new { reasonCode = dto.ReasonCode, note = dto.Note });
+                return Ok(rejected);
             }
             catch (KeyNotFoundException ex)
             {

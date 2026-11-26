@@ -109,6 +109,12 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod());
 });
 
+builder.Services.AddHttpClient<IAuditLogClient, AuditLogClient>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["AdminApi:BaseUrl"] ?? "https://localhost:7076");
+    client.DefaultRequestHeaders.Add("X-Internal-Api-Key", builder.Configuration["InternalApi:Key"]);
+});
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())

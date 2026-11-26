@@ -11,11 +11,13 @@ namespace PaymentAPI.Controllers
     {
         private readonly IRefundService _service;
         private readonly IConfiguration _config;
+        private readonly IAuditLogClient _auditLog;
 
-        public InternalRefundsController(IRefundService service, IConfiguration config)
+        public InternalRefundsController(IRefundService service, IConfiguration config, IAuditLogClient auditLog)
         {
             _service = service;
             _config = config;
+            _auditLog = auditLog;
         }
 
         [HttpPost]
@@ -28,7 +30,13 @@ namespace PaymentAPI.Controllers
 
             try
             {
-                return Ok(await _service.RefundAsync(request, ct));
+                var result = await _service.RefundAsync(request, ct);
+                if (result.Status == "Refunded")
+                    _ = _auditLog.LogAsync(null, "system", "REFUND_CREATED", "PaymentRefund",
+                        result.RefundId?.ToString(), null,
+                        new { request.ReturnRequestId, request.OrderId, request.Amount, result.Status, result.Reference },
+                        HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString(), HttpContext.TraceIdentifier);
+                return Ok(result);
             }
             catch (ArgumentException ex)
             {
@@ -46,7 +54,13 @@ namespace PaymentAPI.Controllers
 
             try
             {
-                return Ok(await _service.RecordManualRefundAsync(request, ct));
+                var result = await _service.RecordManualRefundAsync(request, ct);
+                if (result.Status == "Refunded")
+                    _ = _auditLog.LogAsync(request.ProcessedByUserId, "staff", "MANUAL_BANK_REFUND_RECORDED", "PaymentRefund",
+                        result.RefundId?.ToString(), null,
+                        new { request.ReturnRequestId, request.OrderId, request.Amount, request.Reason, result.Status },
+                        HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString(), HttpContext.TraceIdentifier);
+                return Ok(result);
             }
             catch (ArgumentException ex)
             {

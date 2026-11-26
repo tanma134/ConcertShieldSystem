@@ -11,13 +11,16 @@ namespace EventAPI.Controllers
     {
         private readonly IPricingRuleService _pricingRuleService;
         private readonly IValidator<CreatePricingRuleDTO> _createValidator;
+        private readonly IAuditLogClient _audit;
 
         public PricingRulesController(
             IPricingRuleService pricingRuleService,
-            IValidator<CreatePricingRuleDTO> createValidator)
+            IValidator<CreatePricingRuleDTO> createValidator,
+            IAuditLogClient audit)
         {
             _pricingRuleService = pricingRuleService;
             _createValidator = createValidator;
+            _audit = audit;
         }
 
         [HttpGet("tickettype/{ticketTypeId:int}")]
@@ -44,6 +47,7 @@ namespace EventAPI.Controllers
             try
             {
                 var result = await _pricingRuleService.CreateAsync(dto.TicketTypeId, dto, CurrentUserId, IsAdmin);
+                await AuditAsync(_audit, "PRICING_RULE_CREATED", "PricingRule", result.PricingRuleId);
                 return CreatedAtAction(nameof(GetByTicketType), new { ticketTypeId = dto.TicketTypeId },
                     ApiResponseDTO<PricingRuleResponseDTO>.SuccessResponse(result, "Pricing rule created"));
             }
@@ -57,6 +61,7 @@ namespace EventAPI.Controllers
             try
             {
                 var result = await _pricingRuleService.UpdateAsync(id, dto, CurrentUserId, IsAdmin);
+                await AuditAsync(_audit, "PRICING_RULE_UPDATED", "PricingRule", id);
                 return Ok(ApiResponseDTO<PricingRuleResponseDTO>.SuccessResponse(result, "Pricing rule updated"));
             }
             catch (Exception ex) { return HandleException(ex); }
@@ -69,6 +74,7 @@ namespace EventAPI.Controllers
             try
             {
                 await _pricingRuleService.DeleteAsync(id, CurrentUserId, IsAdmin);
+                await AuditAsync(_audit, "PRICING_RULE_DELETED", "PricingRule", id);
                 return Ok(ApiResponseDTO<object>.SuccessResponse(null!, "Pricing rule deleted"));
             }
             catch (Exception ex) { return HandleException(ex); }

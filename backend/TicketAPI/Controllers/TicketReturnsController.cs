@@ -15,9 +15,11 @@ namespace TicketAPI.Controllers
 
         private readonly IEventApiClient _eventApiClient;
         private readonly ITicketRiskService _risk;
+        private readonly IAuditLogClient _auditLog;
 
-        public TicketReturnsController(ITicketReturnService service, IEventApiClient eventApiClient, ITicketRiskService risk)
+        public TicketReturnsController(ITicketReturnService service, IEventApiClient eventApiClient, ITicketRiskService risk, IAuditLogClient auditLog)
         {
+            _auditLog = auditLog;
             _risk = risk;
             _service = service;
             _eventApiClient = eventApiClient;
@@ -109,7 +111,12 @@ namespace TicketAPI.Controllers
         {
             try
             {
-                return Success(await _service.ReviewAsync(CurrentUserId, id, dto, await ReviewScopeAsync()),
+                var result = await _service.ReviewAsync(CurrentUserId, id, dto, await ReviewScopeAsync());
+
+                await _auditLog.LogAsync(CurrentUserId, AuditActorType, "TICKET_RETURN_REVIEWED", "TicketReturn", id.ToString(),
+                    newValue: new { approved = dto.Approve, reviewNote = dto.ReviewNote }, ipAddress: ClientIp);
+
+                return Success(result,
                     dto.Approve ? "Return request approved." : "Return request rejected.");
             }
             catch (Exception ex)
@@ -124,7 +131,12 @@ namespace TicketAPI.Controllers
         {
             try
             {
-                return Success(await _service.ConfirmManualRefundAsync(CurrentUserId, id, dto, await ReviewScopeAsync()),
+                var result = await _service.ConfirmManualRefundAsync(CurrentUserId, id, dto, await ReviewScopeAsync());
+
+                await _auditLog.LogAsync(CurrentUserId, AuditActorType, "MANUAL_REFUND_CONFIRMED", "TicketReturn", id.ToString(),
+                    newValue: new { amount = dto.Amount }, ipAddress: ClientIp);
+
+                return Success(result,
                     "Manual bank refund confirmed.");
             }
             catch (Exception ex)
