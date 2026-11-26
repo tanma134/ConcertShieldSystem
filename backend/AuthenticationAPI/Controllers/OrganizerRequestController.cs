@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using AuthenticationAPI.DTOs;
 using AuthenticationAPI.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AuthenticationAPI.Controllers
@@ -14,10 +15,31 @@ namespace AuthenticationAPI.Controllers
     public class OrganizerRequestController : ControllerBase
     {
         private readonly IOrganizerRequestService _service;
+        private readonly IConfiguration _configuration;
 
-        public OrganizerRequestController(IOrganizerRequestService service)
+        public OrganizerRequestController(IOrganizerRequestService service, IConfiguration configuration)
         {
             _service = service;
+            _configuration = configuration;
+        }
+
+        private string NotificationConnectionString
+        {
+            get
+            {
+                var connectionString = _configuration.GetConnectionString("NotificationConnection");
+                if (!string.IsNullOrWhiteSpace(connectionString))
+                {
+                    return connectionString;
+                }
+
+                var authenticationConnectionString = _configuration.GetConnectionString("MyConnection")
+                    ?? throw new InvalidOperationException("Missing authentication database connection string.");
+                return new Npgsql.NpgsqlConnectionStringBuilder(authenticationConnectionString)
+                {
+                    Database = "notification_db"
+                }.ConnectionString;
+            }
         }
 
         private int CurrentUserId
@@ -84,7 +106,7 @@ namespace AuthenticationAPI.Controllers
             var items = new List<object>();
             try
             {
-                using var conn = new Npgsql.NpgsqlConnection("Host=localhost;Port=5432;Database=notification_db;Username=postgres;Password=123456");
+                using var conn = new Npgsql.NpgsqlConnection(NotificationConnectionString);
                 await conn.OpenAsync();
                 using var cmd = new Npgsql.NpgsqlCommand(
                     "SELECT notification_id, user_id, title, message, category, target_url, is_read, created_at FROM notifications WHERE (user_id = @uid OR user_id = 0) AND is_deleted = false ORDER BY created_at DESC LIMIT 50;", conn);
@@ -127,7 +149,7 @@ namespace AuthenticationAPI.Controllers
 
             try
             {
-                using var conn = new Npgsql.NpgsqlConnection("Host=localhost;Port=5432;Database=notification_db;Username=postgres;Password=123456");
+                using var conn = new Npgsql.NpgsqlConnection(NotificationConnectionString);
                 await conn.OpenAsync();
                 using var cmd = new Npgsql.NpgsqlCommand(
                     "UPDATE notifications SET is_read = true, read_at = NOW() WHERE (user_id = @uid OR user_id = 0) AND is_read = false AND is_deleted = false;", conn);
@@ -152,7 +174,7 @@ namespace AuthenticationAPI.Controllers
 
             try
             {
-                using var conn = new Npgsql.NpgsqlConnection("Host=localhost;Port=5432;Database=notification_db;Username=postgres;Password=123456");
+                using var conn = new Npgsql.NpgsqlConnection(NotificationConnectionString);
                 await conn.OpenAsync();
                 using var cmd = new Npgsql.NpgsqlCommand(
                     "UPDATE notifications SET is_read = true, read_at = NOW() WHERE notification_id = @nid AND (user_id = @uid OR user_id = 0);", conn);

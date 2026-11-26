@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
 namespace TicketAPI.API;
@@ -53,7 +52,15 @@ public sealed class QueueAdmissionClient(HttpClient http)
                 throw new QueueApiUnavailableException(ex);
             }
 
-         
+            if (status == null)
+                throw new QueueApiUnavailableException();
+
+            if (!string.Equals(status.Status, "ADMITTED", StringComparison.OrdinalIgnoreCase) ||
+                status.AdmissionExpiresAt is not DateTimeOffset expiresAt ||
+                expiresAt <= DateTimeOffset.UtcNow)
+            {
+                throw new QueueAdmissionRequiredException();
+            }
         }
     }
 }

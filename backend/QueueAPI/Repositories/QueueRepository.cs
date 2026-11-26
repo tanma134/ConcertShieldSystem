@@ -58,7 +58,6 @@ public sealed class QueueRepository(QueueDbContext db) : IQueueRepository
 
         return await query
             .OrderByDescending(x => x.UpdatedAt)
-            .Take(500)
             .ToListAsync(cancellationToken);
     }
 

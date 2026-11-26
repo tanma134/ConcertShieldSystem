@@ -235,11 +235,8 @@ namespace PaymentAPI.Services
                     };
                     var content = new System.Net.Http.StringContent(System.Text.Json.JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
 
-                    var endpoints = new[]
-                    {
-                        "https://localhost:7197/api/notifications",
-                        "http://localhost:7186/api/notifications"
-                    };
+                    var notificationApiUrl = _configuration?["NotificationApi:BaseUrl"] ?? "https://localhost:7197";
+                    var endpoints = new[] { $"{notificationApiUrl.TrimEnd('/')}/api/notifications" };
 
                     foreach (var ep in endpoints)
                     {

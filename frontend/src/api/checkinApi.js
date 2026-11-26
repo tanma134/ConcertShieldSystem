@@ -1,20 +1,24 @@
 import axios from "axios";
 
-// Multi-endpoint pool (direct HTTP 5288, direct HTTPS 7330, gateway 7164) to bypass an offline gateway
+const CHECKIN_HTTP_URL =
+  import.meta.env.VITE_CHECKIN_HTTP_URL || "http://localhost:5288/api";
+const CHECKIN_HTTPS_URL =
+  import.meta.env.VITE_CHECKIN_HTTPS_URL || "https://localhost:7330/api";
+
 const http5288Client = axios.create({
-  baseURL: "http://localhost:5288/api",
+  baseURL: CHECKIN_HTTP_URL,
   headers: { "Content-Type": "application/json" },
   timeout: 4000,
 });
 
 const https7330Client = axios.create({
-  baseURL: "https://localhost:7330/api",
+  baseURL: CHECKIN_HTTPS_URL,
   headers: { "Content-Type": "application/json" },
   timeout: 4000,
 });
 
 const gatewayClient = axios.create({
-  baseURL: "https://localhost:7164/api",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "https://localhost:7164/api",
   headers: { "Content-Type": "application/json" },
   timeout: 4000,
 });

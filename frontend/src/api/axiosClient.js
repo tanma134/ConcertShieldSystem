@@ -1,8 +1,7 @@
 import axios from "axios";
 import { riskHeaders } from "../utils/riskSignals";
 
-// TODO: point this at your actual API Gateway address
-const BASE_URL = "https://localhost:7164/api";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://localhost:7164/api";
 
 // Endpoints that don't need (and shouldn't get) an access token attached
 const PUBLIC_ENDPOINTS = [

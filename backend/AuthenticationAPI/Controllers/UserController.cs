@@ -58,6 +58,9 @@ namespace AuthenticationAPI.Controllers
                 if (result.Message == "User not found.")
                     return NotFound(new { message = result.Message });
 
+                if (result.Message == "Admin accounts cannot be modified.")
+                    return Conflict(new { code = "ADMIN_ACCOUNT_PROTECTED", message = result.Message });
+
                 return BadRequest(new { message = result.Message });
             }
 
@@ -78,6 +81,9 @@ namespace AuthenticationAPI.Controllers
                 if (result.Message == "User not found.")
                     return NotFound(new { message = result.Message });
 
+                if (result.Message == "Role assignment is not available for Admin or Organizer accounts.")
+                    return Conflict(new { code = "ADMIN_ACCOUNT_PROTECTED", message = result.Message });
+
                 return BadRequest(new { message = result.Message });
             }
 
@@ -94,6 +100,9 @@ namespace AuthenticationAPI.Controllers
             {
                 if (result.Message == "User not found.")
                     return NotFound(new { message = result.Message });
+
+                if (result.Message == "Admin accounts cannot be modified.")
+                    return Conflict(new { code = "ADMIN_ACCOUNT_PROTECTED", message = result.Message });
 
                 return BadRequest(new { message = result.Message });
             }
@@ -121,6 +130,9 @@ namespace AuthenticationAPI.Controllers
             {
                 if (result.Message == "User not found.")
                     return NotFound(new { message = result.Message });
+
+                if (result.Message == "Admin accounts cannot be blocked or unblocked.")
+                    return Conflict(new { code = "ADMIN_ACCOUNT_PROTECTED", message = result.Message });
 
                 return BadRequest(new { message = result.Message });
             }

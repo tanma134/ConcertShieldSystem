@@ -370,9 +370,13 @@ scratch/
 # Database temporary dumps & backups
 database/backups_pre_recreate/
 database/schema_dumps/
+database/import/*.dump
 *.sql.bak
 *.dmp
 
 # Public uploads
 frontend/public/uploads/*
 !frontend/public/uploads/.gitkeep
+
+# Local deployment secrets
+.env
