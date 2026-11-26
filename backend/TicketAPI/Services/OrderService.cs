@@ -613,9 +613,9 @@ namespace TicketAPI.Services
                 .FirstOrDefault();
 
             var tokenRandom = GenerateQrToken();
+            var shortRandom = tokenRandom.Length > 6 ? tokenRandom.Substring(0, 6) : tokenRandom;
             var codeStr = ticket.TicketCode != Guid.Empty ? ticket.TicketCode.ToString() : ticket.TicketId.ToString();
-            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            var newToken = $"{codeStr}:{timestamp}:{tokenRandom}";
+            var newToken = $"{codeStr}:{shortRandom}";
             var expiresAt = now.AddSeconds(60);
 
             if (currentToken == null)

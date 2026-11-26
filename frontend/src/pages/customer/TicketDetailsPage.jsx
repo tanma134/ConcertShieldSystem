@@ -261,9 +261,9 @@ export default function TicketDetailsPage() {
       }
 
       const image = await QRCode.toDataURL(result.qrToken, {
-        width: 340,
-        margin: 2,
-        errorCorrectionLevel: "H",
+        width: 360,
+        margin: 4,
+        errorCorrectionLevel: "L",
       });
 
       setQrImage(image);

@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import jsQR from "jsqr";
-import { BrowserMultiFormatReader, BrowserQRCodeReader } from "@zxing/library";
+import { BrowserMultiFormatReader, BrowserQRCodeReader, DecodeHintType, BarcodeFormat } from "@zxing/library";
 import checkinApi from "../../api/checkinApi";
 import staffApi from "../../api/staffApi";
 import { useAuth } from "../../context/AuthContext";
@@ -27,7 +27,9 @@ export default function StaffCheckinTerminalPage() {
   const [cameraError, setCameraError] = useState("");
   const [scanResult, setScanResult] = useState(null);
   const [activeScanAlert, setActiveScanAlert] = useState(null);
+  const [shakeAlert, setShakeAlert] = useState(false);
   const alertTimerRef = useRef(null);
+  const cooldownTimerRef = useRef(null);
   const [scanning, setScanning] = useState(false);
   const [autoScannedFlash, setAutoScannedFlash] = useState(false);
   const [videoDevices, setVideoDevices] = useState([]);
@@ -36,9 +38,26 @@ export default function StaffCheckinTerminalPage() {
   const triggerScanAlert = (res) => {
     if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
     setActiveScanAlert(res);
+    const isErrOrDup = res && res.status !== "SUCCESS" && res.status !== "APPROVED";
+    if (isErrOrDup) {
+      setShakeAlert(true);
+      setTimeout(() => setShakeAlert(false), 750);
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        try {
+          navigator.vibrate([220, 80, 220]);
+        } catch (e) {}
+      }
+    } else {
+      setShakeAlert(false);
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        try {
+          navigator.vibrate([120]);
+        } catch (e) {}
+      }
+    }
     alertTimerRef.current = setTimeout(() => {
       setActiveScanAlert(null);
-    }, 5000);
+    }, 6000);
   };
 
   const videoRef = useRef(null);
@@ -419,35 +438,59 @@ export default function StaffCheckinTerminalPage() {
     }
   };
 
+  // Freeze camera video for 2 seconds after a scan and automatically resume
+  const freezeCameraFor2Seconds = useCallback(() => {
+    scanCooldownUntilRef.current = Date.now() + 2100;
+    setIsCooldownActive(true);
+    if (videoRef.current && !videoRef.current.paused) {
+      try {
+        videoRef.current.pause();
+      } catch (e) {}
+    }
+    if (cooldownTimerRef.current) {
+      clearTimeout(cooldownTimerRef.current);
+    }
+    cooldownTimerRef.current = setTimeout(() => {
+      setIsCooldownActive(false);
+      scanCooldownUntilRef.current = 0;
+      if (videoRef.current && videoRef.current.srcObject) {
+        try {
+          videoRef.current.play().catch(() => {});
+        } catch (e) {}
+      }
+    }, 2000);
+  }, []);
+
   // Submit Scan Request (Camera or HID Scanner)
   const handleProcessScan = useCallback(
     async (codeToScan) => {
       const payload = codeToScan || ticketInput;
       if (!payload || !payload.trim()) return;
 
-      // Activate 2-second scanner cooldown pause after scanning any QR
-      scanCooldownUntilRef.current = Date.now() + 2000;
-      setIsCooldownActive(true);
-      setTimeout(() => setIsCooldownActive(false), 2000);
-
+      // Immediately freeze camera and start 2s pause indicator
+      freezeCameraFor2Seconds();
       setScanning(true);
       setScanResult(null);
 
-      // If in offline mode OR device has no internet connection, verify locally immediately
-      if (isOfflineMode || !navigator.onLine) {
+      // If user explicitly turned on offline mode OR browser has no network
+      if (!navigator.onLine) {
         await executeOfflineScan(payload, false);
+        freezeCameraFor2Seconds();
         return;
       }
 
       // Normal Online Mode Processing
       try {
+        const staffId = user?.userId ?? user?.id ?? user?.UserId ?? 0;
         const res = await checkinApi.scanQrTicket({
           eventId: Number(currentEventId),
-          gateId: gateAssignment?.gateId || "GATE_A",
+          gateId: gateAssignment?.gateId || gateAssignment?.gateName || "",
           qrPayload: payload.trim(),
+          staffUserId: staffId > 0 ? staffId : undefined,
         });
 
         if (res && res.data && res.data.data) {
+          if (isOfflineMode) setIsOfflineMode(false);
           const result = res.data.data;
           const isSuccess = result.success || result.status === "SUCCESS" || result.status === "APPROVED";
           const normStatus = isSuccess
@@ -460,6 +503,8 @@ export default function StaffCheckinTerminalPage() {
           setScanResult(result);
           triggerScanAlert(result);
           playAudioFeedback(normStatus === "SUCCESS" ? "SUCCESS" : "ERROR");
+          // Hold 2-second freeze with the colored result banner clearly visible on screen
+          freezeCameraFor2Seconds();
 
           setScanFeed((prev) => [
             {
@@ -486,6 +531,7 @@ export default function StaffCheckinTerminalPage() {
           console.warn("Network lost during online scan. Auto-falling back to offline check-in mode!");
           setIsOfflineMode(true);
           await executeOfflineScan(payload, true /* isAutoFallback */);
+          freezeCameraFor2Seconds();
           return;
         }
 
@@ -497,14 +543,20 @@ export default function StaffCheckinTerminalPage() {
         setScanResult(errResult);
         triggerScanAlert(errResult);
         playAudioFeedback("ERROR");
+        freezeCameraFor2Seconds();
       } finally {
         setScanning(false);
         setTicketInput("");
         if (manualInputRef.current) manualInputRef.current.focus();
       }
     },
-    [currentEventId, gateAssignment, ticketInput, isOfflineMode, user]
+    [currentEventId, gateAssignment, ticketInput, isOfflineMode, user, freezeCameraFor2Seconds]
   );
+
+  const handleProcessScanRef = useRef(handleProcessScan);
+  useEffect(() => {
+    handleProcessScanRef.current = handleProcessScan;
+  }, [handleProcessScan]);
 
   const stopWebcam = useCallback(() => {
     if (fallbackIntervalRef.current) {
@@ -531,26 +583,22 @@ export default function StaffCheckinTerminalPage() {
     }
   }, []);
 
-  // Enumerate camera input devices on mount
+  // Enumerate camera input devices on mount without triggering duplicate stream restart
   useEffect(() => {
     try {
-      const reader = new BrowserMultiFormatReader();
-      reader
-        .listVideoInputDevices()
-        .then((devices) => {
-          if (devices && devices.length > 0) {
-            setVideoDevices(devices);
-            const backCam = devices.find((d) =>
-              d.label?.toLowerCase().includes("back") ||
-              d.label?.toLowerCase().includes("environment") ||
-              d.label?.toLowerCase().includes("rear")
-            );
-            setSelectedDeviceId(backCam ? backCam.deviceId : devices[0].deviceId);
-          }
-        })
-        .catch((e) => {
-          console.warn("Could not list video devices:", e);
-        });
+      if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+        navigator.mediaDevices
+          .enumerateDevices()
+          .then((allDevices) => {
+            const devices = allDevices.filter((d) => d.kind === "videoinput");
+            if (devices.length > 0) {
+              setVideoDevices(devices);
+            }
+          })
+          .catch((e) => {
+            console.warn("Could not list video devices:", e);
+          });
+      }
     } catch (e) {}
   }, []);
 
@@ -567,7 +615,7 @@ export default function StaffCheckinTerminalPage() {
       .trim();
   };
 
-  // Real-time Dual-Engine QR Scanner (ZXing + Native BarcodeDetector + jsQR)
+  // Real-time Multi-Engine QR Scanner (HD 720p + Hardware BarcodeDetector + Multi-Pass jsQR + ZXing TRY_HARDER + De-Glare Contrast)
   useEffect(() => {
     let active = true;
 
@@ -581,110 +629,211 @@ export default function StaffCheckinTerminalPage() {
       stopWebcam();
 
       try {
-        const codeReader = new BrowserQRCodeReader();
-        zxingReaderRef.current = codeReader;
+        // 1. Acquire HD 1280x720 Webcam Stream cleanly (with fallback for older webcams)
+        let stream = null;
+        try {
+          const hdConstraints = {
+            video: {
+              ...(selectedDeviceId
+                ? { deviceId: { exact: selectedDeviceId } }
+                : { facingMode: { ideal: "environment" } }),
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+            audio: false,
+          };
+          stream = await navigator.mediaDevices.getUserMedia(hdConstraints);
+        } catch (hdErr) {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : true,
+            audio: false,
+          });
+        }
 
-        const deviceId = selectedDeviceId || undefined;
+        if (!active) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
 
-        // Primary: ZXing continuous hardware/webcam decoder
-        await codeReader.decodeFromVideoDevice(
-          deviceId,
-          videoRef.current,
-          (result, err) => {
-            if (!active) return;
-            if (result) {
-              const codeTrimmed = result.getText()?.trim();
-              if (!codeTrimmed) return;
-
-              const now = Date.now();
-              if (scanCooldownUntilRef.current && now < scanCooldownUntilRef.current) return;
-              if (
-                lastScannedQrRef.current.code === codeTrimmed &&
-                now - lastScannedQrRef.current.timestamp < 2500
-              ) {
-                return;
-              }
-
-              lastScannedQrRef.current = { code: codeTrimmed, timestamp: now };
-              console.log("ZXing Live Auto-Detected QR Code:", codeTrimmed);
-              setAutoScannedFlash(true);
-              setTimeout(() => setAutoScannedFlash(false), 800);
-              handleProcessScan(codeTrimmed);
-            }
+        mediaStreamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          try {
+            await videoRef.current.play();
+          } catch (playErr) {
+            console.warn("Video play interrupted:", playErr);
           }
-        );
+        }
 
-        // Secondary Backup: Throttled Frame Analyzer (200ms) with BarcodeDetector + jsQR
+        // Refresh device labels after permission granted
+        if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+          navigator.mediaDevices.enumerateDevices().then((all) => {
+            const vDevs = all.filter((d) => d.kind === "videoinput");
+            if (vDevs.length > 0) setVideoDevices(vDevs);
+          }).catch(() => {});
+        }
+
+        // Configure ZXing with TRY_HARDER + QR_CODE hints for maximum sensitivity on dense/tilted QR codes
+        if (!zxingReaderRef.current) {
+          try {
+            const hints = new Map();
+            hints.set(DecodeHintType.TRY_HARDER, true);
+            hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]);
+            zxingReaderRef.current = new BrowserMultiFormatReader(hints);
+          } catch (zErr) {
+            zxingReaderRef.current = new BrowserMultiFormatReader();
+          }
+        }
+
+        const handleDetectedCode = (rawText) => {
+          if (!active || !rawText || !rawText.trim()) return false;
+          const now = Date.now();
+          if (scanCooldownUntilRef.current && now < scanCooldownUntilRef.current) return false;
+
+          const codeTrimmed = rawText.trim();
+          lastScannedQrRef.current = { code: codeTrimmed, timestamp: now };
+          console.log("Scanner Auto-Detected QR Code:", codeTrimmed);
+
+          setAutoScannedFlash(true);
+          setTimeout(() => setAutoScannedFlash(false), 900);
+
+          if (handleProcessScanRef.current) {
+            handleProcessScanRef.current(codeTrimmed);
+          }
+          return true;
+        };
+
+        // 2. High-Performance 4-Pass Multi-Engine Analyzer Loop (85ms interval)
+        let isAnalyzing = false;
+        let bdBusy = false;
+        let tickCount = 0;
         const canvas = canvasRef.current;
         const ctx = canvas.getContext("2d", { willReadFrequently: true });
 
-        fallbackIntervalRef.current = setInterval(async () => {
-          if (!active) return;
+        fallbackIntervalRef.current = setInterval(() => {
+          if (!active || isAnalyzing) return;
           const now = Date.now();
           if (scanCooldownUntilRef.current && now < scanCooldownUntilRef.current) return;
 
           const video = videoRef.current;
-          if (!video || video.readyState < 2 || !video.videoWidth || !video.videoHeight) return;
+          if (!video || video.readyState < 2 || !video.videoWidth || !video.videoHeight || video.paused) return;
 
-          try {
-            const targetW = video.videoWidth;
-            const targetH = video.videoHeight;
-
-            if (canvas.width !== targetW || canvas.height !== targetH) {
-              canvas.width = targetW;
-              canvas.height = targetH;
-            }
-
-            ctx.drawImage(video, 0, 0, targetW, targetH);
-
-            let detected = null;
-
-            // 1. Native BarcodeDetector
-            if (typeof window !== "undefined" && "BarcodeDetector" in window) {
-              try {
-                if (!barcodeDetectorRef.current) {
-                  barcodeDetectorRef.current = new window.BarcodeDetector({ formats: ["qr_code"] });
-                }
-                const barcodes = await barcodeDetectorRef.current.detect(canvas);
-                if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
-                  detected = barcodes[0].rawValue;
-                }
-              } catch (e) {}
-            }
-
-            // 2. jsQR fallback
-            if (!detected) {
-              try {
-                const imgData = ctx.getImageData(0, 0, targetW, targetH);
-                const decodeQR = typeof jsQR === "function" ? jsQR : (jsQR?.default || window.jsQR);
-                if (decodeQR) {
-                  const res = decodeQR(imgData.data, targetW, targetH, { inversionAttempts: "attemptBoth" });
-                  if (res && res.data) detected = res.data;
-                }
-              } catch (e) {}
-            }
-
-            if (detected && detected.trim()) {
-              const codeTrimmed = detected.trim();
-              if (
-                lastScannedQrRef.current.code === codeTrimmed &&
-                now - lastScannedQrRef.current.timestamp < 2500
-              ) {
-                return;
+          // Non-blocking Native Hardware BarcodeDetector (runs asynchronously without ever blocking jsQR/ZXing)
+          if (!bdBusy && typeof window !== "undefined" && "BarcodeDetector" in window) {
+            bdBusy = true;
+            try {
+              if (!barcodeDetectorRef.current) {
+                barcodeDetectorRef.current = new window.BarcodeDetector({ formats: ["qr_code"] });
               }
-              lastScannedQrRef.current = { code: codeTrimmed, timestamp: now };
-              console.log("jsQR / BarcodeDetector Auto-Detected QR Code:", codeTrimmed);
-              setAutoScannedFlash(true);
-              setTimeout(() => setAutoScannedFlash(false), 800);
-              handleProcessScan(codeTrimmed);
+              barcodeDetectorRef.current
+                .detect(video)
+                .then((barcodes) => {
+                  if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+                    handleDetectedCode(barcodes[0].rawValue);
+                  }
+                })
+                .catch(() => {})
+                .finally(() => {
+                  bdBusy = false;
+                });
+            } catch (e) {
+              bdBusy = false;
             }
-          } catch (e) {}
-        }, 200);
+          }
+
+          isAnalyzing = true;
+          tickCount++;
+          try {
+            const vw = video.videoWidth;
+            const vh = video.videoHeight;
+            let detected = null;
+            const decodeQR = typeof jsQR === "function" ? jsQR : (jsQR?.default || window.jsQR);
+
+            const tryDecodeCanvas = (w, h) => {
+              if (decodeQR) {
+                const imgData = ctx.getImageData(0, 0, w, h);
+                const res = decodeQR(imgData.data, w, h, { inversionAttempts: "attemptBoth" });
+                if (res && res.data) return res.data;
+              }
+              if (zxingReaderRef.current) {
+                try {
+                  const zxRes = zxingReaderRef.current.decode(canvas);
+                  if (zxRes && zxRes.getText()) return zxRes.getText();
+                } catch (e) {}
+              }
+              return null;
+            };
+
+            // Pass 1: Center ROI Crop at 1:1 Native HD Resolution (sharpest for dense QR codes inside viewfinder)
+            const cropSize = Math.min(vw, vh, 620);
+            const sx = Math.floor((vw - cropSize) / 2);
+            const sy = Math.floor((vh - cropSize) / 2);
+
+            if (canvas.width !== cropSize || canvas.height !== cropSize) {
+              canvas.width = cropSize;
+              canvas.height = cropSize;
+            }
+            ctx.filter = "none";
+            ctx.drawImage(video, sx, sy, cropSize, cropSize, 0, 0, cropSize, cropSize);
+            detected = tryDecodeCanvas(cropSize, cropSize);
+
+            // Pass 2: High-Resolution Full Frame (840px max dimension - catches QR held anywhere in camera view)
+            if (!detected) {
+              const maxDim = 840;
+              const scale = Math.min(1, maxDim / Math.max(vw, vh));
+              const fw = Math.round(vw * scale);
+              const fh = Math.round(vh * scale);
+
+              if (canvas.width !== fw || canvas.height !== fh) {
+                canvas.width = fw;
+                canvas.height = fh;
+              }
+              ctx.filter = "none";
+              ctx.drawImage(video, 0, 0, fw, fh);
+              detected = tryDecodeCanvas(fw, fh);
+            }
+
+            // Pass 3: De-Glare High-Contrast Filter on Center ROI (cuts through smartphone screen glare & bloom)
+            if (!detected && tickCount % 2 === 0) {
+              if (canvas.width !== cropSize || canvas.height !== cropSize) {
+                canvas.width = cropSize;
+                canvas.height = cropSize;
+              }
+              ctx.filter = "contrast(220%) brightness(92%) grayscale(100%)";
+              ctx.drawImage(video, sx, sy, cropSize, cropSize, 0, 0, cropSize, cropSize);
+              ctx.filter = "none";
+              detected = tryDecodeCanvas(cropSize, cropSize);
+            }
+
+            // Pass 4: Horizontally Flipped Center ROI (handles mirrored phone screenshots or mirrored webcam drivers)
+            if (!detected && tickCount % 2 === 1) {
+              if (canvas.width !== cropSize || canvas.height !== cropSize) {
+                canvas.width = cropSize;
+                canvas.height = cropSize;
+              }
+              ctx.save();
+              ctx.filter = "none";
+              ctx.translate(cropSize, 0);
+              ctx.scale(-1, 1);
+              ctx.drawImage(video, sx, sy, cropSize, cropSize, 0, 0, cropSize, cropSize);
+              ctx.restore();
+              detected = tryDecodeCanvas(cropSize, cropSize);
+            }
+
+            if (detected) {
+              handleDetectedCode(detected);
+            }
+          } catch (e) {
+            console.warn("Scan frame error:", e);
+          } finally {
+            isAnalyzing = false;
+          }
+        }, 85);
 
       } catch (err) {
         console.warn("Camera start error:", err);
         setCameraError(
-          "Could not activate webcam stream (" + (err.message || "Busy or no permission") + "). You can upload a QR image or use a handheld barcode scanner."
+          "Could not activate webcam stream (" + (err.message || "Busy or no permission") + "). You can use manual check-in or a handheld barcode scanner."
         );
       }
     }
@@ -695,7 +844,7 @@ export default function StaffCheckinTerminalPage() {
       active = false;
       stopWebcam();
     };
-  }, [activeTab, cameraActive, gateAssignment, selectedDeviceId, handleProcessScan, stopWebcam]);
+  }, [activeTab, cameraActive, selectedDeviceId, stopWebcam]);
 
   // Support physical USB/Bluetooth handheld barcode scanner (auto-detects fast keystrokes + Enter)
   useEffect(() => {
@@ -723,7 +872,9 @@ export default function StaffCheckinTerminalPage() {
           e.preventDefault();
           const scanned = buffer.trim();
           buffer = "";
-          handleProcessScan(scanned);
+          if (handleProcessScanRef.current) {
+            handleProcessScanRef.current(scanned);
+          }
         }
       } else if (e.key.length === 1) {
         buffer += e.key;
@@ -732,7 +883,7 @@ export default function StaffCheckinTerminalPage() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleProcessScan]);
+  }, []);
 
   const fetchGateAssignment = async () => {
     try {
@@ -833,15 +984,17 @@ export default function StaffCheckinTerminalPage() {
 
     try {
       setScanning(true);
+      const staffId = user?.userId ?? user?.id ?? user?.UserId ?? 0;
       const tCode = selectedManualTicket?.ticketCode || manualForm.ticketCode.trim();
       const res = await checkinApi.manualCheckin({
         eventId: Number(currentEventId),
-        gateId: gateAssignment?.gateId || "GATE_A",
+        gateId: gateAssignment?.gateId || gateAssignment?.gateName || "",
         ticketCode: tCode,
         cccdNumber: manualForm.cccdNumber.trim(),
         reasonCode: manualForm.reasonCode,
         reasonNote: manualForm.reasonNote,
         cccdVerified: manualForm.cccdVerified,
+        staffUserId: staffId > 0 ? staffId : undefined,
       });
 
       if (res && res.data && res.data.data) {
@@ -1271,15 +1424,89 @@ export default function StaffCheckinTerminalPage() {
               </div>
             </div>
 
-            <div className={`camera-box ${cameraActive ? "active" : "paused"} ${autoScannedFlash ? "flash-detected" : ""}`}>
+            <div className={`camera-box ${cameraActive ? "active" : "paused"} ${autoScannedFlash ? "flash-detected" : ""} ${shakeAlert ? "shake-vibrate" : ""}`}>
               {cameraActive ? (
                 <>
                   <video ref={videoRef} autoPlay playsInline muted className="webcam-video-stream" />
                   <div className="scanner-laser"></div>
-                  <div className={`scanner-frame ${autoScannedFlash ? "detected" : ""}`}></div>
+                  <div
+                    className={`scanner-frame ${autoScannedFlash ? "detected" : ""}`}
+                    style={
+                      isCooldownActive && scanResult
+                        ? {
+                            borderColor:
+                              scanResult.status === "SUCCESS"
+                                ? "#10b981"
+                                : scanResult.status === "ALREADY_USED"
+                                ? "#f59e0b"
+                                : "#ef4444",
+                            boxShadow:
+                              scanResult.status === "SUCCESS"
+                                ? "0 0 35px rgba(16, 185, 129, 0.85)"
+                                : scanResult.status === "ALREADY_USED"
+                                ? "0 0 35px rgba(245, 158, 11, 0.85)"
+                                : "0 0 35px rgba(239, 68, 68, 0.85)",
+                          }
+                        : undefined
+                    }
+                  ></div>
                   {isCooldownActive ? (
-                    <div className="cooldown-overlay-banner">
-                      <span className="app-loading-spinner" role="status" aria-label="Loading" />
+                    <div
+                      className={`cooldown-overlay-banner ${shakeAlert ? "shake-vibrate" : ""}`}
+                      style={{
+                        background: !scanResult
+                          ? "rgba(15, 23, 42, 0.92)"
+                          : scanResult.status === "SUCCESS"
+                          ? "rgba(5, 150, 105, 0.96)"
+                          : scanResult.status === "ALREADY_USED"
+                          ? "rgba(217, 119, 6, 0.96)"
+                          : "rgba(220, 38, 38, 0.96)",
+                        border: `2px solid ${
+                          !scanResult
+                            ? "#38bdf8"
+                            : scanResult.status === "SUCCESS"
+                            ? "#34d399"
+                            : scanResult.status === "ALREADY_USED"
+                            ? "#fde047"
+                            : "#fca5a5"
+                        }`,
+                        color: "#ffffff",
+                        padding: "16px 22px",
+                        borderRadius: "12px",
+                        maxWidth: "88%",
+                        textAlign: "center",
+                        flexDirection: "column",
+                        gap: "6px",
+                        boxShadow: "0 12px 32px rgba(0, 0, 0, 0.45)",
+                      }}
+                    >
+                      {!scanResult ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <span className="app-loading-spinner" role="status" aria-label="Loading" />
+                          <span style={{ fontWeight: 700, fontSize: "1rem" }}>Verifying QR Code...</span>
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{ fontSize: "1.15rem", fontWeight: 800, letterSpacing: "0.03em" }}>
+                            {scanResult.status === "SUCCESS"
+                              ? "ENTRY PERMITTED (VÉ HỢP LỆ)"
+                              : scanResult.status === "ALREADY_USED"
+                              ? "ALREADY USED (VÉ TRÙNG - ĐÃ CHECK-IN)"
+                              : "INVALID QR (VÉ KHÔNG HỢP LỆ)"}
+                          </div>
+                          <div style={{ fontSize: "0.92rem", fontWeight: 600, opacity: 0.95 }}>
+                            {scanResult.message}
+                          </div>
+                          {scanResult.customerName && scanResult.customerName !== "N/A" && (
+                            <div style={{ fontSize: "0.88rem", marginTop: "2px", background: "rgba(0,0,0,0.22)", padding: "4px 10px", borderRadius: "6px" }}>
+                              <strong>{scanResult.customerName}</strong> • {scanResult.zoneName}
+                            </div>
+                          )}
+                          <div style={{ fontSize: "0.78rem", opacity: 0.85, marginTop: "2px" }}>
+                            Camera paused for 2s cooldown...
+                          </div>
+                        </>
+                      )}
                     </div>
                   ) : (
                     <p className="scanner-hint">Point attendee QR code at camera to scan automatically</p>
@@ -1303,7 +1530,7 @@ export default function StaffCheckinTerminalPage() {
           {/* Visual Scan Feedback Banner */}
           {scanResult && (
             <div
-              className={`scan-feedback-card ${
+              className={`scan-feedback-card ${shakeAlert ? "shake-vibrate" : ""} ${
                 scanResult.status === "SUCCESS"
                   ? "feedback-success"
                   : scanResult.status === "ALREADY_USED"
@@ -1456,7 +1683,7 @@ export default function StaffCheckinTerminalPage() {
                     onClick={() => searchTicketsByCccd(manualForm.cccdNumber)}
                     disabled={searchingManualTickets || !manualForm.cccdNumber.trim()}
                   >
-                    {searchingManualTickets ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Tìm vé theo CCCD"}
+                    {searchingManualTickets ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Find Tickets by ID/CCCD"}
                   </button>
                 </div>
               </div>
@@ -1464,7 +1691,7 @@ export default function StaffCheckinTerminalPage() {
               {/* Real-time DB lookup results for this CCCD */}
               {searchingManualTickets && (
                 <div className="cccd-box-full" style={{ color: "#2fa4e0", padding: "0.5rem 0", fontStyle: "italic" }}>
-                  Đang tra cứu vé từ cơ sở dữ liệu...
+                  Searching tickets in database...
                 </div>
               )}
 
@@ -1477,7 +1704,7 @@ export default function StaffCheckinTerminalPage() {
               {manualLookupTickets.length > 0 && (
                 <div className="cccd-box-full manual-tickets-preview-box" style={{ margin: "0.5rem 0" }}>
                   <label style={{ fontSize: "0.875rem", color: "#7a7392", display: "block", marginBottom: "0.5rem" }}>
-                    Vé tìm thấy trong Database ({manualLookupTickets.length} vé) - Chọn vé cần check-in:
+                    Tickets found in database ({manualLookupTickets.length}) - Select ticket to check in:
                   </label>
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                     {manualLookupTickets.map((t) => {
@@ -1520,10 +1747,10 @@ export default function StaffCheckinTerminalPage() {
                             <div>
                               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
                                 <span className="t-code-badge" style={{ fontSize: "0.85rem" }}>{t.ticketCode}</span>
-                                <strong style={{ color: "#1e1b2e" }}>{t.customerName || "Khán giả"}</strong>
+                                <strong style={{ color: "#1e1b2e" }}>{t.customerName || "Attendee"}</strong>
                               </div>
                               <div style={{ fontSize: "0.8rem", color: "#7a7392", marginTop: "0.2rem" }}>
-                                Khu vực: <span style={{ color: "#d99a16" }}>{t.zoneName}</span> • Ghế: {t.seatNumber || "General"}
+                                Zone: <span style={{ color: "#d99a16" }}>{t.zoneName}</span> • Seat: {t.seatNumber || "General"}
                               </div>
                             </div>
                           </div>
@@ -1588,7 +1815,7 @@ export default function StaffCheckinTerminalPage() {
                   className="btn-validate-ticket-pink"
                   disabled={!manualForm.cccdVerified || !manualForm.cccdNumber.trim() || (!selectedManualTicket && !manualForm.ticketCode.trim()) || scanning}
                 >
-                  {scanning ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Xác nhận Check-in Vé"}
+                  {scanning ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm Check-in"}
                 </button>
               </div>
             </form>

@@ -254,6 +254,30 @@ namespace TicketAPI.Repositories
             page = Math.Max(1, page);
             pageSize = pageSize <= 0 ? 10 : Math.Min(100, pageSize);
 
+            // 1. Lấy dữ liệu trực tiếp từ bảng ticket_reissues
+            var tableQuery = _context.TicketReissues.AsNoTracking().AsQueryable();
+
+            if (eventId.HasValue && eventId.Value > 0)
+            {
+                tableQuery = tableQuery.Where(r => r.EventId == eventId.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim();
+                tableQuery = tableQuery.Where(r =>
+                    EF.Functions.ILike(r.OldTicketCode, $"%{term}%") ||
+                    EF.Functions.ILike(r.NewTicketCode, $"%{term}%") ||
+                    EF.Functions.ILike(r.EventTitle, $"%{term}%") ||
+                    EF.Functions.ILike(r.CustomerName, $"%{term}%") ||
+                    EF.Functions.ILike(r.CustomerEmail, $"%{term}%") ||
+                    EF.Functions.ILike(r.Reason, $"%{term}%") ||
+                    EF.Functions.ILike(r.ReissuedByName, $"%{term}%"));
+            }
+
+            var tableItems = await tableQuery.ToListAsync();
+
+            // 2. Lấy thêm dữ liệu từ bảng status_histories (action = 'TicketReissued')
             var query = from h in _context.StatusHistories.AsNoTracking()
                         where h.TargetType == "Ticket" && h.Action == "TicketReissued" && h.NewStatus == "Revoked"
                         join oldTicket in _context.Tickets.AsNoTracking() on h.TargetId equals oldTicket.TicketId into oldTicketGroup
@@ -288,12 +312,8 @@ namespace TicketAPI.Repositories
                     (termId.HasValue && x.History.TargetId == termId.Value));
             }
 
-            var totalCount = await query.CountAsync();
-
             var rows = await query
                 .OrderByDescending(x => x.History.CreatedAt)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
                 .ToListAsync();
 
             var replacementIds = new List<int>();
@@ -312,45 +332,60 @@ namespace TicketAPI.Repositories
                     .ToDictionaryAsync(t => t.TicketId)
                 : new Dictionary<int, Ticket>();
 
-            var items = rows.Select(r =>
-            {
-                var repId = ExtractReplacementTicketId(r.History.Metadata);
-                Ticket? newTicket = null;
-                if (repId.HasValue)
+            var existingOldCodes = new HashSet<string>(tableItems.Select(t => t.OldTicketCode), StringComparer.OrdinalIgnoreCase);
+
+            var histItems = rows
+                .Select(r =>
                 {
-                    newTickets.TryGetValue(repId.Value, out newTicket);
-                }
+                    var repId = ExtractReplacementTicketId(r.History.Metadata);
+                    Ticket? newTicket = null;
+                    if (repId.HasValue)
+                    {
+                        newTickets.TryGetValue(repId.Value, out newTicket);
+                    }
 
-                var oldCode = r.OldTicket != null ? r.OldTicket.TicketCode.ToString() : $"TICKET-{r.History.TargetId}";
-                var newCode = newTicket != null ? newTicket.TicketCode.ToString() : (repId.HasValue ? $"TICKET-{repId.Value}" : "REPLACED");
+                    var oldCode = r.OldTicket != null ? r.OldTicket.TicketCode.ToString() : $"TICKET-{r.History.TargetId}";
+                    var newCode = newTicket != null ? newTicket.TicketCode.ToString() : (repId.HasValue ? $"TICKET-{repId.Value}" : "REPLACED");
 
-                var customerName = !string.IsNullOrWhiteSpace(r.OldTicket?.OwnerName)
-                    ? r.OldTicket.OwnerName
-                    : (!string.IsNullOrWhiteSpace(r.Order?.FullName) ? r.Order.FullName : "Customer");
+                    var customerName = !string.IsNullOrWhiteSpace(r.OldTicket?.OwnerName)
+                        ? r.OldTicket.OwnerName
+                        : (!string.IsNullOrWhiteSpace(r.Order?.FullName) ? r.Order.FullName : "Customer");
 
-                var customerEmail = r.Order?.Email ?? "";
-                var eventTitle = !string.IsNullOrWhiteSpace(r.Order?.EventName) ? r.Order.EventName : $"Event #{r.History.EventId}";
-                var seatOrZone = r.OldTicket?.TicketTypeName ?? "";
+                    var customerEmail = r.Order?.Email ?? "";
+                    var eventTitle = !string.IsNullOrWhiteSpace(r.Order?.EventName) ? r.Order.EventName : $"Event #{r.History.EventId}";
+                    var seatOrZone = r.OldTicket?.TicketTypeName ?? "";
 
-                return new TicketReissue
-                {
-                    ReissueId = r.History.StatusHistoryId,
-                    OldTicketCode = oldCode,
-                    NewTicketCode = newCode,
-                    EventId = r.History.EventId,
-                    EventTitle = eventTitle,
-                    ReissuedByAdminId = r.History.ActorUserId ?? 0,
-                    ReissuedByName = $"Admin #{r.History.ActorUserId ?? 0}",
-                    ReissuedAt = r.History.CreatedAt,
-                    Reason = r.History.Reason ?? "Ticket Reissued",
-                    CustomerName = customerName,
-                    CustomerEmail = customerEmail,
-                    SeatOrZone = seatOrZone,
-                    DynamicQrStatus = newTicket != null ? "ACTIVE" : "REPLACED"
-                };
-            }).ToList();
+                    return new TicketReissue
+                    {
+                        ReissueId = 100000 + r.History.StatusHistoryId,
+                        OldTicketCode = oldCode,
+                        NewTicketCode = newCode,
+                        EventId = r.History.EventId,
+                        EventTitle = eventTitle,
+                        ReissuedByAdminId = r.History.ActorUserId ?? 1,
+                        ReissuedByName = (r.History.ActorUserId ?? 1) == 1 ? "Platform Administrator" : $"Admin #{r.History.ActorUserId}",
+                        ReissuedAt = r.History.CreatedAt,
+                        Reason = r.History.Reason ?? "Ticket Reissued",
+                        CustomerName = customerName,
+                        CustomerEmail = customerEmail,
+                        SeatOrZone = seatOrZone,
+                        DynamicQrStatus = newTicket != null ? "ACTIVE" : "REPLACED"
+                    };
+                })
+                .Where(item => !existingOldCodes.Contains(item.OldTicketCode))
+                .ToList();
 
-            return (items, totalCount);
+            var combined = tableItems.Concat(histItems)
+                .OrderByDescending(r => r.ReissuedAt)
+                .ToList();
+
+            var totalCount = combined.Count;
+            var pagedItems = combined
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return (pagedItems, totalCount);
         }
 
         private static int? ExtractReplacementTicketId(string? metadata)
@@ -397,8 +432,8 @@ namespace TicketAPI.Repositories
             var singleRevocationsFromHist = await _context.StatusHistories
                 .CountAsync(h => h.TargetType == "Ticket" && h.Action == "AdminRevoke" && h.NewStatus == "Revoked");
             var singleRevocations = Math.Max(singleRevocationsFromTable, singleRevocationsFromHist);
-            var reissues = await _context.StatusHistories
-                .CountAsync(h => h.TargetType == "Ticket" && h.Action == "TicketReissued" && h.NewStatus == "Revoked");
+            var (reissueItems, reissueCount) = await GetReissueHistoryAsync(null, null, 1, 1);
+            var reissues = reissueCount;
             var refundQueued = await _context.TicketReconciliations
                 .Where(r => EF.Functions.ILike(r.RefundStatus, "%queue%"))
                 .SumAsync(r => (int?)r.TotalTicketsRevoked) ?? 0;

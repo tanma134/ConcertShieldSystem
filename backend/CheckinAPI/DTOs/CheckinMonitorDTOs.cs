@@ -134,6 +134,9 @@ namespace CheckinAPI.DTOs
 
         [JsonPropertyName("qrPayload")]
         public string QrPayload { get; set; } = string.Empty;
+
+        [JsonPropertyName("staffUserId")]
+        public int? StaffUserId { get; set; }
     }
 
     public class ScanResultResponseDTO
@@ -203,6 +206,9 @@ namespace CheckinAPI.DTOs
 
         [JsonPropertyName("cccdNumber")]
         public string? CccdNumber { get; set; }
+
+        [JsonPropertyName("staffUserId")]
+        public int? StaffUserId { get; set; }
     }
 
     // ==========================================

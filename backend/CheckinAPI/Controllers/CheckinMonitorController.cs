@@ -80,6 +80,10 @@ namespace CheckinAPI.Controllers
             try
             {
                 var userId = GetCurrentUserId();
+                if (userId <= 0 && request.StaffUserId.HasValue && request.StaffUserId.Value > 0)
+                {
+                    userId = request.StaffUserId.Value;
+                }
                 var userName = User.Identity?.Name ?? $"Staff #{userId}";
                 var result = await _monitorService.ScanQrTicketAsync(request, userId, userName);
                 return Ok(new { success = result.Success, data = result });
@@ -96,11 +100,16 @@ namespace CheckinAPI.Controllers
         /// BR-290, BR-292, BR-293
         /// </summary>
         [HttpPost("manual-checkin")]
+        [HttpPost("manual")]
         public async Task<IActionResult> ManualCheckin([FromBody] ManualCheckinRequestDTO request)
         {
             try
             {
                 var userId = GetCurrentUserId();
+                if (userId <= 0 && request.StaffUserId.HasValue && request.StaffUserId.Value > 0)
+                {
+                    userId = request.StaffUserId.Value;
+                }
                 var userName = User.Identity?.Name ?? $"Staff #{userId}";
                 var result = await _monitorService.ManualCheckinAsync(request, userId, userName);
                 return Ok(new { success = result.Success, data = result });

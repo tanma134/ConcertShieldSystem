@@ -295,14 +295,25 @@ export default function TicketGovernancePage() {
       }
     });
 
+    // 3b. Events from reissue records
+    (reissues || []).forEach((ri) => {
+      if (ri.eventId) {
+        map.set(Number(ri.eventId), {
+          eventId: Number(ri.eventId),
+          title: ri.eventTitle || `Event ${ri.eventId}`,
+        });
+      }
+    });
+
     // 4. Known events on platform for comprehensive filtering
     const platformEvents = [
       { eventId: 1, title: "Anh Trai Say Hi - Mùa 1 Grand Finale (Cancelled)" },
       { eventId: 16, title: "AMEE - E11EVEN Tour 2027 (Postponed)" },
-      { eventId: 20, title: "Acoustic Night" },
-      { eventId: 21, title: 'Hà Anh Tuấn - "Chân Trời Rực Rỡ" Live Concert' },
       { eventId: 17, title: "Hoàng Thùy Linh - See Tình Tour" },
       { eventId: 18, title: "Wren Evans - Call Me Tour" },
+      { eventId: 20, title: "Acoustic Night" },
+      { eventId: 21, title: 'Hà Anh Tuấn - "Chân Trời Rực Rỡ" Live Concert' },
+      { eventId: 30, title: "Concert Anh Trai Vượt Ngàn Chông Gai 2026 – Day 3 & Day 4" },
     ];
     platformEvents.forEach((pe) => {
       if (!map.has(pe.eventId)) {
@@ -311,7 +322,7 @@ export default function TicketGovernancePage() {
     });
 
     return Array.from(map.values()).sort((a, b) => a.eventId - b.eventId);
-  }, [events, reconciliations, revocations]);
+  }, [events, reconciliations, revocations, reissues]);
 
   return (
     <AdminShell title="Ticket Governance & Dynamic QR Revocation Auditing">

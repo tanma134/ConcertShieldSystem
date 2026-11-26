@@ -26,8 +26,12 @@ builder.Services.AddHttpClient<IEventApiClient, EventApiClient>(client =>
 {
     var eventApiUrl = builder.Configuration["ApiSettings:EventApiUrl"] ?? "https://localhost:7289/";
     client.BaseAddress = new Uri(eventApiUrl);
+    client.Timeout = TimeSpan.FromSeconds(5);
     var key = builder.Configuration["InternalApiKey"] ?? "dev_internal_shared_secret_key_2026";
     client.DefaultRequestHeaders.Add("X-Internal-Api-Key", key);
+}).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
 });
 
 // Register Repositories and Services

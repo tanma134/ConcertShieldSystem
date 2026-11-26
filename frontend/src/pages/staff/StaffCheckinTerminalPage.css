@@ -428,13 +428,32 @@
 
 .cooldown-overlay-banner {
   position: absolute;
-  background: rgba(16, 185, 129, 0.9);
-  color: #3c3552;
+  background: rgba(16, 185, 129, 0.95);
+  color: #ffffff;
   padding: 0.6rem 1.4rem;
   border-radius: 8px;
   font-weight: 700;
   font-size: 0.95rem;
   box-shadow: 0 8px 24px rgba(80,50,120,0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+@keyframes terminal-shake {
+  0%, 100% { transform: translateX(0); }
+  12% { transform: translateX(-12px) rotate(-1deg); }
+  25% { transform: translateX(12px) rotate(1deg); }
+  37% { transform: translateX(-10px); }
+  50% { transform: translateX(10px); }
+  62% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+  88% { transform: translateX(-3px); }
+}
+
+.shake-vibrate {
+  animation: terminal-shake 0.55s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
 
 .camera-off-msg {
