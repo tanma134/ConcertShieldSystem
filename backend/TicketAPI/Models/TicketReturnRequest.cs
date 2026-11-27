@@ -43,6 +43,7 @@ public partial class TicketReturnRequest
     public int? ManualRefundProcessedBy { get; set; }
     public DateTime? ManualRefundProcessedAt { get; set; }
     public string? ProofUrl { get; set; }
+    public string? BankVerificationJson { get; set; }
 
     public virtual Ticket Ticket { get; set; } = null!;
 }

@@ -176,6 +176,16 @@
   gap: 12px;
 }
 
+.tb-refund-warning {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid #f4c76b;
+  border-radius: 8px;
+  background: #fff8e6;
+  color: #7a4b00;
+  line-height: 1.5;
+}
+
 .tb-refund-row {
   background: var(--tb-surface);
   border: 1px solid var(--tb-border);

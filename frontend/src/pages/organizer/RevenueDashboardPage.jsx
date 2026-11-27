@@ -194,7 +194,7 @@ export default function RevenueDashboardPage() {
                         <th className="rp-num">Discounts</th>
                         <th className="rp-num">Refunded</th>
                         <th className="rp-num">Net</th>
-                        <th></th>
+                        <th className="rp-bar-cell"></th>
                       </tr>
                     </thead>
                     <tbody>

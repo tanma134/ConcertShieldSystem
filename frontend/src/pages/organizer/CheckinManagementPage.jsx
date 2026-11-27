@@ -1175,13 +1175,33 @@ const formatEventDateTime = (d) => {
             {/* ================= TAB 3: ADMISSION ATTENDANCE REPORT ================= */}
             {activeTab === "REPORT" && summary && (
               <div style={{ background: "#ffffff", padding: "28px", borderRadius: "14px", border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-                <div style={{ marginBottom: "20px" }}>
-                  <h2 style={{ margin: "0 0 4px 0", fontSize: "1.35rem", fontWeight: 700, color: "#111827" }}>
-                    Attendance & Admission Summary
-                  </h2>
-                  <p style={{ margin: 0, color: "#64748b", fontSize: "0.9rem" }}>
-                    Live snapshot of check-in throughput and venue gate attendance.
-                  </p>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", flexWrap: "wrap", marginBottom: "20px" }}>
+                  <div>
+                    <h2 style={{ margin: "0 0 4px 0", fontSize: "1.35rem", fontWeight: 700, color: "#111827" }}>
+                      Attendance & Admission Summary
+                    </h2>
+                    <p style={{ margin: 0, color: "#64748b", fontSize: "0.9rem" }}>
+                      Live snapshot of check-in throughput and venue gate attendance.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={exportCsv}
+                    disabled={busy}
+                    style={{
+                      padding: "10px 18px",
+                      borderRadius: "10px",
+                      border: "1px solid #be185d",
+                      background: busy ? "#f9d4e4" : "#be185d",
+                      color: busy ? "#9d174d" : "#ffffff",
+                      fontWeight: 600,
+                      fontSize: "0.9rem",
+                      cursor: busy ? "default" : "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {busy ? "Exporting…" : "Export Check-in Report (CSV)"}
+                  </button>
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px", marginTop: "16px" }}>

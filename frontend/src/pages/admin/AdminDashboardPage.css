@@ -163,6 +163,12 @@
   padding: 0 38px 52px;
 }
 
+@media (max-width: 1440px) {
+  .admin-main {
+    padding: 0 24px 38px;
+  }
+}
+
 .admin-topbar {
   min-height: 70px;
   border-bottom: 1px solid var(--admin-line);
@@ -842,6 +848,12 @@
   flex: 1;
   min-width: 0;
   padding: 0 38px 52px;
+}
+
+@media (max-width: 1440px) {
+  .admin-main {
+    padding: 0 24px 38px;
+  }
 }
 
 .admin-topbar {

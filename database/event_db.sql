@@ -1066,14 +1066,15 @@ CREATE TABLE IF NOT EXISTS event_compliance_reviews (
 );
 CREATE TABLE IF NOT EXISTS event_change_requests (
  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
- event_id integer NOT NULL REFERENCES events(event_id), type text NOT NULL CHECK(type IN ('Postpone','Reschedule')),
+ event_id integer NOT NULL REFERENCES events(event_id), type text NOT NULL CHECK(type IN ('Postpone','Reschedule','Cancel')),
  status text NOT NULL DEFAULT 'Pending' CHECK(status IN ('Pending','Approved','Rejected')),
  reason text NOT NULL CHECK(length(trim(reason)) BETWEEN 10 AND 1000),
  old_starts_at timestamptz NOT NULL, old_ends_at timestamptz NOT NULL,
  new_starts_at timestamptz, new_ends_at timestamptz, old_status text NOT NULL,
  event_version integer NOT NULL, submitted_by integer NOT NULL, submitted_at timestamptz NOT NULL,
  reviewed_by integer, reviewed_at timestamptz, review_notes text, processing_status text NOT NULL DEFAULT 'NotApplied',
- CHECK((type='Postpone' AND new_starts_at IS NULL AND new_ends_at IS NULL) OR
+ evidence_url text,
+ CHECK((type IN ('Postpone','Cancel') AND new_starts_at IS NULL AND new_ends_at IS NULL) OR
        (type='Reschedule' AND new_starts_at IS NOT NULL AND new_ends_at > new_starts_at))
 );
 CREATE UNIQUE INDEX IF NOT EXISTS uq_event_change_pending ON event_change_requests(event_id) WHERE status='Pending';

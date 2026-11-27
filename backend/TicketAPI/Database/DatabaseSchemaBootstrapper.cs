@@ -29,24 +29,29 @@ public static class DatabaseSchemaBootstrapper
                 refunded_at timestamp with time zone NULL,
                 refund_reference varchar(100) NULL,
                 refund_error varchar(500) NULL,
-                bank_account_name varchar(150) NULL,
-                bank_account_number varchar(50) NULL,
-                bank_name varchar(150) NULL,
+                bank_account_name varchar(100) NULL,
+                bank_account_number varchar(30) NULL,
+                bank_name varchar(100) NULL,
                 manual_refund_reference varchar(100) NULL,
                 manual_refund_processed_by integer NULL,
                 manual_refund_processed_at timestamp with time zone NULL,
                 CONSTRAINT fk_ticket_return_requests_ticket FOREIGN KEY(ticket_id) REFERENCES public.tickets(ticket_id),
-                CONSTRAINT ck_ticket_return_requests_status CHECK(status IN ('Pending','ApprovedPendingManualRefund','Rejected','Cancelled','Refunded','RefundFailed','RefundProcessing','RefundInfoRequired'))
+                CONSTRAINT ck_ticket_return_requests_status CHECK(status IN ('Pending','Approved','ApprovedPendingManualRefund','Rejected','Cancelled','Refunded','RefundFailed','RefundProcessing','RefundInfoRequired'))
             );
             ALTER TABLE public.ticket_return_requests ALTER COLUMN status TYPE varchar(40);
             ALTER TABLE public.ticket_return_requests DROP CONSTRAINT IF EXISTS ck_ticket_return_requests_status;
-            ALTER TABLE public.ticket_return_requests ADD CONSTRAINT ck_ticket_return_requests_status CHECK(status IN ('Pending','ApprovedPendingManualRefund','Rejected','Cancelled','Refunded','RefundFailed','RefundProcessing','RefundInfoRequired'));
-            ALTER TABLE public.ticket_return_requests ADD COLUMN IF NOT EXISTS bank_account_name varchar(150) NULL;
-            ALTER TABLE public.ticket_return_requests ADD COLUMN IF NOT EXISTS bank_account_number varchar(50) NULL;
-            ALTER TABLE public.ticket_return_requests ADD COLUMN IF NOT EXISTS bank_name varchar(150) NULL;
+            ALTER TABLE public.ticket_return_requests ADD CONSTRAINT ck_ticket_return_requests_status CHECK(status IN ('Pending','Approved','ApprovedPendingManualRefund','Rejected','Cancelled','Refunded','RefundFailed','RefundProcessing','RefundInfoRequired'));
+            ALTER TABLE public.ticket_return_requests ADD COLUMN IF NOT EXISTS bank_account_name varchar(100) NULL;
+            ALTER TABLE public.ticket_return_requests ADD COLUMN IF NOT EXISTS bank_account_number varchar(30) NULL;
+            ALTER TABLE public.ticket_return_requests ADD COLUMN IF NOT EXISTS bank_name varchar(100) NULL;
             ALTER TABLE public.ticket_return_requests ADD COLUMN IF NOT EXISTS manual_refund_reference varchar(100) NULL;
             ALTER TABLE public.ticket_return_requests ADD COLUMN IF NOT EXISTS manual_refund_processed_by integer NULL;
             ALTER TABLE public.ticket_return_requests ADD COLUMN IF NOT EXISTS manual_refund_processed_at timestamp with time zone NULL;
+            ALTER TABLE public.ticket_return_requests ADD COLUMN IF NOT EXISTS bank_verification_json jsonb NULL;
+            -- The customer's supporting-evidence link. EF maps it, but it was missing from
+            -- every bootstrap script, so a freshly built database failed every SELECT on
+            -- this table with "column proof_url does not exist".
+            ALTER TABLE public.ticket_return_requests ADD COLUMN IF NOT EXISTS proof_url text NULL;
             CREATE UNIQUE INDEX IF NOT EXISTS uq_ticket_return_requests_open
                 ON public.ticket_return_requests(ticket_id) WHERE status='Pending';
             CREATE INDEX IF NOT EXISTS ix_ticket_return_requests_requester

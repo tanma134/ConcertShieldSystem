@@ -268,7 +268,7 @@ export default function AppRoutes() {
       />
 
       {/* return review (Staff/Admin) */}
-      <Route path="/staff/returns" element={<ProtectedRoute><TicketReturnReviewPage /></ProtectedRoute>} />
+      <Route path="/staff/returns" element={<ProtectedRoute staffOnly><TicketReturnReviewPage /></ProtectedRoute>} />
       <Route path="/admin/returns" element={<ProtectedRoute adminOnly><TicketReturnReviewPage /></ProtectedRoute>} />
       {/* 3.16.22 Refund Reconciliation Report */}
       <Route path="/admin/refund-reconciliation" element={<ProtectedRoute adminOnly><RefundReconciliationPage /></ProtectedRoute>} />
@@ -276,13 +276,13 @@ export default function AppRoutes() {
       {/* Gate Check-in & Re-entry Terminal.
           NOTE: /staff/checkin/:eventId (StaffCheckinTerminalPage) is declared in the
           "Staff Check-in & Gate Assignment" block below. */}
-      <Route path="/staff/checkin" element={<ProtectedRoute><CheckinScanTerminalPage /></ProtectedRoute>} />
+      <Route path="/staff/checkin" element={<ProtectedRoute staffOnly><CheckinScanTerminalPage /></ProtectedRoute>} />
       <Route path="/admin/checkin" element={<AdminRoute><CheckinScanTerminalPage /></AdminRoute>} />
 
       {/* On-site Incident Management ( - ) */}
-      <Route path="/staff/incidents" element={<ProtectedRoute><IncidentListPage /></ProtectedRoute>} />
-      <Route path="/staff/incidents/new" element={<ProtectedRoute><IncidentReportPage /></ProtectedRoute>} />
-      <Route path="/staff/incidents/:id" element={<ProtectedRoute><IncidentDetailPage /></ProtectedRoute>} />
+      <Route path="/staff/incidents" element={<ProtectedRoute staffOnly><IncidentListPage /></ProtectedRoute>} />
+      <Route path="/staff/incidents/new" element={<ProtectedRoute staffOnly><IncidentReportPage /></ProtectedRoute>} />
+      <Route path="/staff/incidents/:id" element={<ProtectedRoute staffOnly><IncidentDetailPage /></ProtectedRoute>} />
 
       <Route path="/admin/incidents" element={<AdminRoute><IncidentListPage /></AdminRoute>} />
       <Route path="/admin/incidents/new" element={<AdminRoute><IncidentReportPage /></AdminRoute>} />
@@ -290,9 +290,9 @@ export default function AppRoutes() {
 
       {/* Support Case Management & Dispute Resolution */}
       <Route path="/support-cases/:id" element={<ProtectedRoute><SupportCaseDetailPage /></ProtectedRoute>} />
-      <Route path="/staff/support-cases" element={<ProtectedRoute><SupportCaseListPage /></ProtectedRoute>} />
-      <Route path="/staff/support-cases/new" element={<ProtectedRoute><SupportCaseCreatePage /></ProtectedRoute>} />
-      <Route path="/staff/support-cases/:id" element={<ProtectedRoute><SupportCaseDetailPage /></ProtectedRoute>} />
+      <Route path="/staff/support-cases" element={<ProtectedRoute staffOnly><SupportCaseListPage /></ProtectedRoute>} />
+      <Route path="/staff/support-cases/new" element={<ProtectedRoute staffOnly><SupportCaseCreatePage /></ProtectedRoute>} />
+      <Route path="/staff/support-cases/:id" element={<ProtectedRoute staffOnly><SupportCaseDetailPage /></ProtectedRoute>} />
 
       <Route path="/admin/support-cases" element={<AdminRoute><SupportCaseListPage /></AdminRoute>} />
       <Route path="/admin/support-cases/new" element={<AdminRoute><SupportCaseCreatePage /></AdminRoute>} />

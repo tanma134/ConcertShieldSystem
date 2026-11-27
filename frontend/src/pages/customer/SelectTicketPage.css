@@ -381,6 +381,21 @@
   box-shadow: 0 8px 22px #0008;
 }
 
+.tb-map-stage.tb-map-stage-custom {
+  display: block;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  letter-spacing: normal;
+  pointer-events: none;
+}
+.tb-map-stage-custom svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.tb-map-stage-custom span { position: absolute; text-align: center; font-size: 10px; line-height: 1.1; color: #3b0764; }
+.tb-map-stage-main { top: 10%; left: 0; width: 100%; }
+.tb-map-stage-runway { top: 46%; left: 41%; width: 18%; height: 33%; writing-mode: vertical-rl; font-size: 7px !important; }
+.tb-map-stage-end { bottom: 3%; left: 28%; width: 44%; }
+
 .tb-seat-canvas {
   position: relative;
   min-width: 500px;

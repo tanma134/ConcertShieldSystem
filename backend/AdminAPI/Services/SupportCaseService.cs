@@ -452,6 +452,17 @@ public class SupportCaseService : ISupportCaseService
             throw new InvalidOperationException("Support case is already completed.");
         }
 
+        // A staff member may only resolve a case assigned to them. Admins are not restricted.
+        var isAdmin = string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase);
+        if (!isAdmin && supportCase.AssignedStaffId.HasValue && supportCase.AssignedStaffId.Value != resolverId)
+        {
+            throw new InvalidOperationException("This support case is assigned to another staff member.");
+        }
+        if (!isAdmin && !supportCase.AssignedStaffId.HasValue)
+        {
+            throw new InvalidOperationException("Assign this support case to yourself before resolving it.");
+        }
+
         supportCase.Status = "Closed";
         supportCase.Resolution = req.Resolution.Trim();
         supportCase.ResolvedBy = resolverId;

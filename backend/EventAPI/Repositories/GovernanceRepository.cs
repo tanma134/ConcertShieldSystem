@@ -26,7 +26,8 @@ public class GovernanceRepository(EventDbContext db) : IGovernanceRepository
 
     public async Task<Event?> GetEventAsNoTrackingAsync(int id, CancellationToken ct)
     {
-        return await db.Events.AsNoTracking().SingleOrDefaultAsync(x => x.EventId == id && !x.IsDeleted, ct);
+        return await db.Events.AsNoTracking().Include(x => x.TicketTypes)
+            .SingleOrDefaultAsync(x => x.EventId == id && !x.IsDeleted, ct);
     }
 
     public async Task<bool> HasPendingChangeRequestAsync(int eventId, CancellationToken ct)
@@ -75,6 +76,7 @@ public class GovernanceRepository(EventDbContext db) : IGovernanceRepository
                         c.OldEndsAt,
                         c.NewStartsAt,
                         c.NewEndsAt,
+                        c.EvidenceUrl,
                         c.SubmittedAt,
                         c.ReviewedBy,
                         c.ReviewedAt,

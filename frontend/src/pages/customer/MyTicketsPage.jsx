@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import ticketApi from "../../api/ticketApi";
 import ticketReturnApi from "../../api/ticketReturnApi";
+import { REFUND_REQUEST_SUCCESS_MESSAGE } from "../../utils/refundPolicy";
 import { useToast } from "../../components/ToastProvider";
 import appealApi from "../../api/appealApi";
 import EvidenceUploader from "../../components/EvidenceUploader";
@@ -182,26 +183,18 @@ export default function MyTicketsPage() {
   const [bankName, setBankName] = useState("");
   const [submittingBatch, setSubmittingBatch] = useState(false);
   const [batchTouched, setBatchTouched] = useState({});
+  const [cancellingReturnId, setCancellingReturnId] = useState(null);
 
   const handleOpenBatchModal = (order) => {
-    // Check if event cutoff window passed (< 24h)
-    const isWindowOpen =
-      order.startsAt &&
-      new Date(order.startsAt).getTime() - Date.now() >= 24 * 3600 * 1000;
-
-    if (!isWindowOpen) {
-      toast.error("Refund window has closed (returns close 24 hours before showtime).");
-      return;
-    }
-
     const eligibleTickets = order.tickets.filter(
       (t) =>
+        t.canReturn === true &&
         normalize(t.orderStatus) === "paid" &&
         normalize(t.status) === "active" &&
         !t.checkedInAt
     );
     if (eligibleTickets.length === 0) {
-      toast.error("No eligible tickets found for refund in this order.");
+      toast.error(order.tickets.find((ticket) => ticket.returnMessage)?.returnMessage || "No eligible tickets found for refund in this order.");
       return;
     }
     setSelectedOrder(order);
@@ -290,9 +283,7 @@ export default function MyTicketsPage() {
         )
       );
 
-      toast.success(
-        `Refund request submitted successfully for ${selectedTicketIds.length} ticket(s)! Staff will review and process the transfer.`
-      );
+      toast.success(`${REFUND_REQUEST_SUCCESS_MESSAGE} (${selectedTicketIds.length} ticket(s).)`);
       setBatchModalOpen(false);
       window.location.reload();
     } catch (err) {
@@ -306,46 +297,77 @@ export default function MyTicketsPage() {
     }
   };
 
+  // Withdraw a return request that is still waiting for review. The backend allows this
+  // only while the request is Pending, and it puts the ticket back to Active.
+  const handleCancelReturn = async (requestId) => {
+    if (!requestId || cancellingReturnId) return;
+    setCancellingReturnId(requestId);
+    try {
+      await ticketReturnApi.cancel(requestId);
+      toast.success("Return request cancelled. The ticket is active again.");
+      await loadTicketsData();
+    } catch (err) {
+      const errMsg =
+        err.response?.data?.message ||
+        err.message ||
+        "Could not cancel the return request.";
+      toast.error(errMsg);
+    } finally {
+      setCancellingReturnId(null);
+    }
+  };
+
+  // Shared loader so cancelling a return can refresh the list without a page reload.
+  const loadTicketsData = useCallback(async (isCancelled = () => false) => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const [response, returnResponse, decisionResponse] = await Promise.all([
+        ticketApi.getMyTickets(),
+        ticketReturnApi.getMyTickets().catch(() => ({ data: [] })),
+        appealApi.getMyDecisions().catch(() => ({ data: [] })),
+      ]);
+      const data = response.data?.data ?? response.data;
+      const returnData = returnResponse.data?.data ?? returnResponse.data;
+      const returnByTicketId = new Map(
+        (Array.isArray(returnData) ? returnData : []).map((item) => [Number(item.ticketId), item])
+      );
+      const enrichedData = Array.isArray(data)
+        ? data.map((ticket) => {
+            const policy = returnByTicketId.get(Number(ticket.ticketId));
+            return policy ? { ...ticket, ...policy, orderStatus: ticket.orderStatus, unitPrice: ticket.unitPrice, orderDate: ticket.orderDate } : ticket;
+          })
+        : data;
+
+      if (!Array.isArray(enrichedData)) {
+        throw new Error("The ticket response is invalid.");
+      }
+
+      const decisionData = decisionResponse.data?.data ?? decisionResponse.data;
+      if (!isCancelled()) {
+        setTickets(enrichedData);
+        setRestrictions(Array.isArray(decisionData) ? decisionData : []);
+      }
+    } catch (err) {
+      if (!isCancelled()) {
+        setError(
+          err.response?.data?.message || "Could not load your tickets."
+        );
+      }
+    } finally {
+      if (!isCancelled()) setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
-
-    async function loadTickets() {
-      try {
-        setLoading(true);
-        setError("");
-
-        const [response, decisionResponse] = await Promise.all([
-          ticketApi.getMyTickets(),
-          appealApi.getMyDecisions().catch(() => ({ data: [] })),
-        ]);
-        const data = response.data?.data ?? response.data;
-
-        if (!Array.isArray(data)) {
-          throw new Error("The ticket response is invalid.");
-        }
-
-        const decisionData = decisionResponse.data?.data ?? decisionResponse.data;
-        if (!cancelled) {
-          setTickets(data);
-          setRestrictions(Array.isArray(decisionData) ? decisionData : []);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(
-            err.response?.data?.message || "Could not load your tickets."
-          );
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    loadTickets();
+    loadTicketsData(() => cancelled);
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadTicketsData]);
 
   // Active ticket blocks are joined from AdminAPI by ticket id. TicketAPI owns the
   // ticket status and AdminAPI owns the appeal, so the customer screen combines both.
@@ -476,11 +498,10 @@ export default function MyTicketsPage() {
                     </div>
 
                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      {order.startsAt &&
-                        new Date(order.startsAt).getTime() - Date.now() >= 24 * 3600 * 1000 &&
-                        (() => {
+                      {(() => {
                           const eligibleCount = order.tickets.filter(
                             (t) =>
+                              t.canReturn === true &&
                               normalize(t.orderStatus) === "paid" &&
                               normalize(t.status) === "active" &&
                               !t.checkedInAt
@@ -558,31 +579,6 @@ export default function MyTicketsPage() {
                               {getStatusLabel(category, ticket)}
                             </span>
 
-                            {restriction && (
-                              <div className="mt-restriction-note">
-                                {restriction.existingAppealId ? (
-                                  <span>
-                                    Appeal #{restriction.existingAppealId}: <b>{restriction.existingAppealStatus}</b>
-                                  </span>
-                                ) : (
-                                  <span>
-                                    Under risk review
-                                    {restriction.appealDeadlineAt
-                                      ? ` · appeal by ${formatDate(restriction.appealDeadlineAt)}`
-                                      : ""}
-                                  </span>
-                                )}
-                                {(restriction.canAppeal || restriction.existingAppealId != null) && (
-                                  <Link
-                                    className="mt-appeal-link"
-                                    to={`/risk/decisions/${restriction.riskDecisionId}/appeal`}
-                                  >
-                                    {restriction.existingAppealId ? "View appeal" : "Submit appeal"}
-                                  </Link>
-                                )}
-                              </div>
-                            )}
-
                             <Link
                               className="mt-details-link"
                               to={`/my-tickets/${ticket.ticketId}`}
@@ -590,6 +586,67 @@ export default function MyTicketsPage() {
                               View ticket details
                             </Link>
                           </div>
+
+                          {restriction && (
+                            <div className="mt-restriction-note">
+                              {restriction.existingAppealId ? (
+                                <span>
+                                  Appeal #{restriction.existingAppealId}: <b>{restriction.existingAppealStatus}</b>
+                                </span>
+                              ) : (
+                                <span>
+                                  Under risk review
+                                  {restriction.appealDeadlineAt
+                                    ? ` · appeal by ${formatDate(restriction.appealDeadlineAt)}`
+                                    : ""}
+                                </span>
+                              )}
+                              {(restriction.canAppeal || restriction.existingAppealId != null) && (
+                                <Link
+                                  className="mt-appeal-link"
+                                  to={`/risk/decisions/${restriction.riskDecisionId}/appeal`}
+                                >
+                                  {restriction.existingAppealId ? "View appeal" : "Submit appeal"}
+                                </Link>
+                              )}
+                            </div>
+                          )}
+
+                          {ticket.latestReturn && (
+                            <div className="mt-return-status">
+                              <span className="mt-return-label">Return request</span>
+                              <span className={`mt-return-badge status-${normalize(ticket.latestReturn.status)}`}>
+                                {ticket.latestReturn.status}
+                              </span>
+                              {ticket.latestReturn.refundAmount > 0 && (
+                                <span className="mt-return-amount">
+                                  {formatPrice(ticket.latestReturn.refundAmount)}
+                                </span>
+                              )}
+                              {ticket.latestReturn.refundReference && (
+                                <span className="mt-return-ref">
+                                  Ref: {ticket.latestReturn.refundReference}
+                                </span>
+                              )}
+                              {ticket.latestReturn.reviewNote && (
+                                <span className="mt-return-note">
+                                  Note: {ticket.latestReturn.reviewNote}
+                                </span>
+                              )}
+                              {ticket.latestReturn.canCancel && (
+                                <button
+                                  type="button"
+                                  className="mt-return-cancel"
+                                  disabled={cancellingReturnId === ticket.latestReturn.ticketReturnRequestId}
+                                  onClick={() => handleCancelReturn(ticket.latestReturn.ticketReturnRequestId)}
+                                >
+                                  {cancellingReturnId === ticket.latestReturn.ticketReturnRequestId
+                                    ? "Cancelling…"
+                                    : "Cancel return request"}
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </article>
                       );
                     })}
@@ -810,6 +867,8 @@ export default function MyTicketsPage() {
                       Account Number *
                     </label>
                     <input
+                      type="password"
+                      autoComplete="off"
                       style={{
                         width: "100%",
                         padding: "8px 10px",

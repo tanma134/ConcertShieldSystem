@@ -6,6 +6,7 @@ import "./SelectTicketPage.css";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import { useToast } from "../../components/ToastProvider";
+import { getCustomerRefundWarning } from "../../utils/refundPolicy";
 
 const ZONE_PALETTE = [
   "#d98f14",
@@ -38,6 +39,7 @@ const formatEventTime = (value) =>
 
 function parseShape(shapeJson) {
   try {
+    if (shapeJson && typeof shapeJson === "object") return shapeJson;
     return JSON.parse(shapeJson || "{}");
   } catch {
     return {};
@@ -253,7 +255,10 @@ export default function SelectTicketPage() {
   }, [eventId]);
 
   const ticketTypes = event?.ticketTypes ?? [];
+  const [refundNow] = useState(() => Date.now());
+  const refundWarning = getCustomerRefundWarning(event, refundNow);
   const zones = event?.seatingChart?.zones ?? [];
+  const stageShape = parseShape(event?.seatingChart?.layoutJson)?.stageShape;
   const seatCanvasMinimums = useMemo(
     () => getSeatCanvasMinimums(zones),
     [zones]
@@ -301,8 +306,9 @@ export default function SelectTicketPage() {
         };
       }
     }
-    if (ticket.salesEndsAt) {
-      const end = new Date(ticket.salesEndsAt).getTime();
+    if (ticket.salesEndsAt || event?.startsAt) {
+      const end = ticket.salesEndsAt ? new Date(ticket.salesEndsAt).getTime()
+        : new Date(event.startsAt).getTime() - 5 * 60 * 60 * 1000;
       if (end <= now) {
         return {
           isOnSale: false,
@@ -369,7 +375,9 @@ export default function SelectTicketPage() {
             Number(item.ticketTypeId) === Number(zone.ticketTypeId)
         );
         const ticketTypeId = Number(zone.ticketTypeId);
-        const price = Number(ticket?.price || 0);
+        // Must use the same price the order will charge (EffectivePrice when a pricing
+        // rule applies), or the reserved-seat total shown here differs from the invoice.
+        const price = Number(ticket?.effectivePrice ?? ticket?.price ?? 0);
         const existing = grouped.get(ticketTypeId);
 
         if (existing) {
@@ -567,7 +575,8 @@ export default function SelectTicketPage() {
 
   function buildZoneItem(zone, quantity) {
     const ticket = getTicket(zone.ticketTypeId);
-    const price = Number(ticket?.price || 0);
+    // Same price the order charges, so the summary matches the invoice.
+    const price = Number(ticket?.effectivePrice ?? ticket?.price ?? 0);
 
     return {
       id: `zone-${zone.seatZoneId}`,
@@ -783,7 +792,14 @@ export default function SelectTicketPage() {
                       height: `${zoneMapZoom * 100}%`,
                     }}
                   >
-                  <div className="tb-map-stage">STAGE</div>
+                  {stageShape?.stageType === "t-stage" ? (
+                    <div className="tb-map-stage tb-map-stage-custom" style={{ left: `${stageShape.x}%`, top: `${stageShape.y}%`, width: `${stageShape.w}%`, height: `${stageShape.h}%`, transform: `rotate(${Number(stageShape.rot) || 0}deg)` }}>
+                      <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0 H100 V44 H59 V80 H72 V100 H28 V80 H41 V44 H0 Z" fill="#e9dff5" stroke="#a855f7" strokeWidth="0.7" /></svg>
+                      <span className="tb-map-stage-main">STAGE<br />(MAIN STAGE)</span>
+                      <span className="tb-map-stage-runway">RUNWAY</span>
+                      <span className="tb-map-stage-end">STAGE B</span>
+                    </div>
+                  ) : <div className="tb-map-stage" style={stageShape ? { left: `${stageShape.x}%`, top: `${stageShape.y}%`, width: `${stageShape.w}%`, height: `${stageShape.h}%`, transform: `rotate(${Number(stageShape.rot) || 0}deg)` } : undefined}>STAGE</div>}
 
                   {zones.map((zone, index) => {
                     const ticket = getTicket(zone.ticketTypeId);
@@ -1086,7 +1102,7 @@ export default function SelectTicketPage() {
               
               Maximum {maxPerAccount} ticket(s) per order
             </div>
-            {event.startsAt && new Date(event.startsAt).getTime() - Date.now() < 24 * 3600 * 1000 && (
+            {refundWarning && (
               <div
                 style={{
                   marginTop: "12px",
@@ -1099,9 +1115,9 @@ export default function SelectTicketPage() {
                   lineHeight: 1.4,
                 }}
               >
-                <strong>⚠️ Final Sale Policy:</strong>
+                <strong>Refund policy warning:</strong>
                 <p style={{ margin: "4px 0 0 0" }}>
-                  This event starts within the next 24 hours. Tickets purchased are non-refundable under the organizer's policy.
+                  {refundWarning}
                 </p>
               </div>
             )}

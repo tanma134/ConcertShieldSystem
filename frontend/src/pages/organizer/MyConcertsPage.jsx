@@ -72,11 +72,23 @@ export default function MyConcertsPage() {
     setCancelSubmitting(true);
     setError("");
     try {
-      const formData = new FormData();
-      formData.append("type", "Cancel");
-      formData.append("reason", cancelReason.trim());
-      formData.append("evidenceFile", cancelEvidenceFile);
-      await governanceApi.submitChange(cancelModalEvent.eventId, formData);
+      // Upload the legal document first so the request can carry a real, openable URL
+      // (the change endpoint accepts JSON, not multipart).
+      let evidenceUrl = null;
+      if (cancelEvidenceFile) {
+        const uploaded = await governanceApi.uploadChangeEvidence(
+          cancelModalEvent.eventId,
+          cancelEvidenceFile
+        );
+        evidenceUrl = uploaded.data?.data?.url || null;
+      }
+      await governanceApi.submitChange(cancelModalEvent.eventId, {
+        type: "Cancel",
+        reason: cancelReason.trim(),
+        newStartsAt: null,
+        newEndsAt: null,
+        evidenceUrl,
+      });
       toast.success("Cancellation request and legal evidence submitted. Awaiting Platform Admin review.");
       setCancelModalEvent(null);
       const res = await eventApi.getMine();
@@ -278,6 +290,19 @@ export default function MyConcertsPage() {
                     </div>
 
                     <div className="mc-footer-right">
+                      {(isPublished || ev.status === "Postponed") && (
+                        <button
+                          type="button"
+                          className="mc-footer-action-btn mc-footer-action-danger"
+                          data-event-id={ev.eventId}
+                          data-event-title={ev.title}
+                          onClick={openCancelModal}
+                          disabled={cancelSubmitting}
+                          title="Request cancellation of this event (requires Platform Admin approval)"
+                        >
+                          Request Cancellation
+                        </button>
+                      )}
                       {isDraftOrRejected && (
                         <button
                           type="button"

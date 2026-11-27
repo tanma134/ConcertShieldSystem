@@ -21,5 +21,6 @@ namespace TicketAPI.Services
 
         // Retries paying the money back for an approved return whose refund failed.
         Task<TicketReturnDto> ConfirmManualRefundAsync(int reviewerUserId, int requestId, ConfirmManualRefundDto dto, IReadOnlyCollection<int>? eventScope = null);
+        Task<TicketReturnDto> VerifyRefundAccountAsync(int reviewerUserId, int requestId, VerifyRefundAccountDto dto);
     }
 }

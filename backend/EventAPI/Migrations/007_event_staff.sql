@@ -21,3 +21,10 @@ CREATE INDEX IF NOT EXISTS ix_event_staff_staff_user
     ON public.event_staff (staff_user_id) WHERE is_active = true;
 
 ALTER TABLE public.event_staff ADD COLUMN IF NOT EXISTS gate_name varchar(100) NOT NULL DEFAULT 'Main Gate';
+ALTER TABLE public.event_staff ADD COLUMN IF NOT EXISTS shift_date date NULL;
+ALTER TABLE public.event_staff ADD COLUMN IF NOT EXISTS shift_start_time varchar(50) NULL;
+ALTER TABLE public.event_staff ADD COLUMN IF NOT EXISTS shift_end_time varchar(50) NULL;
+ALTER TABLE public.event_staff ADD COLUMN IF NOT EXISTS can_checkin boolean NOT NULL DEFAULT true;
+ALTER TABLE public.event_staff ADD COLUMN IF NOT EXISTS can_review_returns boolean NOT NULL DEFAULT false;
+ALTER TABLE public.event_staff ADD COLUMN IF NOT EXISTS can_manage_incidents boolean NOT NULL DEFAULT false;
+ALTER TABLE public.event_staff ADD COLUMN IF NOT EXISTS can_manage_support_cases boolean NOT NULL DEFAULT false;

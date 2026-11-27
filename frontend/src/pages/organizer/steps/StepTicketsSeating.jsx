@@ -9,6 +9,7 @@ import pricingRuleApi from "../../../api/pricingRuleApi";
 import { formatPrice } from "../../../utils/format";
 import ZoneMapCanvas from "./ZoneMapCanvas";
 import SeatGridPreview from "./SeatGridPreview";
+import "../../../styles/salesWindow.css";
 
 export default function StepTicketsSeating({
   eventId,
@@ -130,6 +131,8 @@ export default function StepTicketsSeating({
 
           {(!only || only === "refunds") && <RefundPolicySection
             eventId={eventId}
+            event={event}
+            ticketTypes={ticketTypes}
             refundPolicies={refundPolicies}
             readOnly={readOnly}
             onChanged={loadAll}
@@ -384,7 +387,7 @@ function DynamicPricingSection({ ticketTypes, event, readOnly }) {
             <div className="ow-span-2" style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "8px", padding: "10px 14px", color: "#166534", fontSize: "12.5px" }}>
               <strong>Ticket sales window ({selectedTicket.typeName}):</strong>{" "}
               {selectedTicket.salesStartsAt ? new Date(selectedTicket.salesStartsAt).toLocaleString() : "Immediately upon publish"}{" "}
-              → {selectedTicket.salesEndsAt ? new Date(selectedTicket.salesEndsAt).toLocaleString() : (event?.startsAt ? `Showtime (${new Date(event.startsAt).toLocaleString()})` : "Showtime")}.
+              → {selectedTicket.salesEndsAt ? new Date(selectedTicket.salesEndsAt).toLocaleString() : (event?.startsAt ? `${new Date(new Date(event.startsAt).getTime() - 5 * 60 * 60 * 1000).toLocaleString()} (5 hours before concert)` : "5 hours before concert")}.
               <br />
               <strong>Allowed discount window:</strong>{" "}
               From <strong>{ruleMinStart ? new Date(ruleMinStart).toLocaleString() : "now"}</strong>{" "}
@@ -619,6 +622,9 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
   const [batchSelectedIds, setBatchSelectedIds] = useState([]);
   const [batchSaving, setBatchSaving] = useState(false);
 
+  const defaultSalesEnd = event?.startsAt
+    ? formatDateTimeLocal(new Date(event.startsAt).getTime() - 5 * 60 * 60 * 1000) : "";
+
   const twoHoursBeforeShow = useMemo(() => {
     if (!event?.startsAt) return "";
     const t = new Date(event.startsAt).getTime() - 2 * 60 * 60 * 1000;
@@ -769,6 +775,7 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
         maxPerOrder: Number(form.maxPerOrder) || 10,
         salesStartsAt: form.salesStartsAt ? new Date(form.salesStartsAt).toISOString() : null,
         salesEndsAt: form.salesEndsAt ? new Date(form.salesEndsAt).toISOString() : null,
+        useDefaultSalesEnd: !form.salesEndsAt,
       };
 
       if (editingId) {
@@ -806,9 +813,6 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
   const openBatchSale = () => {
     if (!showBatchSale) {
       setBatchSelectedIds(ticketTypes.map((t) => t.ticketTypeId));
-      if (!batchSaleEnd && twoHoursBeforeShow) {
-        setBatchSaleEnd(twoHoursBeforeShow);
-      }
     }
     setShowBatchSale((v) => !v);
   };
@@ -827,6 +831,7 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
             ...t,
             salesStartsAt: payloadStart,
             salesEndsAt: payloadEnd,
+            useDefaultSalesEnd: !batchSaleEnd,
           })
         )
       );
@@ -870,14 +875,14 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
         <div style={{ background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: "10px", padding: "16px", marginBottom: "18px" }}>
           <div style={{ fontWeight: 600, color: "#1e293b", marginBottom: "8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span>Schedule sales window ({batchSelectedIds.length}/{ticketTypes.length} tickets selected)</span>
-            {twoHoursBeforeShow && (
+            {defaultSalesEnd && (
               <button
                 type="button"
                 className="ow-shape-pill"
                 style={{ fontSize: "11px", borderColor: "#6366f1", color: "#4f46e5" }}
-                onClick={() => setBatchSaleEnd(twoHoursBeforeShow)}
+                onClick={() => setBatchSaleEnd(defaultSalesEnd)}
               >
-                Auto-close 2h before show
+                Close 5h before show
               </button>
             )}
           </div>
@@ -934,7 +939,7 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
             })}
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "12px", alignItems: "end" }}>
+          <div className="ow-sales-window-grid">
             <label className="ow-field" style={{ margin: 0 }}>
               <span>Sales starts at *</span>
               <input
@@ -946,7 +951,7 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
               />
             </label>
             <label className="ow-field" style={{ margin: 0 }}>
-              <span>Sales ends at (closes before concert)</span>
+              <span>Sales end (optional)</span>
               <input
                 type="datetime-local"
                 min={batchSaleStart || startOfTodayLocal()}
@@ -955,7 +960,7 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
                 onChange={(e) => setBatchSaleEnd(e.target.value)}
               />
             </label>
-            <div style={{ display: "flex", gap: "8px" }}>
+            <div className="ow-sales-window-actions">
               <button
                 type="button"
                 className="tb-btn tb-btn-primary ow-btn-sm"
@@ -973,8 +978,12 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
               </button>
             </div>
           </div>
+          <p className="ow-sales-window-default">
+            Default closing time: {defaultSalesEnd ? new Date(new Date(event.startsAt).getTime() - 5 * 60 * 60 * 1000).toLocaleString() : "5 hours before the concert starts"}.
+            {" "}Leave Sales end blank to use this default.
+          </p>
           <span className="ow-hint" style={{ marginTop: "8px", display: "block", color: "#64748b" }}>
-            To sell tickets in separate phases (e.g. Day 11 vs Day 12), select tickets for Phase 1 and apply, then select the remaining tickets for Phase 2. Ticket sales safely close 2 hours before showtime.
+            For separate sale phases, select the ticket types and apply their schedule, then repeat for the remaining types.
           </span>
         </div>
       )}
@@ -1036,7 +1045,7 @@ function TicketTypesSection({ eventId, event, ticketTypes, chart, hasLayout, rea
                   )}
                   {t.salesStartsAt && (
                     <div className="ow-td-sub" style={{ color: "#7e22ce", fontSize: "11.5px", marginTop: "3px", fontWeight: 500 }}>
-                      Sales window: {new Date(t.salesStartsAt).toLocaleString()} {t.salesEndsAt ? `→ ${new Date(t.salesEndsAt).toLocaleString()}` : "→ Showtime"}
+                      Sales window: {new Date(t.salesStartsAt).toLocaleString()} {t.salesEndsAt ? `→ ${new Date(t.salesEndsAt).toLocaleString()}` : "→ 5 hours before concert"}
                     </div>
                   )}
                 </td>
@@ -2421,12 +2430,25 @@ const emptyPolicy = {
   requiresOrganizerApproval: false,
 };
 
-function RefundPolicySection({ eventId, refundPolicies, readOnly, onChanged }) {
+function RefundPolicySection({ eventId, event, ticketTypes, refundPolicies, readOnly, onChanged }) {
   const [form, setForm] = useState(emptyPolicy);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useToastedError();
   const [editingId, setEditingId] = useState(null);
+
+  const salesStartsAt = (ticketTypes || [])
+    .map((ticket) => ticket.salesStartsAt ? new Date(ticket.salesStartsAt).getTime() : NaN)
+    .filter(Number.isFinite)
+    .sort((a, b) => a - b)[0];
+  const eventStartsAt = event?.startsAt ? new Date(event.startsAt).getTime() : NaN;
+  const salesLeadWarning = (deadline) => {
+    if (!Number.isFinite(salesStartsAt) || !Number.isFinite(eventStartsAt)) return null;
+    const salesLeadHours = (eventStartsAt - salesStartsAt) / (60 * 60 * 1000);
+    return salesLeadHours >= 0 && Number(deadline) >= salesLeadHours
+      ? "The refund deadline is greater than or equal to the time between ticket sales opening and the event. Tickets may not be eligible for customer-requested refunds."
+      : null;
+  };
 
   const startEdit = (policy) => {
     setEditingId(policy.refundPolicyId);
@@ -2459,7 +2481,9 @@ function RefundPolicySection({ eventId, refundPolicies, readOnly, onChanged }) {
       const payload = {
         policyName: form.policyName.trim(),
         description: form.description.trim() || null,
-        deadlineBeforeEventHours: Number(form.deadlineBeforeEventHours) || 1,
+        deadlineBeforeEventHours: Number.isFinite(Number(form.deadlineBeforeEventHours))
+          ? Math.max(0, Number(form.deadlineBeforeEventHours))
+          : 0,
         refundPercent: Number(form.refundPercent) || 0,
         requiresOrganizerApproval: !!form.requiresOrganizerApproval,
         isActive: true,
@@ -2507,7 +2531,7 @@ function RefundPolicySection({ eventId, refundPolicies, readOnly, onChanged }) {
         )}
       </div>
 
-      <p className="ow-hint">At least one policy is required before submitting for review.</p>
+      <p className="ow-hint">Optional. Add a policy to allow customer-requested ticket refunds. Leave this section empty to offer no ticket refunds.</p>
 
       {error && (
         <div className="ow-error" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -2535,7 +2559,13 @@ function RefundPolicySection({ eventId, refundPolicies, readOnly, onChanged }) {
       )}
 
       {refundPolicies.length === 0 && (
-        <div className="ow-empty-row">No refund policies yet.</div>
+        <div className="ow-empty-row">Customer-requested ticket refunds are not offered for this event. You can submit without a refund policy.</div>
+      )}
+
+      {refundPolicies.some((policy) => salesLeadWarning(policy.deadlineBeforeEventHours)) && (
+        <div className="ow-warning" role="alert">
+          {salesLeadWarning(refundPolicies.find((policy) => salesLeadWarning(policy.deadlineBeforeEventHours))?.deadlineBeforeEventHours)}
+        </div>
       )}
 
       {refundPolicies.length > 0 && (
@@ -2579,6 +2609,9 @@ function RefundPolicySection({ eventId, refundPolicies, readOnly, onChanged }) {
 
       {!readOnly && showForm && (
         <form className="ow-inline-form" onSubmit={handleAdd}>
+          {salesLeadWarning(form.deadlineBeforeEventHours) && (
+            <div className="ow-warning" role="alert">{salesLeadWarning(form.deadlineBeforeEventHours)}</div>
+          )}
           <div className="ow-grid">
             <label className="ow-field ow-span-2">
               <span>Policy name *</span>

@@ -9,6 +9,7 @@ import { useToast } from "../../components/ToastProvider";
 import EvidenceUploader from "../../components/EvidenceUploader";
 import { VIETNAM_BANKS } from "../../constants/vietnamBanks";
 import "./TicketDetailsPage.css";
+import { REFUND_REQUEST_SUCCESS_MESSAGE } from "../../utils/refundPolicy";
 
 function getValidDate(value) {
   if (!value) return null;
@@ -134,6 +135,11 @@ export default function TicketDetailsPage() {
   const { ticketId } = useParams();
 
   const [ticket, setTicket] = useState(null);
+  // The backend owns the refund window: /tickets/my returns canReturn + the reason.
+  // The page must not re-derive eligibility on its own or it will offer the button
+  // after the deadline has passed.
+  const [returnEligibility, setReturnEligibility] = useState(null);
+  const [returnEligibilityFailed, setReturnEligibilityFailed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -193,6 +199,35 @@ export default function TicketDetailsPage() {
     return () => {
       cancelled = true;
     };
+  }, [ticketId]);
+
+  // Ask the backend whether this ticket can still be returned right now.
+  // canReturn already accounts for the event's refund tiers, the cutoff deadline,
+  // an existing request, check-in, and the order status.
+  useEffect(() => {
+    let cancelled = false;
+    if (!ticketId) return undefined;
+
+    ticketReturnApi.getMyTickets()
+      .then((response) => {
+        if (cancelled) return;
+        const rows = response.data?.data ?? response.data;
+        const match = Array.isArray(rows)
+          ? rows.find((row) => Number(row.ticketId) === Number(ticketId))
+          : null;
+        // A ticket missing from the list is simply not returnable (unpaid order,
+        // not owned, already returned) - that is not a failed lookup.
+        setReturnEligibility(match || null);
+        setReturnEligibilityFailed(false);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setReturnEligibility(null);
+          setReturnEligibilityFailed(true);
+        }
+      });
+
+    return () => { cancelled = true; };
   }, [ticketId]);
 
   useEffect(() => {
@@ -324,6 +359,23 @@ export default function TicketDetailsPage() {
     );
   }
 
+  // A failed load leaves ticket null. Without this guard the render helpers below
+  // throw on null and React unmounts the whole page, leaving the customer with a
+  // blank screen instead of the error message that was already stored.
+  if (!ticket) {
+    return (
+      <>
+        <Header />
+        <main className="ticket-detail-page">
+          <div className="ticket-detail-state" role="alert">
+            {error || "Could not load this ticket."}
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
   const status = getTicketStatus(ticket);
   const eventStart = formatDate(ticket.startsAt);
   const eventEnd = formatDate(ticket.endsAt);
@@ -344,16 +396,28 @@ export default function TicketDetailsPage() {
     String(ticket.status || "").toLowerCase() === "active" &&
     !ticket.checkedInAt;
 
-  // Close return window if event starts within 24 hours (or in the past)
-  const isReturnWindowOpen =
-    ticket.startsAt &&
-    new Date(ticket.startsAt).getTime() - Date.now() >= 24 * 3600 * 1000;
-
+  // The button is shown only when the backend says the ticket is returnable now.
+  // Eligibility covers the organizer's refund tiers and their cutoff deadline, so a
+  // closed window hides the action instead of letting the customer fill in a form
+  // that the server will reject.
   const canRequestReturn =
-    String(ticket.orderStatus || "").toLowerCase() === "paid" &&
-    String(ticket.status || "").toLowerCase() === "active" &&
-    !ticket.checkedInAt &&
-    isReturnWindowOpen;
+    returnEligibility?.canReturn === true &&
+    String(ticket?.orderStatus || "").toLowerCase() === "paid" &&
+    String(ticket?.status || "").toLowerCase() === "active" &&
+    !ticket?.checkedInAt;
+
+  // Explain a hidden refund action when the customer is still looking at an
+  // otherwise valid ticket. An unavailable eligibility lookup hides the button
+  // silently rather than blaming a policy we could not read.
+  const returnNotice = (() => {
+    if (!returnEligibility || returnEligibility.canReturn === true) return null;
+    if (!canShowQr) return null;
+    const code = returnEligibility.returnCode;
+    if (code === "RETURN_WINDOW_CLOSED" || code === "CHANGE_RETURN_WINDOW_CLOSED") {
+      return returnEligibility.returnMessage;
+    }
+    return null;
+  })();
 
   const REFUND_CATEGORIES = {
     PersonalSchedule: "Personal schedule conflict / Unable to attend",
@@ -423,7 +487,7 @@ export default function TicketDetailsPage() {
         bankName.trim(),
         proofUrl
       );
-      toast.success("Return request submitted. Staff will review it and process a bank transfer if approved.");
+      toast.success(REFUND_REQUEST_SUCCESS_MESSAGE);
       setReturnModalOpen(false);
       window.location.reload();
     } catch (err) {
@@ -586,6 +650,12 @@ export default function TicketDetailsPage() {
 
             <div className="ticket-detail-footer">
               <p>Show your QR code at the entrance to check in.</p>
+              {returnEligibilityFailed && <p className="ticket-refund-warning" role="status">Refund availability could not be checked. Please refresh the page.</p>}
+              {returnNotice && (
+                <p className="ticket-refund-warning" role="status">
+                  {returnNotice}
+                </p>
+              )}
 
               <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center" }}>
                 {ticket.orderId && (
@@ -791,7 +861,7 @@ export default function TicketDetailsPage() {
                   <strong>{ticket.paymentMethod || "VNPay"}</strong>
                 </div>
                 <div className="ticket-modal-policy-badge">
-                  100% Refund Eligible (Policy Active)
+                  Refund eligibility and amount follow the event policy
                 </div>
               </div>
 
@@ -887,6 +957,8 @@ export default function TicketDetailsPage() {
                   <div className="ticket-bank-field">
                     <label>Account Number *</label>
                     <input
+                      type="password"
+                      autoComplete="off"
                       className="ticket-form-input"
                       style={getFieldError("bankAccountNumber") ? { borderColor: "#e11d48", boxShadow: "0 0 0 2px rgba(225, 29, 72, 0.15)" } : {}}
                       placeholder="e.g. 1029384756..."

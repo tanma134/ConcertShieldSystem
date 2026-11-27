@@ -6,9 +6,6 @@ const ticketReturnApi = {
   submit: (ticketId, reason, bankAccountName, bankAccountNumber, bankName, proofUrl = null) =>
     axiosClient.post("/ticket-returns", { ticketId, reason, bankAccountName, bankAccountNumber, bankName, proofUrl }),
 
-  submitBatch: (ticketIds, reason, proofUrl = null) =>
-    axiosClient.post("/ticket-returns/batch", { ticketIds, reason, proofUrl }),
-
   list: (status) => axiosClient.get("/ticket-returns", { params: status ? { status } : {} }),
 
   getById: (id) => axiosClient.get(`/ticket-returns/${id}`),
@@ -18,6 +15,7 @@ const ticketReturnApi = {
   reviewQueue: (status = "Pending") => axiosClient.get("/ticket-returns/review", { params: status ? { status } : {} }),
 
   confirmManualRefund: (id, payload) => axiosClient.post(`/ticket-returns/${id}/confirm-manual-refund`, payload),
+  verifyRefundAccount: (id, payload) => axiosClient.post(`/ticket-returns/${id}/verify-refund-account`, payload),
 
   review: (id, approve, reviewNote = "") => axiosClient.post(`/ticket-returns/${id}/review`, { approve, reviewNote }),
 };

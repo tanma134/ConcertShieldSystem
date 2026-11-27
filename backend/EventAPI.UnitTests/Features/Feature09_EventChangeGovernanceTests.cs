@@ -95,9 +95,8 @@ public class Feature09_EventChangeGovernanceTests
         Assert.Contains("has started cannot change its schedule", ex.Message);
     }
 
-    // FALSE CASE 3: Loai thay doi khong thuoc Reschedule hoac Postpone bi chan boi Validation
+    // FALSE CASE 3: Loai thay doi khong thuoc Reschedule, Postpone hoac Cancel bi chan boi Validation
     [Theory]
-    [InlineData("Cancel")]
     [InlineData("VenueChange")]
     [InlineData("UnknownType")]
     public void False_03_ValidateChange_InvalidType_ThrowsArgumentException(string invalidType)
@@ -107,7 +106,36 @@ public class Feature09_EventChangeGovernanceTests
 
         var ex = Assert.Throws<ArgumentException>(() =>
             GovernanceRules.ValidateChange(ev, input, DateTime.UtcNow));
-        Assert.Contains("Change type must be Postpone or Reschedule", ex.Message);
+        Assert.Contains("Change type must be Postpone, Reschedule or Cancel", ex.Message);
+    }
+
+    // TRUE CASE: Cancel la loai thay doi hop le, khong can lich moi
+    [Fact]
+    public void True_03a_ValidateChange_CancelType_IsAcceptedWithNoNewSchedule()
+    {
+        var ev = CreatePublishedEvent();
+        // Caller gui kem ngay moi nhung Cancel phai bo qua chung.
+        var input = new ChangeInput("Cancel", "[Force Majeure] Venue permanently closed by authority",
+            DateTimeOffset.UtcNow.AddDays(5), DateTimeOffset.UtcNow.AddDays(6));
+
+        var clean = GovernanceRules.ValidateChange(ev, input, DateTime.UtcNow);
+
+        Assert.Equal("Cancel", clean.Type);
+        Assert.Null(clean.NewStartsAt);
+        Assert.Null(clean.NewEndsAt);
+    }
+
+    // TRUE CASE: Su kien da Postponed van co the bi huy
+    [Fact]
+    public void True_03b_ValidateChange_CancelOnPostponedEvent_IsAccepted()
+    {
+        var ev = CreatePublishedEvent();
+        ev.Status = "Postponed";
+        var input = new ChangeInput("Cancel", "[Force Majeure] Event cancelled after postponement", null, null);
+
+        var clean = GovernanceRules.ValidateChange(ev, input, DateTime.UtcNow);
+
+        Assert.Equal("Cancel", clean.Type);
     }
 
     // FALSE CASE 4: Ly do thay doi duoi 10 ky tu hoac vuot qua 1000 ky tu bi chan

@@ -64,7 +64,11 @@ namespace PaymentAPI.Services
 
             var refund = await _refunds.GetByReturnRequestIdAsync(request.ReturnRequestId, ct);
             if (refund?.Status == "Refunded")
+            {
+                if (refund.OrderId != request.OrderId || refund.Amount != request.Amount)
+                    throw new InvalidOperationException("This return already has a different refund record.");
                 return new RefundResultDto { RefundId = refund.PaymentRefundId, Status = "Refunded", Reference = refund.GatewayRefundRef };
+            }
 
             if (refund == null)
             {
@@ -106,12 +110,42 @@ namespace PaymentAPI.Services
                 throw new ArgumentException("Invalid manual refund record.");
 
             var now = DateTime.UtcNow;
+            var suppliedReference = request.Reference.Trim();
+            var isSimulation = request.IsSimulation;
+            if (isSimulation != suppliedReference.StartsWith("SIM-", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("Simulation records require a SIM- reference and cannot be recorded as real transfers.");
+            if (isSimulation && !_config.GetValue("Refund:AllowSimulation", false))
+                throw new InvalidOperationException("Refund simulation is disabled in this environment.");
+            var reference = isSimulation
+                ? $"SIM-RFD-{request.ReturnRequestId:D6}"
+                : suppliedReference;
+            var gateway = isSimulation ? "SimulatedBankTransfer" : "ManualBankTransfer";
             var refund = await _refunds.GetByReturnRequestIdAsync(request.ReturnRequestId, ct);
             if (refund != null && refund.Status == "Refunded")
+            {
+                if (refund.OrderId != request.OrderId || refund.Amount != request.Amount || refund.GatewayRefundRef != reference || refund.Gateway != gateway)
+                    throw new InvalidOperationException("This return already has a different refund record.");
                 return new RefundResultDto { RefundId = refund.PaymentRefundId, Status = "Refunded", Reference = refund.GatewayRefundRef };
+            }
 
             if (refund == null)
             {
+                // The manual bank-transfer path can otherwise record more money back than
+                // the order ever paid, because each return request is recorded on its own.
+                // Enforce the same remaining-balance cap the gateway path already applies.
+                // A simulation moves no money, so it is not capped against a real payment.
+                if (!isSimulation && request.Amount > 0)
+                {
+                    var paid = await _payments.GetLatestByOrderIdAsync(request.OrderId, "VNPay");
+                    if (paid == null || paid.Status != "Success")
+                        throw new InvalidOperationException("No successful payment transaction found for this order.");
+
+                    var alreadyRefunded = await _refunds.GetRefundedAmountByOrderIdAsync(request.OrderId, ct);
+                    if (request.Amount > paid.Amount - alreadyRefunded)
+                        throw new InvalidOperationException(
+                            $"Refund amount exceeds the remaining refundable amount for order #{request.OrderId}.");
+                }
+
                 refund = new PaymentRefund
                 {
                     ReturnRequestId = request.ReturnRequestId,
@@ -120,15 +154,15 @@ namespace PaymentAPI.Services
                     CustomerName = request.CustomerName,
                     EventId = request.EventId,
                     EventName = request.EventName,
-                    Gateway = "ManualBankTransfer",
-                    GatewayRefundRef = request.Reference.Trim(),
+                    Gateway = gateway,
+                    GatewayRefundRef = reference,
                     Status = "Refunded",
                     RefundType = "Full",
                     Reason = string.IsNullOrWhiteSpace(request.Reason) ? "Manual Bank Transfer" : request.Reason.Trim(),
                     ProcessedByUserId = request.ProcessedByUserId,
                     ProcessedByUserName = $"User #{request.ProcessedByUserId}",
-                    GatewayAmount = request.Amount,
-                    ReconciliationStatus = "Matched",
+                    GatewayAmount = isSimulation ? 0 : request.Amount,
+                    ReconciliationStatus = isSimulation ? "Simulated" : "Matched",
                     CreatedAt = now,
                     CompletedAt = now
                 };
@@ -137,13 +171,13 @@ namespace PaymentAPI.Services
             else
             {
                 refund.Amount = request.Amount;
-                refund.Gateway = "ManualBankTransfer";
-                refund.GatewayRefundRef = request.Reference.Trim();
+                refund.Gateway = gateway;
+                refund.GatewayRefundRef = reference;
                 refund.Status = "Refunded";
                 refund.ErrorMessage = null;
                 refund.GatewayErrorCode = null;
-                refund.GatewayAmount = request.Amount;
-                refund.ReconciliationStatus = "Matched";
+                refund.GatewayAmount = isSimulation ? 0 : request.Amount;
+                refund.ReconciliationStatus = isSimulation ? "Simulated" : "Matched";
                 refund.ProcessedByUserId = request.ProcessedByUserId;
                 refund.ProcessedByUserName = $"User #{request.ProcessedByUserId}";
                 refund.CompletedAt = now;
@@ -243,7 +277,7 @@ namespace PaymentAPI.Services
                 }
 
                 // Call VNPay Refund API
-                var (ok, reference, error, errCode) = await CallVnPayRefundAsync(payment, amount, ct);
+                var (ok, reference, error, errCode) = await CallVnPayRefundAsync(payment, refund, amount, ct);
                 if (ok)
                 {
                     return await SucceedAsync(refund, reference!, amount, ct);
@@ -332,14 +366,16 @@ namespace PaymentAPI.Services
             var availableEvents = await _refunds.GetDistinctRefundEventsAsync(ct);
 
             // Calculate KPI metrics
-            var totalRefunds = allRefunds.Count;
-            var totalAmount = allRefunds.Where(r => r.Status == "Refunded").Sum(r => r.Amount);
+            var realRefunds = allRefunds.Where(r => r.Gateway != "SimulatedBankTransfer").ToList();
+            var totalRefunds = realRefunds.Count;
+            var totalAmount = realRefunds.Where(r => r.Status == "Refunded").Sum(r => r.Amount);
             var pendingCount = allRefunds.Count(r => r.Status == "Pending");
             var mismatchedCount = allRefunds.Count(r => r.ReconciliationStatus == "Mismatched" || r.Status == "Failed");
 
             return new RefundReconciliationReportDto
             {
                 TotalRefunds = totalRefunds,
+                SimulatedRefunds = allRefunds.Count - realRefunds.Count,
                 TotalAmount = totalAmount,
                 PendingReconciliation = pendingCount,
                 MismatchedCount = mismatchedCount,
@@ -356,7 +392,8 @@ namespace PaymentAPI.Services
 
         private static RefundItemDto MapRefundItem(PaymentRefund r)
         {
-            var displayStatus = r.Status switch
+            var simulation = r.Gateway == "SimulatedBankTransfer";
+            var displayStatus = simulation ? "Simulated" : r.Status switch
             {
                 "Refunded" => "Completed",
                 "Pending" => "Pending",
@@ -364,7 +401,7 @@ namespace PaymentAPI.Services
                 _ => r.Status
             };
 
-            var matchStatus = r.Status switch
+            var matchStatus = simulation ? "Simulated" : r.Status switch
             {
                 "Refunded" => "Completed",
                 "Failed" => "Mismatched",
@@ -396,7 +433,7 @@ namespace PaymentAPI.Services
         }
 
         private async Task<(bool Ok, string? Reference, string? Error, string? Code)> CallVnPayRefundAsync(
-            PaymentTransaction payment, long amount, CancellationToken ct)
+            PaymentTransaction payment, PaymentRefund refund, long amount, CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(payment.GatewayTransactionRef))
                 return (false, null, "The original VNPay transaction number is missing.", "E0001");
@@ -405,7 +442,10 @@ namespace PaymentAPI.Services
             if (payDate == null)
                 return (false, null, "The original VNPay payment date is missing.", "E0002");
 
-            var requestId = Guid.NewGuid().ToString("N");
+            // VNPay treats vnp_RequestId as the idempotency key. Reusing the id of the
+            // refund record means a retry asks about the same transaction instead of
+            // creating a second payout for the same return.
+            var requestId = $"RFD{refund.PaymentRefundId:D10}";
             var createDate = DateTime.UtcNow.AddHours(7).ToString("yyyyMMddHHmmss");
             var transactionType = amount == payment.Amount ? "02" : "03";
             var txnRef = payment.OrderId.ToString();

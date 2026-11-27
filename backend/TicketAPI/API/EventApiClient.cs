@@ -144,9 +144,10 @@ namespace TicketAPI.API
         }
 
         // Reads the organizer's refund policies for an event and keeps the active ones.
-        // On any failure it returns an empty list, so the return flow falls back to the
-        // default tier instead of blocking every customer.
-        public async Task<IReadOnlyList<TicketAPI.Domain.RefundTier>> GetRefundTiersAsync(int eventId)
+        // Returns null when the policies could not be read at all, so callers can tell
+        // "this event offers no refunds" (empty list) apart from "we do not know"
+        // (null) instead of blocking the customer with a misleading reason.
+        public async Task<IReadOnlyList<TicketAPI.Domain.RefundTier>?> GetRefundTiersAsync(int eventId)
         {
             try
             {
@@ -154,12 +155,12 @@ namespace TicketAPI.API
                 if (!response.IsSuccessStatusCode)
                 {
                     _logger.LogWarning("Cannot read refund policies for event {EventId}. Status: {Status}", eventId, response.StatusCode);
-                    return Array.Empty<TicketAPI.Domain.RefundTier>();
+                    return null;
                 }
 
                 using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
                 if (!doc.RootElement.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Array)
-                    return Array.Empty<TicketAPI.Domain.RefundTier>();
+                    return null;
 
                 var tiers = new List<TicketAPI.Domain.RefundTier>();
                 foreach (var item in data.EnumerateArray())
@@ -176,7 +177,7 @@ namespace TicketAPI.API
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error reading refund policies for event {EventId}", eventId);
-                return Array.Empty<TicketAPI.Domain.RefundTier>();
+                return null;
             }
         }
 
