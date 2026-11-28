@@ -82,7 +82,7 @@ namespace AuthenticationAPI.Controllers
             }
             catch (EkycLockedException ex)
             {
-                // 3 consecutive failures -> locked for 24 hours
+              
                 return StatusCode(423, new
                 {
                     message = $"Verification failed 3 times in a row. Please try again after {ex.LockedUntilUtc:yyyy-MM-dd HH:mm} (UTC).",

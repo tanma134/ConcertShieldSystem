@@ -1,0 +1,13 @@
+.git
+.vs
+.qodo
+**/bin
+**/obj
+**/node_modules
+**/dist
+**/coverage
+**/TestResults
+**/.DS_Store
+*.user
+*.suo
+.env

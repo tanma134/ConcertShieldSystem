@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS public.voucher_usages (
 );
 
 CREATE INDEX IF NOT EXISTS ix_voucher_usages_user ON public.voucher_usages(voucher_id, user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_voucher_usages_order_id ON public.voucher_usages(order_id);
 
 -- ---------- payment_refunds ----------
 CREATE TABLE IF NOT EXISTS public.payment_refunds (
@@ -92,8 +93,7 @@ CREATE TABLE IF NOT EXISTS public.payment_refunds (
     reconciliation_status    varchar(30) DEFAULT 'Matched',
     event_id                 integer NULL,
     event_name               varchar(255) NULL,
-    CONSTRAINT ck_payment_refunds_status CHECK (status IN ('Pending', 'Refunded', 'Failed')),
-    CONSTRAINT uq_payment_refunds_return UNIQUE (return_request_id)
+    CONSTRAINT ck_payment_refunds_status CHECK (status IN ('Pending', 'Refunded', 'Failed'))
 );
 
 CREATE INDEX IF NOT EXISTS ix_payment_refunds_order ON public.payment_refunds (order_id);
@@ -108,10 +108,31 @@ CREATE TABLE IF NOT EXISTS public.payment_reconciliation_resolutions (
     resolution_status                    varchar(20) NOT NULL,
     resolved_by_user_id                  integer NOT NULL,
     resolved_at                          timestamp with time zone NOT NULL DEFAULT now(),
-    CONSTRAINT ck_reconciliation_resolution_status CHECK (resolution_status IN ('Resolved', 'Dismissed'))
+    CONSTRAINT ck_reconciliation_resolution_status CHECK (resolution_status IN ('Resolved', 'Dismissed')),
+    CONSTRAINT fk_payment_reconciliation_resolution_payment_transaction
+        FOREIGN KEY (payment_transaction_id)
+        REFERENCES public.payment_transactions(payment_transaction_id)
+        ON DELETE RESTRICT
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_reconciliation_resolution_transaction 
     ON public.payment_reconciliation_resolutions (payment_transaction_id);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conrelid = 'public.payment_reconciliation_resolutions'::regclass
+          AND conname = 'fk_payment_reconciliation_resolution_payment_transaction'
+    ) THEN
+        ALTER TABLE public.payment_reconciliation_resolutions
+            ADD CONSTRAINT fk_payment_reconciliation_resolution_payment_transaction
+            FOREIGN KEY (payment_transaction_id)
+            REFERENCES public.payment_transactions(payment_transaction_id)
+            ON DELETE RESTRICT;
+    END IF;
+END
+$$;
 
 COMMIT;

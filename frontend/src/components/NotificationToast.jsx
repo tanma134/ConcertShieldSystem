@@ -99,11 +99,17 @@ export default function NotificationToast() {
           window.dispatchEvent(new CustomEvent("notification-updated"));
         }
       };
-    } catch (_) {}
+    } catch {
+      // BroadcastChannel is optional; the storage event remains available.
+    }
 
     const onStorage = (e) => {
       if (e.key === "cs_latest_notification" && e.newValue) {
-        try { addToast(JSON.parse(e.newValue)); } catch (_) {}
+        try {
+          addToast(JSON.parse(e.newValue));
+        } catch {
+          // Ignore malformed cross-tab notification data.
+        }
       }
     };
     window.addEventListener("storage", onStorage);
@@ -118,7 +124,9 @@ export default function NotificationToast() {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    const hubUrl = "https://localhost:7197/hubs/notification";
+    const hubUrl =
+      import.meta.env.VITE_NOTIFICATION_HUB_URL ||
+      "https://localhost:7197/hubs/notification";
     let connection = null;
 
     try {
@@ -220,8 +228,8 @@ export default function NotificationToast() {
             }
           }
         });
-      } catch (err) {
-        // Silent
+      } catch {
+        // The next polling interval retries the request.
       }
     };
 

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using PaymentAPI.DTOs;
 using System.Security.Claims;
 using TicketAPI.API;
@@ -29,6 +30,7 @@ namespace TicketAPI.Controllers
         }
 
         [Authorize(Roles = "Customer")]
+        [EnableRateLimiting(TicketRateLimitPolicies.Order)]
         [HttpPost("create")]
         public async Task<IActionResult> CreateOrder([FromBody] CreateOrderDTO dto)
         {

@@ -21,6 +21,7 @@ namespace AuthenticationAPI.Services
             {
                 EmailPurpose.Register => "Your OTP Verification Code",
                 EmailPurpose.ForgotPassword => "Reset Your Password – OTP Code",
+                EmailPurpose.StepUp => "Confirm Your Action – OTP Code",
                 _ => "OTP Code"
             };
 
@@ -28,6 +29,7 @@ namespace AuthenticationAPI.Services
             {
                 EmailPurpose.Register => BuildRegisterTemplate(otp),
                 EmailPurpose.ForgotPassword => BuildForgotPasswordTemplate(otp),
+                EmailPurpose.StepUp => BuildStepUpTemplate(otp),
                 _ => BuildRegisterTemplate(otp)
             };
 
@@ -151,11 +153,11 @@ namespace AuthenticationAPI.Services
             message.Body = new TextPart("html")
             {
                 Text = $@"<div style='font-family: Arial, sans-serif; max-width: 600px; margin: auto; color: #333;'>
-                    <h2>Sự kiện bạn yêu thích sắp diễn ra</h2>
-                    <p>Xin chào {safeName},</p>
-                    <p>Sự kiện <strong>{safeTitle}</strong> trong wishlist của bạn sẽ bắt đầu sau khoảng 1 ngày.</p>
-                    <p>Thời gian: <strong>{localStartsAt} ({safeTimezone})</strong></p>
-                    <p><a href='{safeEventUrl}'>Xem thông tin sự kiện</a></p>
+                 <h2>Your Favorite Event Is Coming Soon!</h2>
+                <p>Hello {safeName},</p>
+                 <p>The event <strong>{safeTitle}</strong> in your wishlist is scheduled to start in approximately 1 day.</p>
+                 <p>Event Time: <strong>{localStartsAt} ({safeTimezone})</strong></p>
+                 <p><a href='{safeEventUrl}'>View Event Details</a></p>
                 </div>"
             };
 
@@ -312,6 +314,17 @@ namespace AuthenticationAPI.Services
                     This OTP is valid for <strong>5 minutes</strong>.
                     If you did not request a password reset, please ignore this email —
                     your password will remain unchanged.
+                </p>
+            </div>";
+
+        private static string BuildStepUpTemplate(string otp) => $@"
+            <div style='font-family: Arial, sans-serif; max-width: 480px; margin: auto;'>
+                <h2 style='color: #333;'>Confirm Your Action</h2>
+                <p>We noticed unusual activity and need to confirm it is really you. Enter the OTP below to continue:</p>
+                {OtpBox(otp)}
+                <p style='color: #6B7280; font-size: 13px;'>
+                    This OTP is valid for <strong>5 minutes</strong>.
+                    If this was not you, please ignore this email and consider changing your password.
                 </p>
             </div>";
 

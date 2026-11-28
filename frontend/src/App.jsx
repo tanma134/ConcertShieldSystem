@@ -5,6 +5,7 @@ import NotificationToast from "./components/NotificationToast";
 import { ToastProvider } from "./components/ToastProvider";
 import ActiveHoldGuard from "./components/ActiveHoldGuard";
 import ErrorBoundary from "./components/ErrorBoundary";
+import ChallengeModal from "./components/ChallengeModal";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
             <AppRoutes />
           </ToastProvider>
           <NotificationToast />
+          <ChallengeModal />
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>

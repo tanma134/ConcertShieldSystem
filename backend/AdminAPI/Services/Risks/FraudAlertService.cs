@@ -403,7 +403,6 @@ public sealed class FraudAlertService : IFraudAlertService
                 throw new RiskServiceException(409, $"User #{userId} is not an active account.");
         }
 
-        // Blocking any Staff (including yourself) would cut off the operations team.
         if (scope == "ACCOUNT" && userId == staffId)
             throw new RiskServiceException(400, "You cannot block your own account.");
         if (scope == "ACCOUNT" && target?.Roles.Any(r =>
@@ -411,9 +410,6 @@ public sealed class FraudAlertService : IFraudAlertService
                 || string.Equals(r, "Staff", StringComparison.OrdinalIgnoreCase)) == true)
             throw new RiskServiceException(403,
                 "Administrator and Staff accounts cannot be blocked from the fraud console. Use the user management screen instead.");
-
-        // A TICKET block revokes someone's property, so the ticket must exist and
-        // belong to the user named on the block.
         if (scope == "TICKET")
         {
             if (_tickets == null)
@@ -554,8 +550,6 @@ public sealed class FraudAlertService : IFraudAlertService
         if (string.Equals(d.Scope, "TICKET", StringComparison.OrdinalIgnoreCase)
             && d.TicketId.HasValue && _tickets != null)
         {
-            // Do the ticket side first: if TicketAPI fails, the decision must stay Active
-            // instead of showing "Restored" while the ticket is still blocked.
             try
             {
                 await _tickets.UnblockTicketAsync(d.TicketId.Value,

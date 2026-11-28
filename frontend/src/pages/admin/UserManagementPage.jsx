@@ -181,45 +181,50 @@ export default function UserManagementPage() {
 
                       <td>
                         <div className="table-actions">
-                          <button
-                            type="button"
-                            className="text-button"
-                            onClick={() => openDetails(item.userId)}
-                          >
-                            Details
-                          </button>
+                          {isAdmin ? (
+                            <span>Protected account</span>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                className="text-button"
+                                onClick={() => openDetails(item.userId)}
+                              >
+                                Details
+                              </button>
 
-                          <button
-                            type="button"
-                            className="text-button"
-                            onClick={() => {
-                              setSelectedUser(item);
-                              setModal("edit");
-                            }}
-                          >
-                            Update
-                          </button>
+                              <button
+                                type="button"
+                                className="text-button"
+                                onClick={() => {
+                                  setSelectedUser(item);
+                                  setModal("edit");
+                                }}
+                              >
+                                Update
+                              </button>
 
-                          <button
-                            type="button"
-                            className="text-button"
-                            disabled={isAdmin}
-                            onClick={() => openStatus(item)}
-                          >
-                            {item.isActive ? "Block" : "Unblock"}
-                          </button>
+                              <button
+                                type="button"
+                                className="text-button"
+                                onClick={() => openStatus(item)}
+                              >
+                                {item.isActive ? "Block" : "Unblock"}
+                              </button>
 
-                          <button
-                            type="button"
-                            className="text-button"
-                            disabled={isProtected}
-                            onClick={() => {
-                              setSelectedUser(item);
-                              setModal("assign");
-                            }}
-                          >
-                            Assign Role
-                          </button>
+                              <button
+                                type="button"
+                                className="text-button"
+                                disabled={isProtected}
+                                onClick={() => {
+                                  setSelectedUser(item);
+                                  setModal("assign");
+                                }}
+                              >
+                                Assign Role
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>

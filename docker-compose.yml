@@ -1,0 +1,323 @@
+services:
+  postgres:
+    image: postgres:${POSTGRES_VERSION:-16}-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-this-local-password}
+      POSTGRES_DB: postgres
+      RESTORE_EXISTING_DATABASES: ${RESTORE_EXISTING_DATABASES:-false}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data_v18:/var/lib/postgresql
+      - ./database/docker/init-databases.sql:/docker-entrypoint-initdb.d/00-init-databases.sql:ro
+      - ./database/docker/10-init-schemas.sql:/docker-entrypoint-initdb.d/10-init-schemas.sql:ro
+      - ./database/import:/docker-import:ro
+      - ./database/authentication_db.sql:/docker-bootstrap/authentication_db.sql:ro
+      - ./database/event_db.sql:/docker-bootstrap/event_db.sql:ro
+      - ./database/ticket_db.sql:/docker-bootstrap/ticket_db.sql:ro
+      - ./database/payment_db.sql:/docker-bootstrap/payment_db.sql:ro
+      - ./database/notification_db.sql:/docker-bootstrap/notification_db.sql:ro
+      - ./database/incident_db.sql:/docker-bootstrap/incident_db.sql:ro
+      - ./database/admin_db.sql:/docker-bootstrap/admin_db.sql:ro
+      - ./database/checkin_db.sql:/docker-bootstrap/checkin_db.sql:ro
+      - ./database/create_queue_tables.sql:/docker-bootstrap/create_queue_tables.sql:ro
+      - ./database/create_review_tables.sql:/docker-bootstrap/create_review_tables.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  authentication-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT: AuthenticationAPI
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__MyConnection: Host=postgres;Port=5432;Database=authentication_db;Username=postgres;Password=${POSTGRES_PASSWORD:-change-this-local-password}
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=authentication_db;Username=postgres;Password=${POSTGRES_PASSWORD:-change-this-local-password}
+      ConnectionStrings__NotificationConnection: Host=postgres;Port=5432;Database=notification_db;Username=postgres;Password=${POSTGRES_PASSWORD:-change-this-local-password}
+      ConnectionStrings__AdminConnection: Host=postgres;Port=5432;Database=admin_db;Username=postgres;Password=${POSTGRES_PASSWORD:-change-this-local-password}
+      JwtSettings__SecretKey: ${JWT_SECRET:-change-this-to-a-random-secret-at-least-32-characters}
+      InternalApiKey: ${INTERNAL_API_KEY:-change-this-to-a-random-internal-api-key}
+      AdminApi__BaseUrl: http://admin-api:8080
+      NotificationApi__BaseUrl: http://notification-api:8080
+      Frontend__BaseUrl: ${FRONTEND_ORIGIN:-http://localhost:8088}
+    volumes:
+      - kyc_uploads:/app/kyc-uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  event-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT: EventAPI
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=event_db;Username=postgres;Password=${POSTGRES_PASSWORD:-change-this-local-password}
+      JwtSettings__SecretKey: ${JWT_SECRET:-change-this-to-a-random-secret-at-least-32-characters}
+      Services__AuthenticationApi: http://authentication-api:8080
+      Services__InternalApiKey: ${INTERNAL_API_KEY:-change-this-to-a-random-internal-api-key}
+      Governance__TicketApi: http://ticket-api:8080/
+      Governance__NotificationApi: http://notification-api:8080/
+      Governance__InternalApiKey: ${PAYMENT_INTERNAL_API_KEY:-change-this-to-a-random-payment-api-key}
+      EventApi__InternalApiKey: ${PAYMENT_INTERNAL_API_KEY:-change-this-to-a-random-payment-api-key}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ticket-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT: TicketAPI
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__MyConnection: Host=postgres;Port=5432;Database=ticket_db;Username=postgres;Password=${POSTGRES_PASSWORD:-change-this-local-password}
+      ConnectionStrings__EventDbConnection: Host=postgres;Port=5432;Database=event_db;Username=postgres;Password=${POSTGRES_PASSWORD:-change-this-local-password}
+      ConnectionStrings__NotificationDbConnection: Host=postgres;Port=5432;Database=notification_db;Username=postgres;Password=${POSTGRES_PASSWORD:-change-this-local-password}
+      ConnectionStrings__RedisConnection: redis:6379,abortConnect=false,defaultDatabase=0
+      JwtSettings__SecretKey: ${JWT_SECRET:-change-this-to-a-random-secret-at-least-32-characters}
+      InternalApiKey: ${PAYMENT_INTERNAL_API_KEY:-change-this-to-a-random-payment-api-key}
+      ApiSettings__EventApiUrl: http://event-api:8080/
+      ApiSettings__PaymentApiUrl: http://payment-api:8080/
+      ApiSettings__QueueApiUrl: http://queue-api:8080/
+      Governance__TicketApi: http://ticket-api:8080/
+      Governance__NotificationApi: http://notification-api:8080/
+      Governance__InternalApiKey: ${PAYMENT_INTERNAL_API_KEY:-change-this-to-a-random-payment-api-key}
+      AdminApi__BaseUrl: http://admin-api:8080/
+      AdminApi__InternalKey: ${INTERNAL_API_KEY:-change-this-to-a-random-internal-api-key}
+      Risk__AllowedOrigins__0: ${FRONTEND_ORIGIN:-http://localhost:8088}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  payment-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT: PaymentAPI
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=payment_db;Username=postgres;Password=${POSTGRES_PASSWORD:-change-this-local-password}
+      JwtSettings__SecretKey: ${JWT_SECRET:-change-this-to-a-random-secret-at-least-32-characters}
+      TicketApi__InternalApiKey: ${PAYMENT_INTERNAL_API_KEY:-change-this-to-a-random-payment-api-key}
+      ApiSettings__TicketApiUrl: http://ticket-api:8080/
+      ApiSettings__EventApiUrl: http://event-api:8080/
+      NotificationApi__BaseUrl: http://notification-api:8080
+      AdminApi__BaseUrl: http://admin-api:8080/
+      AdminApi__InternalKey: ${INTERNAL_API_KEY:-change-this-to-a-random-internal-api-key}
+      Risk__AllowedOrigins__0: ${FRONTEND_ORIGIN:-http://localhost:8088}
+      VnPay__ReturnUrl: ${FRONTEND_ORIGIN:-http://localhost:8088}/payment/result
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  notification-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT: NotificationAPI
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=notification_db;Username=postgres;Password=${POSTGRES_PASSWORD:-change-this-local-password}
+      JwtSettings__SecretKey: ${JWT_SECRET:-change-this-to-a-random-secret-at-least-32-characters}
+      Services__EventApi: http://event-api:8080
+      Governance__TicketApi: http://ticket-api:8080/
+      Governance__NotificationApi: http://notification-api:8080/
+      Governance__InternalApiKey: ${PAYMENT_INTERNAL_API_KEY:-change-this-to-a-random-payment-api-key}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  admin-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT: AdminAPI
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=admin_db;Username=postgres;Password=${POSTGRES_PASSWORD:-change-this-local-password}
+      Jwt__Key: ${JWT_SECRET:-change-this-to-a-random-secret-at-least-32-characters}
+      InternalApi__Key: ${INTERNAL_API_KEY:-change-this-to-a-random-internal-api-key}
+      TicketApi__BaseUrl: http://ticket-api:8080/
+      TicketApi__InternalApiKey: ${PAYMENT_INTERNAL_API_KEY:-change-this-to-a-random-payment-api-key}
+      NotificationApi__BaseUrl: http://notification-api:8080/
+      NotificationApi__InternalApiKey: ${PAYMENT_INTERNAL_API_KEY:-change-this-to-a-random-payment-api-key}
+      AuthenticationApi__BaseUrl: http://authentication-api:8080/
+      AuthenticationApi__InternalApiKey: ${INTERNAL_API_KEY:-change-this-to-a-random-internal-api-key}
+      NotificationService__Url: http://notification-api:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  checkin-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT: CheckinAPI
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=ticket_db;Username=postgres;Password=${POSTGRES_PASSWORD:-change-this-local-password}
+      ConnectionStrings__EventDbConnection: Host=postgres;Port=5432;Database=event_db;Username=postgres;Password=${POSTGRES_PASSWORD:-change-this-local-password}
+      ConnectionStrings__NotificationDbConnection: Host=postgres;Port=5432;Database=notification_db;Username=postgres;Password=${POSTGRES_PASSWORD:-change-this-local-password}
+      ConnectionStrings__RedisConnection: redis:6379,abortConnect=false,defaultDatabase=0
+      Jwt__SecretKey: ${JWT_SECRET:-change-this-to-a-random-secret-at-least-32-characters}
+      InternalApiKey: ${CHECKIN_INTERNAL_API_KEY:-change-this-to-a-random-checkin-api-key}
+      ApiSettings__EventApiUrl: http://event-api:8080/
+      ApiSettings__NotificationApiUrl: http://notification-api:8080/
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  queue-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT: QueueAPI
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=queue_db;Username=postgres;Password=${POSTGRES_PASSWORD:-change-this-local-password}
+      Redis__ConnectionString: redis:6379,abortConnect=false
+      JwtSettings__SecretKey: ${JWT_SECRET:-change-this-to-a-random-secret-at-least-32-characters}
+      Services__EventAPI: http://event-api:8080
+      AdminApi__BaseUrl: http://admin-api:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  incident-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT: IncidentAPI
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=incident_db;Username=postgres;Password=${POSTGRES_PASSWORD:-change-this-local-password}
+      Jwt__Key: ${JWT_SECRET:-change-this-to-a-random-secret-at-least-32-characters}
+      NotificationApi__BaseUrl: http://notification-api:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  review-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT: ReviewAPI
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=review_db;Username=postgres;Password=${POSTGRES_PASSWORD:-change-this-local-password}
+      JwtSettings__SecretKey: ${JWT_SECRET:-change-this-to-a-random-secret-at-least-32-characters}
+      Services__EventApi: http://event-api:8080
+      Services__AuthenticationApi: http://authentication-api:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db-restore:
+    image: postgres:${POSTGRES_VERSION:-16}-alpine
+    profiles: ["import"]
+    entrypoint: ["/bin/bash", "/docker-scripts/restore-existing-databases.sh"]
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD:-change-this-local-password}
+    volumes:
+      - ./database/import:/docker-import:ro
+      - ./database/docker/restore-existing-databases.sh:/docker-scripts/restore-existing-databases.sh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  gateway-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PROJECT: GatewayAPI
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Production
+      DOCKER_MODE: "true"
+      Jwt__Issuer: AuthenticationAPI
+      Jwt__Audience: AuthenticationAPIUsers
+      Jwt__Key: ${JWT_SECRET:-change-this-to-a-random-secret-at-least-32-characters}
+      Cors__Origins__0: ${FRONTEND_ORIGIN:-http://localhost:8088}
+    depends_on:
+      - authentication-api
+      - event-api
+      - ticket-api
+      - payment-api
+      - notification-api
+      - admin-api
+      - checkin-api
+      - queue-api
+      - incident-api
+      - review-api
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: /api
+        VITE_NOTIFICATION_API_URL: /api
+        VITE_NOTIFICATION_HUB_URL: /hubs/notification
+        VITE_CHECKIN_HTTP_URL: /api
+        VITE_CHECKIN_HTTPS_URL: /api
+    ports:
+      - "${FRONTEND_PORT:-8088}:80"
+    depends_on:
+      - gateway-api
+    restart: unless-stopped
+
+volumes:
+  postgres_data_v18:
+  redis_data:
+  kyc_uploads:

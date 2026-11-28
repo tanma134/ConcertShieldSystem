@@ -10,11 +10,11 @@ const tokenKey = (eventId) => `queue-token:${eventId}`;
 const errorMessage = (error) => {
   const code = error?.response?.data?.code;
   const status = error?.response?.status;
+  if (code === "TOKEN_INVALID") return "";
   const messages = {
     PREQUEUE_NOT_OPEN: "Pre-queue registration has not opened yet.",
     PREQUEUE_CLOSED: "Pre-queue registration is closed.",
     ALREADY_REGISTERED: "You are already registered for this event.",
-    TOKEN_INVALID: "This queue session is no longer valid.",
     TOKEN_REVOKED: "This queue token has been revoked.",
     QUEUE_NOT_AVAILABLE: "Virtual queue is not available for this event.",
     EVENT_NOT_FOUND: "Queue configuration was not found for this event.",
@@ -46,13 +46,24 @@ export default function VirtualQueuePage() {
   const loadStatus = async (currentToken = token) => {
     if (!currentToken) { setLoading(false); return; }
     try { const response = await queueApi.getQueueStatus(eventId, currentToken); setStatus(response.data); setError(""); }
-    catch (requestError) { setError(errorMessage(requestError)); }
+    catch (requestError) {
+      if (requestError?.response?.data?.code === "TOKEN_INVALID") {
+        if (localStorage.getItem(tokenKey(eventId)) === currentToken) {
+          localStorage.removeItem(tokenKey(eventId));
+          setToken((currentTokenState) => currentTokenState === currentToken ? null : currentTokenState);
+          setStatus(null);
+          setError("");
+        }
+      } else {
+        setError(errorMessage(requestError));
+      }
+    }
     finally { setLoading(false); }
   };
 
   useEffect(() => { setToken(localStorage.getItem(tokenKey(eventId))); eventApi.getById ? eventApi.getById(eventId).then((response) => setEvent(response.data?.data || response.data)).catch(() => {}) : setEvent(null); loadStatus(); }, [eventId]);
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
-  useEffect(() => { if (!token) return undefined; const timer = setInterval(() => loadStatus(), 4000); return () => clearInterval(timer); }, [eventId, token]);
+  useEffect(() => { if (!token) return undefined; const timer = setInterval(() => loadStatus(), 4000); return () => clearInterval(timer); }, [eventId, token]); //Cứ mỗi 4 giây, trang gọi loadStatus() để lấy vị trí mới từ API trạng thái hàng đợi rồi cập nhật màn hình.
   useEffect(() => {
     if (status?.status !== "PREQUEUE" || !status.preQueueEndsAt || new Date(status.preQueueEndsAt).getTime() > now || !token) return;
 

@@ -46,6 +46,22 @@ namespace AuthenticationAPI.Services
             _approvalNotifier = approvalNotifier;
         }
 
+        private string GetDatabaseConnectionString(string settingName, string databaseName)
+        {
+            var configuredConnectionString = _configuration?.GetConnectionString(settingName);
+            if (!string.IsNullOrWhiteSpace(configuredConnectionString))
+            {
+                return configuredConnectionString;
+            }
+
+            var authenticationConnectionString = _configuration?.GetConnectionString("MyConnection")
+                ?? throw new InvalidOperationException("Missing authentication database connection string.");
+            return new Npgsql.NpgsqlConnectionStringBuilder(authenticationConnectionString)
+            {
+                Database = databaseName
+            }.ConnectionString;
+        }
+
         public async Task<OrganizerRequestResponseDTO> CreateRequestAsync(int userId, CreateOrganizerRequestDTO dto)
         {
             var user = await _userRepository.GetByIdAsync(userId)
@@ -152,7 +168,7 @@ namespace AuthenticationAPI.Services
                 var adminNotifMsg = $"Applicant '{displayName}' (Tax: {request.TaxCode}, Bank: {request.BankName} - {request.BankAccountNumber}) has submitted verification documents for review.";
                 try
                 {
-                    using var conn = new Npgsql.NpgsqlConnection("Host=localhost;Port=5432;Database=notification_db;Username=postgres;Password=123456");
+                    using var conn = new Npgsql.NpgsqlConnection(GetDatabaseConnectionString("NotificationConnection", "notification_db"));
                     await conn.OpenAsync();
                     using var cmd = new Npgsql.NpgsqlCommand(
                         "INSERT INTO notifications (user_id, title, message, category, target_url, is_read, created_at, is_deleted) VALUES (@uid, @title, @msg, @cat, @url, false, NOW(), false);", conn);
@@ -187,7 +203,8 @@ namespace AuthenticationAPI.Services
                     };
                     var content = new StringContent(System.Text.Json.JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
 
-                    var endpoints = new[] { "https://localhost:7197/api/notifications", "http://localhost:5174/api/notifications" };
+                    var notificationApiUrl = _configuration?["NotificationApi:BaseUrl"] ?? "https://localhost:7197";
+                    var endpoints = new[] { $"{notificationApiUrl.TrimEnd('/')}/api/notifications" };
                     foreach (var ep in endpoints)
                     {
                         try
@@ -286,7 +303,7 @@ namespace AuthenticationAPI.Services
                 {
                     try
                     {
-                        using var pConn = new Npgsql.NpgsqlConnection("Host=localhost;Port=5432;Database=admin_db;Username=postgres;Password=123456");
+                        using var pConn = new Npgsql.NpgsqlConnection(GetDatabaseConnectionString("AdminConnection", "admin_db"));
                         pConn.Open();
                         using var pCmd = new Npgsql.NpgsqlCommand("SELECT platform_fee_percent, payout_days FROM system_policies WHERE category = 'PRICE_TICKETING' AND LOWER(status) = 'active' ORDER BY version_number DESC LIMIT 1;", pConn);
                         using var pReader = pCmd.ExecuteReader();
@@ -366,7 +383,8 @@ namespace AuthenticationAPI.Services
                                 targetUrl = notifUrl
                             };
                             var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-                            var endpoints = new[] { "https://localhost:7197/api/notifications", "http://localhost:5174/api/notifications" };
+                            var notificationApiUrl = _configuration?["NotificationApi:BaseUrl"] ?? "https://localhost:7197";
+                            var endpoints = new[] { $"{notificationApiUrl.TrimEnd('/')}/api/notifications" };
                             foreach (var ep in endpoints)
                             {
                                 try

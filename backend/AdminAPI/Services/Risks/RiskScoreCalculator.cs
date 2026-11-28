@@ -37,11 +37,13 @@ public sealed class RiskScoreCalculator
         return new ScoreResult(score, raw, trustPoints, byGroup, groupCount, combo, trustDisabled);
     }
 
+    // Hard rules first, then each risk type is decided on its own ladder and the more severe result wins.
     public RiskDecisionResult Decide(RiskConfig cfg, ScoreResult bot, ScoreResult fraud, DecisionContext? ctx = null)
     {
         ctx ??= new DecisionContext();
-        var top = bot.Score >= fraud.Score ? bot : fraud;
-        var dominant = bot.Score >= fraud.Score ? RiskType.Bot : RiskType.Fraud;
+        var botFirst = bot.Score >= fraud.Score;
+        var top = botFirst ? bot : fraud;
+        var dominant = botFirst ? RiskType.Bot : RiskType.Fraud;
 
         if (ctx.HardRule == HrWhitelist)
             return Result(cfg, RiskLevel.Low, RiskAction.Allow, dominant, top.Score, ctx.HardRule, "HARD_RULE_WHITELIST");
@@ -58,34 +60,63 @@ public sealed class RiskScoreCalculator
             return BuildHardRuleBlock(cfg, hrDominant, scopes, ctx, $"HARD_RULE_{ctx.HardRule}");
         }
 
-        var score = top.Score;
-        var level = LevelOf(cfg, score);
+        var b = DecideByType(cfg, RiskType.Bot, bot, ctx);
+        var f = DecideByType(cfg, RiskType.Fraud, fraud, ctx);
+
+        var sb = Severity(b);
+        var sf = Severity(f);
+        if (sf > sb) return f;
+        if (sb > sf) return b;
+        return botFirst ? b : f;
+    }
+
+    private static int Severity(RiskDecisionResult r) => (int)r.Action * 10 + (int)r.Level;
+
+    private static RiskDecisionResult DecideByType(RiskConfig cfg, RiskType type, ScoreResult s, DecisionContext ctx)
+    {
+        var score = s.Score;
+        var level = LevelOf(cfg, score, type);
         var downgraded = false;
 
-        if (level == RiskLevel.Critical && top.GroupCount < cfg.CriticalMinGroups)
+        if (level == RiskLevel.Critical && s.GroupCount < cfg.CriticalMinGroups)
         {
             level = RiskLevel.High;
             downgraded = true;
         }
 
-        if (ctx.IsVipOrLargeOrder && score >= cfg.ThresholdHigh)
-            return Result(cfg, RiskLevel.High, RiskAction.Hold, dominant, score, "HR_VIP", "VIP_FORCED_HIGH", downgraded);
+        // Large / VIP orders are a fraud concern only.
+        if (type == RiskType.Fraud && ctx.IsVipOrLargeOrder && score >= cfg.ThresholdHighFor(type))
+            return Result(cfg, RiskLevel.High, RiskAction.Hold, type, score, "HR_VIP", "VIP_FORCED_HIGH", downgraded);
 
         switch (level)
         {
             case RiskLevel.Low:
-                return Result(cfg, level, RiskAction.Allow, dominant, score, null, "SCORE_LOW");
+                return Result(cfg, level, RiskAction.Allow, type, score, null, "SCORE_LOW");
+
             case RiskLevel.Medium:
-                return Result(cfg, level, RiskAction.Challenge, dominant, score, null, "SCORE_MEDIUM",
-                    challenge: dominant == RiskType.Fraud ? "OTP" : "CAPTCHA");
+                return Result(cfg, level, RiskAction.Challenge, type, score, null, "SCORE_MEDIUM",
+                    challenge: type == RiskType.Fraud ? "OTP" : "CAPTCHA");
+
             case RiskLevel.High:
-                return Result(cfg, level, RiskAction.Hold, dominant, score, null,
+                if (type == RiskType.Bot)
+                {
+                    // Evidence from a single group is weak: ask for CAPTCHA instead of blocking.
+                    if (downgraded)
+                        return Result(cfg, level, RiskAction.Challenge, type, score, null,
+                            "DOWNGRADED_SINGLE_GROUP", true, "CAPTCHA");
+
+                    return new RiskDecisionResult(level, RiskAction.Block, type, score,
+                        new[] { "SESSION", "IP" }, cfg.BotHighBlockHours, 1, false, null,
+                        ctx.HardRule, false, cfg.IsShadow, "SCORE_HIGH_BOT");
+                }
+                return Result(cfg, level, RiskAction.Hold, type, score, null,
                     downgraded ? "DOWNGRADED_SINGLE_GROUP" : "SCORE_HIGH", downgraded);
+
             default:
-                var scopes = dominant == RiskType.Bot
+                var scopes = type == RiskType.Bot
                     ? new[] { "SESSION", "IP", "DEVICE" }
                     : new[] { "ACCOUNT" };
-                return BuildBlock(cfg, RiskLevel.Critical, dominant, score, scopes, ctx, false, "SCORE_CRITICAL");
+                return BuildBlock(cfg, RiskLevel.Critical, type, score, scopes, ctx, false, "SCORE_CRITICAL");
         }
     }
 
@@ -93,6 +124,11 @@ public sealed class RiskScoreCalculator
         score >= cfg.ThresholdCritical ? RiskLevel.Critical :
         score >= cfg.ThresholdHigh ? RiskLevel.High :
         score >= cfg.ThresholdMedium ? RiskLevel.Medium : RiskLevel.Low;
+
+    public static RiskLevel LevelOf(RiskConfig cfg, int score, RiskType type) =>
+        score >= cfg.ThresholdCriticalFor(type) ? RiskLevel.Critical :
+        score >= cfg.ThresholdHighFor(type) ? RiskLevel.High :
+        score >= cfg.ThresholdMediumFor(type) ? RiskLevel.Medium : RiskLevel.Low;
 
     private static RiskDecisionResult BuildBlock(RiskConfig cfg, RiskLevel level, RiskType dominant, int score,
         string[] scopes, DecisionContext ctx, bool downgraded, string reason)

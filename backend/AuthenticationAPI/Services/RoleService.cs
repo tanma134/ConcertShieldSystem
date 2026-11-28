@@ -48,6 +48,11 @@ namespace AuthenticationAPI.Services
                 return (false, "RoleName is required.", null);
             }
 
+            if (IsAdminRoleName(dto.RoleName))
+            {
+                return (false, "The Admin role cannot be created or modified.", null);
+            }
+
             if (await _roleRepository.ExistsByNameAsync(dto.RoleName))
             {
                 return (false, "Role already exists.", null);
@@ -79,6 +84,11 @@ namespace AuthenticationAPI.Services
             if (role == null)
             {
                 return (false, "Role not found.", null);
+            }
+
+            if (IsAdminRoleName(role.RoleName) || IsAdminRoleName(dto.RoleName))
+            {
+                return (false, "The Admin role cannot be modified.", null);
             }
 
             if (string.IsNullOrWhiteSpace(dto.RoleName))
@@ -117,7 +127,7 @@ namespace AuthenticationAPI.Services
                 return (false, "Role not found.");
             }
 
-            if (role.RoleName.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+            if (IsAdminRoleName(role.RoleName))
             {
                 return (false, "The Admin role cannot be deleted.");
             }
@@ -134,5 +144,8 @@ namespace AuthenticationAPI.Services
 
             return (true, "");
         }
+
+        private static bool IsAdminRoleName(string? roleName) =>
+            string.Equals(roleName?.Trim(), "Admin", StringComparison.OrdinalIgnoreCase);
     }
 }

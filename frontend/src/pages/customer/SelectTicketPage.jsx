@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import eventApi from "../../api/eventApi";
+import queueApi from "../../api/queueApi";
 import ticketApi from "../../api/ticketApi";
 import "./SelectTicketPage.css";
 import Header from "../../components/Header";
@@ -190,6 +191,33 @@ export default function SelectTicketPage() {
           throw new Error("The event was not found.");
         }
 
+        if (eventData.requiresVirtualQueue) {
+          const queueToken = localStorage.getItem(`queue-token:${eventData.eventId}`);
+          if (!queueToken) {
+            navigate(`/events/${eventData.eventId}/queue`, { replace: true });
+            return;
+          }
+
+          try {
+            const queueResponse = await queueApi.getQueueStatus(eventData.eventId, queueToken);
+            const queueStatus = unwrapResponse(queueResponse);
+            const expiresAt = queueStatus?.admissionExpiresAt
+              ? new Date(queueStatus.admissionExpiresAt).getTime()
+              : 0;
+
+            if (queueStatus?.status !== "ADMITTED" || expiresAt <= Date.now()) {
+              navigate(`/events/${eventData.eventId}/queue`, { replace: true });
+              return;
+            }
+          } catch (queueError) {
+            if ([401, 403, 409].includes(queueError.response?.status)) {
+              navigate(`/events/${eventData.eventId}/queue`, { replace: true });
+              return;
+            }
+            throw queueError;
+          }
+        }
+
         if (cancelled) return;
 
         setEvent(eventData);
@@ -252,7 +280,7 @@ export default function SelectTicketPage() {
     return () => {
       cancelled = true;
     };
-  }, [eventId]);
+  }, [eventId, navigate]);
 
   const ticketTypes = event?.ticketTypes ?? [];
   const [refundNow] = useState(() => Date.now());
@@ -657,6 +685,12 @@ export default function SelectTicketPage() {
       navigate(`/checkout/question-form/${encodeURIComponent(holdId)}`);
     } catch (err) {
       const body = err.response?.data;
+
+      if (body?.code === "QUEUE_ADMISSION_REQUIRED") {
+        toast.error(body.message || "Please pass the virtual queue before buying tickets.");
+        navigate(`/events/${payload.eventId}/queue`);
+        return;
+      }
 
       // The API sends a machine-readable code for risk / eKYC rejections.
       // Send the customer to the page where they can fix the cause instead of
