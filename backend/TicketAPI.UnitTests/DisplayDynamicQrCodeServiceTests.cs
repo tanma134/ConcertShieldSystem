@@ -30,7 +30,7 @@ public class DisplayDynamicQrCodeServiceTests
         var token = Assert.Single(rig.AddedQrTokens);
 
         Assert.Equal(TicketId, result.TicketId);
-        Assert.Matches("^[A-Za-z0-9_-]{43}$", result.QrToken);
+        Assert.Matches(@"^[^:]+:\d+:[A-Za-z0-9_-]{43}$", result.QrToken);
         Assert.Equal(result.QrToken, token.QrToken);
         Assert.Equal(TicketId, token.TicketId);
         Assert.False(token.IsRevoked);
@@ -174,7 +174,7 @@ public class DisplayDynamicQrCodeServiceTests
 
         var addedToken = Assert.Single(rig.AddedQrTokens);
 
-        Assert.Matches("^[A-Za-z0-9_-]{43}$", result.QrToken);
+        Assert.Matches(@"^[^:]+:\d+:[A-Za-z0-9_-]{43}$", result.QrToken);
         Assert.Equal(result.QrToken, addedToken.QrToken);
         Assert.Equal(TicketId, addedToken.TicketId);
         Assert.True(revokedToken.IsRevoked);

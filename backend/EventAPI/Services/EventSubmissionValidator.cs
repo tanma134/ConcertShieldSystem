@@ -42,7 +42,6 @@ namespace EventAPI.Services
             // to submit without artwork during a demo.
             bool requirePoster = _configuration.GetValue("Publication:RequirePoster", true);
             bool requireBanner = _configuration.GetValue("Publication:RequireBanner", false);
-            bool requireRefundPolicy = _configuration.GetValue("Publication:RequireRefundPolicy", true);
 
             if (string.IsNullOrWhiteSpace(ev.Title))
                 result.Errors.Add("Title is required.");
@@ -71,9 +70,6 @@ namespace EventAPI.Services
 
             if (string.IsNullOrWhiteSpace(ev.City))
                 result.Errors.Add("City is required.");
-
-            if (!ev.Latitude.HasValue || !ev.Longitude.HasValue)
-                result.Warnings.Add("Latitude/Longitude are not set — the venue won't show on a map.");
 
             if (ev.StartsAt == default)
                 result.Errors.Add("Start time (StartsAt) is required.");
@@ -139,8 +135,13 @@ namespace EventAPI.Services
                 if (t.SalesEndsAt.HasValue && ev.EndsAt != default && t.SalesEndsAt > ev.EndsAt)
                     result.Errors.Add($"{label}: ticket sales cannot end after the concert ends.");
 
-                if (!t.SalesStartsAt.HasValue || !t.SalesEndsAt.HasValue)
-                    result.Warnings.Add($"{label}: no sale window set — tickets go on sale as soon as the concert is published.");
+                if (!t.SalesStartsAt.HasValue)
+                    result.Warnings.Add($"{label}: no sales start set — sales open when the concert is published and eligible for sales.");
+                if (!t.SalesEndsAt.HasValue)
+                    result.Warnings.Add($"{label}: no sales end set — sales close 5 hours before the concert starts.");
+
+                if (t.SalesStartsAt.HasValue && TicketSalesWindow.EndsAt(t.SalesEndsAt, ev.StartsAt) <= t.SalesStartsAt)
+                    result.Errors.Add($"{label}: sales start must be before sales end (defaults to 5 hours before the concert).");
             }
 
             // Re-validate rules against current schedules since event or ticket dates may have changed.
@@ -168,21 +169,23 @@ namespace EventAPI.Services
             }
 
             var refundPolicies = await _refundPolicyRepository.GetByEventIdAsync(eventId);
-            if (refundPolicies.Count == 0)
+            // No active policies means customer-requested ticket refunds are not offered.
+            foreach (var policy in refundPolicies)
             {
-                if (requireRefundPolicy)
-                    result.Errors.Add("At least one active refund policy is required.");
-                else
-                    result.Warnings.Add("No refund policy configured.");
-            }
+                if (policy.RefundPercent < 0 || policy.RefundPercent > 100)
+                    result.Errors.Add($"Refund policy '{policy.PolicyName}': RefundPercent must be between 0 and 100.");
 
-            foreach (var p in refundPolicies)
-            {
-                if (p.RefundPercent < 0 || p.RefundPercent > 100)
-                    result.Errors.Add($"Refund policy '{p.PolicyName}': RefundPercent must be between 0 and 100.");
+                if (policy.DeadlineBeforeEventHours < 0)
+                    result.Errors.Add($"Refund policy '{policy.PolicyName}': DeadlineBeforeEventHours cannot be negative.");
 
-                if (p.DeadlineBeforeEventHours <= 0)
-                    result.Errors.Add($"Refund policy '{p.PolicyName}': DeadlineBeforeEventHours must be greater than 0.");
+                var salesStartsAt = ticketTypes
+                    .Where(t => t.SalesStartsAt.HasValue)
+                    .Select(t => t.SalesStartsAt)
+                    .Min();
+                var warning = RefundPolicyRules.GetSalesLeadWarning(
+                    salesStartsAt, ev.StartsAt, policy.DeadlineBeforeEventHours);
+                if (warning != null && !result.Warnings.Contains(warning))
+                    result.Warnings.Add(warning);
             }
 
             var seatMap = await _seatingRepository.GetByEventIdAsync(eventId, includeSeats: true);

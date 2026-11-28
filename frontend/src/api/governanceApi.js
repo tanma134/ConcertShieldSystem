@@ -21,6 +21,13 @@ export const governanceApi = {
 
   submitChange: (id, input) => client.post(`${base(id)}/changes`, input),
 
+  // Supporting legal document for a schedule/cancellation request (not a compliance doc).
+  uploadChangeEvidence: (id, file) => {
+    const data = new FormData();
+    data.append('file', file);
+    return client.post(`${base(id)}/changes/evidence`, data, { timeout: 170000 });
+  },
+
   reviewChange: (id, request, input) => client.post(`${base(id)}/changes/${request}/review`, input),
 
   adminDirectChange: (id, input) => client.post(`${base(id)}/changes/admin-direct`, input),

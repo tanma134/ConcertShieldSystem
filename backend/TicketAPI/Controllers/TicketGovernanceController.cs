@@ -1,6 +1,7 @@
 using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using TicketAPI.DTOs;
@@ -8,8 +9,12 @@ using TicketAPI.Services;
 
 namespace TicketAPI.Controllers
 {
+    // Bulk revocation cancels tickets for a whole event, so it must never be reachable
+    // by a customer or an anonymous caller. The only screen that calls it is the Admin
+    // ticket-governance page.
     [ApiController]
     [Route("api/tickets/governance")]
+    [Authorize(Roles = "Admin")]
     public class TicketGovernanceController : TicketApiControllerBase
     {
         private readonly ITicketGovernanceService _governanceService;

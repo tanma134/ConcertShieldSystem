@@ -17,8 +17,11 @@ namespace TicketAPI.API
         // Same call, but says why it failed (wrong key, EventAPI down, ticket type gone).
         Task<InventoryReleaseOutcome> TryReleaseReturnedTicketAsync(int eventId, int ticketTypeId, int quantity);
 
-        // Active refund tiers the organizer configured for the event (empty when none).
-        Task<IReadOnlyList<TicketAPI.Domain.RefundTier>> GetRefundTiersAsync(int eventId);
+        // Active refund tiers the organizer configured for the event.
+        // An empty list means the event genuinely offers no customer refunds.
+        // Null means the policy could not be read (EventAPI down or error), which is a
+        // different situation and must not be reported to the customer as "not allowed".
+        Task<IReadOnlyList<TicketAPI.Domain.RefundTier>?> GetRefundTiersAsync(int eventId);
 
         // Event ids where this Staff account was given the return-review duty by the organizer.
         // Fails closed: an error returns an empty list, so nobody reviews events they were not assigned to.

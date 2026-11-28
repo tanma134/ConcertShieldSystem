@@ -34,6 +34,7 @@ namespace EventAPI.DTOs
 
     public class UpdateTicketTypeDTO
     {
+        public bool UseDefaultSalesEnd { get; set; }
         [Required]
         public int TicketTypeId { get; set; }
 

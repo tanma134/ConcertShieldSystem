@@ -817,13 +817,26 @@ export default function IncidentDetailPage() {
                     <label className="inc-form-label">
                       Choose Evidence File <span className="required">*</span>
                     </label>
-                    <input
-                      type="file"
-                      className="inc-form-control"
-                      accept="image/*,video/*,audio/*,application/pdf"
-                      onChange={(e) => setUploadFile(e.target.files[0] || null)}
-                      required
-                    />
+                    <div className="inc-file-picker-wrapper" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <label
+                        htmlFor="modal-evidence-file"
+                        className="inc-btn inc-btn-secondary"
+                        style={{ cursor: "pointer", padding: "6px 14px", fontSize: "13px", fontWeight: 600 }}
+                      >
+                        Browse File...
+                      </label>
+                      <span style={{ fontSize: "13px", color: uploadFile ? "#1d1730" : "#6b6480" }}>
+                        {uploadFile ? uploadFile.name : "No file selected"}
+                      </span>
+                      <input
+                        id="modal-evidence-file"
+                        type="file"
+                        style={{ display: "none" }}
+                        accept="image/*,video/*,audio/*,application/pdf"
+                        onChange={(e) => setUploadFile(e.target.files[0] || null)}
+                        required
+                      />
+                    </div>
                     <div className="inc-form-help">
                       Accepts photos (JPG, PNG, WebP), video footage (MP4, MOV), audio logs, and PDF files. Assets are secured on Cloudinary.
                     </div>

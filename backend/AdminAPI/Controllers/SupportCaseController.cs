@@ -30,13 +30,15 @@ public class SupportCaseController : ControllerBase
         var userName = await GetCurrentUserNameAsync(userId);
         var userEmail = GetCurrentUserEmail();
 
-        // If submitted by a Customer, auto-populate customer identity if missing
+        // A customer's case is always attributed to the caller, never to whatever ids the
+        // request body supplied. Previously these fields were only filled when blank, so a
+        // customer could file a case under another user's id and e-mail.
         var isInternalStaff = User.IsInRole("Admin") || User.IsInRole("Staff") || User.IsInRole("SupportStaff") || User.IsInRole("SecurityStaff");
         if (!isInternalStaff)
         {
-            if (!req.CustomerId.HasValue) req.CustomerId = userId;
-            if (string.IsNullOrWhiteSpace(req.CustomerName) || string.Equals(req.CustomerName, "User", StringComparison.OrdinalIgnoreCase)) req.CustomerName = userName;
-            if (string.IsNullOrWhiteSpace(req.CustomerEmail)) req.CustomerEmail = userEmail;
+            req.CustomerId = userId;
+            req.CustomerName = userName;
+            req.CustomerEmail = userEmail;
         }
 
         try

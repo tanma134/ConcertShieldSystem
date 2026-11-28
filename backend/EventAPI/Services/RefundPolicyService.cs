@@ -33,6 +33,11 @@ namespace EventAPI.Services
         {
             var ev = await GetEditableEventAsync(eventId, callerId, isAdmin);
 
+            if (dto.DeadlineBeforeEventHours < 0)
+                throw new ArgumentException("DeadlineBeforeEventHours cannot be negative.");
+            if (dto.RefundPercent < 0 || dto.RefundPercent > 100)
+                throw new ArgumentException("RefundPercent must be between 0 and 100.");
+
             var existing = await _refundPolicyRepository.GetByEventIdAsync(eventId);
             if (existing.Any(p => string.Equals(p.PolicyName, dto.PolicyName, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException($"A refund policy named '{dto.PolicyName}' already exists for this concert.");
@@ -68,8 +73,8 @@ namespace EventAPI.Services
             if (dto.RequiresOrganizerApproval.HasValue) entity.RequiresOrganizerApproval = dto.RequiresOrganizerApproval.Value;
             if (dto.IsActive.HasValue) entity.IsActive = dto.IsActive.Value;
 
-            if (entity.DeadlineBeforeEventHours <= 0)
-                throw new InvalidOperationException("DeadlineBeforeEventHours must be greater than 0.");
+            if (entity.DeadlineBeforeEventHours < 0)
+                throw new InvalidOperationException("DeadlineBeforeEventHours cannot be negative.");
 
             if (entity.RefundPercent < 0 || entity.RefundPercent > 100)
                 throw new InvalidOperationException("RefundPercent must be between 0 and 100.");

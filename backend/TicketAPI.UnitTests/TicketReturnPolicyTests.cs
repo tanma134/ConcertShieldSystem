@@ -199,6 +199,19 @@ public class TicketReturnPolicyTests
         Assert.Equal("RETURN_WINDOW_CLOSED", result.Code);
     }
 
+    // Returns stay open while any tier still applies, so the window closes at the
+    // SMALLEST deadline. Naming the largest one would tell the customer they still had
+    // 168 hours of eligibility when only 48 ever existed.
+    [Fact]
+    public void ClosedWindowMessageNamesTheSmallestDeadline()
+    {
+        var result = TicketReturnPolicy.Evaluate(Eligible(startsAt: Now.AddHours(47)), Now, Tiers);
+
+        Assert.Equal("RETURN_WINDOW_CLOSED", result.Code);
+        Assert.Contains("48 hours", result.Message);
+        Assert.DoesNotContain("168 hours", result.Message);
+    }
+
     [Fact]
     public void ExactlyOnTheDeadlineStillQualifiesForThatTier()
     {
@@ -209,15 +222,23 @@ public class TicketReturnPolicyTests
     }
 
     [Fact]
-    public void NoConfiguredTiersFallsBackToTheDefaultWindowAndFullRefund()
+    public void NoConfiguredTiersDoesNotAllowCustomerRefunds()
     {
         var open = TicketReturnPolicy.Evaluate(Eligible(startsAt: Now.AddHours(30)), Now, Array.Empty<RefundTier>());
-        var closed = TicketReturnPolicy.Evaluate(Eligible(startsAt: Now.AddHours(23)), Now, null);
 
-        Assert.True(open.IsEligible);
-        Assert.Equal(100m, open.RefundPercent);
-        Assert.False(closed.IsEligible);
-        Assert.Equal("RETURN_WINDOW_CLOSED", closed.Code);
+        Assert.False(open.IsEligible);
+        Assert.Equal("REFUNDS_NOT_ALLOWED", open.Code);
+    }
+
+    // A policy we could not read is not the same as an event that offers no refunds:
+    // telling the customer "this event does not allow refunds" would be a false claim.
+    [Fact]
+    public void UnreadablePolicyReportsThatItCouldNotBeChecked()
+    {
+        var result = TicketReturnPolicy.Evaluate(Eligible(startsAt: Now.AddHours(30)), Now, null);
+
+        Assert.False(result.IsEligible);
+        Assert.Equal("REFUND_POLICY_UNAVAILABLE", result.Code);
     }
 
     [Fact]

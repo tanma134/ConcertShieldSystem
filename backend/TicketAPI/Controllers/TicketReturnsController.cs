@@ -126,7 +126,7 @@ namespace TicketAPI.Controllers
         }
 
         [HttpPost("{id:int}/confirm-manual-refund")]
-        [Authorize(Roles = "Staff,Admin")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ConfirmManualRefund(int id, [FromBody] ConfirmManualRefundDto dto)
         {
             try
@@ -143,6 +143,14 @@ namespace TicketAPI.Controllers
             {
                 return Fail(ex);
             }
+        }
+
+        [HttpPost("{id:int}/verify-refund-account")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> VerifyRefundAccount(int id, [FromBody] VerifyRefundAccountDto dto)
+        {
+            try { return Success(await _service.VerifyRefundAccountAsync(CurrentUserId, id, dto), "Manual account checks recorded. This is not automatic bank ownership verification."); }
+            catch (Exception ex) { return Fail(ex); }
         }
     }
 }

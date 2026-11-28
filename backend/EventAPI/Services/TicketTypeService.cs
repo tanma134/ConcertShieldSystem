@@ -41,6 +41,10 @@ namespace EventAPI.Services
         {
             var ev = await GetOwnedEventAsync(eventId, callerId, isAdmin);
 
+            if (dto.SalesStartsAt.HasValue &&
+                TicketSalesWindow.EndsAt(EventTime.ToUtc(dto.SalesEndsAt), ev.StartsAt) <= EventTime.ToUtc(dto.SalesStartsAt))
+                throw new InvalidOperationException("Sales start must be before sales end (defaults to 5 hours before the concert).");
+
             if (await _ticketTypeRepository.ExistsNameAsync(eventId, dto.TypeName))
                 throw new InvalidOperationException(
                     $"A ticket type named '{dto.TypeName.Trim()}' already exists for this concert.");
@@ -115,7 +119,8 @@ namespace EventAPI.Services
             if (dto.SortOrder.HasValue) entity.SortOrder = dto.SortOrder.Value;
             if (dto.Status != null) entity.Status = dto.Status;
             if (dto.SalesStartsAt.HasValue) entity.SalesStartsAt = EventTime.ToUtc(dto.SalesStartsAt);
-            if (dto.SalesEndsAt.HasValue) entity.SalesEndsAt = EventTime.ToUtc(dto.SalesEndsAt);
+            if (dto.UseDefaultSalesEnd) entity.SalesEndsAt = null;
+            else if (dto.SalesEndsAt.HasValue) entity.SalesEndsAt = EventTime.ToUtc(dto.SalesEndsAt);
 
             if (entity.Quantity < entity.SoldQuantity)
                 throw new InvalidOperationException("Quantity cannot be less than the number already sold.");
@@ -127,8 +132,8 @@ namespace EventAPI.Services
             if (entity.MaxPerOrder < entity.MinPerOrder)
                 throw new InvalidOperationException("MaxPerOrder must be >= MinPerOrder.");
 
-            if (entity.SalesStartsAt.HasValue && entity.SalesEndsAt.HasValue &&
-                entity.SalesEndsAt <= entity.SalesStartsAt)
+            if (entity.SalesStartsAt.HasValue &&
+                TicketSalesWindow.EndsAt(entity.SalesEndsAt, parentEvent.StartsAt) <= entity.SalesStartsAt)
                 throw new InvalidOperationException("SalesEndsAt must be after SalesStartsAt.");
 
             if (entity.SalesEndsAt.HasValue && parentEvent.StartsAt != default)

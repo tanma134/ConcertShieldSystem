@@ -17,6 +17,8 @@ export default function RefundReconciliationPage() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedEventId, setSelectedEventId] = useState("All");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 50;
 
   // Modals
   const [processOrderId, setProcessOrderId] = useState(null);
@@ -30,6 +32,8 @@ export default function RefundReconciliationPage() {
     try {
       setLoading(true);
       setError("");
+      // Every new report starts from the first page.
+      setPage(1);
       const params = {};
       if (statusFilter === "Mismatched") params.matchStatus = "Mismatched";
       else if (statusFilter !== "All") params.status = statusFilter;
@@ -153,14 +157,23 @@ export default function RefundReconciliationPage() {
   const availableEvents = report?.availableEvents || [];
   const totalCount = report?.totalRefunds ?? refunds.length;
   const totalAmount = report?.totalAmount ?? 0;
-  const pendingCount =
-    report?.pendingReconciliation ??
-    refunds.filter((r) => r.status === "Pending").length;
-  const mismatchedCount =
-    report?.mismatchedCount ??
-    refunds.filter(
-      (r) => r.matchStatus === "Mismatched" || r.status === "Failed"
-    ).length;
+
+  // The report can hold thousands of refunds; render one page at a time so the
+  // table stays responsive and the page stays short.
+  const totalPages = Math.max(1, Math.ceil(refunds.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * PAGE_SIZE;
+  const pageRefunds = refunds.slice(pageStart, pageStart + PAGE_SIZE);
+  // Simulation records never count as real money, so every KPI below is derived
+  // from the same set of real rows. Otherwise the cards disagree with each other
+  // (e.g. a simulated failure showing up as a mismatch that needs action).
+  const realRefunds = refunds.filter((r) => r.status !== "Simulated");
+  const completedCount = realRefunds.filter((r) => r.status === "Completed").length;
+  const pendingCount = realRefunds.filter((r) => r.status === "Pending").length;
+  const mismatchedCount = realRefunds.filter(
+    (r) => r.matchStatus === "Mismatched" || r.status === "Failed"
+  ).length;
+  const simulatedCount = refunds.length - realRefunds.length;
 
   const formatMillions = (amount) => {
     if (!amount) return "₫ 0";
@@ -191,9 +204,19 @@ export default function RefundReconciliationPage() {
         <div className="rr-header">
           <div>
             <h1>Refund Reconciliation Report</h1>
-            <p>Compare refunds in ConcertShield against VNPay gateway confirmations.</p>
+            <p>Review manual bank transfers and gateway refunds. Simulation records are labeled separately and excluded from actual refund totals.</p>
+            {report?.simulatedRefunds > 0 && <p role="status">{report.simulatedRefunds} simulated refund(s) — no money transferred.</p>}
           </div>
           <div className="rr-header-actions">
+            <button
+              type="button"
+              className="rr-btn-export-csv"
+              disabled={loading || refunds.length === 0}
+              onClick={() => window.print()}
+              title="Print the filtered reconciliation report or save it as PDF"
+            >
+              Export PDF
+            </button>
             <button
               type="button"
               className="rr-btn-export-csv"
@@ -219,16 +242,17 @@ export default function RefundReconciliationPage() {
               {selectedEventId === "All" ? "Total Refunds" : "Event Refunds"}
             </span>
             <div className="rr-kpi-val">{totalCount}</div>
-            <span className="rr-kpi-trend up">
-              {selectedEventId === "All" ? "↑ 12% vs last month" : "Selected event scope"}
+            <span className="rr-kpi-sub">
+              {completedCount.toLocaleString()} completed
+              {simulatedCount > 0 ? ` · ${simulatedCount.toLocaleString()} simulation excluded` : ""}
             </span>
           </div>
 
           <div className="rr-kpi-card">
             <span className="rr-kpi-label">Total Amount</span>
             <div className="rr-kpi-val green">{formatMillions(totalAmount)}</div>
-            <span className="rr-kpi-trend up">
-              {selectedEventId === "All" ? "↑ 8% vs last month" : "Reconciled amount"}
+            <span className="rr-kpi-sub">
+              Refunded only · simulation excluded
             </span>
           </div>
 
@@ -236,9 +260,13 @@ export default function RefundReconciliationPage() {
             <span className="rr-kpi-label">Pending / Mismatched</span>
             <div className="rr-kpi-val orange">{pendingCount + mismatchedCount}</div>
             <span className="rr-kpi-sub">
-              {mismatchedCount > 0
-                ? `${mismatchedCount} mismatches require action`
-                : "Awaiting gateway confirmation"}
+              {pendingCount > 0 && mismatchedCount > 0
+                ? `${pendingCount} pending · ${mismatchedCount} mismatches need action`
+                : mismatchedCount > 0
+                  ? `${mismatchedCount} mismatches require action`
+                  : pendingCount > 0
+                    ? `${pendingCount} awaiting gateway confirmation`
+                    : "Nothing outstanding"}
             </span>
           </div>
         </div>
@@ -366,7 +394,7 @@ export default function RefundReconciliationPage() {
                   </td>
                 </tr>
               ) : (
-                refunds.map((r) => {
+                pageRefunds.map((r) => {
                   const statusClass = (r.status || "").toLowerCase();
                   const matchClass = (r.matchStatus || "").toLowerCase();
 
@@ -449,6 +477,23 @@ export default function RefundReconciliationPage() {
             </tbody>
           </table>
         </div>
+
+        {!loading && refunds.length > PAGE_SIZE && (
+          <div className="rr-pagination">
+            <span>
+              Showing {(pageStart + 1).toLocaleString()}–{Math.min(pageStart + PAGE_SIZE, refunds.length).toLocaleString()} of {refunds.length.toLocaleString()} records
+            </span>
+            <div className="rr-pagination-controls">
+              <button type="button" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>
+                Previous
+              </button>
+              <span>Page {currentPage} / {totalPages}</span>
+              <button type="button" disabled={currentPage >= totalPages} onClick={() => setPage(currentPage + 1)}>
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Prompt for Order ID when clicking "+ Process Refund" */}

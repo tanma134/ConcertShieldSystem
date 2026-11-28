@@ -11,13 +11,15 @@ public static class GovernanceRules
             throw new InvalidOperationException("Only Published or Postponed concerts support schedule changes.");
         if (status == EventStatus.Published && ev.StartsAt <= now)
             throw new InvalidOperationException("A concert that has started cannot change its schedule.");
-        if (input.Type != "Reschedule" && input.Type != "Postpone")
-            throw new ArgumentException("Change type must be Postpone or Reschedule.");
-        if (status == EventStatus.Postponed && input.Type != "Reschedule")
-            throw new InvalidOperationException("A postponed concert needs a new schedule.");
+        if (input.Type != "Reschedule" && input.Type != "Postpone" && input.Type != "Cancel")
+            throw new ArgumentException("Change type must be Postpone, Reschedule or Cancel.");
         var reason = input.Reason?.Trim() ?? "";
         if (reason.Length < 10 || reason.Length > 1000)
             throw new ArgumentException("Reason must contain 10 to 1000 characters.");
+        // Cancellation has no new schedule; the Admin decision itself is the only remaining step.
+        if (input.Type == "Cancel") return input with { Reason = reason, NewStartsAt = null, NewEndsAt = null };
+        if (status == EventStatus.Postponed && input.Type != "Reschedule")
+            throw new InvalidOperationException("A postponed concert needs a new schedule.");
         if (input.Type == "Postpone") return input with { Reason = reason, NewStartsAt = null, NewEndsAt = null };
         if (!input.NewStartsAt.HasValue || !input.NewEndsAt.HasValue)
             throw new ArgumentException("New start and end are required.");

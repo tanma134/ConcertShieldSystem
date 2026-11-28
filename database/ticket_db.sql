@@ -389,6 +389,8 @@ ALTER TABLE public.ticket_return_requests
 -- ---------- 012 check-in / re-entry (ticket) ----------
 ALTER TABLE public.tickets ADD COLUMN IF NOT EXISTS last_exit_at timestamp with time zone NULL;
 ALTER TABLE public.tickets ADD COLUMN IF NOT EXISTS checked_in_gate character varying(100) NULL;
+ALTER TABLE public.tickets ADD COLUMN IF NOT EXISTS gate_id character varying(50) NULL;
+ALTER TABLE public.ticket_return_requests ADD COLUMN IF NOT EXISTS bank_verification_json jsonb NULL;
 ALTER TABLE public.tickets ADD COLUMN IF NOT EXISTS is_inside boolean NOT NULL DEFAULT false;
 ALTER TABLE public.tickets ADD COLUMN IF NOT EXISTS re_entry_count integer NOT NULL DEFAULT 0;
 

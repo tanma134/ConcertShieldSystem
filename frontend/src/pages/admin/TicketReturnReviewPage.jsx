@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
 import ticketReturnApi from "../../api/ticketReturnApi";
+import { maskAccountNumber } from "../../utils/refundPolicy";
 import { apiErrorMessage } from "../../utils/apiError";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../components/ToastProvider";
 import PanelShell from "../../components/PanelShell";
 import AdminShell from "./AdminShell";
+import StaffShell from "../staff/StaffShell";
 import { formatPrice } from "../../utils/format";
 import "../../styles/reportPages.css";
+import "./TicketReturnReviewPage.css";
+import RefundAccountVerificationModal from "../../components/refund/RefundAccountVerificationModal";
+import EvidenceUploader from "../../components/EvidenceUploader";
 
 // Staff only see the ticket return queue and home link.
 const STAFF_LINKS = [
@@ -47,14 +52,17 @@ function getReturnStatusBadge(status) {
     borderRadius: "6px",
     fontWeight: 700,
     fontSize: "11.5px",
-    whiteSpace: "nowrap",
+    whiteSpace: "normal",
+    maxWidth: "100%",
+    boxSizing: "border-box",
+    overflowWrap: "anywhere",
   };
   switch (status) {
     case "Approved":
     case "ApprovedPendingManualRefund":
       return (
         <span style={{ ...base, background: "#fef3c7", color: "#b45309", border: "1px solid #fde68a" }}>
-          Awaiting Transfer
+          Accounting review / transfer
         </span>
       );
     case "Refunded":
@@ -87,6 +95,12 @@ function getReturnStatusBadge(status) {
           Rejected
         </span>
       );
+    case "Simulated":
+      return (
+        <span style={{ ...base, background: "#f5f3ff", color: "#6d28d9", border: "1px solid #ddd6fe" }}>
+          Simulated
+        </span>
+      );
     case "Cancelled":
       return (
         <span style={{ ...base, background: "#f1f5f9", color: "#64748b", border: "1px solid #e2e8f0" }}>
@@ -98,14 +112,20 @@ function getReturnStatusBadge(status) {
   }
 }
 
-function formatProcessor(userId) {
+function formatProcessor(userId, { currentUserId, isAdmin, forceAdmin = false } = {}) {
   if (!userId) return "—";
-  if (Number(userId) === 1) return "Admin (#1)";
+  if (
+    forceAdmin ||
+    Number(userId) === 1 ||
+    (isAdmin && currentUserId && Number(userId) === Number(currentUserId))
+  ) {
+    return `Admin (#${userId})`;
+  }
   return `Staff (#${userId})`;
 }
 
-// Two-step refund workflow: Staff approve and revoke the ticket first, then Admin confirms the manual bank transfer.
-function ReturnQueue({ isAdmin }) {
+// Two-step refund workflow: Staff or Admin approve and revoke the ticket first, then Admin confirms the manual bank transfer.
+function ReturnQueue({ isAdmin, currentUserId }) {
   const toast = useToast();
   const [rows, setRows] = useState([]);
   const [status, setStatus] = useState("Pending");
@@ -115,6 +135,7 @@ function ReturnQueue({ isAdmin }) {
   const [payoutModal, setPayoutModal] = useState(null); // { row, reference, amount, note, error, busy }
   const [inspectItem, setInspectItem] = useState(null);
   const [activeEvidence, setActiveEvidence] = useState(null);
+  const [verificationItem, setVerificationItem] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -132,11 +153,16 @@ function ReturnQueue({ isAdmin }) {
   useEffect(() => { load(); }, [status]);
 
   const confirmManualRefund = (row) => {
+    if (!isAdmin || !row.isBankAccountVerified) {
+      toast.error("Accounting must verify the receiving account before a transfer can be confirmed.");
+      return;
+    }
     setPayoutModal({
       row,
       reference: "",
       amount: String(row.refundAmount || 0),
       note: "",
+      receipt: "",
       error: "",
       busy: false,
     });
@@ -144,12 +170,16 @@ function ReturnQueue({ isAdmin }) {
 
   const submitManualRefund = async () => {
     if (!payoutModal) return;
-    const { row, reference, amount, note } = payoutModal;
+    const { row, reference, amount, note, receipt } = payoutModal;
     const trimmedRef = reference.trim();
     const numAmount = Number(amount);
 
     if (!trimmedRef) {
       setPayoutModal((p) => ({ ...p, error: "Please enter the bank transfer reference / FT code." }));
+      return;
+    }
+    if (!receipt) {
+      setPayoutModal(p => ({ ...p, error: "Attach the bank transfer receipt before confirming." }));
       return;
     }
     if (!Number.isFinite(numAmount) || numAmount !== Number(row.refundAmount || 0)) {
@@ -163,8 +193,10 @@ function ReturnQueue({ isAdmin }) {
         reference: trimmedRef,
         amount: numAmount,
         note: note.trim() || undefined,
+        transferReceipt: receipt,
+        isSimulation: row.bankVerification?.isSimulation === true,
       });
-      toast.success(`Return #${row.ticketReturnRequestId} marked as refunded.`);
+      toast.success(row.bankVerification?.isSimulation ? `Return #${row.ticketReturnRequestId}: simulated refund recorded. No money transferred.` : `Return #${row.ticketReturnRequestId} marked as refunded.`);
       setPayoutModal(null);
       await load();
     } catch (e) {
@@ -185,10 +217,9 @@ function ReturnQueue({ isAdmin }) {
     }
     setDecision((d) => ({ ...d, busy: true, error: "" }));
     try {
-      const saved = await ticketReturnApi.review(row.ticketReturnRequestId, approve, note.trim());
-      const finalStatus = saved.data?.data?.status;
+      await ticketReturnApi.review(row.ticketReturnRequestId, approve, note.trim());
       if (!approve) toast.success(`Return #${row.ticketReturnRequestId} rejected.`);
-      else toast.success(`Return #${row.ticketReturnRequestId} approved. Transfer the refund manually and confirm it afterward.`);
+      else toast.success(`Return #${row.ticketReturnRequestId} approved. Accounting must check the receiving account before confirming a transfer.`);
       setDecision(null);
       await load();
     } catch (e) {
@@ -224,7 +255,7 @@ function ReturnQueue({ isAdmin }) {
           >
             <option value="">All Statuses</option>
             <option value="Pending">Pending Review</option>
-            <option value="Approved">Awaiting Bank Transfer</option>
+            <option value="Approved">Accounting verification / transfer</option>
             <option value="Refunded">Refunded</option>
             <option value="Rejected">Rejected</option>
           </select>
@@ -235,7 +266,7 @@ function ReturnQueue({ isAdmin }) {
         ) : rows.length === 0 ? (
           <div className="tb-empty">No return requests.</div>
         ) : (
-          <div className="od-table-wrap">
+          <div className="od-table-wrap refund-review-table-wrap" tabIndex={0} aria-label="Ticket returns; scroll horizontally to view all columns">
             <table className="ow-table">
               <thead>
                 <tr>
@@ -268,17 +299,19 @@ function ReturnQueue({ isAdmin }) {
                     </td>
                     <td style={{ whiteSpace: "nowrap", fontWeight: 600 }}>{formatPrice(r.refundAmount || 0)}</td>
                     <td style={{ whiteSpace: "nowrap" }}>
-                      {getReturnStatusBadge(r.status)}
+                      {getReturnStatusBadge(r.bankVerification?.isSimulation && r.status === "Refunded" ? "Simulated" : r.status)}
+                      {r.bankVerification?.isSimulation && <div style={{ color: "#7c3aed", fontWeight: 700 }}>SIMULATION — no money transferred</div>}
+                      {["Approved", "RefundFailed", "RefundProcessing"].includes(r.status) && <div className="ow-hint">{r.isBankAccountVerified ? "Account checks recorded" : "Awaiting account verification"}</div>}
                       {r.status === "RefundFailed" && r.refundError && <div className="ow-hint" style={{ color: "#b91c1c", marginTop: "4px", whiteSpace: "normal", maxWidth: "170px" }}>{r.refundError}</div>}
                       {r.status === "Refunded" && (r.refundReference || r.manualRefundReference) && <div className="ow-hint" style={{ marginTop: "4px" }}>Ref {r.refundReference || r.manualRefundReference}</div>}
                     </td>
                     <td style={{ whiteSpace: "nowrap" }}>
                       <div style={{ fontSize: "12px", lineHeight: 1.45 }}>
                         {r.reviewedBy ? (
-                          <div><span style={{ color: "#64748b" }}>Review:</span> <strong>{formatProcessor(r.reviewedBy)}</strong></div>
+                          <div><span style={{ color: "#64748b" }}>Review:</span> <strong>{formatProcessor(r.reviewedBy, { currentUserId, isAdmin })}</strong></div>
                         ) : null}
                         {r.manualRefundProcessedBy ? (
-                          <div style={{ color: "#166534" }}><span style={{ color: "#64748b" }}>Payout:</span> <strong>{formatProcessor(r.manualRefundProcessedBy)}</strong></div>
+                          <div style={{ color: "#166534" }}><span style={{ color: "#64748b" }}>Payout:</span> <strong>{formatProcessor(r.manualRefundProcessedBy, { currentUserId, isAdmin, forceAdmin: true })}</strong></div>
                         ) : null}
                         {!r.reviewedBy && !r.manualRefundProcessedBy && <span className="ow-hint">—</span>}
                       </div>
@@ -291,7 +324,10 @@ function ReturnQueue({ isAdmin }) {
                             <button className="tb-btn tb-btn-outline" style={{ padding: "5px 10px", fontSize: "12px" }} onClick={() => openDecision(r, false)}>Reject</button>
                           </div>
                         ) : r.status === "Approved" || r.status === "ApprovedPendingManualRefund" || r.status === "RefundProcessing" || r.status === "RefundFailed" ? (
-                          <button className="tb-btn tb-btn-primary" style={{ padding: "5px 10px", fontSize: "12px" }} onClick={() => confirmManualRefund(r)}>Confirm Transfer</button>
+                          <>
+                            {isAdmin && !r.isBankAccountVerified && <button className="tb-btn tb-btn-primary" style={{ padding: "5px 10px", fontSize: "12px" }} onClick={() => setVerificationItem(r)}>Verify receiving account</button>}
+                            <button className="tb-btn tb-btn-primary" style={{ padding: "5px 10px", fontSize: "12px" }} disabled={!isAdmin || !r.isBankAccountVerified} onClick={() => confirmManualRefund(r)}>{r.bankVerification?.isSimulation ? "Record simulated transfer" : "Confirm Transfer"}</button>
+                          </>
                         ) : null}
                         <button
                           type="button"
@@ -352,11 +388,11 @@ function ReturnQueue({ isAdmin }) {
             <div style={{ marginBottom: "14px", background: "#f8fafc", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
               <div>
                 <span style={{ color: "#64748b", display: "block", fontSize: "10.5px", fontWeight: 700 }}>STEP 1: STAFF REVIEW</span>
-                <span>{inspectItem.reviewedBy ? <strong>Approved by {formatProcessor(inspectItem.reviewedBy)}</strong> : <span style={{ color: "#b45309" }}>Pending Staff Review</span>}</span>
+                <span>{inspectItem.reviewedBy ? <strong>Approved by {formatProcessor(inspectItem.reviewedBy, { currentUserId, isAdmin })}</strong> : <span style={{ color: "#b45309" }}>Pending Staff Review</span>}</span>
               </div>
               <div style={{ textAlign: "right" }}>
                 <span style={{ color: "#64748b", display: "block", fontSize: "10.5px", fontWeight: 700 }}>STEP 2: BANK PAYOUT (ACCOUNTING)</span>
-                <span>{inspectItem.manualRefundProcessedBy ? <strong style={{ color: "#166534" }}>Paid by {formatProcessor(inspectItem.manualRefundProcessedBy)}</strong> : <span style={{ color: "#64748b" }}>Awaiting Bank Payout</span>}</span>
+                <span>{inspectItem.manualRefundProcessedBy ? <strong style={{ color: "#166534" }}>Paid by {formatProcessor(inspectItem.manualRefundProcessedBy, { currentUserId, isAdmin, forceAdmin: true })}</strong> : <span style={{ color: "#64748b" }}>Awaiting Bank Payout</span>}</span>
               </div>
             </div>
 
@@ -367,8 +403,11 @@ function ReturnQueue({ isAdmin }) {
                   <button
                     type="button"
                     onClick={() => {
-                      navigator.clipboard.writeText(inspectItem.bankAccountNumber);
-                      toast.success(`Copied account ${inspectItem.bankAccountNumber} to clipboard!`);
+                      // The API only ever sends the masked account number, so this is what
+                      // can be copied. Use it to identify the request in the bank's own
+                      // beneficiary lookup; the full number stays with the customer.
+                      navigator.clipboard.writeText(maskAccountNumber(inspectItem.bankAccountNumber));
+                      toast.success(`Copied masked account ${maskAccountNumber(inspectItem.bankAccountNumber)}.`);
                     }}
                     style={{
                       fontSize: "11.5px",
@@ -392,7 +431,7 @@ function ReturnQueue({ isAdmin }) {
                 </div>
                 <div>
                   <span style={{ color: "#15803d", fontSize: "11px", display: "block" }}>Account Number</span>
-                  <strong style={{ fontFamily: "monospace", letterSpacing: "0.5px", color: "#0f172a" }}>{inspectItem.bankAccountNumber || "—"}</strong>
+                      <strong style={{ fontFamily: "monospace", letterSpacing: "0.5px", color: "#0f172a" }}>{maskAccountNumber(inspectItem.bankAccountNumber) || "—"}</strong>
                 </div>
                 <div>
                   <span style={{ color: "#15803d", fontSize: "11px", display: "block" }}>Account Holder</span>
@@ -487,6 +526,12 @@ function ReturnQueue({ isAdmin }) {
               )}
             </div>
 
+            {inspectItem.bankVerification && <div style={{ margin: "14px 0", padding: 12, background: "#f8fafc", borderRadius: 8 }}>
+              <strong>{inspectItem.bankVerification.isSimulation ? "SIMULATION — sample account checks" : "Accounting account checks"}</strong>
+              <p>Identity: {inspectItem.bankVerification.identityName}<br />Bank lookup: {inspectItem.bankVerification.bankReportedName}<br />Checked by user #{inspectItem.bankVerification.verifiedBy} · {new Date(inspectItem.bankVerification.verifiedAt).toLocaleString()}</p>
+              <p>{inspectItem.bankVerification.notes}</p>
+              {[['Identity evidence', inspectItem.bankVerification.identityEvidence], ['Bank lookup evidence', inspectItem.bankVerification.bankEvidence], ['Customer confirmation', inspectItem.bankVerification.customerConfirmationEvidence], ['Transfer receipt', inspectItem.bankVerification.transferReceipt]].filter(([, url]) => url).map(([label, url]) => <button key={label} type="button" className="tb-btn tb-btn-outline ow-btn-sm" onClick={() => openEvidenceInNewTab(url)}>{label}</button>)}
+            </div>}
             {inspectItem.reviewNote && (
               <div style={{ marginBottom: "14px", padding: "10px 12px", background: "#fef3c7", borderRadius: "8px", border: "1px solid #fde68a" }}>
                 <span style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "#92400e" }}>REVIEW NOTE</span>
@@ -530,6 +575,7 @@ function ReturnQueue({ isAdmin }) {
         </div>
       )}
 
+      {verificationItem && <RefundAccountVerificationModal row={verificationItem} onClose={() => setVerificationItem(null)} onSaved={async () => { setVerificationItem(null); await load(); }} />}
       {decision && (
         <div className="rp-modal-backdrop" onClick={() => !decision.busy && setDecision(null)}>
           <div className="rp-modal" onClick={(e) => e.stopPropagation()}>
@@ -553,7 +599,7 @@ function ReturnQueue({ isAdmin }) {
             <div className="rp-modal-actions">
               <button className="tb-btn tb-btn-outline" disabled={decision.busy} onClick={() => setDecision(null)}>Cancel</button>
               <button className="tb-btn tb-btn-primary" disabled={decision.busy} onClick={confirmDecision}>
-                {decision.busy ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : decision.approve ? "Approve & refund" : "Reject"}
+                {decision.busy ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : decision.approve ? "Approve return" : "Reject"}
               </button>
             </div>
           </div>
@@ -562,9 +608,9 @@ function ReturnQueue({ isAdmin }) {
 
       {payoutModal && (
         <div className="rp-modal-backdrop" onClick={() => !payoutModal.busy && setPayoutModal(null)}>
-          <div className="rp-modal" style={{ maxWidth: "480px" }} onClick={(e) => e.stopPropagation()}>
+          <div className="rp-modal" style={{ maxWidth: "560px", maxHeight: "88vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ margin: "0 0 8px", fontSize: "18px", fontWeight: 700 }}>
-              Confirm Bank Transfer — #{payoutModal.row.ticketReturnRequestId}
+              {payoutModal.row.bankVerification?.isSimulation ? "Record simulated transfer" : "Confirm Bank Transfer"} — #{payoutModal.row.ticketReturnRequestId}
             </h3>
             <p className="rp-muted" style={{ marginBottom: "12px" }}>
               {payoutModal.row.eventName || `Event #${payoutModal.row.eventId}`} · {payoutModal.row.ticketTypeName}
@@ -579,8 +625,10 @@ function ReturnQueue({ isAdmin }) {
                   <button
                     type="button"
                     onClick={() => {
-                      navigator.clipboard.writeText(payoutModal.row.bankAccountNumber);
-                      toast.success(`Copied ${payoutModal.row.bankAccountNumber}`);
+                      // The API only sends the masked number, so this is the most that can
+                      // be copied. The full number is never exposed to any browser.
+                      navigator.clipboard.writeText(maskAccountNumber(payoutModal.row.bankAccountNumber));
+                      toast.success(`Copied masked account ${maskAccountNumber(payoutModal.row.bankAccountNumber)}`);
                     }}
                     style={{ fontSize: "11px", padding: "2px 8px", background: "#fff", border: "1px solid #86efac", borderRadius: "5px", color: "#166534", cursor: "pointer", fontWeight: 600 }}
                   >
@@ -588,7 +636,7 @@ function ReturnQueue({ isAdmin }) {
                   </button>
                 )}
               </div>
-              <div><strong>{payoutModal.row.bankName || "—"}</strong> · <span style={{ fontFamily: "monospace", fontWeight: 700 }}>{payoutModal.row.bankAccountNumber || "—"}</span></div>
+              <div><strong>{payoutModal.row.bankName || "—"}</strong> · <span style={{ fontFamily: "monospace", fontWeight: 700 }}>{maskAccountNumber(payoutModal.row.bankAccountNumber) || "—"}</span></div>
               <div style={{ color: "#15803d", fontSize: "12px" }}>{payoutModal.row.bankAccountName || "—"}</div>
             </div>
 
@@ -602,6 +650,9 @@ function ReturnQueue({ isAdmin }) {
                 onChange={(e) => setPayoutModal((p) => ({ ...p, reference: e.target.value, error: "" }))}
               />
             </label>
+
+            <p className="ow-hint">Account checks recorded by user #{payoutModal.row.bankVerification?.verifiedBy}. {payoutModal.row.bankVerification?.isSimulation ? "SIMULATION: this records a test refund and does not transfer money." : "Only confirm after the bank reports a successful transfer."}</p>
+            <EvidenceUploader label="Bank transfer receipt" optional={false} maxSizeMb={2} value={payoutModal.receipt} onChange={receipt => setPayoutModal(p => ({ ...p, receipt }))} hint={payoutModal.row.bankVerification?.isSimulation ? "Attach a clearly marked simulation receipt." : "Attach the successful bank transfer receipt matching the approved amount and destination."} />
 
             <label className="ow-field" style={{ marginBottom: "10px" }}>
               <span>Transferred Amount (VND) *</span>
@@ -630,8 +681,8 @@ function ReturnQueue({ isAdmin }) {
               <button type="button" className="tb-btn tb-btn-outline" disabled={payoutModal.busy} onClick={() => setPayoutModal(null)}>
                 Cancel
               </button>
-              <button type="button" className="tb-btn tb-btn-primary" disabled={payoutModal.busy} onClick={submitManualRefund}>
-                {payoutModal.busy ? "Confirming..." : "Confirm Transfer"}
+              <button type="button" className="tb-btn tb-btn-primary" disabled={payoutModal.busy || !payoutModal.receipt} onClick={submitManualRefund}>
+                {payoutModal.busy ? "Confirming..." : payoutModal.row.bankVerification?.isSimulation ? "Record simulated transfer" : "Confirm Transfer"}
               </button>
             </div>
           </div>
@@ -704,16 +755,17 @@ function ReturnQueue({ isAdmin }) {
 }
 
 export default function TicketReturnReviewPage() {
-  const { isAdmin, isStaff } = useAuth();
+  const { isAdmin, isStaff, user } = useAuth();
+  const currentUserId = user?.userId ?? user?.id;
 
   if (isAdmin) {
-    return <AdminShell title="Ticket Returns / Refunds"><ReturnQueue isAdmin /></AdminShell>;
+    return <AdminShell title="Ticket Returns / Refunds"><ReturnQueue isAdmin currentUserId={currentUserId} /></AdminShell>;
   }
   if (isStaff) {
     return (
-      <PanelShell title="Return Requests" links={STAFF_LINKS} roleLabel="Staff" logoutPath="/login" navLabel="Staff navigation">
-        <ReturnQueue isAdmin={false} />
-      </PanelShell>
+      <StaffShell title="Return Requests">
+        <ReturnQueue isAdmin={false} currentUserId={currentUserId} />
+      </StaffShell>
     );
   }
   return <div className="tb-empty" style={{ margin: 40 }}>Only Staff or Admin can review ticket returns.</div>;

@@ -44,6 +44,8 @@ public class TicketReturnDto
     public int? ManualRefundProcessedBy { get; set; }
     public DateTime? ManualRefundProcessedAt { get; set; }
     public string? ProofUrl { get; set; }
+    public TicketAPI.Domain.RefundAccountCheck? BankVerification { get; set; }
+    public bool IsBankAccountVerified { get; set; }
 }
 
 
@@ -59,6 +61,19 @@ public class ConfirmManualRefundDto
     public string Reference { get; set; } = null!;
     public long Amount { get; set; }
     public string? Note { get; set; }
+    public string? TransferReceipt { get; set; }
+    public bool IsSimulation { get; set; }
+}
+
+public class VerifyRefundAccountDto
+{
+    public string IdentityName { get; set; } = "";
+    public string BankReportedName { get; set; } = "";
+    public string? IdentityEvidence { get; set; }
+    public string? BankEvidence { get; set; }
+    public string? CustomerConfirmationEvidence { get; set; }
+    public string Notes { get; set; } = "";
+    public bool IsSimulation { get; set; }
 }
 
 // One ticket in "My tickets", with whether it can be returned right now.

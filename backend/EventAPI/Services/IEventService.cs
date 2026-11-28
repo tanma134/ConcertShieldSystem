@@ -42,7 +42,7 @@ namespace EventAPI.Services
 
         Task<EventResponseDTO> RejectAsync(int id, string reason, int adminId);
 
-        Task<EventResponseDTO> CancelAsync(int id, int callerId, bool isAdmin);
+        Task<EventResponseDTO> CancelAsync(int id, int callerId, bool isAdmin, string? reason = null, string? evidenceUrl = null);
 
         Task<EventResponseDTO> SetPosterAsync(int id, string url, string publicId, int callerId, bool isAdmin);
 

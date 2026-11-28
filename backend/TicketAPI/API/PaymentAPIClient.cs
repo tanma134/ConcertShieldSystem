@@ -86,7 +86,8 @@ public class PaymentAPIClient : IPaymentAPIClient
         {
             using var response = await _httpClient.PostAsJsonAsync(
                 "api/internal/refunds/manual",
-                new { returnRequestId, orderId, amount, reference, processedByUserId, customerName, eventId, eventName, reason },
+                new { returnRequestId, orderId, amount, reference, processedByUserId, customerName, eventId, eventName, reason,
+                    isSimulation = reference.StartsWith("SIM-", StringComparison.OrdinalIgnoreCase) },
                 cancellationToken);
 
             if (!response.IsSuccessStatusCode)

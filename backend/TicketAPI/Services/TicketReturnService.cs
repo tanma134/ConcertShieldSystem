@@ -48,7 +48,9 @@ namespace TicketAPI.Services
             var ticketIds = tickets.Select(t => t.TicketId).ToList();
 
             // One call per event: the organizer's refund tiers decide the window and the percentage.
-            var tiersByEvent = new Dictionary<int, IReadOnlyList<RefundTier>>();
+            // The value stays null when the policy could not be read, so the eligibility check
+            // can report "cannot be checked" instead of "this event offers no refunds".
+            var tiersByEvent = new Dictionary<int, IReadOnlyList<RefundTier>?>();
             foreach (var eventId in tickets.Select(t => t.EventId).Distinct())
                 tiersByEvent[eventId] = await _eventApiClient.GetRefundTiersAsync(eventId);
 
@@ -245,6 +247,24 @@ namespace TicketAPI.Services
                 return MapRequest(request, request.Ticket);
             }
 
+            await _notifier.NotifyCustomerAsync(request.RequesterUserId, request.TicketReturnRequestId, "approved",
+                "Ticket return approved - awaiting refund",
+                $"Your ticket return was approved. Refund amount: {request.RefundAmount:N0} VND. Accounting must check the receiving account before confirming payment. No transfer has been confirmed yet.");
+            return MapRequest(request, request.Ticket);
+        }
+
+        public async Task<TicketReturnDto> VerifyRefundAccountAsync(int reviewerUserId, int requestId, VerifyRefundAccountDto dto)
+        {
+            var request = await LoadForReviewAsync(requestId, null);
+            if (request.Status != ReturnRequestStatuses.Approved && request.Status != ReturnRequestStatuses.RefundFailed)
+                throw new InvalidOperationException("Approve the return request before the accounting account checks.");
+            if (RefundAccountVerification.Read(request) != null)
+                throw new InvalidOperationException("Account checks are already recorded. They cannot be overwritten.");
+            var check = RefundAccountVerification.Verify(request, dto, reviewerUserId,
+                _configuration.GetValue("ManualRefund:AllowSimulation", false));
+            request.BankVerificationJson = System.Text.Json.JsonSerializer.Serialize(check);
+            request.UpdatedAt = DateTime.UtcNow;
+            await _returnRepository.SaveChangesAsync();
             return MapRequest(request, request.Ticket);
         }
 
@@ -256,8 +276,32 @@ namespace TicketAPI.Services
                 throw new InvalidOperationException("Only an approved return can be marked as manually refunded.");
             if (dto.Amount != request.RefundAmount || string.IsNullOrWhiteSpace(dto.Reference))
                 throw new ArgumentException("The transferred amount must match the approved refund and include a bank reference.");
+            if (dto.Reference.Trim().Length > 100)
+                throw new ArgumentException("The transfer reference cannot exceed 100 characters.");
+            var check = RefundAccountVerification.Read(request)
+                ?? throw new InvalidOperationException("Accounting must record the beneficiary, buyer identity and registered-contact checks before confirming a transfer.");
+            if (dto.IsSimulation != check.IsSimulation)
+                throw new InvalidOperationException("Simulation checks cannot be used to confirm a real bank transfer.");
+            if (dto.IsSimulation && !_configuration.GetValue("ManualRefund:AllowSimulation", false))
+                throw new InvalidOperationException("Refund simulation is disabled in this environment.");
+            RefundAccountVerification.ValidateEvidence(dto.TransferReceipt, "Bank transfer receipt");
+            var reference = dto.Reference.Trim();
+            if (dto.IsSimulation) reference = $"SIM-RFD-{request.TicketReturnRequestId:D6}";
+            if (!dto.IsSimulation && reference.StartsWith("SIM-", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("A simulation reference cannot confirm a real bank transfer.");
+            if (reference.Length > 100) throw new ArgumentException("The transfer reference is too long.");
+
+            // Do not show a completed refund when the accounting ledger failed to record it.
+            var outcome = await _paymentClient.RecordManualRefundAsync(
+                request.TicketReturnRequestId, request.OrderId, request.RefundAmount, reference,
+                reviewerUserId, request.Ticket.Order?.FullName, request.Ticket.Order?.EventId,
+                request.Ticket.Order?.EventName, request.Reason);
+            if (!outcome.Success)
+                throw new InvalidOperationException("The refund ledger could not be updated. The request remains awaiting transfer. " + outcome.Error);
+
             request.Status = ReturnRequestStatuses.Refunded;
-            request.ManualRefundReference = dto.Reference.Trim();
+            request.ManualRefundReference = reference;
+            request.BankVerificationJson = System.Text.Json.JsonSerializer.Serialize(check with { TransferReceipt = dto.TransferReceipt });
             request.ManualRefundProcessedBy = reviewerUserId;
             request.ManualRefundProcessedAt = DateTime.UtcNow;
             request.RefundReference = request.ManualRefundReference;
@@ -267,18 +311,12 @@ namespace TicketAPI.Services
             await _returnRepository.SyncOrderRefundStatusAsync(request.OrderId);
             await _returnRepository.SaveChangesAsync();
 
-            // Record the completed manual bank transfer in PaymentAPI so reconciliation reports stay in sync.
-            await _paymentClient.RecordManualRefundAsync(
-                request.TicketReturnRequestId,
-                request.OrderId,
-                request.RefundAmount,
-                request.ManualRefundReference!,
-                reviewerUserId,
-                request.Ticket.Order?.FullName,
-                request.Ticket.Order?.EventId,
-                request.Ticket.Order?.EventName,
-                request.Reason);
-
+            await _notifier.NotifyCustomerAsync(request.RequesterUserId, request.TicketReturnRequestId,
+                dto.IsSimulation ? "simulated" : "refunded",
+                dto.IsSimulation ? "Refund simulation completed - no money transferred" : "Refund transfer recorded",
+                dto.IsSimulation
+                    ? $"SIMULATION: your refund of {request.RefundAmount:N0} VND was recorded for testing. No real money was transferred. Reference: {request.ManualRefundReference}."
+                    : $"Accounting recorded a successful refund transfer of {request.RefundAmount:N0} VND. Reference: {request.ManualRefundReference}.");
             return MapRequest(request, request.Ticket);
         }
 
@@ -288,48 +326,6 @@ namespace TicketAPI.Services
             var result = value.Trim();
             if (result.Length > 150) throw new ArgumentException($"{field} is too long.");
             return result;
-        }
-
-        private async Task PayBackAsync(TicketReturnRequest request)
-        {
-            var outcome = await _paymentClient.RefundAsync(
-                request.TicketReturnRequestId,
-                request.OrderId,
-                request.RefundAmount,
-                request.Ticket.Order?.FullName,
-                request.Ticket.Order?.EventId,
-                request.Ticket.Order?.EventName);
-            var now = DateTime.UtcNow;
-            request.UpdatedAt = now;
-
-            if (outcome.Success)
-            {
-                request.Status = ReturnRequestStatuses.Refunded;
-                request.RefundedAt = now;
-                request.RefundReference = outcome.Reference;
-                request.RefundError = null;
-
-                        await _returnRepository.SyncOrderRefundStatusAsync(request.OrderId);
-            }
-            else
-            {
-                request.Status = ReturnRequestStatuses.RefundFailed;
-                var error = outcome.Error ?? "Refund was not completed.";
-                request.RefundError = error.Length > 500 ? error[..500] : error;
-            }
-
-            await _returnRepository.SaveChangesAsync();
-
-            var eventName = request.Ticket.Order?.EventName ?? "your ticket";
-            var amount = request.RefundAmount.ToString("N0", System.Globalization.CultureInfo.InvariantCulture);
-            if (outcome.Success)
-                await _notifier.NotifyCustomerAsync(request.RequesterUserId, request.TicketReturnRequestId, "refunded",
-                    "Return approved and refunded",
-                    $"Your return for {eventName} was approved. {amount} VND is being paid back to you.");
-            else
-                await _notifier.NotifyCustomerAsync(request.RequesterUserId, request.TicketReturnRequestId, "approved",
-                    "Return approved",
-                    $"Your return for {eventName} was approved. We are processing your refund of {amount} VND and will update you.");
         }
 
         // Loads a request for review. A request outside the reviewer's events looks like "not found".
@@ -345,7 +341,7 @@ namespace TicketAPI.Services
         }
 
         // Only tickets included in the snapshot receive the reschedule policy; do not open it to the whole event.
-        private ReturnEligibility EvaluatePolicy(Ticket ticket, bool hasOpen, DateTime now, IReadOnlyList<RefundTier> tiers, AppliedEventChange? change)
+        private ReturnEligibility EvaluatePolicy(Ticket ticket, bool hasOpen, DateTime now, IReadOnlyList<RefundTier>? tiers, AppliedEventChange? change)
         {
             if (change != null)
                 return EventChangeReturnPolicy.Evaluate(ticket.Status, ticket.Order.Status, ticket.CheckedInAt, hasOpen, now, change.AppliedAt,
@@ -378,12 +374,13 @@ namespace TicketAPI.Services
 
         // Percentage shown to the customer: the applicable tier while returnable,
         // otherwise what the best tier would pay (so the card still shows the policy).
-        private static decimal ResolvePercent(ReturnEligibility eligibility, IReadOnlyList<RefundTier> tiers)
+        // An unreadable policy shows 0 because no amount can be promised.
+        private static decimal ResolvePercent(ReturnEligibility eligibility, IReadOnlyList<RefundTier>? tiers)
         {
             if (eligibility.IsEligible)
                 return eligibility.RefundPercent;
 
-            return tiers.Count > 0 ? tiers.Max(t => t.RefundPercent) : TicketReturnPolicy.DefaultTier.RefundPercent;
+            return tiers is { Count: > 0 } ? tiers.Max(t => t.RefundPercent) : 0m;
         }
 
         // Refund for one ticket: its unit price minus its share of the order discount,
@@ -435,11 +432,13 @@ namespace TicketAPI.Services
                 RefundError = request.RefundError,
                 CanRetryRefund = request.Status == ReturnRequestStatuses.RefundFailed
                 ,BankAccountName = request.BankAccountName
-                ,BankAccountNumber = request.BankAccountNumber
+                ,BankAccountNumber = RefundAccountVerification.MaskAccountNumber(request.BankAccountNumber)
                 ,BankName = request.BankName
                 ,ManualRefundReference = request.ManualRefundReference
                 ,ManualRefundProcessedBy = request.ManualRefundProcessedBy
                 ,ManualRefundProcessedAt = request.ManualRefundProcessedAt
+                ,BankVerification = RefundAccountVerification.Read(request)
+                ,IsBankAccountVerified = RefundAccountVerification.Read(request) != null
                 ,ProofUrl = request.ProofUrl
             };
         }

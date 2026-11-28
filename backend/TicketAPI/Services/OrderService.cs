@@ -62,7 +62,10 @@ namespace TicketAPI.Services
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                await _context.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(9823, {customerId})");
+                if (_context.Database.IsRelational())
+                {
+                    await _context.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(9823, {customerId})");
+                }
 
                 var requestedQuantity = dto.OrderDetails.Sum(x => x.Quantity);
                 if (eventInfo.MinTicketsPerAccount is > 0 && requestedQuantity < eventInfo.MinTicketsPerAccount.Value)
@@ -121,15 +124,18 @@ namespace TicketAPI.Services
                     if (ticketType.Status != "Active" ||
                         (ticketType.SalesStartsAt.HasValue &&
                          ticketType.SalesStartsAt.Value > nowUtc) ||
-                        (ticketType.SalesEndsAt.HasValue &&
-                         ticketType.SalesEndsAt.Value <= nowUtc))
+                        (ticketType.SalesEndsAt ?? eventInfo.StartsAt.AddHours(-5)) <= nowUtc)
                     {
                         throw new InvalidOperationException(
                             $"Ticket type {ticketType.TypeName} is not currently on sale.");
                     }
 
-                    //if (detailDto.Quantity < ticketType.MinPerOrder) throw new Exception($"Vé {ticketType.TypeName} yêu cầu ít nhất {ticketType.MinPerOrder} vé.");
-                    if (detailDto.Quantity > ticketType.MaxPerOrder) throw new Exception($"The maximum quantity for ticket type {ticketType.TypeName} is {ticketType.MaxPerOrder}.");
+                    if (detailDto.Quantity < ticketType.MinPerOrder)
+                        throw new InvalidOperationException(
+                            $"The minimum quantity for ticket type {ticketType.TypeName} is {ticketType.MinPerOrder}.");
+                    if (detailDto.Quantity > ticketType.MaxPerOrder)
+                        throw new InvalidOperationException(
+                            $"The maximum quantity for ticket type {ticketType.TypeName} is {ticketType.MaxPerOrder}.");
 
                     string? seatIdsJson = null;
 

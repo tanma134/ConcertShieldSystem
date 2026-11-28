@@ -865,21 +865,23 @@
 }
 
 .inc-btn-warning {
-  background: #ac5f05;
-  color: #3c3552;
+  background: #d97706;
+  color: #ffffff !important;
 }
 
 .inc-btn-warning:hover {
   background: #b45309;
+  color: #ffffff !important;
 }
 
 .inc-btn-success {
-  background: #04825b;
-  color: #3c3552;
+  background: #059669;
+  color: #ffffff !important;
 }
 
 .inc-btn-success:hover {
   background: #047857;
+  color: #ffffff !important;
 }
 
 .inc-btn-sm {

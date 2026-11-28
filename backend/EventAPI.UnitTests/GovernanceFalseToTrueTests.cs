@@ -17,8 +17,10 @@ public class PostponeRescheduleFalseToTrueTests
     public void F01_NonPublishedLifecycleIsRefused(string status) => Assert.Throws<InvalidOperationException>(() => GovernanceRules.ValidateChange(Concert(status), new("Postpone", "Venue is unavailable", null, null), Now));
     [Fact] public void F02_StartedPublishedConcertIsRefused() { var ev = Concert(); ev.StartsAt = Now.AddMinutes(-1); Assert.Throws<InvalidOperationException>(() => GovernanceRules.ValidateChange(ev, new("Postpone", "Venue is unavailable", null, null), Now)); }
     [Fact] public void F03_ConcertStartingExactlyNowIsRefused() { var ev = Concert(); ev.StartsAt = Now; Assert.Throws<InvalidOperationException>(() => GovernanceRules.ValidateChange(ev, new("Postpone", "Venue is unavailable", null, null), Now)); }
-    [Theory][InlineData("")][InlineData("Cancel")][InlineData("postpone")][InlineData("Move")]
+    [Theory][InlineData("")][InlineData("postpone")][InlineData("Move")]
     public void F04_UnknownChangeTypeIsRefused(string type) => Assert.Throws<ArgumentException>(() => GovernanceRules.ValidateChange(Concert(), new(type, "Venue is unavailable", null, null), Now));
+    // "Cancel" is a valid type since cancellation requests were wired up; it must not need a new schedule.
+    [Fact] public void T04_CancelIsAcceptedWithoutSchedule() { var clean = GovernanceRules.ValidateChange(Concert(), new("Cancel", "Venue is unavailable", null, null), Now); Assert.Equal("Cancel", clean.Type); Assert.Null(clean.NewStartsAt); }
     [Theory][InlineData(0)][InlineData(9)][InlineData(1001)]
     public void F05_ReasonLengthOutOfRangeIsRefused(int len) => Assert.Throws<ArgumentException>(() => GovernanceRules.ValidateChange(Concert(), new("Postpone", new string('a', len), null, null), Now));
     [Fact] public void F06_ReasonOfOnlySpacesIsRefused() => Assert.Throws<ArgumentException>(() => GovernanceRules.ValidateChange(Concert(), new("Postpone", "            ", null, null), Now));

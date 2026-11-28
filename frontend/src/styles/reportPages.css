@@ -40,8 +40,22 @@
   background: var(--tb-surface-2);
 }
 
-.rp-num { text-align: right; font-variant-numeric: tabular-nums; }
+.ow-table th.rp-num,
+.ow-table td.rp-num,
+.od-table th.rp-num,
+.od-table td.rp-num,
+th.rp-num,
+td.rp-num,
+.rp-num {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
 .rp-negative { color: #b91c1c; font-weight: 600; }
+
+.rp-section .ow-table th,
+.rp-section .ow-table td {
+  padding: 12px 14px;
+}
 
 .rp-toast {
   position: fixed;

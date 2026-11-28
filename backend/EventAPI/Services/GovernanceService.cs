@@ -207,7 +207,8 @@ public class GovernanceService(IGovernanceRepository repo, IComplianceAssetStore
             OldStatus = ev.Status,
             EventVersion = ev.ScheduleVersion,
             SubmittedBy = caller,
-            SubmittedAt = DateTime.UtcNow
+            SubmittedAt = DateTime.UtcNow,
+            EvidenceUrl = string.IsNullOrWhiteSpace(clean.EvidenceUrl) ? null : clean.EvidenceUrl.Trim()
         };
 
         await repo.AddChangeRequestAsync(request, ct);
@@ -215,6 +216,32 @@ public class GovernanceService(IGovernanceRepository repo, IComplianceAssetStore
         await repo.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         return request.Id;
+    }
+
+    // Stores a supporting document for a change/cancellation request and returns its URL.
+    // Kept separate from UploadAsync so it never touches the compliance document set.
+    public async Task<string> UploadChangeEvidenceAsync(int id, int caller, IFormFile file, CancellationToken ct)
+    {
+        if (file == null || file.Length == 0 || file.Length > MaxBytes)
+            throw new ArgumentException("File is empty or too large.");
+
+        using var memory = new MemoryStream();
+        await file.CopyToAsync(memory, ct);
+        var bytes = memory.ToArray();
+        // Reuse the compliance validator: same PDF/PNG/JPEG magic-byte + MIME checks.
+        GovernanceRules.ValidateFile(file.FileName, file.ContentType, bytes, MaxBytes);
+
+        var preflight = await GetAsync(id, caller, false, false, ct);
+        if (!EventStatus.Editable.Contains(EventStatus.Normalize(preflight.Status))
+            && EventStatus.Normalize(preflight.Status) != EventStatus.Published
+            && EventStatus.Normalize(preflight.Status) != EventStatus.Postponed)
+            throw new InvalidOperationException("Evidence can only be uploaded while the concert is Draft, Rejected, Published or Postponed.");
+        if (await repo.HasPendingChangeRequestAsync(id, ct))
+            throw new GovernanceConflictException("A pending change already exists for this concert.");
+
+        var publicId = "concertshield/change-evidence/" + Guid.NewGuid().ToString("N") + Path.GetExtension(file.FileName).ToLowerInvariant();
+        var stored = await assets.UploadAsync(bytes, publicId, ct);
+        return stored.SecureUrl;
     }
 
     public async Task<object> ChangesAsync(int id, int caller, bool admin, CancellationToken ct)
@@ -238,7 +265,11 @@ public class GovernanceService(IGovernanceRepository repo, IComplianceAssetStore
 
             GovernanceRules.ValidateChange(ev, new(request.Type, request.Reason, request.NewStartsAt.HasValue ? new DateTimeOffset(request.NewStartsAt.Value) : null, request.NewEndsAt.HasValue ? new DateTimeOffset(request.NewEndsAt.Value) : null), DateTime.UtcNow);
 
-            if (request.Type == "Postpone")
+            if (request.Type == "Cancel")
+            {
+                ev.Status = EventStatus.Cancelled;
+            }
+            else if (request.Type == "Postpone")
             {
                 ev.Status = EventStatus.Postponed;
             }
@@ -303,7 +334,11 @@ public class GovernanceService(IGovernanceRepository repo, IComplianceAssetStore
             ProcessingStatus = "Pending"
         };
 
-        if (clean.Type == "Postpone")
+        if (clean.Type == "Cancel")
+        {
+            ev.Status = EventStatus.Cancelled;
+        }
+        else if (clean.Type == "Postpone")
         {
             ev.Status = EventStatus.Postponed;
         }
@@ -362,7 +397,11 @@ public class GovernanceService(IGovernanceRepository repo, IComplianceAssetStore
     public async Task<SaleEligibility> EligibilityAsync(int id, CancellationToken ct)
     {
         var ev = await repo.GetEventAsNoTrackingAsync(id, ct) ?? throw new KeyNotFoundException("Concert not found.");
-        var canSell = ev.Status == EventStatus.Published && !ev.SalesFrozen && GovernanceRules.ComplianceApproved(ev) && ev.StartsAt > DateTime.UtcNow;
+        var now = DateTime.UtcNow;
+        var canSell = ev.Status == EventStatus.Published && !ev.SalesFrozen && GovernanceRules.ComplianceApproved(ev) && ev.StartsAt > now
+            && ev.TicketTypes.Any(t => !t.IsDeleted && t.Status == "Active"
+                && (!t.SalesStartsAt.HasValue || t.SalesStartsAt <= now)
+                && TicketSalesWindow.EndsAt(t.SalesEndsAt, ev.StartsAt) > now);
         return new(canSell, canSell ? "" : "Sales are unavailable: check event status, schedule and compliance approval.", ev.Status, ev.StartsAt, ev.EndsAt, ev.ScheduleVersion, ev.RequiresVirtualQueue);
     }
 }

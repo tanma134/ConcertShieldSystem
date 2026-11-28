@@ -109,12 +109,13 @@ export default function GovernancePanel({ event, admin = false, onUpdated, onCom
 
   const buildInput = () => {
     const isPostpone = form.type === 'Postpone';
+    const isCancel = form.type === 'Cancel';
     const combinedReason = `[${category}] ${form.reason.trim()}`;
     const input = {
       type: form.type,
       reason: combinedReason,
-      newStartsAt: isPostpone ? null : localToUtc(form.newStartsAt, event.timezone),
-      newEndsAt: isPostpone ? null : localToUtc(form.newEndsAt, event.timezone)
+      newStartsAt: (isPostpone || isCancel) ? null : localToUtc(form.newStartsAt, event.timezone),
+      newEndsAt: (isPostpone || isCancel) ? null : localToUtc(form.newEndsAt, event.timezone)
     };
     const problem = validateChange(input);
     if (problem) throw new Error(problem);
@@ -296,6 +297,7 @@ export default function GovernancePanel({ event, admin = false, onUpdated, onCom
             <select value={form.type} onChange={e => updateForm('type', e.target.value)}>
               <option value="Reschedule">Reschedule (Change Dates)</option>
               {event.status !== 'Postponed' && <option value="Postpone">Postpone (Hold Indefinitely)</option>}
+              <option value="Cancel">Cancel (Terminate Event &amp; Refund)</option>
             </select>
           </label>
 
@@ -426,18 +428,18 @@ export default function GovernancePanel({ event, admin = false, onUpdated, onCom
                 className="tb-btn tb-btn-primary"
                 disabled={busy}
                 onClick={() => run(async () => {
+                  let evidenceUrl = null;
                   if (changeEvidenceFile) {
-                    try {
-                      await api.upload(id, 'ChangeSupportingEvidence', changeEvidenceFile);
-                    } catch (uploadErr) {
-                      console.warn('Could not upload evidence document:', uploadErr);
-                    }
+                    const problem = fileError(changeEvidenceFile, 20 * 1024 * 1024);
+                    if (problem) throw new Error(problem);
+                    // Upload must succeed: a silently dropped legal document would leave
+                    // the admin approving a cancellation with no supporting proof.
+                    const uploaded = await api.uploadChangeEvidence(id, changeEvidenceFile);
+                    evidenceUrl = uploaded.data?.data?.url || null;
                   }
                   const finalInput = {
                     ...preview.input,
-                    reason: changeEvidenceFile 
-                      ? `${preview.input.reason} [Attached Evidence: ${changeEvidenceFile.name}]`
-                      : preview.input.reason
+                    evidenceUrl
                   };
                   await api.submitChange(id, finalInput);
                   setPreview(null);
