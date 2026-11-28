@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Link, useParams } from "react-router-dom";
 import OrganizerShell from "./OrganizerShell";
 import reportApi, { saveBlob } from "../../api/reportApi";
+import checkinApi from "../../api/checkinApi";
 import staffApi from "../../api/staffApi";
 import eventApi from "../../api/eventApi";
 import ticketTypeApi from "../../api/ticketTypeApi";
@@ -125,14 +126,77 @@ export default function CheckinManagementPage() {
     }
   }, [effectiveId, loadAll]);
 
-  // Export check-in report as CSV
+  // Export check-in report as CSV (structured Real-time Check-in Monitor data)
   const exportCsv = async () => {
     if (!effectiveId) return;
     setBusy(true);
     try {
-      const response = await reportApi.exportCheckin(effectiveId);
-      saveBlob(response, `checkin-event-${effectiveId}.csv`);
-      showToast("Report exported successfully!");
+      const res = await checkinApi.getMonitorStatus(effectiveId, {}).catch(() => null);
+      const d = res?.data?.data || {};
+      const currentEv = eventsList.find((e) => (e.eventId || e.id) === Number(effectiveId));
+      const s = checkin?.summary || {};
+
+      const esc = (val) => {
+        const str = val == null ? "" : String(val);
+        if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+      };
+
+      const exportedAt = new Date().toLocaleString("en-US");
+      const totalIssued = d.totalIssued ?? s.totalTickets ?? 0;
+      const checkedIn = d.checkedIn ?? s.checkedIn ?? 0;
+      const pending = d.pending ?? s.notCheckedIn ?? Math.max(0, totalIssued - checkedIn);
+      const occupancyRate = d.occupancyRate ?? s.checkInRatePercent ?? 0;
+      const gatesRows = Array.isArray(d.gates) ? d.gates : [];
+      const zonesRows = Array.isArray(d.zones) ? d.zones : [];
+      const scansRows = Array.isArray(d.recentScans) ? d.recentScans : [];
+
+      const lines = [
+        "=== 1. REAL-TIME CHECK-IN OVERVIEW ===",
+        "Metric,Value",
+        `Event ID,${esc(effectiveId)}`,
+        `Event Title,${esc(d.eventTitle || currentEv?.title || `Concert #${effectiveId}`)}`,
+        `Exported At,${esc(exportedAt)}`,
+        `Total Tickets Issued,${totalIssued}`,
+        `Checked-in Tickets (Used),${checkedIn}`,
+        `Total / Used Ratio,${esc(`${totalIssued} / ${checkedIn}`)}`,
+        `Pending Admission,${pending}`,
+        `Occupancy Rate (%),${esc(`${occupancyRate}%`)}`,
+        "",
+        "=== 2. GATE ADMISSION BREAKDOWN ===",
+        "Gate ID,Gate Name,Total Assigned,Checked-in (Used),Pending,Occupancy Rate (%),Gate Status",
+        ...(gatesRows.length > 0
+          ? gatesRows.map(
+              (g) =>
+                `${esc(g.gateId)},${esc(g.gateName)},${g.totalAssigned ?? 0},${g.checkedIn ?? 0},${g.pending ?? Math.max(0, (g.totalAssigned ?? 0) - (g.checkedIn ?? 0))},${esc(`${g.occupancyRate ?? 0}%`)},${esc(g.status || "Normal")}`
+            )
+          : ["No gate data available,,,,"]),
+        "",
+        "=== 3. TICKET TIER & SEATING ZONE BREAKDOWN ===",
+        "Ticket Tier / Zone Name,Total Issued,Checked-in (Used),Pending,Occupancy Rate (%)",
+        ...(zonesRows.length > 0
+          ? zonesRows.map(
+              (z) =>
+                `${esc(z.zoneName)},${z.totalIssued ?? 0},${z.checkedIn ?? 0},${z.pending ?? Math.max(0, (z.totalIssued ?? 0) - (z.checkedIn ?? 0))},${esc(`${z.occupancyRate ?? 0}%`)}`
+            )
+          : ["No zone data available,,,,"]),
+        "",
+        "=== 4. RECENT SCAN TELEMETRY STREAM (SCAN HISTORY) ===",
+        "Scan ID,Attendee Name,Ticket Tier / Zone,Entrance Gate,Scan Time,Scan Method,Status",
+        ...(scansRows.length > 0
+          ? scansRows.map(
+              (sRow) =>
+                `${esc(sRow.scanId)},${esc(sRow.customerName)},${esc(sRow.zoneName)},${esc(sRow.gateName)},${esc(sRow.scannedAt ? new Date(sRow.scannedAt).toLocaleString("en-US") : "")},${esc(sRow.scanMethod)},${esc(sRow.status)}`
+            )
+          : ["No scan events logged yet,,,,,,"]),
+      ];
+
+      const csvContent = "\uFEFF" + lines.join("\r\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      saveBlob({ data: blob, headers: {} }, `realtime-checkin-event-${effectiveId}.csv`);
+      showToast("Check-in report exported successfully!");
     } catch (err) {
       showToast(apiErrorMessage(err, "Could not export report."), "error");
     } finally {
@@ -176,18 +240,56 @@ const formatEventDateTime = (d) => {
   });
 };
 
-  // Assign staff to event with gate and shift hours
+const getShiftScheduleWarning = (ev, shiftStartDtStr, shiftEndDtStr) => {
+  if (!ev?.startsAt || !shiftStartDtStr || !shiftEndDtStr) return null;
+  const evStartLocal = toDateTimeLocal(ev.startsAt);
+  const evEndLocal = ev.endsAt
+    ? toDateTimeLocal(ev.endsAt)
+    : toDateTimeLocal(new Date(new Date(ev.startsAt).getTime() + 4 * 3600000));
+  if (!evStartLocal || !evEndLocal) return null;
+
+  const evStartMs = new Date(evStartLocal).getTime();
+  const evEndMs = new Date(evEndLocal).getTime();
+  const shiftStartMs = new Date(shiftStartDtStr).getTime();
+  const shiftEndMs = new Date(shiftEndDtStr).getTime();
+
+  if (isNaN(evStartMs) || isNaN(evEndMs) || isNaN(shiftStartMs) || isNaN(shiftEndMs)) {
+    return null;
+  }
+
+  const isDifferent =
+    Math.abs(shiftStartMs - evStartMs) >= 60000 ||
+    Math.abs(shiftEndMs - evEndMs) >= 60000;
+
+  if (!isDifferent) return null;
+
+  const a = formatEventDateTime(evStartLocal);
+  const b = formatEventDateTime(evEndLocal);
+  const c = formatEventDateTime(shiftStartDtStr);
+  const d = formatEventDateTime(shiftEndDtStr);
+
+  return `Notice: This event takes place from ${a} to ${b}, and you are currently assigning a shift from ${c} to ${d}. Are you sure you want to proceed with this schedule?`;
+};
+
+  // Assign staff to event with gate and shift hours (based on 3 Staff Roles)
   const assign = async (candidate) => {
     if (!effectiveId) return;
     setBusy(true);
     try {
-      const isCheckin = checkinByStaff[candidate.userId] ?? true;
-      const canReview = !!reviewByStaff[candidate.userId];
-      const canIncidents = !!incidentsByStaff[candidate.userId];
-      const canSupport = !!supportByStaff[candidate.userId];
+      // Role 1: Check-in Staff -> Gate Check-in (QR/Manual/Offline) + On-site Incidents
+      const isCheckinStaff = checkinByStaff[candidate.userId] ?? true;
+      // Role 2: Security/Support Staff -> Support Cases + Fraud Cases & Risk Decisions
+      const isSecuritySupportStaff = !!supportByStaff[candidate.userId];
+      // Role 3: Ticketing/Operations Staff -> Process Full/Partial Refund + View Seat/Ticket Status History
+      const isTicketingOpsStaff = !!reviewByStaff[candidate.userId];
 
-      if (!isCheckin && !canReview && !canIncidents && !canSupport) {
-        showToast("Please assign at least one duty (Check-in, Return Review, Incidents, or Support Desk).", "error");
+      const isCheckin = isCheckinStaff;
+      const canIncidents = isCheckinStaff;
+      const canSupport = isSecuritySupportStaff;
+      const canReview = isTicketingOpsStaff;
+
+      if (!isCheckinStaff && !isSecuritySupportStaff && !isTicketingOpsStaff) {
+        showToast("Please select at least one Staff Role (Check-in Staff, Security/Support Staff, or Ticketing/Operations Staff).", "error");
         setBusy(false);
         return;
       }
@@ -224,30 +326,45 @@ const formatEventDateTime = (d) => {
         }
 
         shiftDate = startVal.substring(0, 10);
+        const shiftEndDate = endVal.substring(0, 10);
         startTime = startVal.substring(11, 16);
         endTime = endVal.substring(11, 16);
+
+        await staffApi.assign(
+          effectiveId,
+          candidate.userId,
+          chosenGate,
+          canReview,
+          startTime,
+          endTime,
+          shiftDate,
+          canIncidents,
+          canSupport,
+          isCheckin,
+          shiftEndDate
+        );
+      } else {
+        await staffApi.assign(
+          effectiveId,
+          candidate.userId,
+          chosenGate,
+          canReview,
+          null,
+          null,
+          null,
+          canIncidents,
+          canSupport,
+          isCheckin,
+          null
+        );
       }
 
-      await staffApi.assign(
-        effectiveId,
-        candidate.userId,
-        chosenGate,
-        canReview,
-        startTime,
-        endTime,
-        shiftDate,
-        canIncidents,
-        canSupport,
-        isCheckin
-      );
+      const roleLabels = [];
+      if (isCheckinStaff) roleLabels.push(`Check-in Staff (${chosenGate})`);
+      if (isSecuritySupportStaff) roleLabels.push("Security/Support Staff");
+      if (isTicketingOpsStaff) roleLabels.push("Ticketing/Operations Staff");
 
-      const dutyLabels = [];
-      if (isCheckin) dutyLabels.push(`Check-in (${chosenGate})`);
-      if (canReview) dutyLabels.push("Return Review");
-      if (canIncidents) dutyLabels.push("Incidents");
-      if (canSupport) dutyLabels.push("Support Desk");
-
-      showToast(`Assigned ${candidate.fullName} to [${dutyLabels.join(", ")}].`);
+      showToast(`Assigned ${candidate.fullName} as [${roleLabels.join(", ")}].`);
       await Promise.all([loadAll(), searchCandidates()]);
     } catch (err) {
       showToast(apiErrorMessage(err, "Could not assign this staff member."), "error");
@@ -258,12 +375,25 @@ const formatEventDateTime = (d) => {
 
   // Open modal to edit existing staff shift
   const openEditShiftModal = (member) => {
+    const currentEv = eventsList.find((e) => (e.eventId || e.id) === Number(effectiveId));
+    const defaultStart = currentEv?.startsAt ? toDateTimeLocal(currentEv.startsAt) : "";
+    const defaultEnd = currentEv?.endsAt
+      ? toDateTimeLocal(currentEv.endsAt)
+      : (currentEv?.startsAt ? toDateTimeLocal(new Date(new Date(currentEv.startsAt).getTime() + 4 * 3600000)) : "");
+
+    const sDate = member.shiftDate ? String(member.shiftDate).substring(0, 10) : (defaultStart ? defaultStart.substring(0, 10) : "");
+    const eDate = member.shiftEndDate ? String(member.shiftEndDate).substring(0, 10) : sDate;
+    const sTime = member.shiftStartTime ? String(member.shiftStartTime).substring(0, 5) : (defaultStart ? defaultStart.substring(11, 16) : "08:00");
+    const eTime = member.shiftEndTime ? String(member.shiftEndTime).substring(0, 5) : (defaultEnd ? defaultEnd.substring(11, 16) : "17:00");
+
+    const startDateTime = sDate && sTime ? `${sDate}T${sTime}` : defaultStart;
+    const endDateTime = eDate && eTime ? `${eDate}T${eTime}` : (sDate && eTime ? `${sDate}T${eTime}` : defaultEnd);
+
     setEditingStaffShift(member);
     setShiftFormData({
       gateName: member.gateName || (gatesList[0]?.gateName || "Main Gate"),
-      shiftStartTime: member.shiftStartTime || "08:00",
-      shiftEndTime: member.shiftEndTime || "17:00",
-      shiftDate: member.shiftDate ? String(member.shiftDate).substring(0, 10) : "",
+      shiftStartDateTime: startDateTime,
+      shiftEndDateTime: endDateTime,
     });
   };
 
@@ -271,23 +401,38 @@ const formatEventDateTime = (d) => {
     e.preventDefault();
     if (!editingStaffShift || !effectiveId) return;
 
-    if (shiftFormData.shiftStartTime && shiftFormData.shiftEndTime) {
-      if (shiftFormData.shiftEndTime <= shiftFormData.shiftStartTime) {
-        showToast("Shift end time must be after shift start time.", "error");
-        return;
-      }
+    const startVal = shiftFormData.shiftStartDateTime;
+    const endVal = shiftFormData.shiftEndDateTime;
+
+    if (!startVal || !endVal) {
+      showToast("Please choose both shift start and end date & time.", "error");
+      return;
     }
+
+    const sDt = new Date(startVal);
+    const eDt = new Date(endVal);
+
+    if (eDt <= sDt) {
+      showToast("Shift end time must be after shift start time.", "error");
+      return;
+    }
+
+    const shiftDate = startVal.substring(0, 10);
+    const shiftEndDate = endVal.substring(0, 10);
+    const shiftStartTime = startVal.substring(11, 16);
+    const shiftEndTime = endVal.substring(11, 16);
 
     setSavingShift(true);
     try {
       await staffApi.updateShift(effectiveId, editingStaffShift.staffUserId, {
         gateName: shiftFormData.gateName,
-        shiftStartTime: shiftFormData.shiftStartTime,
-        shiftEndTime: shiftFormData.shiftEndTime,
-        shiftDate: shiftFormData.shiftDate || null,
+        shiftStartTime,
+        shiftEndTime,
+        shiftDate,
+        shiftEndDate,
       });
 
-      showToast(`Shift updated for ${editingStaffShift.fullName} (${shiftFormData.shiftStartTime} - ${shiftFormData.shiftEndTime}${shiftFormData.shiftDate ? ` on ${shiftFormData.shiftDate}` : ""}).`);
+      showToast(`Shift updated for ${editingStaffShift.fullName} (From ${shiftDate} ${shiftStartTime} to ${shiftEndDate} ${shiftEndTime}).`);
       setEditingStaffShift(null);
       await loadAll();
     } catch (err) {
@@ -297,27 +442,38 @@ const formatEventDateTime = (d) => {
     }
   };
 
-  // Toggle individual staff duty (checkin, returns, incidents, support)
-  const toggleStaffDuty = async (member, dutyType, currentValue) => {
+  // Toggle one of the 3 Staff Roles (Check-in Staff, Security/Support Staff, Ticketing/Operations Staff)
+  const toggleStaffRole = async (member, roleType, currentValue) => {
     if (!effectiveId) return;
     setBusy(true);
     try {
-      await staffApi.setDuty(effectiveId, member.staffUserId, dutyType, !currentValue);
-      const label = dutyType === "checkin" ? "Check-in / Gate Scanning" : dutyType === "returns" ? "Return Review" : dutyType === "incidents" ? "Incident Management" : "Support Cases";
-      showToast(currentValue
-        ? `${member.fullName} can no longer handle ${label}.`
-        : `${member.fullName} can now handle ${label} for this concert.`);
+      const nextVal = !currentValue;
+      let payload = {};
+      let label = "";
+
+      if (roleType === "CHECKIN_STAFF") {
+        payload = { canCheckin: nextVal, canManageIncidents: nextVal };
+        label = "Check-in Staff (Gate Check-in & On-site Incidents)";
+      } else if (roleType === "SECURITY_SUPPORT_STAFF") {
+        payload = { canManageSupportCases: nextVal };
+        label = "Security/Support Staff (Support Cases & Fraud/Risk)";
+      } else if (roleType === "TICKETING_OPS_STAFF") {
+        payload = { canReviewReturns: nextVal };
+        label = "Ticketing/Operations Staff (Process Refund & Ticket Status History)";
+      }
+
+      await staffApi.updateDuties(effectiveId, member.staffUserId, payload);
+      showToast(
+        nextVal
+          ? `Assigned ${member.fullName} to role: ${label}.`
+          : `Removed ${member.fullName} from role: ${label}.`
+      );
       await loadAll();
     } catch (err) {
-      showToast(apiErrorMessage(err, "Could not update staff duty."), "error");
+      showToast(apiErrorMessage(err, "Could not update staff role."), "error");
     } finally {
       setBusy(false);
     }
-  };
-
-  // Toggle ticket return review permission (legacy wrapper)
-  const toggleReturnReview = async (member) => {
-    await toggleStaffDuty(member, "returns", !!member.canReviewReturns);
   };
 
   // Remove staff member from event
@@ -446,15 +602,24 @@ const formatEventDateTime = (d) => {
     return gatesList.find((g) => g.gateName.toLowerCase() === (name || "").toLowerCase());
   };
 
-  // Calculate staff currently on-duty (checks both shift hours and shift date)
-  const isShiftActiveNow = (startStr, endStr, dateStr) => {
+  // Calculate staff currently on-duty (checks both shift hours and shift date / date range)
+  const isShiftActiveNow = (startStr, endStr, dateStr, endDateStr) => {
     try {
       const now = new Date();
-      if (dateStr) {
-        const d = typeof dateStr === "string" ? dateStr.substring(0, 10) : "";
-        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-        if (d && d !== todayStr) return false;
+      const sDate = dateStr ? String(dateStr).substring(0, 10) : "";
+      const eDate = endDateStr ? String(endDateStr).substring(0, 10) : sDate;
+
+      const sTime = startStr ? String(startStr).substring(0, 5) : "00:00";
+      const eTime = endStr ? String(endStr).substring(0, 5) : "23:59";
+
+      if (sDate) {
+        const startDt = new Date(`${sDate}T${sTime}:00`);
+        const endDt = new Date(`${eDate}T${eTime}:00`);
+        if (!isNaN(startDt.getTime()) && !isNaN(endDt.getTime())) {
+          return now >= startDt && now <= endDt;
+        }
       }
+
       if (!startStr || !endStr) return true;
       const currentMinutes = now.getHours() * 60 + now.getMinutes();
       const parseToMin = (s) => {
@@ -470,7 +635,7 @@ const formatEventDateTime = (d) => {
     }
   };
 
-  const onDutyCount = staff.filter((s) => isShiftActiveNow(s.shiftStartTime, s.shiftEndTime, s.shiftDate)).length;
+  const onDutyCount = staff.filter((s) => isShiftActiveNow(s.shiftStartTime, s.shiftEndTime, s.shiftDate, s.shiftEndDate)).length;
   const summary = checkin?.summary;
 
   return (
@@ -559,6 +724,24 @@ const formatEventDateTime = (d) => {
             </p>
           </div>
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+            <button
+              type="button"
+              disabled={busy || !effectiveId}
+              onClick={exportCsv}
+              style={{
+                padding: "8px 18px",
+                borderRadius: "8px",
+                fontWeight: 600,
+                fontSize: "0.9rem",
+                background: "#ffffff",
+                border: "1px solid #0f172a",
+                color: "#0f172a",
+                cursor: busy || !effectiveId ? "not-allowed" : "pointer",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
+              }}
+            >
+              Export Check-in Report
+            </button>
             <Link
               to={effectiveId ? `/organizer/events/${effectiveId}/realtime-checkin` : "/organizer/realtime-checkin"}
               style={{
@@ -694,11 +877,19 @@ const formatEventDateTime = (d) => {
                         <tbody>
                           {staff.map((member) => {
                             const gateCfg = findGateConfig(member.gateName);
-                            const onDuty = isShiftActiveNow(member.shiftStartTime, member.shiftEndTime, member.shiftDate);
-                            const shiftDisplay =
-                              member.shiftStartTime && member.shiftEndTime
-                                ? `${member.shiftStartTime} - ${member.shiftEndTime}`
-                                : "All Day / Unset";
+                            const onDuty = isShiftActiveNow(member.shiftStartTime, member.shiftEndTime, member.shiftDate, member.shiftEndDate);
+                            const sDate = member.shiftDate ? String(member.shiftDate).substring(0, 10) : "";
+                            const eDate = member.shiftEndDate ? String(member.shiftEndDate).substring(0, 10) : sDate;
+                            const sTime = member.shiftStartTime ? String(member.shiftStartTime).substring(0, 5) : "";
+                            const eTime = member.shiftEndTime ? String(member.shiftEndTime).substring(0, 5) : "";
+                            const fmtDate = (dStr) => {
+                              if (!dStr) return "";
+                              const parts = dStr.split("-");
+                              if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                              return new Date(dStr).toLocaleDateString("vi-VN");
+                            };
+                            const fromDisplay = sDate && sTime ? `${fmtDate(sDate)} ${sTime}` : sTime;
+                            const toDisplay = eDate && eTime ? `${fmtDate(eDate)} ${eTime}` : eTime;
 
                             return (
                               <tr key={member.staffUserId}>
@@ -723,9 +914,6 @@ const formatEventDateTime = (d) => {
                                 <td>
                                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                      <strong style={{ fontSize: "0.92rem", color: onDuty ? "#111827" : "#6b7280" }}>
-                                        {shiftDisplay}
-                                      </strong>
                                       <span
                                         style={{
                                           fontSize: "0.75rem",
@@ -740,64 +928,112 @@ const formatEventDateTime = (d) => {
                                         {onDuty ? "ON SHIFT" : "OFF SHIFT"}
                                       </span>
                                     </div>
-                                    <div style={{ fontSize: "0.8rem", color: "#64748b" }}>
-                                      Date: {member.shiftDate ? new Date(member.shiftDate).toLocaleDateString('vi-VN') : "All Dates"}
-                                    </div>
+                                    {sTime && eTime ? (
+                                      <>
+                                        <div style={{ fontSize: "0.82rem", color: "#0f172a" }}>
+                                          <span style={{ color: "#64748b", fontWeight: 600 }}>From:</span>{" "}
+                                          <strong>{fromDisplay}</strong>
+                                        </div>
+                                        <div style={{ fontSize: "0.82rem", color: "#0f172a" }}>
+                                          <span style={{ color: "#64748b", fontWeight: 600 }}>To:</span>{" "}
+                                          <strong>{toDisplay}</strong>
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <div style={{ fontSize: "0.82rem", color: "#64748b" }}>All Day / Unset</div>
+                                    )}
                                   </div>
                                 </td>
                                 <td>
-                                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                                    {/* 0. Check-in / Gate Scanning */}
-                                    <label style={{ display: "flex", gap: 6, alignItems: "center", cursor: "pointer", fontSize: "0.8rem" }}>
+                                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                    {/* Role 1: Check-in Staff */}
+                                    <label style={{ display: "flex", gap: 8, alignItems: "flex-start", cursor: "pointer", fontSize: "0.8rem" }}>
                                       <input
                                         type="checkbox"
-                                        checked={member.canCheckin ?? true}
+                                        checked={!!(member.canCheckin || member.canManageIncidents)}
                                         disabled={busy}
-                                        onChange={() => toggleStaffDuty(member, "checkin", member.canCheckin ?? true)}
-                                        style={{ width: "14px", height: "14px", margin: 0, padding: 0, accentColor: "#d61f6e" }}
+                                        onChange={() =>
+                                          toggleStaffRole(
+                                            member,
+                                            "CHECKIN_STAFF",
+                                            !!(member.canCheckin || member.canManageIncidents)
+                                          )
+                                        }
+                                        style={{ width: "14px", height: "14px", marginTop: "2px", padding: 0, accentColor: "#d61f6e" }}
                                       />
-                                      <span>
-                                        Check-in: {(member.canCheckin ?? true) ? <strong style={{ color: "#059669" }}>Allowed</strong> : <span style={{ color: "#9ca3af" }}>No</span>}
-                                      </span>
+                                      <div style={{ display: "flex", flexDirection: "column" }}>
+                                        <span>
+                                          <strong>Check-in Staff:</strong>{" "}
+                                          {member.canCheckin || member.canManageIncidents ? (
+                                            <strong style={{ color: "#059669" }}>Allowed</strong>
+                                          ) : (
+                                            <span style={{ color: "#9ca3af" }}>No</span>
+                                          )}
+                                        </span>
+                                        <span style={{ fontSize: "0.72rem", color: "#64748b" }}>
+                                          Gate Assignment, QR/Manual/Offline Check-in, On-site Incidents
+                                        </span>
+                                      </div>
                                     </label>
 
-                                    {/* 1. Return Review */}
-                                    <label style={{ display: "flex", gap: 6, alignItems: "center", cursor: "pointer", fontSize: "0.8rem" }}>
-                                      <input
-                                        type="checkbox"
-                                        checked={!!member.canReviewReturns}
-                                        disabled={busy}
-                                        onChange={() => toggleStaffDuty(member, "returns", !!member.canReviewReturns)}
-                                      />
-                                      <span>
-                                        Returns: {member.canReviewReturns ? <strong style={{ color: "#059669" }}>Allowed</strong> : <span style={{ color: "#9ca3af" }}>No</span>}
-                                      </span>
-                                    </label>
-
-                                    {/* 2. Incident Management */}
-                                    <label style={{ display: "flex", gap: 6, alignItems: "center", cursor: "pointer", fontSize: "0.8rem" }}>
-                                      <input
-                                        type="checkbox"
-                                        checked={!!member.canManageIncidents}
-                                        disabled={busy}
-                                        onChange={() => toggleStaffDuty(member, "incidents", !!member.canManageIncidents)}
-                                      />
-                                      <span>
-                                        Incidents: {member.canManageIncidents ? <strong style={{ color: "#059669" }}>Allowed</strong> : <span style={{ color: "#9ca3af" }}>No</span>}
-                                      </span>
-                                    </label>
-
-                                    {/* 3. Support Cases */}
-                                    <label style={{ display: "flex", gap: 6, alignItems: "center", cursor: "pointer", fontSize: "0.8rem" }}>
+                                    {/* Role 2: Security/Support Staff */}
+                                    <label style={{ display: "flex", gap: 8, alignItems: "flex-start", cursor: "pointer", fontSize: "0.8rem" }}>
                                       <input
                                         type="checkbox"
                                         checked={!!member.canManageSupportCases}
                                         disabled={busy}
-                                        onChange={() => toggleStaffDuty(member, "support", !!member.canManageSupportCases)}
+                                        onChange={() =>
+                                          toggleStaffRole(
+                                            member,
+                                            "SECURITY_SUPPORT_STAFF",
+                                            !!member.canManageSupportCases
+                                          )
+                                        }
+                                        style={{ width: "14px", height: "14px", marginTop: "2px", padding: 0, accentColor: "#d61f6e" }}
                                       />
-                                      <span>
-                                        Support Desk: {member.canManageSupportCases ? <strong style={{ color: "#059669" }}>Allowed</strong> : <span style={{ color: "#9ca3af" }}>No</span>}
-                                      </span>
+                                      <div style={{ display: "flex", flexDirection: "column" }}>
+                                        <span>
+                                          <strong>Security/Support Staff:</strong>{" "}
+                                          {member.canManageSupportCases ? (
+                                            <strong style={{ color: "#059669" }}>Allowed</strong>
+                                          ) : (
+                                            <span style={{ color: "#9ca3af" }}>No</span>
+                                          )}
+                                        </span>
+                                        <span style={{ fontSize: "0.72rem", color: "#64748b" }}>
+                                          Support Cases (Create/View/Resolve), Fraud Cases & Risk Decisions
+                                        </span>
+                                      </div>
+                                    </label>
+
+                                    {/* Role 3: Ticketing/Operations Staff */}
+                                    <label style={{ display: "flex", gap: 8, alignItems: "flex-start", cursor: "pointer", fontSize: "0.8rem" }}>
+                                      <input
+                                        type="checkbox"
+                                        checked={!!member.canReviewReturns}
+                                        disabled={busy}
+                                        onChange={() =>
+                                          toggleStaffRole(
+                                            member,
+                                            "TICKETING_OPS_STAFF",
+                                            !!member.canReviewReturns
+                                          )
+                                        }
+                                        style={{ width: "14px", height: "14px", marginTop: "2px", padding: 0, accentColor: "#d61f6e" }}
+                                      />
+                                      <div style={{ display: "flex", flexDirection: "column" }}>
+                                        <span>
+                                          <strong>Ticketing/Operations Staff:</strong>{" "}
+                                          {member.canReviewReturns ? (
+                                            <strong style={{ color: "#059669" }}>Allowed</strong>
+                                          ) : (
+                                            <span style={{ color: "#9ca3af" }}>No</span>
+                                          )}
+                                        </span>
+                                        <span style={{ fontSize: "0.72rem", color: "#64748b" }}>
+                                          Process Full/Partial Refund, View Seat/Ticket Status History
+                                        </span>
+                                      </div>
                                     </label>
                                   </div>
                                 </td>
@@ -930,45 +1166,56 @@ const formatEventDateTime = (d) => {
                                     <span className="rp-badge rp-badge-active">Already Assigned</span>
                                   ) : (
                                     <div style={{ display: "flex", flexDirection: "column", gap: "10px", alignItems: "flex-start", width: "100%", maxWidth: "420px" }}>
-                                      {/* Role Permissions & Duties (All 4 duties) */}
-                                      <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "100%", padding: "8px 10px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
-                                        <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#334155" }}>Assign Duties:</span>
-                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
-                                          <label style={{ display: "flex", gap: "6px", alignItems: "center", fontSize: "0.78rem", cursor: "pointer", color: isCheckin ? "#0f172a" : "#475569", fontWeight: isCheckin ? 600 : 400 }}>
+                                      {/* 3 Staff Roles Selection */}
+                                      <div style={{ display: "flex", flexDirection: "column", gap: "8px", width: "100%", padding: "10px 12px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                                        <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#0f172a" }}>Select Staff Role(s):</span>
+                                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                          {/* 1. Check-in Staff */}
+                                          <label style={{ display: "flex", gap: "8px", alignItems: "flex-start", fontSize: "0.8rem", cursor: "pointer", color: isCheckin ? "#0f172a" : "#475569", padding: "6px 8px", borderRadius: "6px", background: isCheckin ? "#fdf2f8" : "#ffffff", border: `1px solid ${isCheckin ? "#f472b6" : "#e2e8f0"}` }}>
                                             <input
                                               type="checkbox"
                                               checked={isCheckin}
                                               onChange={(e) => setCheckinByStaff({ ...checkinByStaff, [candidate.userId]: e.target.checked })}
-                                              style={{ width: "15px", height: "15px", margin: 0, padding: 0, accentColor: "#d61f6e" }}
+                                              style={{ width: "15px", height: "15px", marginTop: "2px", padding: 0, accentColor: "#d61f6e" }}
                                             />
-                                            Check-in
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                                              <span style={{ fontWeight: 700, color: "#0f172a" }}>1. Check-in Staff</span>
+                                              <span style={{ fontSize: "0.73rem", color: "#475569", lineHeight: 1.35 }}>
+                                                View Gate Assignment, Scan Dynamic QR / Manual Check-in / Lookup Ticket / Scan History, Offline Check-in & Sync, Report & Escalate On-site Incidents
+                                              </span>
+                                            </div>
                                           </label>
-                                          <label style={{ display: "flex", gap: "6px", alignItems: "center", fontSize: "0.78rem", cursor: "pointer", color: canReview ? "#0f172a" : "#475569", fontWeight: canReview ? 600 : 400 }}>
-                                            <input
-                                              type="checkbox"
-                                              checked={canReview}
-                                              onChange={(e) => setReviewByStaff({ ...reviewByStaff, [candidate.userId]: e.target.checked })}
-                                              style={{ width: "15px", height: "15px", margin: 0, padding: 0, accentColor: "#d61f6e" }}
-                                            />
-                                            Return Review
-                                          </label>
-                                          <label style={{ display: "flex", gap: "6px", alignItems: "center", fontSize: "0.78rem", cursor: "pointer", color: canIncidents ? "#0f172a" : "#475569", fontWeight: canIncidents ? 600 : 400 }}>
-                                            <input
-                                              type="checkbox"
-                                              checked={canIncidents}
-                                              onChange={(e) => setIncidentsByStaff({ ...incidentsByStaff, [candidate.userId]: e.target.checked })}
-                                              style={{ width: "15px", height: "15px", margin: 0, padding: 0, accentColor: "#d61f6e" }}
-                                            />
-                                            Incidents
-                                          </label>
-                                          <label style={{ display: "flex", gap: "6px", alignItems: "center", fontSize: "0.78rem", cursor: "pointer", color: canSupport ? "#0f172a" : "#475569", fontWeight: canSupport ? 600 : 400 }}>
+
+                                          {/* 2. Security/Support Staff */}
+                                          <label style={{ display: "flex", gap: "8px", alignItems: "flex-start", fontSize: "0.8rem", cursor: "pointer", color: canSupport ? "#0f172a" : "#475569", padding: "6px 8px", borderRadius: "6px", background: canSupport ? "#fdf2f8" : "#ffffff", border: `1px solid ${canSupport ? "#f472b6" : "#e2e8f0"}` }}>
                                             <input
                                               type="checkbox"
                                               checked={canSupport}
                                               onChange={(e) => setSupportByStaff({ ...supportByStaff, [candidate.userId]: e.target.checked })}
-                                              style={{ width: "15px", height: "15px", margin: 0, padding: 0, accentColor: "#d61f6e" }}
+                                              style={{ width: "15px", height: "15px", marginTop: "2px", padding: 0, accentColor: "#d61f6e" }}
                                             />
-                                            Support Desk
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                                              <span style={{ fontWeight: 700, color: "#0f172a" }}>2. Security/Support Staff</span>
+                                              <span style={{ fontSize: "0.73rem", color: "#475569", lineHeight: 1.35 }}>
+                                                View / Create / Resolve Support Cases, View & Resolve Fraud Cases, View Risk Decision Details
+                                              </span>
+                                            </div>
+                                          </label>
+
+                                          {/* 3. Ticketing/Operations Staff */}
+                                          <label style={{ display: "flex", gap: "8px", alignItems: "flex-start", fontSize: "0.8rem", cursor: "pointer", color: canReview ? "#0f172a" : "#475569", padding: "6px 8px", borderRadius: "6px", background: canReview ? "#fdf2f8" : "#ffffff", border: `1px solid ${canReview ? "#f472b6" : "#e2e8f0"}` }}>
+                                            <input
+                                              type="checkbox"
+                                              checked={canReview}
+                                              onChange={(e) => setReviewByStaff({ ...reviewByStaff, [candidate.userId]: e.target.checked })}
+                                              style={{ width: "15px", height: "15px", marginTop: "2px", padding: 0, accentColor: "#d61f6e" }}
+                                            />
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                                              <span style={{ fontWeight: 700, color: "#0f172a" }}>3. Ticketing/Operations Staff</span>
+                                              <span style={{ fontSize: "0.73rem", color: "#475569", lineHeight: 1.35 }}>
+                                                Process Full/Partial Refund, View Seat/Ticket Status History
+                                              </span>
+                                            </div>
                                           </label>
                                         </div>
                                       </div>
@@ -1028,9 +1275,32 @@ const formatEventDateTime = (d) => {
 
                                           {currentEv?.startsAt && (
                                             <small style={{ color: "#64748b", fontSize: "0.72rem" }}>
-                                              Concert starts: {formatEventDateTime(currentEv.startsAt)}
+                                              Concert schedule: {formatEventDateTime(currentEv.startsAt)}
+                                              {currentEv.endsAt ? ` – ${formatEventDateTime(currentEv.endsAt)}` : ""}
                                             </small>
                                           )}
+
+                                          {(() => {
+                                            const shiftWarning = getShiftScheduleWarning(currentEv, currentStartDt, currentEndDt);
+                                            if (!shiftWarning) return null;
+                                            return (
+                                              <div
+                                                style={{
+                                                  marginTop: "4px",
+                                                  padding: "8px 10px",
+                                                  background: "#fffbeb",
+                                                  border: "1px solid #f59e0b",
+                                                  borderRadius: "6px",
+                                                  color: "#92400e",
+                                                  fontSize: "0.76rem",
+                                                  lineHeight: "1.4",
+                                                  fontWeight: 600,
+                                                }}
+                                              >
+                                                {shiftWarning}
+                                              </div>
+                                            );
+                                          })()}
                                         </div>
                                       ) : (
                                         <div style={{ fontSize: "0.78rem", color: "#64748b", fontStyle: "italic", background: "#f8fafc", padding: "8px 10px", borderRadius: "6px", border: "1px dashed #cbd5e1", width: "100%" }}>
@@ -1172,8 +1442,8 @@ const formatEventDateTime = (d) => {
               </div>
             )}
 
-            {/* ================= TAB 3: ADMISSION ATTENDANCE REPORT ================= */}
-            {activeTab === "REPORT" && summary && (
+{/* ================= TAB 3: ADMISSION ATTENDANCE REPORT ================= */}
+            {activeTab === "REPORT" && (
               <div style={{ background: "#ffffff", padding: "28px", borderRadius: "14px", border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", flexWrap: "wrap", marginBottom: "20px" }}>
                   <div>
@@ -1187,16 +1457,16 @@ const formatEventDateTime = (d) => {
                   <button
                     type="button"
                     onClick={exportCsv}
-                    disabled={busy}
+                    disabled={busy || !effectiveId}
                     style={{
                       padding: "10px 18px",
                       borderRadius: "10px",
                       border: "1px solid #be185d",
-                      background: busy ? "#f9d4e4" : "#be185d",
-                      color: busy ? "#9d174d" : "#ffffff",
+                      background: busy || !effectiveId ? "#f9d4e4" : "#be185d",
+                      color: busy || !effectiveId ? "#9d174d" : "#ffffff",
                       fontWeight: 600,
                       fontSize: "0.9rem",
-                      cursor: busy ? "default" : "pointer",
+                      cursor: busy || !effectiveId ? "not-allowed" : "pointer",
                       whiteSpace: "nowrap",
                     }}
                   >
@@ -1210,7 +1480,7 @@ const formatEventDateTime = (d) => {
                       Total Issued Tickets
                     </div>
                     <div style={{ fontSize: "2rem", fontWeight: 800, color: "#0f172a" }}>
-                      {summary.totalTickets}
+                      {summary?.totalTickets ?? 0}
                     </div>
                   </div>
                   <div style={{ background: "#ffffff", border: "1px solid #fbcfe8", borderRadius: "12px", padding: "20px", boxShadow: "0 2px 6px rgba(190, 24, 93, 0.08)" }}>
@@ -1218,7 +1488,7 @@ const formatEventDateTime = (d) => {
                       Checked-in Attendance
                     </div>
                     <div style={{ fontSize: "2rem", fontWeight: 800, color: "#be185d" }}>
-                      {summary.checkedIn}
+                      {summary?.checkedIn ?? 0}
                     </div>
                   </div>
                   <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "20px", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
@@ -1226,7 +1496,7 @@ const formatEventDateTime = (d) => {
                       Not Checked-in
                     </div>
                     <div style={{ fontSize: "2rem", fontWeight: 800, color: "#0f172a" }}>
-                      {summary.notCheckedIn}
+                      {summary?.notCheckedIn ?? 0}
                     </div>
                   </div>
                   <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "20px", boxShadow: "0 1px 3px rgba(0,0,0,0.03)" }}>
@@ -1234,17 +1504,53 @@ const formatEventDateTime = (d) => {
                       Refunded / Returned
                     </div>
                     <div style={{ fontSize: "2rem", fontWeight: 800, color: "#0f172a" }}>
-                      {summary.returned}
+                      {summary?.returned ?? 0}
                     </div>
                   </div>
                 </div>
 
                 <div style={{ background: "#f1f5f9", height: "10px", borderRadius: "8px", overflow: "hidden", marginTop: "28px" }}>
-                  <div style={{ width: `${summary.checkInRatePercent}%`, height: "100%", background: "linear-gradient(90deg, #d61f6e, #be185d)", borderRadius: "8px", transition: "width 0.4s ease" }}></div>
+                  <div style={{ width: `${summary?.checkInRatePercent ?? 0}%`, height: "100%", background: "linear-gradient(90deg, #d61f6e, #be185d)", borderRadius: "8px", transition: "width 0.4s ease" }}></div>
                 </div>
                 <p style={{ marginTop: "10px", color: "#475569", fontSize: "0.92rem", fontWeight: 500 }}>
-                  <strong>{summary.checkInRatePercent}%</strong> of valid ticket holders have arrived and scanned at venue gates.
+                  <strong>{summary?.checkInRatePercent ?? 0}%</strong> of valid ticket holders have arrived and scanned at venue gates.
                 </p>
+
+                {Array.isArray(checkin?.byTicketType) && checkin.byTicketType.length > 0 && (
+                  <div style={{ marginTop: "24px" }}>
+                    <h3 style={{ margin: "0 0 12px 0", fontSize: "1.05rem", fontWeight: 700, color: "#0f172a" }}>
+                      Check-in Breakdown by Ticket Type
+                    </h3>
+                    <div className="od-table-wrap">
+                      <table className="ow-table">
+                        <thead>
+                          <tr>
+                            <th>Ticket Type</th>
+                            <th>Total Valid Tickets</th>
+                            <th>Checked-in</th>
+                            <th>Not Checked-in</th>
+                            <th>Check-in Rate</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {checkin.byTicketType.map((row) => (
+                            <tr key={row.ticketTypeId}>
+                              <td>
+                                <strong>{row.ticketTypeName}</strong>
+                              </td>
+                              <td>{row.totalTickets}</td>
+                              <td style={{ color: "#059669", fontWeight: 700 }}>{row.checkedIn}</td>
+                              <td>{row.notCheckedIn}</td>
+                              <td>
+                                <strong>{row.checkInRatePercent}%</strong>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </>
@@ -1417,41 +1723,52 @@ const formatEventDateTime = (d) => {
                   </select>
                 </div>
 
-                <div className="osp-form-group">
-                  <label>Shift Date</label>
-                  <input
-                    type="date"
-                    value={shiftFormData.shiftDate || ""}
-                    onChange={(e) => setShiftFormData({ ...shiftFormData, shiftDate: e.target.value })}
-                  />
-                  <small style={{ color: "#6b7280", marginTop: "4px", display: "block" }}>
-                    Select specific date, or leave blank to apply to all event dates.
-                  </small>
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "4px" }}>
                   <div className="osp-form-group">
-                    <label>Shift Start Time *</label>
+                    <label>From (Shift Start Date & Time) *</label>
                     <input
-                      type="time"
+                      type="datetime-local"
                       required
-                      value={shiftFormData.shiftStartTime}
-                      onChange={(e) => setShiftFormData({ ...shiftFormData, shiftStartTime: e.target.value })}
+                      value={shiftFormData.shiftStartDateTime || ""}
+                      onChange={(e) => setShiftFormData({ ...shiftFormData, shiftStartDateTime: e.target.value })}
                     />
                   </div>
                   <div className="osp-form-group">
-                    <label>Shift End Time *</label>
+                    <label>To (Shift End Date & Time) *</label>
                     <input
-                      type="time"
+                      type="datetime-local"
                       required
-                      value={shiftFormData.shiftEndTime}
-                      onChange={(e) => setShiftFormData({ ...shiftFormData, shiftEndTime: e.target.value })}
+                      value={shiftFormData.shiftEndDateTime || ""}
+                      onChange={(e) => setShiftFormData({ ...shiftFormData, shiftEndDateTime: e.target.value })}
                     />
                   </div>
                 </div>
-                <small style={{ color: "#6b7280" }}>
+                <small style={{ color: "#6b7280", display: "block", marginTop: "4px" }}>
                   Staff will only be allowed to scan tickets during this shift window.
                 </small>
+
+                {(() => {
+                  const currentEv = eventsList.find((e) => (e.eventId || e.id) === Number(effectiveId));
+                  const shiftWarning = getShiftScheduleWarning(currentEv, shiftFormData.shiftStartDateTime, shiftFormData.shiftEndDateTime);
+                  if (!shiftWarning) return null;
+                  return (
+                    <div
+                      style={{
+                        marginTop: "12px",
+                        padding: "10px 12px",
+                        background: "#fffbeb",
+                        border: "1px solid #f59e0b",
+                        borderRadius: "8px",
+                        color: "#92400e",
+                        fontSize: "0.82rem",
+                        lineHeight: "1.45",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {shiftWarning}
+                    </div>
+                  );
+                })()}
               </div>
               <div className="osp-modal-footer">
                 <button

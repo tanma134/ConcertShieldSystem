@@ -387,6 +387,7 @@ namespace EventAPI.Data
                 entity.Property(x => x.StaffUserId).HasColumnName("staff_user_id");
                 entity.Property(x => x.GateName).HasMaxLength(100).HasDefaultValue("Main Gate").HasColumnName("gate_name");
                 entity.Property(x => x.ShiftDate).HasColumnName("shift_date");
+                entity.Property(x => x.ShiftEndDate).HasColumnName("shift_end_date");
                 entity.Property(x => x.ShiftStartTime).HasMaxLength(50).HasColumnName("shift_start_time");
                 entity.Property(x => x.ShiftEndTime).HasMaxLength(50).HasColumnName("shift_end_time");
                 entity.Property(x => x.CanCheckin).HasDefaultValue(true).HasColumnName("can_checkin");

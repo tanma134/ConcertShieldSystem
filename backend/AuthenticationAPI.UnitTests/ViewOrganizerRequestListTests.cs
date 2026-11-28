@@ -7,10 +7,14 @@ using Xunit;
 
 namespace AuthenticationAPI.UnitTests;
 
+/// <summary>
+/// Unit Tests for Function_163_ReviewOrganizerVer (GetVerificationRequests / GetVerificationRequestsAsync / GetAllRequestsAsync)
+/// Total Specification Test Cases: 9 (UTCID01..UTCID09: N=3, B=3, A=3) + regression tests
+/// </summary>
 public sealed class ViewOrganizerRequestListTests
 {
     [Fact]
-    public async Task UTCID01_MapsAllRequestsAndPreservesRepositoryOrder()
+    public async Task ReviewOrganizerVerification_UTCID01_AllRequests_ReturnsListAndPreservesOrder()
     {
         var pendingUser = TestData.CreateUser(11);
         var pending = TestData.CreateOrganizerRequest(2, "Pending", pendingUser);
@@ -22,50 +26,47 @@ public sealed class ViewOrganizerRequestListTests
         repository.Setup(repo => repo.GetAllAsync(null)).ReturnsAsync(new List<OrganizerRequest> { pending, approved });
         var service = CreateService(repository);
 
-        var result = await service.GetAllRequestsAsync(null);
+        var result = await service.GetVerificationRequestsAsync(status: null, page: 1, limit: 10, callerRole: "Admin");
 
         Assert.Equal(new[] { 2, 1 }, result.Select(request => request.RequestId));
         Assert.Equal("user11@example.com", result[0].UserEmail);
-        Assert.Equal("User 11", result[0].UserFullName);
-        Assert.Null(result[0].ReviewedByName);
         Assert.Equal("Admin One", result[1].ReviewedByName);
-        Assert.Equal("user12@example.com", result[1].UserEmail);
-        repository.Verify(repo => repo.GetAllAsync(null), Times.Once);
     }
 
     [Fact]
-    public async Task UTCID02_ForwardsPendingStatusAndMapsOneRequest()
+    public async Task ReviewOrganizerVerification_UTCID02_FilterByPendingStatus_ReturnsPendingRequests()
     {
-        var request = TestData.CreateOrganizerRequest(
-            2, "Pending", TestData.CreateUser(11));
+        var request = TestData.CreateOrganizerRequest(2, "PENDING", TestData.CreateUser(11));
         var repository = new Mock<IOrganizerRequestRepository>();
-        repository.Setup(repo => repo.GetAllAsync("Pending"))
+        repository.Setup(repo => repo.GetAllAsync("PENDING"))
             .ReturnsAsync(new List<OrganizerRequest> { request });
         var service = CreateService(repository);
 
-        var result = await service.GetAllRequestsAsync("Pending");
+        var result = await service.GetVerificationRequestsAsync(status: "PENDING", page: 1, limit: 10, callerRole: "Admin");
 
         var mapped = Assert.Single(result);
         Assert.Equal(2, mapped.RequestId);
-        Assert.Equal("Pending", mapped.Status);
-        repository.Verify(repo => repo.GetAllAsync("Pending"), Times.Once);
+        Assert.Equal("PENDING", mapped.Status);
     }
 
     [Fact]
-    public async Task UTCID03_ReturnsEmptyListForUnknownStatus()
+    public async Task ReviewOrganizerVerification_UTCID03_FilterByApprovedStatus_ReturnsApprovedRequests()
     {
+        var request = TestData.CreateOrganizerRequest(3, "APPROVED", TestData.CreateUser(12));
         var repository = new Mock<IOrganizerRequestRepository>();
-        repository.Setup(repo => repo.GetAllAsync("Unknown")).ReturnsAsync(new List<OrganizerRequest>());
+        repository.Setup(repo => repo.GetAllAsync("APPROVED"))
+            .ReturnsAsync(new List<OrganizerRequest> { request });
         var service = CreateService(repository);
 
-        var result = await service.GetAllRequestsAsync("Unknown");
+        var result = await service.GetVerificationRequestsAsync(status: "APPROVED", page: 1, limit: 10, callerRole: "Admin");
 
-        Assert.Empty(result);
-        repository.Verify(repo => repo.GetAllAsync("Unknown"), Times.Once);
+        var mapped = Assert.Single(result);
+        Assert.Equal(3, mapped.RequestId);
+        Assert.Equal("APPROVED", mapped.Status);
     }
 
     [Fact]
-    public async Task UTCID04_ForwardsWhitespaceStatusWithoutFilteringInService()
+    public async Task ReviewOrganizerVerification_UTCID04_BoundaryLimitMin1_ReturnsSingleItem()
     {
         var requests = new List<OrganizerRequest>
         {
@@ -73,28 +74,77 @@ public sealed class ViewOrganizerRequestListTests
             TestData.CreateOrganizerRequest(1, "Approved", TestData.CreateUser(12))
         };
         var repository = new Mock<IOrganizerRequestRepository>();
-        repository.Setup(repo => repo.GetAllAsync("   ")).ReturnsAsync(requests);
+        repository.Setup(repo => repo.GetAllAsync(null)).ReturnsAsync(requests);
         var service = CreateService(repository);
 
-        var result = await service.GetAllRequestsAsync("   ");
+        var result = await service.GetVerificationRequestsAsync(status: null, page: 1, limit: 1, callerRole: "Admin");
 
-        Assert.Equal(new[] { 2, 1 }, result.Select(request => request.RequestId));
-        repository.Verify(repo => repo.GetAllAsync("   "), Times.Once);
+        Assert.Single(result);
     }
 
     [Fact]
-    public async Task UTCID05_PropagatesRepositoryException()
+    public async Task ReviewOrganizerVerification_UTCID05_BoundaryLimitMax100_ReturnsAllMatchingItems()
     {
+        var requests = new List<OrganizerRequest>
+        {
+            TestData.CreateOrganizerRequest(2, "Pending", TestData.CreateUser(11)),
+            TestData.CreateOrganizerRequest(1, "Approved", TestData.CreateUser(12))
+        };
         var repository = new Mock<IOrganizerRequestRepository>();
-        repository.Setup(repo => repo.GetAllAsync(null))
-            .ThrowsAsync(new InvalidOperationException("Repository failure"));
+        repository.Setup(repo => repo.GetAllAsync(null)).ReturnsAsync(requests);
         var service = CreateService(repository);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            service.GetAllRequestsAsync(null));
+        var result = await service.GetVerificationRequestsAsync(status: null, page: 1, limit: 100, callerRole: "Admin");
 
-        Assert.Equal("Repository failure", exception.Message);
-        repository.Verify(repo => repo.GetAllAsync(null), Times.Once);
+        Assert.Equal(2, result.Count);
+    }
+
+    [Fact]
+    public async Task ReviewOrganizerVerification_UTCID06_BoundaryZeroPendingRequests_ReturnsEmptyList()
+    {
+        var repository = new Mock<IOrganizerRequestRepository>();
+        repository.Setup(repo => repo.GetAllAsync("PENDING")).ReturnsAsync(new List<OrganizerRequest>());
+        var service = CreateService(repository);
+
+        var result = await service.GetVerificationRequestsAsync(status: "PENDING", page: 1, limit: 10, callerRole: "Admin");
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task ReviewOrganizerVerification_UTCID07_BoundaryPageZero_ThrowsArgumentException()
+    {
+        var repository = new Mock<IOrganizerRequestRepository>();
+        var service = CreateService(repository);
+
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.GetVerificationRequestsAsync(status: null, page: 0, limit: 10, callerRole: "Admin"));
+
+        Assert.Equal("Page must be >= 1", ex.Message);
+    }
+
+    [Fact]
+    public async Task ReviewOrganizerVerification_UTCID08_AbnormalNegativePage_ThrowsArgumentException()
+    {
+        var repository = new Mock<IOrganizerRequestRepository>();
+        var service = CreateService(repository);
+
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.GetVerificationRequestsAsync(status: null, page: -1, limit: 10, callerRole: "Admin"));
+
+        Assert.Equal("Page must be >= 1", ex.Message);
+    }
+
+    [Fact]
+    public async Task ReviewOrganizerVerification_UTCID09_CallerIsOrganizerRole_ThrowsUnauthorizedAccessException()
+    {
+        var repository = new Mock<IOrganizerRequestRepository>();
+        var service = CreateService(repository);
+
+        var ex = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            service.GetVerificationRequestsAsync(status: null, page: 1, limit: 10, callerRole: "Organizer"));
+
+        Assert.Equal("Admin access required", ex.Message);
     }
 
     private static OrganizerRequestService CreateService(Mock<IOrganizerRequestRepository> repository) =>

@@ -4,6 +4,12 @@ using System.Threading.Tasks;
 
 namespace CheckinAPI.API
 {
+    public class EventTicketTypeInfo
+    {
+        public string TypeName { get; set; } = "General Admission";
+        public int Quantity { get; set; }
+    }
+
     public class EventInfoResult
     {
         public int EventId { get; set; }
@@ -14,6 +20,7 @@ namespace CheckinAPI.API
         public DateTime EndsAt { get; set; }
         public string ReEntryPolicy { get; set; } = "NoReEntry";
         public int? ReEntryDurationMinutes { get; set; }
+        public List<EventTicketTypeInfo> TicketTypes { get; set; } = new();
     }
 
     public class EventGateInfo
@@ -34,6 +41,7 @@ namespace CheckinAPI.API
         public string? ShiftStartTime { get; set; }
         public string? ShiftEndTime { get; set; }
         public string? ShiftDate { get; set; }
+        public string? ShiftEndDate { get; set; }
         public string? EventTitle { get; set; }
         public bool CanCheckin { get; set; } = true;
     }

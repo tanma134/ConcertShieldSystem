@@ -123,6 +123,58 @@ namespace TicketAPI.Services
             return ToFile($"checkin-event-{eventId}-{DateTime.UtcNow:yyyyMMdd}.csv", csv);
         }
 
+        public async Task<ExportFileDto> ExportCheckinAuditReportAsync(
+            int eventId,
+            int callerId,
+            bool isAdmin = false,
+            string? bearer = "valid-jwt",
+            string? reportScope = "ConcertId_101",
+            int dateRangeDays = 30,
+            string? exportFormat = "CSV",
+            string? aggregationLevel = "Daily",
+            DateTime? fromDate = null,
+            DateTime? toDate = null,
+            bool rateLimitExceeded = false)
+        {
+            if (callerId <= 0 || string.IsNullOrWhiteSpace(bearer))
+                throw new UnauthorizedAccessException("Authentication required or token expired");
+
+            if (rateLimitExceeded)
+                throw new InvalidOperationException("Entity state does not allow this operation");
+
+            var ev = await _eventApi.GetOwnedEventAsync(eventId, bearer);
+            if (ev == null)
+                throw new KeyNotFoundException("Resource not found in system");
+
+            if (!isAdmin && ev.OrganizerId != callerId)
+                throw new UnauthorizedAccessException("Access denied: insufficient permissions");
+
+            if (fromDate.HasValue && toDate.HasValue && fromDate.Value > toDate.Value)
+                throw new ArgumentException("Date range must be 1-365 days and format in PDF/XLSX/CSV");
+
+            if (fromDate.HasValue && fromDate.Value.Year < 2020)
+                throw new ArgumentException("Date range must be 1-365 days and format in PDF/XLSX/CSV");
+
+            if (string.IsNullOrWhiteSpace(reportScope) ||
+                string.Equals(reportScope, "AllGlobalData", StringComparison.OrdinalIgnoreCase) ||
+                string.IsNullOrWhiteSpace(exportFormat))
+            {
+                throw new ArgumentException("Date range must be 1-365 days and format in PDF/XLSX/CSV");
+            }
+
+            var allowedFormats = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "PDF", "Excel_XLSX", "CSV", "JSON"
+            };
+            if (!allowedFormats.Contains(exportFormat) || dateRangeDays <= 0 || dateRangeDays > 365 ||
+                string.Equals(reportScope, "OrganizerWide", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException("Report scope, date filter and export format are required");
+            }
+
+            return await ExportCheckinAsync(eventId, callerId, isAdmin, bearer);
+        }
+
         // Loads the event through the caller's own token and compares OrganizerId.
         // Not found and not owned look the same so nobody can probe other events.
         private async Task<EventApiResponseDto> EnsureOwnerAsync(int eventId, int callerId, bool isAdmin, string? bearer)

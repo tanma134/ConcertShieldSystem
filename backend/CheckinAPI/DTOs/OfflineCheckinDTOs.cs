@@ -41,6 +41,7 @@ namespace CheckinAPI.DTOs
         public DateTime ScannedAt { get; set; }
         public string ScanMethod { get; set; } = "Offline QR Scan";
         public int StaffUserId { get; set; }
+        public string? Signature { get; set; }
     }
 
     public class OfflineSyncRequestDTO
@@ -78,6 +79,7 @@ namespace CheckinAPI.DTOs
 
         public int TimeDifferenceSeconds => (int)Math.Abs((DuplicateScannedAt - EarlierScannedAt).TotalSeconds);
         public string Status { get; set; } = "PENDING_REVIEW"; // PENDING_REVIEW, RESOLVED_EARLIER_VALID, RESOLVED_SECURITY_ESCALATED
+        public string? Resolution { get; set; }
         public string? ResolutionNotes { get; set; }
         public string? ResolvedByName { get; set; }
         public DateTime? ResolvedAt { get; set; }
@@ -87,6 +89,16 @@ namespace CheckinAPI.DTOs
     {
         public string Decision { get; set; } = "ACCEPT_EARLIER_REJECT_LATER"; // ACCEPT_EARLIER_REJECT_LATER, ESCALATE_SECURITY, REVOKE_BOTH
         public string Notes { get; set; } = string.Empty;
+        public string Resolution
+        {
+            get => Decision;
+            set => Decision = value ?? string.Empty;
+        }
+        public string Reason
+        {
+            get => Notes;
+            set => Notes = value ?? string.Empty;
+        }
     }
 
     public class OfflineSyncResponseDTO
@@ -94,6 +106,7 @@ namespace CheckinAPI.DTOs
         public bool Success { get; set; }
         public int TotalProcessed { get; set; }
         public int NewlyCheckedIn { get; set; }
+        public int SyncedCount => NewlyCheckedIn;
         public int AlreadyUsedCount { get; set; }
         public int ConflictCount { get; set; }
         public List<OfflineSyncConflictDTO> Conflicts { get; set; } = new();

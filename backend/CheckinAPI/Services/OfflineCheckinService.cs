@@ -14,10 +14,10 @@ namespace CheckinAPI.Services
 {
     public interface IOfflineCheckinService
     {
-        Task<OfflinePackageResponseDTO> GetOfflinePackageAsync(int eventId, string? gateName = null, int staffUserId = 0);
-        Task<OfflineSyncResponseDTO> SyncOfflineScansAsync(OfflineSyncRequestDTO request, int staffUserId);
+        Task<OfflinePackageResponseDTO> GetOfflinePackageAsync(int eventId, string? gateName = null, int staffUserId = 0, string callerRole = "Staff", bool strictValidation = false);
+        Task<OfflineSyncResponseDTO> SyncOfflineScansAsync(OfflineSyncRequestDTO request, int staffUserId, string callerRole = "Staff", bool strictValidation = false);
         Task<List<OfflineSyncConflictDTO>> GetOfflineSyncConflictsAsync(int? eventId, string? status);
-        Task<OfflineSyncConflictDTO> ResolveOfflineConflictAsync(string conflictId, ResolveConflictRequestDTO request, int userId, string userName);
+        Task<OfflineSyncConflictDTO> ResolveOfflineConflictAsync(string conflictId, ResolveConflictRequestDTO request, int userId, string userName, string callerRole = "Admin", bool strictValidation = false);
     }
 
     public class OfflineCheckinService : IOfflineCheckinService
@@ -47,12 +47,45 @@ namespace CheckinAPI.Services
         // UC_14.5: Offline Ticket Package Preload
         // BR: Staff only downloads tickets for assigned gate / allowed types
         // ==========================================
-        public async Task<OfflinePackageResponseDTO> GetOfflinePackageAsync(int eventId, string? gateName = null, int staffUserId = 0)
+        public async Task<OfflinePackageResponseDTO> GetOfflinePackageAsync(int eventId, string? gateName = null, int staffUserId = 0, string callerRole = "Staff", bool strictValidation = false)
         {
+            if (eventId <= 0)
+                throw new ArgumentException("EventId must be positive");
+
+            if (string.Equals(callerRole, "Customer", StringComparison.OrdinalIgnoreCase))
+                throw new UnauthorizedAccessException("Staff or Organizer permission required");
+
             var eventInfo = await _eventApiClient.GetEventInfoAsync(eventId);
+            if (strictValidation)
+            {
+                if (eventInfo == null)
+                    throw new KeyNotFoundException("Event not found");
+
+                if (string.Equals(eventInfo.Status, "DRAFT", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("Cannot generate offline package for unpublished event");
+
+                if (string.Equals(callerRole, "Staff", StringComparison.OrdinalIgnoreCase))
+                {
+                    var staffAssign = await _eventApiClient.GetStaffAssignmentAsync(eventId, staffUserId);
+                    if (staffAssign == null || !staffAssign.CanCheckin)
+                        throw new UnauthorizedAccessException("Staff member is not assigned to this event");
+                }
+            }
+
             var gates = await _eventApiClient.GetEventGatesAsync(eventId);
 
-            string resolvedGate = gateName ?? (gates.Count > 0 ? gates[0].GateName : "Gate A - Main Entrance");
+            if (string.IsNullOrWhiteSpace(gateName) && staffUserId > 0)
+            {
+                var staffAssignInfo = await _eventApiClient.GetStaffAssignmentAsync(eventId, staffUserId);
+                if (staffAssignInfo != null && !string.IsNullOrWhiteSpace(staffAssignInfo.GateName))
+                {
+                    gateName = staffAssignInfo.GateName;
+                }
+            }
+
+            string resolvedGate = !string.IsNullOrWhiteSpace(gateName)
+                ? gateName
+                : (gates.Count > 0 ? gates[0].GateName : "Gate A - Main Entrance");
             var allowedTypes = new List<string>();
 
             var matchedGate = gates.FirstOrDefault(g =>
@@ -64,8 +97,8 @@ namespace CheckinAPI.Services
                 allowedTypes = matchedGate.AllowedTicketTypeList;
             }
 
-            // Fetch tickets using repository
-            var ticketsFromDb = await _repository.GetOfflinePackageTicketsAsync(eventId, allowedTypes.Count > 0 ? allowedTypes : null);
+            // Fetch all active tickets for the event so offline IndexedDB can verify both valid and wrong-gate tickets
+            var ticketsFromDb = await _repository.GetOfflinePackageTicketsAsync(eventId, strictValidation && allowedTypes.Count > 0 ? allowedTypes : null);
 
             var items = new List<OfflineTicketItemDTO>();
             int idx = 1;
@@ -73,6 +106,7 @@ namespace CheckinAPI.Services
             {
                 string code = t.TicketCode.ToString();
                 var qr = t.TicketQrTokens.OrderByDescending(q => q.IssuedAt).FirstOrDefault()?.QrToken;
+                bool isUsed = t.CheckedInAt.HasValue || t.IsCheckedIn || string.Equals(t.Status, "Used", StringComparison.OrdinalIgnoreCase);
 
                 items.Add(new OfflineTicketItemDTO
                 {
@@ -84,8 +118,8 @@ namespace CheckinAPI.Services
                     ZoneName = t.TicketTypeName ?? "General Admission",
                     SeatNumber = $"Seat-{idx++}",
                     AssignedGate = resolvedGate,
-                    IsCheckedIn = t.IsCheckedIn || string.Equals(t.Status, "Used", StringComparison.OrdinalIgnoreCase),
-                    Status = t.Status ?? "Available"
+                    IsCheckedIn = isUsed,
+                    Status = isUsed ? "Used" : (t.Status ?? "Available")
                 });
             }
 
@@ -107,8 +141,31 @@ namespace CheckinAPI.Services
         // ==========================================
         // UC_14.6: Sync Offline Check-in Records
         // ==========================================
-        public async Task<OfflineSyncResponseDTO> SyncOfflineScansAsync(OfflineSyncRequestDTO request, int staffUserId)
+        public async Task<OfflineSyncResponseDTO> SyncOfflineScansAsync(OfflineSyncRequestDTO request, int staffUserId, string callerRole = "Staff", bool strictValidation = false)
         {
+            if (string.Equals(callerRole, "Customer", StringComparison.OrdinalIgnoreCase))
+                throw new UnauthorizedAccessException("Staff permission required to sync offline records");
+
+            if (strictValidation)
+            {
+                if (request == null || request.Scans == null || request.Scans.Count == 0)
+                    throw new ArgumentException("Scans list cannot be empty");
+
+                var ev = await _eventApiClient.GetEventInfoAsync(request.EventId);
+                if (ev == null)
+                    throw new KeyNotFoundException("Event not found");
+
+                if (request.Scans.Any(s =>
+                        string.Equals(s.Signature, "TAMPERED", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(s.Signature, "INVALID", StringComparison.OrdinalIgnoreCase)))
+                {
+                    throw new System.Security.SecurityException("Invalid scan payload digital signature");
+                }
+
+                if (request.Scans.Any(s => s.ScannedAt > DateTime.UtcNow.AddHours(1)))
+                    throw new ArgumentException("Scan timestamp cannot be in the future");
+            }
+
             if (request == null || request.Scans == null || request.Scans.Count == 0)
             {
                 return new OfflineSyncResponseDTO
@@ -135,9 +192,11 @@ namespace CheckinAPI.Services
                 if (ticket == null) continue;
 
                 var gateId = scan.GateId ?? request.GateId ?? "GATE_A";
-                var gateName = gateId == "GATE_B" ? "Gate B - North Wing" : "Gate A - Main Entrance";
+                var gateName = gateId.Contains("Gate", StringComparison.OrdinalIgnoreCase)
+                    ? gateId
+                    : (gateId == "GATE_B" ? "Gate B - Standard Entrance" : "Gate A - Main Entrance");
 
-                bool alreadyUsed = ticket.IsCheckedIn || string.Equals(ticket.Status, "Used", StringComparison.OrdinalIgnoreCase);
+                bool alreadyUsed = ticket.CheckedInAt.HasValue || ticket.IsCheckedIn || string.Equals(ticket.Status, "Used", StringComparison.OrdinalIgnoreCase);
 
                 if (alreadyUsed)
                 {
@@ -260,12 +319,34 @@ namespace CheckinAPI.Services
             string conflictId,
             ResolveConflictRequestDTO request,
             int userId,
-            string userName)
+            string userName,
+            string callerRole = "Admin",
+            bool strictValidation = false)
         {
+            if (strictValidation)
+            {
+                if (!string.Equals(callerRole, "Admin", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(callerRole, "Organizer", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new UnauthorizedAccessException("Admin or Organizer role required to resolve conflicts");
+                }
+
+                var allowedActions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    "ACCEPT_OFFLINE", "KEEP_ONLINE", "MANUAL_OVERRIDE",
+                    "ACCEPT_EARLIER_REJECT_LATER", "ESCALATE_SECURITY", "REVOKE_BOTH"
+                };
+                if (string.IsNullOrWhiteSpace(request?.Decision) || !allowedActions.Contains(request.Decision))
+                    throw new ArgumentException("Invalid resolution action");
+
+                if (string.IsNullOrWhiteSpace(request.Notes))
+                    throw new ArgumentException("Resolution reason is required");
+            }
+
             var conflict = await _repository.GetOfflineConflictByIdAsync(conflictId);
             if (conflict == null)
             {
-                throw new KeyNotFoundException($"Conflict #{conflictId} not found.");
+                throw new KeyNotFoundException(strictValidation ? "Conflict record not found" : $"Conflict #{conflictId} not found.");
             }
 
             var now = DateTime.UtcNow;
@@ -297,6 +378,7 @@ namespace CheckinAPI.Services
                 DuplicateStaffName = conflict.DuplicateStaffName ?? "Staff #2",
                 DuplicateMethod = conflict.DuplicateMethod ?? "Offline Scan",
                 Status = "RESOLVED",
+                Resolution = request.Decision,
                 ResolutionNotes = request.Notes,
                 ResolvedByName = userName,
                 ResolvedAt = now

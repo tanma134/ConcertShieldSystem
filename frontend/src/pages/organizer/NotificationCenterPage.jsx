@@ -73,10 +73,6 @@ export default function NotificationCenterPage() {
         }
       });
   };
-        }
-      })
-      .catch(() => {});
-  };
 
   useEffect(() => {
     if (isAuthenticated) {

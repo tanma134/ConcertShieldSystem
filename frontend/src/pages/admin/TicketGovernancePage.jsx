@@ -54,6 +54,8 @@ export default function TicketGovernancePage() {
     fetchStats();
     fetchEvents();
     fetchReconciliations();
+    fetchRevocations();
+    fetchReissues();
   }, []);
 
   // Fetch when Tab 2 filters/page changes
@@ -295,6 +297,16 @@ export default function TicketGovernancePage() {
       }
     });
 
+    // 3.5. Events from reissue records
+    (reissues || []).forEach((ri) => {
+      if (ri.eventId) {
+        map.set(Number(ri.eventId), {
+          eventId: Number(ri.eventId),
+          title: ri.eventTitle || `Event ${ri.eventId}`,
+        });
+      }
+    });
+
     // 4. Known events on platform for comprehensive filtering
     const platformEvents = [
       { eventId: 1, title: "Anh Trai Say Hi - Mùa 1 Grand Finale (Cancelled)" },
@@ -311,7 +323,7 @@ export default function TicketGovernancePage() {
     });
 
     return Array.from(map.values()).sort((a, b) => a.eventId - b.eventId);
-  }, [events, reconciliations, revocations]);
+  }, [events, reconciliations, revocations, reissues]);
 
   return (
     <AdminShell title="Ticket Governance & Dynamic QR Revocation Auditing">

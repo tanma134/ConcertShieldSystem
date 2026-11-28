@@ -256,7 +256,7 @@ namespace TicketAPI.Repositories
             if (order == null)
                 throw new KeyNotFoundException("The ticket's order was not found.");
 
-            if (order.Status != "Paid")
+            if (!string.Equals(order.Status, "Paid", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException(
                     "Only tickets belonging to paid orders can be re-issued.");
 
@@ -271,10 +271,10 @@ namespace TicketAPI.Repositories
                     "A checked-in ticket cannot be re-issued.");
             }
 
-            var previousStatus = oldTicket.Status;
+            var previousStatus = oldTicket.Status ?? TicketStatuses.Active;
 
-            if (previousStatus != TicketStatuses.Active &&
-                previousStatus != TicketStatuses.Revoked)
+            if (!string.Equals(previousStatus, TicketStatuses.Active, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(previousStatus, TicketStatuses.Revoked, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException(
                     "Only Active or Revoked tickets can be re-issued.");
@@ -283,7 +283,8 @@ namespace TicketAPI.Repositories
             var alreadyReissued = await _context.StatusHistories
                 .AsNoTracking()
                 .AnyAsync(history =>
-                    history.TicketId == oldTicket.TicketId &&
+                    history.TargetType == "Ticket" &&
+                    history.TargetId == oldTicket.TicketId &&
                     history.Action == "TicketReissued" &&
                     history.NewStatus == TicketStatuses.Revoked);
 

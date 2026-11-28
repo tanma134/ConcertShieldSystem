@@ -34,13 +34,13 @@
 .policy-gov-header h1 {
   margin: 0;
   font-size: 1.6rem;
-  color: #3c3552;
+  color: #111827;
 }
 
 .policy-gov-header .subtitle {
   margin: 0.5rem 0 0;
   font-size: 0.92rem;
-  color: #6e6788;
+  color: #111827;
   max-width: 800px;
   line-height: 1.5;
 }
@@ -143,12 +143,13 @@
 
 /* Active Spotlight Card */
 .active-policy-spotlight {
-  background: linear-gradient(135deg, #d5d0e0 0%, #d8d3e8 100%);
+  background: linear-gradient(135deg, #f3e8ff 0%, #ede9fe 100%);
+  border: 1px solid #d8b4fe;
   border-radius: 12px;
   padding: 1.75rem 2rem;
-  color: white;
+  color: #111827;
   margin-bottom: 1.75rem;
-  box-shadow: 0 10px 25px -5px rgba(49, 46, 129, 0.3);
+  box-shadow: 0 10px 25px -5px rgba(49, 46, 129, 0.12);
 }
 
 .spotlight-badge-row {
@@ -160,8 +161,8 @@
 }
 
 .badge-active-version {
-  background: rgba(16, 185, 129, 0.25);
-  color: #3c7859;
+  background: rgba(16, 185, 129, 0.2);
+  color: #065f46;
   border: 1px solid #0e9e78;
   padding: 0.3rem 0.85rem;
   border-radius: 999px;
@@ -170,18 +171,20 @@
 }
 
 .badge-effective-date {
-  color: #484962;
+  color: #111827;
   font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .spotlight-title {
   font-size: 1.35rem;
   margin: 0 0 0.65rem 0;
   font-weight: 800;
+  color: #111827;
 }
 
 .spotlight-scope {
-  color: #3c3552;
+  color: #111827;
   font-size: 0.92rem;
   margin: 0 0 0.75rem 0;
 }
@@ -238,19 +241,19 @@
 .history-section-header h3 {
   margin: 0 0 0.35rem 0;
   font-size: 1.15rem;
-  color: #3c3552;
+  color: #111827;
 }
 
 .history-section-header p {
   margin: 0;
   font-size: 0.85rem;
-  color: #6e6788;
+  color: #111827;
 }
 
 .btn-refresh-history {
   background: #faf5ff;
   border: 1px solid #5f587a;
-  color: #60738f;
+  color: #111827;
   padding: 0.5rem 1rem;
   border-radius: 6px;
   font-weight: 600;
@@ -266,6 +269,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.88rem;
+  color: #111827;
 }
 
 .policy-table th,
@@ -273,11 +277,12 @@
   padding: 0.9rem 1rem;
   text-align: left;
   border-bottom: 1px solid #ece0f8;
+  color: #111827;
 }
 
 .policy-table th {
   background: #faf5ff;
-  color: #606e82;
+  color: #111827;
   font-weight: 700;
   font-size: 0.78rem;
   text-transform: uppercase;
@@ -291,14 +296,14 @@
   font-family: monospace;
   font-weight: 800;
   background: rgba(255, 45, 117, 0.15);
-  color: #3c3552;
+  color: #111827;
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
 }
 
 .sub-date {
   font-size: 0.75rem;
-  color: #6e6788;
+  color: #111827;
   margin-top: 0.25rem;
 }
 
@@ -309,7 +314,7 @@
 .scope-tag {
   display: inline-block;
   background: #f4eef9;
-  color: #606d80;
+  color: #111827;
   font-size: 0.78rem;
   font-weight: 600;
   padding: 0.2rem 0.55rem;
@@ -326,12 +331,12 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  color: #574f72;
+  color: #111827;
 }
 
 .admin-name {
   font-weight: 600;
-  color: #3c3552;
+  color: #111827;
 }
 
 .status-pill {
@@ -343,12 +348,12 @@
 
 .status-pill.active {
   background: #faf5ff;
-  color: #198147;
+  color: #15803d;
 }
 
 .status-pill.archived {
   background: #f4eef9;
-  color: #616c7c;
+  color: #111827;
 }
 
 .btn-action-read {
@@ -423,8 +428,8 @@
 .doc-ver-code {
   font-family: monospace;
   font-weight: 800;
-  background: #faf5ff;
-  color: white;
+  background: #e9d5ff;
+  color: #111827;
   padding: 0.2rem 0.6rem;
   border-radius: 4px;
   font-size: 0.8rem;
@@ -438,35 +443,36 @@
 }
 
 .doc-status-tag.active {
-  background: #faf5ff;
-  color: #1f8a50;
+  background: #dcfce7;
+  color: #15803d;
 }
 
 .doc-status-tag.archived {
   background: #f4eef9;
-  color: #616c7c;
+  color: #111827;
 }
 
 .doc-modal-header h2 {
   margin: 0 0 0.5rem 0;
   font-size: 1.35rem;
-  color: #3c3552;
+  color: #111827;
 }
 
 .doc-meta-row {
   display: flex;
   gap: 1.5rem;
   font-size: 0.85rem;
-  color: #6e6788;
+  color: #111827;
 }
 
 .btn-close-doc {
-  background: #faf5ff;
-  border: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  font-size: 1rem;
+  background: #f3e8ff;
+  color: #111827;
+  border: 1px solid #d8b4fe;
+  padding: 0.35rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -490,18 +496,18 @@
 
 .doc-summary-box h4 {
   margin: 0 0 0.5rem 0;
-  color: #1f8a50;
+  color: #111827;
 }
 
 .doc-summary-box p {
   margin: 0.25rem 0;
-  color: #14532d;
+  color: #111827;
 }
 
 .doc-full-content h3 {
   margin: 0 0 1rem 0;
   font-size: 1.1rem;
-  color: #1e1b2e;
+  color: #111827;
 }
 
 .content-rendered {
@@ -511,7 +517,7 @@
   padding: 1.5rem;
   line-height: 1.7;
   font-size: 0.92rem;
-  color: #3c3552;
+  color: #111827;
   white-space: pre-line;
 }
 
@@ -526,12 +532,12 @@
 
 .doc-hash-audit {
   font-size: 0.8rem;
-  color: #6e6788;
+  color: #111827;
 }
 
 .btn-done-read {
-  background: #faf5ff;
-  color: white;
+  background: #111827;
+  color: #ffffff;
   border: none;
   padding: 0.6rem 1.4rem;
   border-radius: 6px;
@@ -551,6 +557,7 @@
   flex-direction: column;
   box-shadow: 0 25px 50px -12px rgba(28,18,52,0.5);
   overflow: hidden;
+  color: #111827;
 }
 
 .policy-create-modal form {
@@ -574,13 +581,13 @@
 .create-modal-header h2 {
   margin: 0;
   font-size: 1.25rem;
-  color: #3c3552;
+  color: #111827;
 }
 
 .create-modal-header p {
   margin: 0.25rem 0 0;
   font-size: 0.85rem;
-  color: #6e6788;
+  color: #111827;
 }
 
 .create-modal-body {
@@ -598,7 +605,7 @@
   display: block;
   font-weight: 700;
   font-size: 0.85rem;
-  color: #4f4e5f;
+  color: #111827;
   margin-bottom: 0.4rem;
 }
 
@@ -662,7 +669,7 @@
 
 .create-note {
   font-size: 0.78rem;
-  color: #6e6788;
+  color: #111827;
   max-width: 450px;
 }
 
@@ -674,7 +681,7 @@
 .btn-modal-cancel {
   background: #f4eef9;
   border: 1px solid #5f587a;
-  color: #606d80;
+  color: #111827;
   padding: 0.6rem 1.1rem;
   border-radius: 6px;
   font-weight: 700;

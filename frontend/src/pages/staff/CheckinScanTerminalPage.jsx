@@ -271,7 +271,6 @@ export default function CheckinScanTerminalPage() {
                 <thead>
                   <tr style={{ borderBottom: "2px solid #4a4458", textAlign: "left", color: "#655d7e" }}>
                     <th style={{ padding: "8px 12px" }}>Time</th>
-                    <th style={{ padding: "8px 12px" }}>Ticket Code</th>
                     <th style={{ padding: "8px 12px" }}>Gate</th>
                     <th style={{ padding: "8px 12px" }}>Type</th>
                     <th style={{ padding: "8px 12px" }}>Result</th>
@@ -282,7 +281,6 @@ export default function CheckinScanTerminalPage() {
                   {recentScans.map((s, idx) => (
                     <tr key={idx} style={{ borderBottom: "1px solid #eee9f5" }}>
                       <td style={{ padding: "8px 12px" }}>{s.time}</td>
-                      <td style={{ padding: "8px 12px", fontFamily: "monospace" }}>{s.code}</td>
                       <td style={{ padding: "8px 12px" }}>{s.gate}</td>
                       <td style={{ padding: "8px 12px" }}>
                         <span

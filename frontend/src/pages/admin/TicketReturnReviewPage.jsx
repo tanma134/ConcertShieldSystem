@@ -761,13 +761,12 @@ export default function TicketReturnReviewPage() {
   if (isAdmin) {
     return <AdminShell title="Ticket Returns / Refunds"><ReturnQueue isAdmin currentUserId={currentUserId} /></AdminShell>;
   }
-  if (isStaff) {
+    if (isStaff) {
     return (
-      <StaffShell title="Return Requests">
+      <StaffShell title="Process Full/Partial Refund — Return Requests">
         <ReturnQueue isAdmin={false} currentUserId={currentUserId} />
       </StaffShell>
     );
   }
   return <div className="tb-empty" style={{ margin: 40 }}>Only Staff or Admin can review ticket returns.</div>;
 }
-

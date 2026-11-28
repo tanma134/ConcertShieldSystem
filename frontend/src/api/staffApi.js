@@ -19,7 +19,7 @@ const staffApi = {
     axiosClient.get(`/events/${eventId}/staff/candidates`, { params: q ? { q } : {} }),
 
   // UC_14.4: assign a Staff account to the event with permissions and shift.
-  assign: (eventId, staffUserId, gateName, canReviewReturns = false, shiftStartTime = null, shiftEndTime = null, shiftDate = null, canManageIncidents = false, canManageSupportCases = false, canCheckin = true) =>
+  assign: (eventId, staffUserId, gateName, canReviewReturns = false, shiftStartTime = null, shiftEndTime = null, shiftDate = null, canManageIncidents = false, canManageSupportCases = false, canCheckin = true, shiftEndDate = null) =>
     axiosClient.post(`/events/${eventId}/staff`, {
       staffUserId,
       gateName,
@@ -27,14 +27,15 @@ const staffApi = {
       shiftStartTime,
       shiftEndTime,
       shiftDate,
+      shiftEndDate,
       canManageIncidents,
       canManageSupportCases,
       canCheckin,
     }),
 
   // Update gate and shift hours of an assigned staff member
-  updateShift: (eventId, staffUserId, { gateName, shiftStartTime, shiftEndTime, shiftDate }) =>
-    axiosClient.put(`/events/${eventId}/staff/${staffUserId}/shift`, { gateName, shiftStartTime, shiftEndTime, shiftDate }),
+  updateShift: (eventId, staffUserId, { gateName, shiftStartTime, shiftEndTime, shiftDate, shiftEndDate }) =>
+    axiosClient.put(`/events/${eventId}/staff/${staffUserId}/shift`, { gateName, shiftStartTime, shiftEndTime, shiftDate, shiftEndDate }),
 
   setReturnReview: (eventId, staffUserId, canReviewReturns) =>
     axiosClient.put(`/events/${eventId}/staff/${staffUserId}/return-review`, { canReviewReturns }),

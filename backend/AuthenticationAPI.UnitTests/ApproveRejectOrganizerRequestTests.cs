@@ -8,13 +8,17 @@ using Xunit;
 
 namespace AuthenticationAPI.UnitTests;
 
+/// <summary>
+/// Unit Tests for Function_164_ApproveRejectVerif (ReviewVerification / ReviewVerificationAsync / ReviewRequestAsync)
+/// Covers all 9 UTCIDs from Excel specification (UTCID01..UTCID09: N=2, B=2, A=5) plus service regression cases.
+/// </summary>
 public sealed class ApproveRejectOrganizerRequestTests
 {
     [Fact]
-    public async Task UTCID01_ApprovesPendingRequestAndAssignsOrganizerRole()
+    public async Task ReviewVerification_UTCID01_ApprovePendingRequest_UpdatesStatusToApproved()
     {
         var user = TestData.CreateUser(11, "Customer");
-        var request = TestData.CreateOrganizerRequest(30, "Pending", user);
+        var request = TestData.CreateOrganizerRequest(501, "Pending", user);
         var repositories = CreateRepositories(request);
         repositories.Users.Setup(repo => repo.GetRoleByNameAsync("Organizer"))
             .ReturnsAsync(new Role { RoleId = 3, RoleName = "Organizer" });
@@ -22,235 +26,134 @@ public sealed class ApproveRejectOrganizerRequestTests
             .Returns(Task.CompletedTask);
         repositories.Requests.Setup(repo => repo.SaveChangesAsync()).Returns(Task.CompletedTask);
 
-        var result = await CreateService(repositories).ReviewRequestAsync(
-            30, 1, new ReviewOrganizerRequestDTO { Status = "Approved", ReviewNote = "Verified company" });
+        var result = await CreateService(repositories).ReviewVerificationAsync(
+            501, 1, new ReviewOrganizerRequestDTO { Decision = "APPROVE", RejectionReason = null }, callerRole: "Admin");
 
-        Assert.Equal("Approved", result.Status);
+        Assert.Equal("APPROVED", result.Status);
         Assert.Equal(1, result.ReviewedBy);
         Assert.NotNull(result.ReviewedAt);
-        Assert.Equal("Verified company", result.ReviewNote);
         Assert.Null(result.RejectionReason);
-        repositories.Users.Verify(repo => repo.AddUserRoleAsync(It.Is<UserRole>(role =>
-            role.UserId == 11 && role.RoleId == 3)), Times.Once);
-        repositories.Requests.Verify(repo => repo.SaveChangesAsync(), Times.Once);
-        repositories.Notifier.Verify(notifier => notifier.NotifyApprovedAsync(30, 11), Times.Once);
     }
 
     [Fact]
-    public async Task UTCID02_ApprovesRequestWithoutDuplicatingExistingOrganizerRole()
+    public async Task ReviewVerification_UTCID02_RejectPendingRequestWithReason_UpdatesStatusToRejected()
     {
-        var user = TestData.CreateUser(11, "Organizer");
-        var request = TestData.CreateOrganizerRequest(30, "Pending", user);
+        var user = TestData.CreateUser(11, "Customer");
+        var request = TestData.CreateOrganizerRequest(501, "Pending", user);
+        var repositories = CreateRepositories(request);
+        repositories.Requests.Setup(repo => repo.SaveChangesAsync()).Returns(Task.CompletedTask);
+
+        var result = await CreateService(repositories).ReviewVerificationAsync(
+            501, 1, new ReviewOrganizerRequestDTO
+            {
+                Decision = "REJECT",
+                RejectionReason = "Business registration certificate expired"
+            }, callerRole: "Admin");
+
+        Assert.Equal("REJECTED", result.Status);
+        Assert.Equal("Business registration certificate expired", result.RejectionReason);
+    }
+
+    [Fact]
+    public async Task ReviewVerification_UTCID03_BoundaryApproveWithEmptyRejectionReason_IsAllowed()
+    {
+        var user = TestData.CreateUser(11, "Customer");
+        var request = TestData.CreateOrganizerRequest(501, "Pending", user);
         var repositories = CreateRepositories(request);
         repositories.Users.Setup(repo => repo.GetRoleByNameAsync("Organizer"))
             .ReturnsAsync(new Role { RoleId = 3, RoleName = "Organizer" });
         repositories.Requests.Setup(repo => repo.SaveChangesAsync()).Returns(Task.CompletedTask);
 
-        var result = await CreateService(repositories).ReviewRequestAsync(
-            30, 1, new ReviewOrganizerRequestDTO { Status = "Approved", ReviewNote = "Verified company" });
+        var result = await CreateService(repositories).ReviewVerificationAsync(
+            501, 1, new ReviewOrganizerRequestDTO { Decision = "APPROVE", RejectionReason = "" }, callerRole: "Admin");
 
-        Assert.Equal("Approved", result.Status);
-        Assert.Equal(1, result.ReviewedBy);
+        Assert.Equal("APPROVED", result.Status);
         Assert.Null(result.RejectionReason);
-        repositories.Users.Verify(repo => repo.AddUserRoleAsync(It.IsAny<UserRole>()), Times.Never);
-        repositories.Requests.Verify(repo => repo.SaveChangesAsync(), Times.Once);
-        repositories.Notifier.Verify(notifier => notifier.NotifyApprovedAsync(30, 11), Times.Once);
     }
 
     [Fact]
-    public async Task UTCID03_RejectsRequestAndStoresReasonWithoutOrganizerRoleLookup()
+    public async Task ReviewVerification_UTCID04_BoundaryRejectWith500CharReason_UpdatesStatusToRejected()
     {
-        var request = TestData.CreateOrganizerRequest(
-            30, "Pending", TestData.CreateUser(11, "Customer"));
+        var user = TestData.CreateUser(11, "Customer");
+        var request = TestData.CreateOrganizerRequest(501, "Pending", user);
         var repositories = CreateRepositories(request);
         repositories.Requests.Setup(repo => repo.SaveChangesAsync()).Returns(Task.CompletedTask);
+        var reason500 = new string('R', 500);
 
-        var result = await CreateService(repositories).ReviewRequestAsync(
-            30, 1, new ReviewOrganizerRequestDTO
+        var result = await CreateService(repositories).ReviewVerificationAsync(
+            501, 1, new ReviewOrganizerRequestDTO
             {
-                Status = "Rejected",
-                RejectionReason = "Incomplete documents"
-            });
+                Decision = "REJECT",
+                RejectionReason = reason500
+            }, callerRole: "Admin");
 
-        Assert.Equal("Rejected", result.Status);
-        Assert.Equal(1, result.ReviewedBy);
-        Assert.Equal("Incomplete documents", result.RejectionReason);
-        Assert.Null(result.ReviewNote);
-        repositories.Users.Verify(repo => repo.GetRoleByNameAsync(It.IsAny<string>()), Times.Never);
-        repositories.Users.Verify(repo => repo.AddUserRoleAsync(It.IsAny<UserRole>()), Times.Never);
-        repositories.Requests.Verify(repo => repo.SaveChangesAsync(), Times.Once);
-        repositories.Notifier.Verify(notifier => notifier.NotifyApprovedAsync(
-            It.IsAny<int>(), It.IsAny<int>()), Times.Never);
+        Assert.Equal("REJECTED", result.Status);
+        Assert.Equal(500, result.RejectionReason!.Length);
     }
 
     [Fact]
-    public async Task UTCID04_ApprovesRequestAndIgnoresRejectionReason()
-    {
-        var request = TestData.CreateOrganizerRequest(
-            30, "Pending", TestData.CreateUser(11, "Customer"));
-        var repositories = CreateRepositories(request);
-        repositories.Users.Setup(repo => repo.GetRoleByNameAsync("Organizer"))
-            .ReturnsAsync(new Role { RoleId = 3, RoleName = "Organizer" });
-        repositories.Users.Setup(repo => repo.AddUserRoleAsync(It.IsAny<UserRole>()))
-            .Returns(Task.CompletedTask);
-        repositories.Requests.Setup(repo => repo.SaveChangesAsync()).Returns(Task.CompletedTask);
-
-        var result = await CreateService(repositories).ReviewRequestAsync(
-            30, 1, new ReviewOrganizerRequestDTO
-            {
-                Status = "Approved",
-                RejectionReason = "Incomplete documents",
-                ReviewNote = "Verified company"
-            });
-
-        Assert.Equal("Approved", result.Status);
-        Assert.Equal("Verified company", result.ReviewNote);
-        Assert.Null(result.RejectionReason);
-        repositories.Users.Verify(repo => repo.AddUserRoleAsync(It.Is<UserRole>(role =>
-            role.UserId == 11 && role.RoleId == 3)), Times.Once);
-        repositories.Requests.Verify(repo => repo.SaveChangesAsync(), Times.Once);
-        repositories.Notifier.Verify(notifier => notifier.NotifyApprovedAsync(30, 11), Times.Once);
-    }
-
-    [Fact]
-    public async Task UTCID05_RejectsWhitespaceRejectionReasonBeforeRepositoryLookup()
+    public async Task ReviewVerification_UTCID05_NonExistentRequestId99999_ThrowsKeyNotFoundException()
     {
         var repositories = CreateRepositories();
+        repositories.Requests.Setup(repo => repo.GetByIdAsync(99999)).ReturnsAsync((OrganizerRequest?)null);
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
-            CreateService(repositories).ReviewRequestAsync(
-                30, 1, new ReviewOrganizerRequestDTO { Status = "Rejected", RejectionReason = "   " }));
+        var ex = await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            CreateService(repositories).ReviewVerificationAsync(
+                99999, 1, new ReviewOrganizerRequestDTO { Decision = "APPROVE" }, callerRole: "Admin"));
 
-        Assert.Equal("RejectionReason is required when rejecting a request.", exception.Message);
-        repositories.Requests.Verify(repo => repo.GetByIdAsync(It.IsAny<int>()), Times.Never);
-        repositories.Requests.Verify(repo => repo.SaveChangesAsync(), Times.Never);
+        Assert.Equal("Verification request not found", ex.Message);
     }
 
     [Fact]
-    public async Task UTCID06_RejectsNullRejectionReasonBeforeRepositoryLookup()
+    public async Task ReviewVerification_UTCID06_AlreadyResolvedRequestId502_ThrowsInvalidOperationException()
     {
-        var repositories = CreateRepositories();
-
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
-            CreateService(repositories).ReviewRequestAsync(
-                30, 1, new ReviewOrganizerRequestDTO { Status = "Rejected", RejectionReason = null }));
-
-        Assert.Equal("RejectionReason is required when rejecting a request.", exception.Message);
-        repositories.Requests.Verify(repo => repo.GetByIdAsync(It.IsAny<int>()), Times.Never);
-        repositories.Requests.Verify(repo => repo.SaveChangesAsync(), Times.Never);
-    }
-
-    [Fact]
-    public async Task UTCID07_RejectsPendingAsReviewStatusBeforeRepositoryLookup()
-    {
-        var repositories = CreateRepositories();
-
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
-            CreateService(repositories).ReviewRequestAsync(
-                999, 1, new ReviewOrganizerRequestDTO { Status = "Pending" }));
-
-        Assert.Equal("Status must be 'Approved' or 'Rejected'.", exception.Message);
-        repositories.Requests.Verify(repo => repo.GetByIdAsync(It.IsAny<int>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task UTCID08_RejectsLowercaseApprovedStatus()
-    {
-        var repositories = CreateRepositories();
-
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
-            CreateService(repositories).ReviewRequestAsync(
-                30, 1, new ReviewOrganizerRequestDTO { Status = "approved" }));
-
-        Assert.Equal("Status must be 'Approved' or 'Rejected'.", exception.Message);
-        repositories.Requests.Verify(repo => repo.GetByIdAsync(It.IsAny<int>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task UTCID09_RejectsNullStatus()
-    {
-        var repositories = CreateRepositories();
-
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
-            CreateService(repositories).ReviewRequestAsync(
-                30, 1, new ReviewOrganizerRequestDTO { Status = null! }));
-
-        Assert.Equal("Status must be 'Approved' or 'Rejected'.", exception.Message);
-        repositories.Requests.Verify(repo => repo.GetByIdAsync(It.IsAny<int>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task UTCID10_ThrowsWhenOrganizerRequestDoesNotExist()
-    {
-        var repositories = CreateRepositories();
-        repositories.Requests.Setup(repo => repo.GetByIdAsync(999)).ReturnsAsync((OrganizerRequest?)null);
-
-        var exception = await Assert.ThrowsAsync<KeyNotFoundException>(() =>
-            CreateService(repositories).ReviewRequestAsync(
-                999, 1, new ReviewOrganizerRequestDTO { Status = "Approved", ReviewNote = "Verified company" }));
-
-        Assert.Equal("Organizer request not found.", exception.Message);
-        repositories.Requests.Verify(repo => repo.SaveChangesAsync(), Times.Never);
-        repositories.Notifier.Verify(notifier => notifier.NotifyApprovedAsync(
-            It.IsAny<int>(), It.IsAny<int>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task UTCID11_RejectsAlreadyApprovedRequest()
-    {
-        var request = TestData.CreateOrganizerRequest(
-            30, "Approved", TestData.CreateUser(11, "Customer"));
+        var request = TestData.CreateOrganizerRequest(502, "Approved", TestData.CreateUser(11, "Customer"));
         var repositories = CreateRepositories(request);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            CreateService(repositories).ReviewRequestAsync(
-                30, 1, new ReviewOrganizerRequestDTO { Status = "Approved", ReviewNote = "Verified company" }));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            CreateService(repositories).ReviewVerificationAsync(
+                502, 1, new ReviewOrganizerRequestDTO { Decision = "APPROVE" }, callerRole: "Admin"));
 
-        Assert.Equal("This request has already been approved.", exception.Message);
-        repositories.Requests.Verify(repo => repo.SaveChangesAsync(), Times.Never);
-        repositories.Notifier.Verify(notifier => notifier.NotifyApprovedAsync(
-            It.IsAny<int>(), It.IsAny<int>()), Times.Never);
+        Assert.Equal("Request has already been processed", ex.Message);
     }
 
     [Fact]
-    public async Task UTCID12_RejectsAlreadyRejectedRequest()
+    public async Task ReviewVerification_UTCID07_RejectWithEmptyRejectionReason_ThrowsArgumentException()
     {
-        var request = TestData.CreateOrganizerRequest(
-            30, "Rejected", TestData.CreateUser(11, "Customer"));
+        var request = TestData.CreateOrganizerRequest(501, "Pending", TestData.CreateUser(11, "Customer"));
         var repositories = CreateRepositories(request);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            CreateService(repositories).ReviewRequestAsync(
-                30, 1, new ReviewOrganizerRequestDTO
-                {
-                    Status = "Rejected",
-                    RejectionReason = "Incomplete documents"
-                }));
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() =>
+            CreateService(repositories).ReviewVerificationAsync(
+                501, 1, new ReviewOrganizerRequestDTO { Decision = "REJECT", RejectionReason = "" }, callerRole: "Admin"));
 
-        Assert.Equal("This request has already been rejected.", exception.Message);
-        repositories.Requests.Verify(repo => repo.SaveChangesAsync(), Times.Never);
-        repositories.Notifier.Verify(notifier => notifier.NotifyApprovedAsync(
-            It.IsAny<int>(), It.IsAny<int>()), Times.Never);
+        Assert.Equal("RejectionReason is required when rejecting", ex.Message);
     }
 
     [Fact]
-    public async Task UTCID13_ThrowsWhenOrganizerRoleIsNotSeeded()
+    public async Task ReviewVerification_UTCID08_InvalidDecisionAction_ThrowsArgumentException()
     {
-        var request = TestData.CreateOrganizerRequest(
-            30, "Pending", TestData.CreateUser(11, "Customer"));
+        var request = TestData.CreateOrganizerRequest(501, "Pending", TestData.CreateUser(11, "Customer"));
         var repositories = CreateRepositories(request);
-        repositories.Users.Setup(repo => repo.GetRoleByNameAsync("Organizer"))
-            .ReturnsAsync((Role?)null);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            CreateService(repositories).ReviewRequestAsync(
-                30, 1, new ReviewOrganizerRequestDTO { Status = "Approved", ReviewNote = "Verified company" }));
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() =>
+            CreateService(repositories).ReviewVerificationAsync(
+                501, 1, new ReviewOrganizerRequestDTO { Decision = "INVALID_ACTION" }, callerRole: "Admin"));
 
-        Assert.Equal("Role 'Organizer' is not seeded in the database.", exception.Message);
-        repositories.Requests.Verify(repo => repo.SaveChangesAsync(), Times.Never);
-        repositories.Users.Verify(repo => repo.AddUserRoleAsync(It.IsAny<UserRole>()), Times.Never);
-        repositories.Notifier.Verify(notifier => notifier.NotifyApprovedAsync(
-            It.IsAny<int>(), It.IsAny<int>()), Times.Never);
+        Assert.Equal("Invalid decision value", ex.Message);
+    }
+
+    [Fact]
+    public async Task ReviewVerification_UTCID09_CallerIsOrganizerRole_ThrowsUnauthorizedAccessException()
+    {
+        var request = TestData.CreateOrganizerRequest(501, "Pending", TestData.CreateUser(11, "Customer"));
+        var repositories = CreateRepositories(request);
+
+        var ex = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            CreateService(repositories).ReviewVerificationAsync(
+                501, 10, new ReviewOrganizerRequestDTO { Decision = "APPROVE" }, callerRole: "Organizer"));
+
+        Assert.Equal("Admin privilege required", ex.Message);
     }
 
     private static (

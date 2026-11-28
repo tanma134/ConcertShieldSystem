@@ -28,8 +28,23 @@ namespace NotificationAPI.Controllers
             var value = User.FindFirstValue(ClaimTypes.NameIdentifier) 
                      ?? User.FindFirstValue("sub")
                      ?? User.FindFirstValue("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")
-                     ?? User.FindFirstValue("userId");
+                     ?? User.FindFirstValue("userId")
+                     ?? User.FindFirstValue("id");
             return int.TryParse(value, out var id) ? id : null;
+        }
+
+        private int GetEffectiveUserId(int? fallbackUserId = null)
+        {
+            var claimId = GetCurrentUserId();
+            if (claimId.HasValue && claimId.Value > 0)
+            {
+                return claimId.Value;
+            }
+            if (fallbackUserId.HasValue && fallbackUserId.Value > 0)
+            {
+                return fallbackUserId.Value;
+            }
+            return 0;
         }
 
         /// <summary>
@@ -37,12 +52,12 @@ namespace NotificationAPI.Controllers
         /// If user is authenticated, returns their notifications + broadcast. If not, returns broadcast (UserId = 0).
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetNotifications()
+        public async Task<IActionResult> GetNotifications([FromQuery] int? userId = null)
         {
             try
             {
-                var userId = GetCurrentUserId() ?? 0;
-                var result = await _notificationService.GetUserNotificationsAsync(userId);
+                var effectiveUserId = GetEffectiveUserId(userId);
+                var result = await _notificationService.GetUserNotificationsAsync(effectiveUserId);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -57,17 +72,12 @@ namespace NotificationAPI.Controllers
         /// </summary>
         [HttpPut("{id}/read")]
         [Authorize]
-        public async Task<IActionResult> MarkAsRead(int id)
+        public async Task<IActionResult> MarkAsRead(int id, [FromQuery] int? userId = null)
         {
             try
             {
-                var userId = GetCurrentUserId();
-                if (userId == null)
-                {
-                    return Unauthorized(new { message = "Missing, invalid, or expired Access Token." });
-                }
-
-                var unreadCount = await _notificationService.MarkAsReadAsync(id, userId.Value);
+                var effectiveUserId = GetEffectiveUserId(userId);
+                var unreadCount = await _notificationService.MarkAsReadAsync(id, effectiveUserId);
                 return Ok(new { success = true, unreadCount });
             }
             catch (KeyNotFoundException ex)
@@ -76,7 +86,7 @@ namespace NotificationAPI.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                _logger.LogWarning("Unauthorized notification access attempt by user {UserId} on notification {Id}", GetCurrentUserId(), id);
+                _logger.LogWarning("Unauthorized notification access attempt by user {UserId} on notification {Id}", GetEffectiveUserId(userId), id);
                 return StatusCode(403, new { message = ex.Message });
             }
             catch (Exception ex)
@@ -91,17 +101,12 @@ namespace NotificationAPI.Controllers
         /// </summary>
         [HttpPut("read-all")]
         [Authorize]
-        public async Task<IActionResult> MarkAllAsRead()
+        public async Task<IActionResult> MarkAllAsRead([FromQuery] int? userId = null)
         {
             try
             {
-                var userId = GetCurrentUserId();
-                if (userId == null)
-                {
-                    return Unauthorized(new { message = "Missing, invalid, or expired Access Token." });
-                }
-
-                var unreadCount = await _notificationService.MarkAllAsReadAsync(userId.Value);
+                var effectiveUserId = GetEffectiveUserId(userId);
+                var unreadCount = await _notificationService.MarkAllAsReadAsync(effectiveUserId);
                 return Ok(new { success = true, unreadCount });
             }
             catch (Exception ex)
@@ -116,17 +121,12 @@ namespace NotificationAPI.Controllers
         /// </summary>
         [HttpDelete("{id}")]
         [Authorize]
-        public async Task<IActionResult> DeleteNotification(int id)
+        public async Task<IActionResult> DeleteNotification(int id, [FromQuery] int? userId = null)
         {
             try
             {
-                var userId = GetCurrentUserId();
-                if (userId == null)
-                {
-                    return Unauthorized(new { message = "Missing, invalid, or expired Access Token." });
-                }
-
-                var unreadCount = await _notificationService.DeleteNotificationAsync(id, userId.Value);
+                var effectiveUserId = GetEffectiveUserId(userId);
+                var unreadCount = await _notificationService.DeleteNotificationAsync(id, effectiveUserId);
                 return Ok(new { message = "Delete asset(s) successfully.", unreadCount });
             }
             catch (KeyNotFoundException ex)

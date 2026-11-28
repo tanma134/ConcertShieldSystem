@@ -20,6 +20,7 @@ namespace AuthenticationAPI.Repositories
         {
             return await _context.OrganizerRequests
                 .Include(r => r.User)
+                    .ThenInclude(u => u.UserRoles)
                 .Include(r => r.ReviewedByNavigation)
                 .Include(r => r.Documents)
                 .FirstOrDefaultAsync(r => r.RequestId == requestId && !r.IsDeleted);

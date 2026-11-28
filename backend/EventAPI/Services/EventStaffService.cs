@@ -64,7 +64,7 @@ namespace EventAPI.Services
         public async Task<EventStaffDTO> AssignAsync(
             int eventId, int staffUserId, string? gateName, int callerId, bool isAdmin, string? bearer,
             bool canReviewReturns = false, string? shiftStartTime = null, string? shiftEndTime = null, string? shiftDate = null,
-            bool canManageIncidents = false, bool canManageSupportCases = false, bool canCheckin = true)
+            bool canManageIncidents = false, bool canManageSupportCases = false, bool canCheckin = true, string? shiftEndDate = null)
         {
             if (staffUserId <= 0)
                 throw new ArgumentException("Please choose a staff member.");
@@ -77,33 +77,6 @@ namespace EventAPI.Services
             if (!canCheckin && !canReviewReturns && !canManageIncidents && !canManageSupportCases)
             {
                 throw new ArgumentException("Please assign at least one duty (Check-in, Return Review, Incidents, or Support Desk).");
-            }
-
-            // Timeline validation: ensure shift falls within event timeframe
-            if (canCheckin && !string.IsNullOrWhiteSpace(shiftStartTime) && !string.IsNullOrWhiteSpace(shiftEndTime))
-            {
-                DateTime? startDt = null;
-                DateTime? endDt = null;
-
-                if (DateTime.TryParse(shiftStartTime, out var parsedStart)) startDt = parsedStart;
-                if (DateTime.TryParse(shiftEndTime, out var parsedEnd)) endDt = parsedEnd;
-
-                if (!startDt.HasValue && !string.IsNullOrWhiteSpace(shiftDate) && TimeSpan.TryParse(shiftStartTime, out var sTime))
-                {
-                    if (DateTime.TryParse(shiftDate, out var bDate)) startDt = bDate.Date.Add(sTime);
-                }
-                if (!endDt.HasValue && !string.IsNullOrWhiteSpace(shiftDate) && TimeSpan.TryParse(shiftEndTime, out var eTime))
-                {
-                    if (DateTime.TryParse(shiftDate, out var bDate)) endDt = bDate.Date.Add(eTime);
-                }
-
-                if (startDt.HasValue && endDt.HasValue)
-                {
-                    if (endDt.Value <= startDt.Value)
-                    {
-                        throw new ArgumentException("Shift end time must be after shift start time.");
-                    }
-                }
             }
 
             var person = (await _directory.GetByIdsAsync(new[] { staffUserId }, bearer)).FirstOrDefault()
@@ -123,12 +96,23 @@ namespace EventAPI.Services
                 parsedShiftDate = DateOnly.FromDateTime(ev.StartsAt);
             }
 
+            DateOnly? parsedShiftEndDate = null;
+            if (!string.IsNullOrWhiteSpace(shiftEndDate) && DateOnly.TryParse(shiftEndDate, out var seDate))
+            {
+                parsedShiftEndDate = seDate;
+            }
+            else
+            {
+                parsedShiftEndDate = parsedShiftDate;
+            }
+
             var row = new EventStaff
             {
                 EventId = eventId,
                 StaffUserId = staffUserId,
                 GateName = string.IsNullOrWhiteSpace(gateName) ? "Main Gate" : gateName.Trim(),
                 ShiftDate = parsedShiftDate,
+                ShiftEndDate = parsedShiftEndDate,
                 ShiftStartTime = string.IsNullOrWhiteSpace(shiftStartTime) ? null : shiftStartTime.Trim(),
                 ShiftEndTime = string.IsNullOrWhiteSpace(shiftEndTime) ? null : shiftEndTime.Trim(),
                 AssignedBy = callerId,
@@ -161,34 +145,12 @@ namespace EventAPI.Services
 
         // Updates gate and shift time of an assigned staff member.
         public async Task<EventStaffDTO> UpdateShiftAsync(
-            int eventId, int staffUserId, string? gateName, string? shiftStartTime, string? shiftEndTime, int callerId, bool isAdmin, string? bearer, string? shiftDate = null)
+            int eventId, int staffUserId, string? gateName, string? shiftStartTime, string? shiftEndTime, int callerId, bool isAdmin, string? bearer, string? shiftDate = null, string? shiftEndDate = null)
         {
             await EnsureOwnerAsync(eventId, callerId, isAdmin);
 
             var row = await _staffRepository.GetActiveAssignmentAsync(eventId, staffUserId)
                 ?? throw new KeyNotFoundException("This staff member is not assigned to the concert.");
-
-            if (!string.IsNullOrWhiteSpace(shiftStartTime) && !string.IsNullOrWhiteSpace(shiftEndTime))
-            {
-                var ev = await _events.GetByIdAsync(eventId);
-                if (ev != null)
-                {
-                    var targetDate = !string.IsNullOrWhiteSpace(shiftDate) && DateOnly.TryParse(shiftDate, out var sD)
-                        ? sD
-                        : (row.ShiftDate ?? DateOnly.FromDateTime(ev.StartsAt));
-
-                    if (TimeSpan.TryParse(shiftStartTime, out var sTime) && TimeSpan.TryParse(shiftEndTime, out var eTime))
-                    {
-                        var startDt = targetDate.ToDateTime(TimeOnly.FromTimeSpan(sTime), DateTimeKind.Utc);
-                        var endDt = targetDate.ToDateTime(TimeOnly.FromTimeSpan(eTime), DateTimeKind.Utc);
-
-                        if (endDt <= startDt)
-                        {
-                            throw new ArgumentException("Shift end time must be after shift start time.");
-                        }
-                    }
-                }
-            }
 
             if (!string.IsNullOrWhiteSpace(gateName)) row.GateName = gateName.Trim();
             if (shiftStartTime != null) row.ShiftStartTime = string.IsNullOrWhiteSpace(shiftStartTime) ? null : shiftStartTime.Trim();
@@ -196,6 +158,14 @@ namespace EventAPI.Services
             if (!string.IsNullOrWhiteSpace(shiftDate) && DateOnly.TryParse(shiftDate, out var sDate))
             {
                 row.ShiftDate = sDate;
+            }
+            if (!string.IsNullOrWhiteSpace(shiftEndDate) && DateOnly.TryParse(shiftEndDate, out var seDate))
+            {
+                row.ShiftEndDate = seDate;
+            }
+            else if (!string.IsNullOrWhiteSpace(shiftDate))
+            {
+                row.ShiftEndDate = row.ShiftEndDate ?? row.ShiftDate;
             }
 
             await _staffRepository.SaveChangesAsync();
@@ -296,6 +266,7 @@ namespace EventAPI.Services
                 var row = await _staffRepository.GetActiveAssignmentAsync(assignment.EventId, staffUserId);
                 if (row == null) continue;
                 assignment.ShiftDate = (row.ShiftDate ?? DateOnly.FromDateTime(assignment.StartsAt)).ToString("yyyy-MM-dd");
+                assignment.ShiftEndDate = (row.ShiftEndDate ?? row.ShiftDate ?? DateOnly.FromDateTime(assignment.EndsAt)).ToString("yyyy-MM-dd");
                 assignment.ShiftStartTime = row.ShiftStartTime;
                 assignment.ShiftEndTime = row.ShiftEndTime;
                 assignment.CanCheckin = row.CanCheckin;
@@ -344,6 +315,7 @@ namespace EventAPI.Services
                 Email = person?.Email ?? string.Empty,
                 GateName = row.GateName,
                 ShiftDate = row.ShiftDate.HasValue ? row.ShiftDate.Value.ToString("yyyy-MM-dd") : null,
+                ShiftEndDate = row.ShiftEndDate.HasValue ? row.ShiftEndDate.Value.ToString("yyyy-MM-dd") : null,
                 ShiftStartTime = row.ShiftStartTime,
                 ShiftEndTime = row.ShiftEndTime,
                 CanCheckin = row.CanCheckin,

@@ -550,25 +550,25 @@ export default function RequestOrganizerPage() {
               {/* PAYOUT & BANK ACCOUNT INFORMATION */}
               <div
                 style={{
-                  background: "rgba(139, 92, 246, 0.08)",
-                  border: "1px solid rgba(139, 92, 246, 0.25)",
+                  background: "#f3e8ff",
+                  border: "1px solid #c084fc",
                   borderRadius: "10px",
                   padding: "16px",
                   margin: "24px 0 16px 0",
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", marginBottom: "6px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "700", color: "#c4b5fd" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "700", color: "#111827" }}>
                     Payment & Bank Account Information (Ticket Payout)
                   </div>
                   {pricingPolicy?.versionCode && (
-                    <span style={{ fontSize: "11px", color: "#a78bfa", background: "rgba(139, 92, 246, 0.2)", padding: "2px 8px", borderRadius: "999px", fontWeight: "600" }}>
+                    <span style={{ fontSize: "11px", color: "#111827", background: "#e9d5ff", padding: "2px 8px", borderRadius: "999px", fontWeight: "700" }}>
                       Policy {pricingPolicy.versionCode}
                     </span>
                   )}
                 </div>
-                <p style={{ margin: 0, fontSize: "13px", color: "#d1d5db", lineHeight: "1.5" }}>
-                  ConcertShield will transfer ticket sales revenue directly to your registered bank account. Net sales (after deducting the platform service fee of <strong>{pricingPolicy?.platformFeePercent ?? 5}%</strong>) will be deposited within <strong>{pricingPolicy?.payoutDays ?? 7} business days</strong> after the post-event sales report is finalized. If you need expedited disbursement, please contact our support team at <a href="mailto:support@concertshield.com" style={{ color: "#ec4899", textDecoration: "underline" }}>support@concertshield.com</a>.
+                <p style={{ margin: 0, fontSize: "13px", color: "#111827", lineHeight: "1.5" }}>
+                  ConcertShield will transfer ticket sales revenue directly to your registered bank account. Net sales (after deducting the platform service fee of <strong>{pricingPolicy?.platformFeePercent ?? 5}%</strong>) will be deposited within <strong>{pricingPolicy?.payoutDays ?? 7} business days</strong> after the post-event sales report is finalized. If you need expedited disbursement, please contact our support team at <a href="mailto:support@concertshield.com" style={{ color: "#be185d", fontWeight: 600, textDecoration: "underline" }}>support@concertshield.com</a>.
                 </p>
               </div>
 

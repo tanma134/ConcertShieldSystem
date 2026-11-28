@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import AdminShell from "./AdminShell";
+import StaffShell from "../staff/StaffShell";
+import { useAuth } from "../../context/AuthContext";
 import ticketApi from "../../api/ticketApi";
 import { useToast } from "../../components/ToastProvider";
 import "./TicketStatusHistoryPage.css";
@@ -75,6 +77,8 @@ function getStatusChange(item) {
 
 export default function TicketStatusHistoryPage() {
   const toast = useToast();
+  const { isAdmin } = useAuth();
+  const Shell = isAdmin ? AdminShell : StaffShell;
 
   const [items, setItems] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -170,7 +174,7 @@ export default function TicketStatusHistoryPage() {
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   return (
-    <AdminShell title="Ticket Status History">
+    <Shell title="Seat / Ticket Status History">
       <div className="tsh-page">
         <header className="tsh-heading">
           <div>
@@ -360,6 +364,6 @@ export default function TicketStatusHistoryPage() {
           </footer>
         </section>
       </div>
-    </AdminShell>
+    </Shell>
   );
 }

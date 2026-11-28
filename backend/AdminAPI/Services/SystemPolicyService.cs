@@ -16,6 +16,21 @@ public interface ISystemPolicyService
 
     Task<PolicyVersionDTO> CreateAsync(CreatePolicyVersionRequestDTO request, int adminId, string adminName,
         CancellationToken ct = default);
+
+    Task<PagedResult<PolicyVersionDTO>> GetPolicyVersionsAsync(
+        string? category = null,
+        string? status = null,
+        int page = 1,
+        int pageSize = 10,
+        string callerRole = "Admin",
+        CancellationToken ct = default);
+
+    Task<PolicyVersionDTO> CreatePolicyVersionAsync(
+        CreatePolicyVersionRequestDTO request,
+        int adminId = 1,
+        string adminName = "Admin",
+        string callerRole = "Admin",
+        CancellationToken ct = default);
 }
 
 public sealed class SystemPolicyService(ISystemPolicyRepository repository) : ISystemPolicyService
@@ -80,6 +95,111 @@ public sealed class SystemPolicyService(ISystemPolicyRepository repository) : IS
             CreatedByAdminId = adminId,
             CreatedByAdminName = adminName
         };
+    }
+
+    public async Task<PagedResult<PolicyVersionDTO>> GetPolicyVersionsAsync(
+        string? category = null,
+        string? status = null,
+        int page = 1,
+        int pageSize = 10,
+        string callerRole = "Admin",
+        CancellationToken ct = default)
+    {
+        if (!string.Equals(callerRole, "Admin", StringComparison.OrdinalIgnoreCase))
+            throw new UnauthorizedAccessException("Admin access required");
+
+        if (page < 1)
+            throw new ArgumentException("Page must be >= 1");
+
+        if (pageSize < 1 || pageSize > 50)
+            throw new ArgumentException("PageSize must be between 1 and 50");
+
+        if (!string.IsNullOrWhiteSpace(category) && !IsValidCategory(category))
+            throw new ArgumentException("Invalid policy category");
+
+        var normalized = NormalizeCategory(category);
+        var rows = await repository.GetHistoryAsync(normalized, ct);
+        var filtered = rows.Select(ToDto).ToList();
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            filtered = filtered
+                .Where(p => string.Equals(p.Status, status.Trim(), StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        var total = filtered.Count;
+        var paged = filtered.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+        return new PagedResult<PolicyVersionDTO>
+        {
+            Items = paged,
+            Page = page,
+            PageSize = pageSize,
+            TotalCount = total
+        };
+    }
+
+    public async Task<PolicyVersionDTO> CreatePolicyVersionAsync(
+        CreatePolicyVersionRequestDTO request,
+        int adminId = 1,
+        string adminName = "Admin",
+        string callerRole = "Admin",
+        CancellationToken ct = default)
+    {
+        if (!string.Equals(callerRole, "Admin", StringComparison.OrdinalIgnoreCase))
+            throw new UnauthorizedAccessException("Admin role required");
+
+        if (request.VersionNumber != null && string.IsNullOrWhiteSpace(request.VersionNumber))
+            throw new ArgumentException("Version number is required");
+
+        if (!string.IsNullOrWhiteSpace(request.RulesJson))
+        {
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(request.RulesJson);
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                throw new ArgumentException("RulesJson must be valid JSON");
+            }
+        }
+
+        if (request.EffectiveDate.HasValue && request.EffectiveDate.Value.ToUniversalTime() < DateTime.UtcNow.AddMinutes(-1))
+            throw new ArgumentException("EffectiveDate cannot be in the past");
+
+        var category = NormalizeCategory(request.Category);
+        if (!string.IsNullOrWhiteSpace(request.VersionNumber))
+        {
+            var existing = await repository.GetHistoryAsync(category, ct);
+            if (existing.Any(r =>
+                    string.Equals(r.VersionCode, request.VersionNumber.Trim(), StringComparison.OrdinalIgnoreCase) ||
+                    r.VersionCode.EndsWith($"V{request.VersionNumber.Trim()}", StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new InvalidOperationException("Policy version already exists");
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Title))
+            request.Title = $"Policy {category} {request.VersionNumber ?? "v1"}";
+        if (string.IsNullOrWhiteSpace(request.ChangeSummary))
+            request.ChangeSummary = $"Updated {category} rules";
+        if (string.IsNullOrWhiteSpace(request.Content))
+            request.Content = request.RulesJson ?? "Standard policy content";
+
+        return await CreateAsync(request, adminId, adminName, ct);
+    }
+
+    public static bool IsValidCategory(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return true;
+        var upper = raw.Trim().ToUpperInvariant();
+        return upper.Contains("PRICE") ||
+               upper.Contains("REFUND") ||
+               upper.Contains("QUEUE") ||
+               upper.Contains("RISK") ||
+               upper.Contains("TERMS") ||
+               upper.Contains("TOS");
     }
 
     public static string NormalizeCategory(string? raw)

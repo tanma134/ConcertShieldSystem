@@ -236,11 +236,11 @@ export default function SystemPoliciesPage() {
               <span className="badge-active-version">
                 Active In-Force Version: {activePolicy.versionCode} (v{activePolicy.versionNumber})
               </span>
-              <span style={{ background: "rgba(236, 72, 153, 0.25)", color: "#fbcfe8", border: "1px solid #ec4899", padding: "0.3rem 0.85rem", borderRadius: "999px", fontWeight: "700", fontSize: "0.82rem" }}>
-                💰 Platform Fee: {activePolicy.platformFeePercent}%
+              <span style={{ background: "#fce7f3", color: "#111827", border: "1px solid #ec4899", padding: "0.3rem 0.85rem", borderRadius: "999px", fontWeight: "700", fontSize: "0.82rem" }}>
+                Platform Fee: {activePolicy.platformFeePercent}%
               </span>
-              <span style={{ background: "rgba(139, 92, 246, 0.25)", color: "#ddd6fe", border: "1px solid #8b5cf6", padding: "0.3rem 0.85rem", borderRadius: "999px", fontWeight: "700", fontSize: "0.82rem" }}>
-                ⏱️ Payout Schedule: {activePolicy.payoutDays} Business Days
+              <span style={{ background: "#ede9fe", color: "#111827", border: "1px solid #8b5cf6", padding: "0.3rem 0.85rem", borderRadius: "999px", fontWeight: "700", fontSize: "0.82rem" }}>
+                Payout Schedule: {activePolicy.payoutDays} Business Days
               </span>
               <span className="badge-effective-date">
                 Effective from: {new Date(activePolicy.effectiveDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
@@ -323,7 +323,7 @@ export default function SystemPoliciesPage() {
                         <strong>{item.title}</strong>
                       </td>
                       <td>
-                        <span style={{ display: "inline-block", background: "rgba(236,72,153,0.15)", color: "#f472b6", padding: "3px 8px", borderRadius: "6px", fontSize: "12px", fontWeight: "700", whiteSpace: "nowrap" }}>
+                        <span style={{ display: "inline-block", background: "#fce7f3", color: "#111827", padding: "3px 8px", borderRadius: "6px", fontSize: "12px", fontWeight: "700", whiteSpace: "nowrap" }}>
                           {item.platformFeePercent}% / {item.payoutDays}d
                         </span>
                       </td>
@@ -459,12 +459,11 @@ export default function SystemPoliciesPage() {
                         required
                       />
                       {fieldErrors.platformFeePercent ? (
-                        <div style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px", fontWeight: "600", display: "flex", alignItems: "center", gap: "4px" }}>
-                          <span>⚠️</span>
+                        <div style={{ color: "#dc2626", fontSize: "12px", marginTop: "4px", fontWeight: "600", display: "flex", alignItems: "center", gap: "4px" }}>
                           <span>{fieldErrors.platformFeePercent}</span>
                         </div>
                       ) : (
-                        <small style={{ color: "#94a3b8", fontSize: "11px", marginTop: "2px", display: "block" }}>
+                        <small style={{ color: "#111827", fontSize: "11px", marginTop: "2px", display: "block" }}>
                           Commission percentage deducted from ticket revenue (0% - 100%).
                         </small>
                       )}
@@ -482,7 +481,7 @@ export default function SystemPoliciesPage() {
                         onChange={(e) => setCreateForm({ ...createForm, payoutDays: e.target.value })}
                         required
                       />
-                      <small style={{ color: "#94a3b8", fontSize: "11px", marginTop: "2px", display: "block" }}>
+                      <small style={{ color: "#111827", fontSize: "11px", marginTop: "2px", display: "block" }}>
                         Disbursement deadline after sales report is finalized (1 - 60 days).
                       </small>
                     </div>
@@ -517,8 +516,7 @@ export default function SystemPoliciesPage() {
                         required
                       />
                       {fieldErrors.effectiveDate && (
-                        <div style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px", fontWeight: "600", display: "flex", alignItems: "center", gap: "4px" }}>
-                          <span>⚠️</span>
+                        <div style={{ color: "#dc2626", fontSize: "12px", marginTop: "4px", fontWeight: "600", display: "flex", alignItems: "center", gap: "4px" }}>
                           <span>{fieldErrors.effectiveDate}</span>
                         </div>
                       )}

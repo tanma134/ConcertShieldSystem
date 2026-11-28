@@ -130,10 +130,10 @@ namespace CheckinAPI.DTOs
         public int EventId { get; set; }
 
         [JsonPropertyName("gateId")]
-        public string GateId { get; set; } = "GATE_A";
+        public string? GateId { get; set; } = "GATE_A";
 
         [JsonPropertyName("qrPayload")]
-        public string QrPayload { get; set; } = string.Empty;
+        public string? QrPayload { get; set; } = string.Empty;
     }
 
     public class ScanResultResponseDTO
@@ -187,13 +187,13 @@ namespace CheckinAPI.DTOs
         public int EventId { get; set; }
 
         [JsonPropertyName("gateId")]
-        public string GateId { get; set; } = "GATE_A";
+        public string? GateId { get; set; } = "GATE_A";
 
         [JsonPropertyName("ticketCode")]
-        public string TicketCode { get; set; } = string.Empty;
+        public string? TicketCode { get; set; } = string.Empty;
 
         [JsonPropertyName("reasonCode")]
-        public string ReasonCode { get; set; } = "DEAD_BATTERY"; // DEAD_BATTERY, BROKEN_SCREEN, NETWORK_ERROR, OTHER
+        public string? ReasonCode { get; set; } = "DEAD_BATTERY"; // DEAD_BATTERY, BROKEN_SCREEN, NETWORK_ERROR, OTHER
 
         [JsonPropertyName("reasonNote")]
         public string? ReasonNote { get; set; }
@@ -332,6 +332,9 @@ namespace CheckinAPI.DTOs
 
         [JsonPropertyName("shiftDate")]
         public string? ShiftDate { get; set; }
+
+        [JsonPropertyName("shiftEndDate")]
+        public string? ShiftEndDate { get; set; }
 
         [JsonPropertyName("totalScannedInShift")]
         public int TotalScannedInShift { get; set; } = 354;
