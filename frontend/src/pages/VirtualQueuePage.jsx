@@ -63,7 +63,7 @@ export default function VirtualQueuePage() {
 
   useEffect(() => { setToken(localStorage.getItem(tokenKey(eventId))); eventApi.getById ? eventApi.getById(eventId).then((response) => setEvent(response.data?.data || response.data)).catch(() => {}) : setEvent(null); loadStatus(); }, [eventId]);
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
-  useEffect(() => { if (!token) return undefined; const timer = setInterval(() => loadStatus(), 4000); return () => clearInterval(timer); }, [eventId, token]);
+  useEffect(() => { if (!token) return undefined; const timer = setInterval(() => loadStatus(), 4000); return () => clearInterval(timer); }, [eventId, token]); //Cứ mỗi 4 giây, trang gọi loadStatus() để lấy vị trí mới từ API trạng thái hàng đợi rồi cập nhật màn hình.
   useEffect(() => {
     if (status?.status !== "PREQUEUE" || !status.preQueueEndsAt || new Date(status.preQueueEndsAt).getTime() > now || !token) return;
 
