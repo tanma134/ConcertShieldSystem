@@ -24,9 +24,11 @@ public sealed class RiskGuard : IRiskGuard
     private readonly SlidingCounter _counters;
     private readonly IConfiguration _cfg;
     private readonly ILogger<RiskGuard> _logger;
+    private readonly IChallengeVerifier? _challenges;
 
-    public RiskGuard(IRiskClient client, SlidingCounter counters, IConfiguration cfg, ILogger<RiskGuard> logger)
-    { _client = client; _counters = counters; _cfg = cfg; _logger = logger; }
+    public RiskGuard(IRiskClient client, SlidingCounter counters, IConfiguration cfg, ILogger<RiskGuard> logger,
+        IChallengeVerifier? challenges = null)
+    { _client = client; _counters = counters; _cfg = cfg; _logger = logger; _challenges = challenges; }
 
     private bool Enabled => _cfg.GetValue("Risk:Enabled", true);
 
@@ -69,6 +71,11 @@ public sealed class RiskGuard : IRiskGuard
 
         // SHADOW mode logs decisions without blocking.
         if (res.IsShadow) return RiskVerdict.Allow(res);
+
+        // CHALLENGE already satisfied (Turnstile token / step-up token)? Let the request through.
+        if (res.Action == "CHALLENGE" && _challenges != null &&
+            await _challenges.IsPassedAsync(http, res.ChallengeType ?? "CAPTCHA", evt.UserId, ct))
+            return RiskVerdict.Allow(res);
 
         return res.Action switch
         {

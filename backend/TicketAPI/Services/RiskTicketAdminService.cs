@@ -1,7 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using TicketAPI.API;
 using TicketAPI.Domain;
 using TicketAPI.Models;
+using TicketAPI.Repositories;
 
 namespace TicketAPI.Services;
 
@@ -30,21 +30,17 @@ public interface IRiskTicketAdminService
         string reason, CancellationToken ct = default);
 }
 
-// Internal enforcement used by AdminAPI's risk engine:
-//  - block/unblock a ticket while an appeal is pending;
-//  - after a rejected appeal, revoke the ticket and pay a 100% refund.
-// Ticket status is the single source of truth for both TicketAPI and CheckinAPI.
 public sealed class RiskTicketAdminService : IRiskTicketAdminService
 {
-    private readonly TicketDbContext _db;
+    private readonly IRiskTicketRepository _repo;
     private readonly IEventApiClient _eventApi;
     private readonly IPaymentAPIClient _payment;
     private readonly ILogger<RiskTicketAdminService> _logger;
 
-    public RiskTicketAdminService(TicketDbContext db, IEventApiClient eventApi,
+    public RiskTicketAdminService(IRiskTicketRepository repo, IEventApiClient eventApi,
         IPaymentAPIClient payment, ILogger<RiskTicketAdminService> logger)
     {
-        _db = db;
+        _repo = repo;
         _eventApi = eventApi;
         _payment = payment;
         _logger = logger;
@@ -52,8 +48,7 @@ public sealed class RiskTicketAdminService : IRiskTicketAdminService
 
     public async Task<RiskTicketInfo?> FindTicketAsync(int ticketId, CancellationToken ct = default)
     {
-        var ticket = await _db.Tickets.AsNoTracking()
-            .FirstOrDefaultAsync(t => t.TicketId == ticketId && !t.IsDeleted, ct);
+        var ticket = await _repo.FindTicketAsync(ticketId, ct);
         if (ticket?.OwnerUserId == null) return null;
 
         return new RiskTicketInfo(ticket.TicketId, ticket.OwnerUserId.Value,
@@ -71,7 +66,7 @@ public sealed class RiskTicketAdminService : IRiskTicketAdminService
             return;
 
         ticket.Status = TicketStatuses.Blocked;
-        await _db.SaveChangesAsync(ct);
+        await _repo.SaveChangesAsync(ct);
         _logger.LogInformation("Ticket {TicketId} blocked by risk admin {StaffId}: {Reason}", ticketId, staffId, reason);
     }
 
@@ -83,43 +78,31 @@ public sealed class RiskTicketAdminService : IRiskTicketAdminService
 
         // If the customer had a return request open before the block, put the ticket
         // back into that state rather than silently making it usable again.
-        var hasPendingReturn = await _db.TicketReturnRequests
-            .AnyAsync(r => r.TicketId == ticketId && r.Status == ReturnRequestStatuses.Pending, ct);
+        var hasPendingReturn = await _repo.HasPendingReturnRequestAsync(ticketId, ct);
 
         ticket.Status = hasPendingReturn ? TicketStatuses.ReturnPending : TicketStatuses.Active;
-        await _db.SaveChangesAsync(ct);
+        await _repo.SaveChangesAsync(ct);
         _logger.LogInformation("Ticket {TicketId} unblocked by risk admin {StaffId}: {Reason}", ticketId, staffId, reason);
     }
 
     public async Task<RiskRevokeResult> RevokeAndRefundAsync(int ticketId, int ownerUserId, int appealId,
         int staffId, string reason, CancellationToken ct = default)
     {
-        var ticket = await _db.Tickets
-            .Include(t => t.Order).ThenInclude(o => o.OrderDetails)
-            .Include(t => t.TicketQrTokens)
-            .FirstOrDefaultAsync(t => t.TicketId == ticketId && !t.IsDeleted, ct)
+        var ticket = await _repo.GetTicketForRevokeAsync(ticketId, ct)
             ?? throw new KeyNotFoundException("Ticket not found.");
 
         if (ticket.OwnerUserId != ownerUserId)
             throw new KeyNotFoundException("Ticket not found.");
 
-        // Idempotent: a second resolve/retry returns the existing refund record.
-        var latest = await _db.TicketReturnRequests
-            .Where(r => r.TicketId == ticketId)
-            .OrderByDescending(r => r.CreatedAt)
-            .FirstOrDefaultAsync(ct);
+        var latest = await _repo.GetLatestReturnRequestAsync(ticketId, ct);
 
         if ((ticket.Status is TicketStatuses.Revoked or TicketStatuses.Returned) && latest != null)
             return FromExisting(latest);
 
         var now = DateTime.UtcNow;
 
-        // A ticket that was already used for entry has delivered the service: revoke it,
-        // but never pay a refund.
         var refundAmount = ticket.CheckedInAt.HasValue ? 0 : ComputeFullRefund(ticket);
 
-        // Give the seat back to inventory when possible. This is best effort: a failure
-        // must not leave a confirmed fraud ticket usable.
         var release = await _eventApi.TryReleaseReturnedTicketAsync(ticket.EventId, ticket.TicketTypeId, 1);
         if (!release.Success)
             _logger.LogWarning("Risk revoke {TicketId}: inventory release failed: {Error}", ticketId, release.Error);
@@ -144,8 +127,6 @@ public sealed class RiskTicketAdminService : IRiskTicketAdminService
 
         var storedReason = string.IsNullOrWhiteSpace(reason) ? "RISK_BLOCK_APPEAL_REJECTED" : reason;
 
-        // When the customer already had a Pending return request, keep their reason and
-        // append the risk decision instead of overwriting it.
         if (request.TicketReturnRequestId != 0 && !string.IsNullOrWhiteSpace(request.Reason))
         {
             var combined = $"{request.Reason} | {storedReason}";
@@ -164,9 +145,9 @@ public sealed class RiskTicketAdminService : IRiskTicketAdminService
         request.ReviewNote = reviewNote.Length > 500 ? reviewNote[..500] : reviewNote;
 
         if (request.TicketReturnRequestId == 0)
-            _db.TicketReturnRequests.Add(request);
+            _repo.AddReturnRequest(request);
 
-        await _db.SaveChangesAsync(ct);
+        await _repo.SaveChangesAsync(ct);
 
         if (refundAmount == 0)
         {
@@ -174,7 +155,7 @@ public sealed class RiskTicketAdminService : IRiskTicketAdminService
             request.RefundedAt = now;
             request.RefundReference = ticket.CheckedInAt.HasValue ? "NO-REFUND-CHECKED-IN" : "NO-REFUND";
             request.RefundError = null;
-            await _db.SaveChangesAsync(ct);
+            await _repo.SaveChangesAsync(ct);
             return FromExisting(request);
         }
 
@@ -200,13 +181,13 @@ public sealed class RiskTicketAdminService : IRiskTicketAdminService
             request.RefundError = error.Length > 500 ? error[..500] : error;
         }
 
-        await _db.SaveChangesAsync(ct);
+        await _repo.SaveChangesAsync(ct);
         return FromExisting(request);
     }
 
     private async Task<Ticket> LoadAsync(int ticketId, int ownerUserId, CancellationToken ct)
     {
-        var ticket = await _db.Tickets.FirstOrDefaultAsync(t => t.TicketId == ticketId && !t.IsDeleted, ct)
+        var ticket = await _repo.GetTicketAsync(ticketId, ct)
                      ?? throw new KeyNotFoundException("Ticket not found.");
         if (ticket.OwnerUserId != ownerUserId)
             throw new KeyNotFoundException("Ticket not found.");

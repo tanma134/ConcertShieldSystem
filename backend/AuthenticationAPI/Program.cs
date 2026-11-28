@@ -135,6 +135,8 @@ builder.Services.AddHttpClient<IAuditLogClient, AuditLogClient>(client =>
 builder.Services.AddRiskClient(builder.Configuration);
 builder.Services.AddScoped<IAuthRiskService, AuthRiskService>();
 
+builder.Services.AddApiRateLimiting();
+
 var app = builder.Build();
 
 await DatabaseInitializer.InitializeAsync(app.Services);
@@ -148,5 +150,6 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.MapControllers();
 app.Run();

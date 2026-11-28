@@ -51,6 +51,27 @@ public sealed class RiskConfig
     public int ThresholdCritical { get; set; } = 80;
     public int CriticalMinGroups { get; set; } = 2;
 
+    // Per-type thresholds. When null they fall back to the shared thresholds above,
+    // so existing configs keep working unchanged.
+    public int? BotThresholdMedium { get; set; }
+    public int? BotThresholdHigh { get; set; }
+    public int? BotThresholdCritical { get; set; }
+    public int? FraudThresholdMedium { get; set; }
+    public int? FraudThresholdHigh { get; set; }
+    public int? FraudThresholdCritical { get; set; }
+
+    // Short block applied to bots at the High level (SESSION + IP).
+    public int BotHighBlockHours { get; set; } = 1;
+
+    public int ThresholdMediumFor(RiskType t) =>
+        (t == RiskType.Bot ? BotThresholdMedium : FraudThresholdMedium) ?? ThresholdMedium;
+
+    public int ThresholdHighFor(RiskType t) =>
+        (t == RiskType.Bot ? BotThresholdHigh : FraudThresholdHigh) ?? ThresholdHigh;
+
+    public int ThresholdCriticalFor(RiskType t) =>
+        (t == RiskType.Bot ? BotThresholdCritical : FraudThresholdCritical) ?? ThresholdCritical;
+
     public int BlockHoursLevel1 { get; set; } = 24;
     public int BlockHoursLevel2 { get; set; } = 72;
     public int EscalationWindowDays { get; set; } = 30;
@@ -131,6 +152,13 @@ public sealed class RiskConfig
                 case "risk.threshold.high": cfg.ThresholdHigh = Int(cfg, key, value, cfg.ThresholdHigh); break;
                 case "risk.threshold.critical": cfg.ThresholdCritical = Int(cfg, key, value, cfg.ThresholdCritical); break;
                 case "risk.critical.min_groups": cfg.CriticalMinGroups = Int(cfg, key, value, cfg.CriticalMinGroups); break;
+                case "risk.threshold.bot.medium": cfg.BotThresholdMedium = Int(cfg, key, value, cfg.ThresholdMedium); break;
+                case "risk.threshold.bot.high": cfg.BotThresholdHigh = Int(cfg, key, value, cfg.ThresholdHigh); break;
+                case "risk.threshold.bot.critical": cfg.BotThresholdCritical = Int(cfg, key, value, cfg.ThresholdCritical); break;
+                case "risk.threshold.fraud.medium": cfg.FraudThresholdMedium = Int(cfg, key, value, cfg.ThresholdMedium); break;
+                case "risk.threshold.fraud.high": cfg.FraudThresholdHigh = Int(cfg, key, value, cfg.ThresholdHigh); break;
+                case "risk.threshold.fraud.critical": cfg.FraudThresholdCritical = Int(cfg, key, value, cfg.ThresholdCritical); break;
+                case "risk.bot.high_block_hours": cfg.BotHighBlockHours = Int(cfg, key, value, cfg.BotHighBlockHours); break;
                 case "risk.block.hours.level1": cfg.BlockHoursLevel1 = Int(cfg, key, value, cfg.BlockHoursLevel1); break;
                 case "risk.block.hours.level2": cfg.BlockHoursLevel2 = Int(cfg, key, value, cfg.BlockHoursLevel2); break;
                 case "risk.block.escalation_window_days": cfg.EscalationWindowDays = Int(cfg, key, value, cfg.EscalationWindowDays); break;

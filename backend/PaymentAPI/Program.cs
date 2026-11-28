@@ -156,6 +156,8 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+builder.Services.AddApiRateLimiting();
+
 var app = builder.Build();
 
 try
@@ -234,6 +236,7 @@ app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapControllers();
 

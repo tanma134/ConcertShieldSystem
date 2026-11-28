@@ -730,6 +730,72 @@ namespace AuthenticationAPI.Services
             return Convert.ToBase64String(bytes);
         }
 
+        // ---- Step-up (risk CHALLENGE = OTP) ----
+        private const string StepUpAudience = "AuthenticationAPI.StepUp";
+        private static readonly TimeSpan StepUpOtpTtl = TimeSpan.FromMinutes(5);
+        private static readonly TimeSpan StepUpTokenTtl = TimeSpan.FromMinutes(10);
+        private static string StepUpOtpKey(int userId) => $"stepup_otp:{userId}";
+        private static string StepUpAttemptKey(int userId) => $"stepup_attempts:{userId}";
+
+        public async Task SendStepUpOtpAsync(int userId)
+        {
+            var user = await _userRepository.GetByIdAsync(userId)
+                ?? throw new KeyNotFoundException("User not found.");
+
+            string otp = GenerateOTP();
+            _cache.Set(StepUpOtpKey(userId), HashValue(otp), StepUpOtpTtl);
+            _cache.Remove(StepUpAttemptKey(userId));
+
+            await _emailService.SendOTPAsync(user.Email, otp, EmailPurpose.StepUp);
+            _logger.LogInformation("Step-up OTP sent (UserId={UserId}).", userId);
+        }
+
+        public Task<StepUpTokenResponseDTO> VerifyStepUpOtpAsync(int userId, VerifyStepUpOtpDTO dto)
+        {
+            var attemptKey = StepUpAttemptKey(userId);
+            var attempts = _cache.TryGetValue(attemptKey, out int n) ? n : 0;
+            if (attempts >= MaxOtpAttempts)
+            {
+                _cache.Remove(StepUpOtpKey(userId));
+                throw new UnauthorizedAccessException(GenericOtpInvalidMessage);
+            }
+
+            if (!_cache.TryGetValue(StepUpOtpKey(userId), out string? stored)
+                || string.IsNullOrEmpty(stored)
+                || stored != HashValue(dto.OTP ?? string.Empty))
+            {
+                _cache.Set(attemptKey, attempts + 1, StepUpOtpTtl);
+                _logger.LogWarning("Step-up OTP verification failed (UserId={UserId}).", userId);
+                throw new UnauthorizedAccessException(GenericOtpInvalidMessage);
+            }
+
+            // One-time use.
+            _cache.Remove(StepUpOtpKey(userId));
+            _cache.Remove(attemptKey);
+
+            var jwt = _configuration.GetSection("JwtSettings");
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["SecretKey"]!));
+            var expiry = DateTime.UtcNow.Add(StepUpTokenTtl);
+
+            var token = new JwtSecurityToken(
+                issuer: jwt["Issuer"] ?? "AuthenticationAPI",
+                audience: StepUpAudience,
+                claims: new[]
+                {
+                    new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
+                    new Claim("purpose", "stepup"),
+                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                },
+                expires: expiry,
+                signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256));
+
+            return Task.FromResult(new StepUpTokenResponseDTO
+            {
+                StepUpToken = new JwtSecurityTokenHandler().WriteToken(token),
+                ExpiresAt = expiry
+            });
+        }
+
         private static string GenerateOTP()
         {
             int value = RandomNumberGenerator.GetInt32(100000, 1000000);

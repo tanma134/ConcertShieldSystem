@@ -16,6 +16,9 @@ public static class RiskServiceExtensions
             var key = config["AdminApi:InternalKey"] ?? config["InternalApi:Key"];
             if (!string.IsNullOrEmpty(key)) client.DefaultRequestHeaders.Add("X-Internal-Api-Key", key);
         });
+        services.AddMemoryCache();
+        services.AddHttpClient();
+        services.AddScoped<IChallengeVerifier, ChallengeVerifier>();
         services.AddScoped<IRiskGuard, RiskGuard>();
         return services;
     }

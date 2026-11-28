@@ -379,3 +379,24 @@ database/schema_dumps/
 # Public uploads
 frontend/public/uploads/*
 !frontend/public/uploads/.gitkeep
+
+# Claude Code — do NOT push (machine-specific)
+**/.claude/
+
+# Temp dev notes — do NOT push
+backend/RATE_LIMITING_CHANGES.md
+
+# Build/publish artifacts — do NOT push, rebuild from source
+*.zip
+*.rar
+*.7z
+
+# MS Office temp lock files (mở Word/Excel sinh ra file ~$...)
+~$*
+*.tmp
+
+# Playwright test output — do NOT push, regenerate on each run
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
