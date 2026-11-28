@@ -16,19 +16,22 @@ namespace EventAPI.Controllers
         private readonly IValidator<CreateEventDTO> _createValidator;
         private readonly IValidator<UpdateEventDTO> _updateValidator;
         private readonly ILogger<EventsController> _logger;
+        private readonly IAuditLogClient _audit;
 
         public EventsController(
             IEventService eventService,
             IEventStaffService eventStaffService,
             IValidator<CreateEventDTO> createValidator,
             IValidator<UpdateEventDTO> updateValidator,
-            ILogger<EventsController> logger)
+            ILogger<EventsController> logger,
+            IAuditLogClient audit)
         {
             _eventService = eventService;
             _eventStaffService = eventStaffService;
             _createValidator = createValidator;
             _updateValidator = updateValidator;
             _logger = logger;
+            _audit = audit;
         }
 
         [HttpGet("staff/{staffId:int}")]
@@ -184,6 +187,7 @@ namespace EventAPI.Controllers
             try
             {
                 await _eventService.SoftDeleteAsync(id, CurrentUserId, IsAdmin);
+                await AuditAsync(_audit, "EVENT_DELETED", "Event", id);
                 return Ok(ApiResponseDTO<object>.SuccessResponse(null!, "Concert deleted"));
             }
             catch (Exception ex) { return HandleException(ex); }
@@ -194,6 +198,7 @@ namespace EventAPI.Controllers
         public async Task<IActionResult> Restore(int id)
         {
             await _eventService.RestoreAsync(id);
+            await AuditAsync(_audit, "EVENT_RESTORED", "Event", id);
             return Ok(ApiResponseDTO<object>.SuccessResponse(null!, "Concert restored"));
         }
 
@@ -230,6 +235,7 @@ namespace EventAPI.Controllers
             try
             {
                 var result = await _eventService.CancelAsync(id, CurrentUserId, IsAdmin);
+                await AuditAsync(_audit, "EVENT_CANCELLED", "Event", id, newValue: new { status = result.Status });
                 return Ok(ApiResponseDTO<EventResponseDTO>.SuccessResponse(result, "Concert cancelled"));
             }
             catch (Exception ex) { return HandleException(ex); }
@@ -283,6 +289,8 @@ namespace EventAPI.Controllers
                 var (result, roleGrant) = await _eventService.ApproveAsync(
                     id, CurrentUserId, BearerToken);
 
+                await AuditAsync(_audit, "EVENT_APPROVED", "Event", id, newValue: new { status = result.Status });
+
                 var message = roleGrant.Success
                     ? "Concert approved and published. Owner now also has the Organizer role."
                     : "Concert approved, but Organizer role could not be granted: " + roleGrant.Message;
@@ -308,6 +316,7 @@ namespace EventAPI.Controllers
             try
             {
                 var result = await _eventService.RejectAsync(id, dto.Reason, CurrentUserId);
+                await AuditAsync(_audit, "EVENT_REJECTED", "Event", id, newValue: new { status = result.Status, reason = dto.Reason });
                 return Ok(ApiResponseDTO<EventResponseDTO>.SuccessResponse(result, "Concert rejected"));
             }
             catch (Exception ex) { return HandleException(ex); }

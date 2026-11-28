@@ -233,9 +233,69 @@ public class RiskScoreCalculatorTests
 
         var d = _calc.Decide(cfg, bot, _calc.CalculateScore(cfg, Array.Empty<MatchedRule>()));
         Assert.Equal(RiskLevel.High, d.Level);
-        Assert.Equal(RiskAction.Hold, d.Action);
+        Assert.Equal(RiskAction.Challenge, d.Action);   // Bot with a single group: CAPTCHA, not Hold
+        Assert.Equal("CAPTCHA", d.ChallengeType);
         Assert.True(d.Downgraded);
         Assert.Equal("DOWNGRADED_SINGLE_GROUP", d.ReasonCode);
+    }
+
+    [Fact]
+    public void FraudCriticalWithOnlyOneGroup_IsDowngradedToHold()
+    {
+        var cfg = new RiskConfig { CapGroup = 100 };
+        var fraud = _calc.CalculateScore(cfg, new[] { R("A", "P", 50), R("B", "P", 40) });
+
+        var d = _calc.Decide(cfg, _calc.CalculateScore(cfg, Array.Empty<MatchedRule>()), fraud);
+        Assert.Equal(RiskType.Fraud, d.Dominant);
+        Assert.Equal(RiskAction.Hold, d.Action);
+        Assert.True(d.Downgraded);
+    }
+
+    // ------------------------------------------------------------ separate Bot / Fraud policy
+
+    [Fact]
+    public void BotHigh_BlocksSessionAndIpBriefly_NoManualReview()
+    {
+        var bot = Score(new[] { R("A", "H", 40), R("B", "V", 25) });   // 65, 2 groups
+        var d = _calc.Decide(_cfg, bot, Empty());
+
+        Assert.Equal(RiskLevel.High, d.Level);
+        Assert.Equal(RiskAction.Block, d.Action);
+        Assert.Equal(new[] { "SESSION", "IP" }, d.Scopes);
+        Assert.Equal(_cfg.BotHighBlockHours, d.BlockHours);
+        Assert.False(d.RequiresManualReview);
+    }
+
+    [Fact]
+    public void FraudHigh_IsHoldNotBlock()
+    {
+        var fraud = Score(new[] { R("A", "P", 40), R("B", "A", 25) });   // 65
+        var d = _calc.Decide(_cfg, Empty(), fraud);
+
+        Assert.Equal(RiskAction.Hold, d.Action);
+        Assert.Equal(RiskType.Fraud, d.Dominant);
+    }
+
+    [Fact]
+    public void PerTypeThresholds_OverrideSharedOnes()
+    {
+        var cfg = new RiskConfig { FraudThresholdMedium = 20 };
+        var fraud = _calc.CalculateScore(cfg, new[] { R("F", "P", 25) });
+        var bot = _calc.CalculateScore(cfg, new[] { R("B", "H", 25) });
+
+        Assert.Equal(RiskAction.Challenge, _calc.Decide(cfg, Empty(), fraud).Action);
+        Assert.Equal(RiskAction.Allow, _calc.Decide(cfg, bot, Empty()).Action);
+    }
+
+    [Fact]
+    public void MoreSevereTypeWins_BotBlockBeatsFraudChallenge()
+    {
+        var bot = Score(new[] { R("A", "H", 40), R("B", "V", 40) });   // 80, critical
+        var fraud = Score(new[] { R("F", "P", 35) });                  // 35, medium
+        var d = _calc.Decide(_cfg, bot, fraud);
+
+        Assert.Equal(RiskAction.Block, d.Action);
+        Assert.Equal(RiskType.Bot, d.Dominant);
     }
 
     // ------------------------------------------------------------ leo thang block

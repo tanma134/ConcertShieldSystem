@@ -23,6 +23,12 @@ namespace TicketAPI.Controllers
         // True when the caller holds the Admin role.
         protected bool IsAdmin => User.IsInRole("Admin");
 
+        // actor_type for audit logs, matching the values used by AuthenticationAPI.
+        protected string AuditActorType =>
+            IsAdmin ? "admin" : User.IsInRole("Staff") ? "staff" : User.IsInRole("Organizer") ? "organizer" : "user";
+
+        protected string? ClientIp => HttpContext.Connection.RemoteIpAddress?.ToString();
+
         // The caller's raw JWT, forwarded to EventAPI to prove event ownership.
         protected string? BearerToken
         {

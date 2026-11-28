@@ -17,12 +17,18 @@ namespace AuthenticationAPI.Controllers
     {
         private readonly IKycReviewService _review;
         private readonly ILogger<KycAdminController> _logger;
+        private readonly IAuditLogClient _auditLog;
 
-        public KycAdminController(IKycReviewService review, ILogger<KycAdminController> logger)
+        public KycAdminController(IKycReviewService review, ILogger<KycAdminController> logger, IAuditLogClient auditLog)
         {
             _review = review;
             _logger = logger;
+            _auditLog = auditLog;
         }
+
+        private Task AuditAsync(int adminId, string action, int ekycId, object? newValue = null) =>
+            _auditLog.LogAsync(adminId, "admin", action, "Ekyc", ekycId.ToString(),
+                newValue: newValue, ipAddress: GetClientIp(), userAgent: Request.Headers.UserAgent.ToString());
 
         // GET api/admin/kyc/reviews?page=1&pageSize=20
         [HttpGet("reviews")]
@@ -48,6 +54,7 @@ namespace AuthenticationAPI.Controllers
             try
             {
                 await _review.ApproveAsync(ekycId, adminId.Value, GetClientIp());
+                await AuditAsync(adminId.Value, "KYC_APPROVED", ekycId);
                 return Ok(new { message = "eKYC request approved" });
             }
             catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
@@ -65,6 +72,7 @@ namespace AuthenticationAPI.Controllers
             try
             {
                 await _review.RejectAsync(ekycId, adminId.Value, dto.Reason, GetClientIp());
+                await AuditAsync(adminId.Value, "KYC_REJECTED", ekycId, new { reason = dto.Reason });
                 return Ok(new { message = "eKYC request rejected" });
             }
             catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
@@ -82,6 +90,8 @@ namespace AuthenticationAPI.Controllers
             try
             {
                 await _review.SetLegalHoldAsync(ekycId, dto.Hold, dto.Reason, adminId.Value, GetClientIp());
+                await AuditAsync(adminId.Value, dto.Hold ? "KYC_LEGAL_HOLD_SET" : "KYC_LEGAL_HOLD_CLEARED", ekycId,
+                    new { hold = dto.Hold, reason = dto.Reason });
                 return Ok(new { message = dto.Hold ? "Legal hold placed" : "Legal hold cleared" });
             }
             catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }

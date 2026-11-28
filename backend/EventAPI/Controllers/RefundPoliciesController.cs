@@ -11,13 +11,16 @@ namespace EventAPI.Controllers
     {
         private readonly IRefundPolicyService _refundPolicyService;
         private readonly IValidator<CreateRefundPolicyDTO> _createValidator;
+        private readonly IAuditLogClient _audit;
 
         public RefundPoliciesController(
             IRefundPolicyService refundPolicyService,
-            IValidator<CreateRefundPolicyDTO> createValidator)
+            IValidator<CreateRefundPolicyDTO> createValidator,
+            IAuditLogClient audit)
         {
             _refundPolicyService = refundPolicyService;
             _createValidator = createValidator;
+            _audit = audit;
         }
 
         [HttpGet("event/{eventId:int}")]
@@ -44,6 +47,7 @@ namespace EventAPI.Controllers
             try
             {
                 var result = await _refundPolicyService.CreateAsync(eventId, dto, CurrentUserId, IsAdmin);
+                await AuditAsync(_audit, "REFUND_POLICY_CREATED", "RefundPolicy", result.RefundPolicyId);
                 return CreatedAtAction(nameof(GetByEvent), new { eventId },
                     ApiResponseDTO<RefundPolicyResponseDTO>.SuccessResponse(result, "Refund policy created"));
             }
@@ -57,6 +61,7 @@ namespace EventAPI.Controllers
             try
             {
                 var result = await _refundPolicyService.UpdateAsync(id, dto, CurrentUserId, IsAdmin);
+                await AuditAsync(_audit, "REFUND_POLICY_UPDATED", "RefundPolicy", id);
                 return Ok(ApiResponseDTO<RefundPolicyResponseDTO>.SuccessResponse(result, "Refund policy updated"));
             }
             catch (Exception ex) { return HandleException(ex); }
@@ -69,6 +74,7 @@ namespace EventAPI.Controllers
             try
             {
                 await _refundPolicyService.DeleteAsync(id, CurrentUserId, IsAdmin);
+                await AuditAsync(_audit, "REFUND_POLICY_DELETED", "RefundPolicy", id);
                 return Ok(ApiResponseDTO<object>.SuccessResponse(null!, "Refund policy deleted"));
             }
             catch (Exception ex) { return HandleException(ex); }

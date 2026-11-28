@@ -8,7 +8,7 @@ using AuthenticationAPI.DTOs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-// Vi?t theo ti li?u "API eKYC" c?a VNPT (domain https://api.idg.vnpt.vn)
+// Written according to VNPT's "eKYC API" documentation (domain https://api.idg.vnpt.vn)
 namespace AuthenticationAPI.Providers
 {
     public class VnptEkycOptions
@@ -19,7 +19,7 @@ namespace AuthenticationAPI.Providers
         public string TokenKey { get; set; } = "";
         public string MacAddress { get; set; } = "AUTH-API-SERVER";
 
-   
+
         public string CropParam { get; set; } = "0.14,0.3";
 
         public bool RejectExpiredCard { get; set; } = true;
@@ -82,7 +82,7 @@ namespace AuthenticationAPI.Providers
         {
             try
             {
-                _logger.LogInformation("VNPT OCR b?t ?u: SplitOcr={Split}, CropParam='{Crop}'",
+                _logger.LogInformation("VNPT OCR started: SplitOcr={Split}, CropParam='{Crop}'",
                     _options.SplitOcr, _options.CropParam);
 
                 var frontHash = await GetHashAsync(front, "front.jpg");
@@ -92,10 +92,10 @@ namespace AuthenticationAPI.Providers
                     new() { ["img"] = frontHash }, includeToken: false)).GetProperty("object");
 
                 if (!IsSuccess(cardLive, "liveness")
-                    || GetBool(cardLive, "fake_liveness")     
-                    || GetBool(cardLive, "face_swapping"))   
+                    || GetBool(cardLive, "fake_liveness")
+                    || GetBool(cardLive, "face_swapping"))
                 {
-                    return Fail("Gi?y t? khng h?p l? ho?c nghi ng? gi? m?o"
+                    return Fail("Document is invalid or suspected to be forged"
                                 + (GetString(cardLive, "liveness_msg") is { } m ? $" ({m})" : ""));
                 }
 
@@ -105,7 +105,7 @@ namespace AuthenticationAPI.Providers
                 {
                     ["img_front"] = frontHash,
                     ["img_back"] = backHash,
-                    ["type"] = -1,                      
+                    ["type"] = -1,
                     ["validate_postcode"] = true
                 };
                 if (!string.IsNullOrWhiteSpace(_options.CropParam))
@@ -130,7 +130,7 @@ namespace AuthenticationAPI.Providers
             }
             catch (Exception ex) when (ex is VnptApiException or HttpRequestException or TaskCanceledException)
             {
-                _logger.LogError(ex, "VNPT OCR l?i");
+                _logger.LogError(ex, "VNPT OCR error");
                 return Fail(ToUserMessage(ex));
             }
         }
@@ -149,8 +149,8 @@ namespace AuthenticationAPI.Providers
             }
             catch (VnptApiException ex)
             {
-                _logger.LogWarning(ex, "VNPT OCR m?t tr?c l?i");
-                return Fail(SideMessage("tr?c", ex));
+                _logger.LogWarning(ex, "VNPT OCR front side error");
+                return Fail(SideMessage("front", ex));
             }
 
             try
@@ -163,17 +163,17 @@ namespace AuthenticationAPI.Providers
             }
             catch (VnptApiException ex)
             {
-                _logger.LogWarning(ex, "VNPT OCR m?t sau l?i");
-                return Fail(SideMessage("sau", ex));
+                _logger.LogWarning(ex, "VNPT OCR back side error");
+                return Fail(SideMessage("back", ex));
             }
 
             var frontWarn = GetStringList(frontObj, "warning_msg");
             if (frontWarn.Count > 0)
-                return Fail("?nh m?t tr?c cha ?t: " + string.Join(", ", frontWarn));
+                return Fail("The front side image does not meet quality standards: " + string.Join(", ", frontWarn));
 
             var backWarn = GetStringList(backObj, "warning_msg");
             if (backWarn.Count > 0)
-                return Fail("?nh m?t sau cha ?t: " + string.Join(", ", backWarn));
+                return Fail("The back side image does not meet quality standards: " + string.Join(", ", backWarn));
             var merged = new JsonObject();
             foreach (var p in frontObj.EnumerateObject()) merged[p.Name] = JsonNode.Parse(p.Value.GetRawText());
             foreach (var p in backObj.EnumerateObject()) merged[p.Name] = JsonNode.Parse(p.Value.GetRawText());
@@ -198,48 +198,48 @@ namespace AuthenticationAPI.Providers
 
         private static string SideMessage(string side, Exception ex) =>
             ex is VnptApiException { Code: "IDG-00010003" }
-                ? $"?nh m?t {side} CCCD khng ?t chu?n (m?, t?i, chi sng, m?t gc ho?c qu nh?). Vui l?ng ch?p l?i m?t {side}"
+                ? $"The {side} side image of the ID card does not meet quality standards (blurry, dark, glare, tilted or too small). Please retake the {side} side"
                 : ToUserMessage(ex);
 
-        // Tr? v? thng bo l?i n?u k?t qu? OCR khng ?t, null n?u ?n
+        // Returns an error message if the OCR result is not acceptable, null if it is OK
         private string? ValidateOcr(JsonElement obj)
         {
             if (GetString(obj, "msg") != "OK" || GetString(obj, "msg_back") != "OK")
-                return "Khng ?c ?c thng tin gi?y t?, vui l?ng ch?p l?i r? nt c? 2 m?t";
+                return "Unable to read the document information, please retake clear photos of both sides";
 
-            // ?nh c v?n ?: m?t gc, m?/nh?e...
+            // Image has issues: tilted, blurry, etc.
             var warnings = GetStringList(obj, "warning_msg");
             if (warnings.Count > 0)
-                return "?nh gi?y t? cha ?t: " + string.Join(", ", warnings);
+                return "The document image does not meet quality standards: " + string.Join(", ", warnings);
 
             if (string.IsNullOrWhiteSpace(GetString(obj, "id")))
-                return "Khng ?c ?c s? CCCD, vui l?ng ch?p l?i ?nh r? nt hn";
+                return "Unable to read the ID number, please retake a clearer photo";
 
             // only a citizen ID card (CCCD, 12-digit number) is accepted
             var idNumber = (GetString(obj, "id") ?? string.Empty).Trim();
             if (idNumber.Length != 12 || !idNumber.All(char.IsDigit))
-                return "Ch? ch?p nh?n Cn c?c cng dn (CCCD) 12 s?";
+                return "Only 12-digit Citizen ID cards (CCCD) are accepted";
 
             // front and back must be the same card. The MRZ on the back embeds the full ID number.
             var mrz = GetString(obj, "mrz");
             if (!string.IsNullOrWhiteSpace(mrz)
                 && mrz.Replace("<", "").Replace(" ", "").Length >= 20
                 && !mrz.Contains(idNumber))
-                return "Hai m?t gi?y t? khng thu?c cng m?t th? CCCD";
+                return "The two sides do not belong to the same CCCD card";
 
-            // S? ID c h?p l? theo quy lu?t khng (tampering.is_legal = "yes")
+            // The ID number must be valid according to the rules (tampering.is_legal = "yes")
             if (obj.TryGetProperty("tampering", out var tamper)
                 && GetString(tamper, "is_legal") is { } legal
                 && !legal.Equals("yes", StringComparison.OrdinalIgnoreCase))
-                return "S? gi?y t? khng h?p l?";
+                return "The document number is invalid";
 
             if (string.Equals(GetString(obj, "id_fake_warning"), "yes", StringComparison.OrdinalIgnoreCase))
-                return "S? gi?y t? nghi ng? gi? m?o";
+                return "The document number is suspected to be forged";
 
             // an expired ID card is always rejected (no longer controlled by configuration)
             if (string.Equals(GetString(obj, "expire_warning"), "yes", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(GetString(obj, "back_expire_warning"), "yes", StringComparison.OrdinalIgnoreCase))
-                return "Gi?y t? ? h?t h?n";
+                return "The document has expired";
 
             return null;
         }
@@ -276,7 +276,7 @@ namespace AuthenticationAPI.Providers
                     ["img_face"] = selfieHash
                 })).GetProperty("object");
 
-                // Ti li?u ghi prob l string nhng v d? tr? s? -> x? l? c? hai
+                // The documentation says prob is a string but the example returns a number -> handle both
                 TryGetDecimal(cmp, "prob", out var prob);
 
                 return new FaceCompareResult
@@ -284,12 +284,12 @@ namespace AuthenticationAPI.Providers
                     Success = true,
                     MatchScore = prob,                                   // 0-100
                     LivenessPassed = livenessPassed,
-                    LivenessScore = livenessPassed ? 100m : 0m           // VNPT ch? tr? success/failure
+                    LivenessScore = livenessPassed ? 100m : 0m           // VNPT only returns success/failure
                 };
             }
             catch (Exception ex) when (ex is VnptApiException or HttpRequestException or TaskCanceledException)
             {
-                _logger.LogError(ex, "VNPT face compare l?i");
+                _logger.LogError(ex, "VNPT face compare error");
                 return new FaceCompareResult { Success = false, ErrorMessage = ToUserMessage(ex) };
             }
         }
@@ -300,22 +300,22 @@ namespace AuthenticationAPI.Providers
         private static OcrResult Fail(string message) =>
             new() { Success = false, ErrorMessage = message };
 
-        // Khng a m? l?i/chi ti?t c?a VNPT ra cho ng?i dng cu?i (chi ti?t ? c trong log)
+        // Do not expose VNPT's error codes/details to the end user (details are in the log)
         private static string ToUserMessage(Exception ex) => ex switch
         {
             VnptApiException { Code: "IDG-00010003" } =>
-                "Ch?t l?ng ?nh khng ?t chu?n (m?, t?i, chi sng, m?t gc ho?c qu nh?). Vui l?ng ch?p l?i r? nt",
+                "Image quality does not meet standards (blurry, dark, glare, tilted or too small). Please retake a clear photo",
             VnptApiException { Code: "LOCAL-UNSUPPORTED-IMAGE" } =>
-                "Ch? h? tr? ?nh ?nh d?ng JPG ho?c PNG",
+                "Only JPG or PNG images are supported",
             VnptApiException =>
-                "Khng xc th?c ?c ?nh, vui l?ng ch?p l?i ho?c th? l?i sau",
+                "Unable to verify the image, please retake it or try again later",
             TaskCanceledException =>
-                "H? th?ng xc th?c ph?n h?i qu ch?m, vui l?ng th? l?i",
+                "The verification system responded too slowly, please try again",
             _ =>
-                "Khng k?t n?i ?c h? th?ng xc th?c, vui l?ng th? l?i sau"
+                "Unable to connect to the verification system, please try again later"
         };
 
-        // Nh?n di?n JPG/PNG theo magic bytes (iPhone c th? g?i HEIC, Android c th? g?i WebP -> VNPT khng nh?n)
+        // Detect JPG/PNG by magic bytes (iPhone may send HEIC, Android may send WebP -> VNPT does not accept them)
         private static (string ContentType, string Extension)? DetectImageType(byte[] b)
         {
             if (b.Length > 3 && b[0] == 0xFF && b[1] == 0xD8 && b[2] == 0xFF)
@@ -325,7 +325,7 @@ namespace AuthenticationAPI.Providers
             return null;
         }
 
-        // Upload ?nh (#1) -> hash. ?c ra byte[] ? HttpClient khng dispose stream c?a KycService.
+        // Upload image (#1) -> hash. Read into byte[] so HttpClient does not dispose KycService's stream.
         private async Task<string> GetHashAsync(Stream stream, string fileName)
         {
             var bytes = await ReadAllBytesAsync(stream);
@@ -335,7 +335,7 @@ namespace AuthenticationAPI.Providers
                 return cached;
 
             var type = DetectImageType(bytes)
-                ?? throw new VnptApiException("?nh d?ng ?nh khng ?c h? tr? (ch? JPG/PNG)", "LOCAL-UNSUPPORTED-IMAGE");
+                ?? throw new VnptApiException("Unsupported image format (only JPG/PNG)", "LOCAL-UNSUPPORTED-IMAGE");
 
             var uploadName = Path.ChangeExtension(fileName, type.Extension);
             _logger.LogInformation("VNPT upload {File}: {SizeKb} KB, {Type}",
@@ -353,25 +353,25 @@ namespace AuthenticationAPI.Providers
 
             var hash = root.GetProperty("object").GetProperty("hash").GetString();
             if (string.IsNullOrEmpty(hash))
-                throw new VnptApiException("addFile khng tr? v? hash");
+                throw new VnptApiException("addFile did not return a hash");
 
             _hashCache[cacheKey] = hash;
             return hash;
         }
 
-        // Theo ti li?u: card/liveness v face/mask khng c field "token"; cc API c?n l?i c.
+        // Per the documentation: card/liveness and face/mask have no "token" field; the other APIs require it.
         private async Task<JsonElement> PostAiAsync(string path, Dictionary<string, object?> body, bool includeToken = true)
         {
             body["client_session"] = _clientSession;
             if (includeToken)
-                body["token"] = Guid.NewGuid().ToString("N");   // chu?i b?t k?, khng k? t? ?c bi?t
+                body["token"] = Guid.NewGuid().ToString("N");   // any string, no special characters
 
             using var resp = await _http.PostAsJsonAsync(path, body);
             return await ParseAsync(resp, path);
         }
 
-        // Thnh cng: message = "IDG-00000000".
-        // L?i: {status, message (vd IDG-00010102), statusCode, errors[]}
+        // Success: message = "IDG-00000000".
+        // Error: {status, message (e.g. IDG-00010102), statusCode, errors[]}
         private static async Task<JsonElement> ParseAsync(HttpResponseMessage resp, string path)
         {
             var json = await resp.Content.ReadAsStringAsync();
@@ -392,7 +392,7 @@ namespace AuthenticationAPI.Providers
             {
                 var errors = parsed ? GetStringList(root, "errors") : new List<string>();
                 throw new VnptApiException(
-                    $"VNPT {path} l?i (HTTP {(int)resp.StatusCode}, {code ?? "n/a"})"
+                    $"VNPT {path} error (HTTP {(int)resp.StatusCode}, {code ?? "n/a"})"
                     + (errors.Count > 0 ? ": " + string.Join("; ", errors) : ""),
                     code ?? $"HTTP{(int)resp.StatusCode}");
             }

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using AuthenticationAPI.DTOs;
@@ -16,11 +18,16 @@ namespace AuthenticationAPI.Controllers
     {
         private readonly IOrganizerRequestService _service;
         private readonly IConfiguration _configuration;
+        private readonly IAuditLogClient _auditLog;
 
-        public OrganizerRequestController(IOrganizerRequestService service, IConfiguration configuration)
+        public OrganizerRequestController(
+            IOrganizerRequestService service,
+            IConfiguration configuration,
+            IAuditLogClient auditLog)
         {
             _service = service;
             _configuration = configuration;
+            _auditLog = auditLog;
         }
 
         private string NotificationConnectionString
@@ -46,8 +53,8 @@ namespace AuthenticationAPI.Controllers
         {
             get
             {
-                var raw = User.FindFirstValue(ClaimTypes.NameIdentifier) 
-                    ?? User.FindFirst("userId")?.Value 
+                var raw = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                    ?? User.FindFirst("userId")?.Value
                     ?? User.FindFirst("sub")?.Value;
                 return int.TryParse(raw, out var id) ? id : 0;
             }
@@ -233,6 +240,13 @@ namespace AuthenticationAPI.Controllers
             try
             {
                 var result = await _service.ReviewRequestAsync(requestId, CurrentUserId, dto);
+                var approved = string.Equals(result.Status, "Approved", StringComparison.OrdinalIgnoreCase);
+                await _auditLog.LogAsync(CurrentUserId, "admin",
+                    approved ? "ORGANIZER_REQUEST_APPROVED" : "ORGANIZER_REQUEST_REJECTED",
+                    "OrganizerRequest", requestId.ToString(),
+                    newValue: new { status = result.Status, targetUserId = result.UserId, rejectionReason = dto.RejectionReason },
+                    ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    userAgent: Request.Headers.UserAgent.ToString());
                 return Ok(result);
             }
             catch (KeyNotFoundException ex)

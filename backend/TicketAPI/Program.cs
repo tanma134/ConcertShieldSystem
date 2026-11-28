@@ -94,6 +94,7 @@ builder.Services.AddScoped<ITicketReturnService>(sp => new TicketReturnService(
     sp.GetRequiredService<IConfiguration>(),
     sp.GetRequiredService<IPaymentAPIClient>(),
     sp.GetRequiredService<TicketReturnNotifier>()));
+builder.Services.AddScoped<IRiskTicketRepository, RiskTicketRepository>();
 builder.Services.AddScoped<IRiskTicketAdminService, RiskTicketAdminService>();
 builder.Services.AddScoped<IReportService>(sp => new ReportService(
     sp.GetRequiredService<IReportRepository>(),
@@ -185,6 +186,14 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddHttpClient<IAuditLogClient, AuditLogClient>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["AdminApi:BaseUrl"] ?? "https://localhost:7076");
+    client.DefaultRequestHeaders.Add("X-Internal-Api-Key", builder.Configuration["InternalApi:Key"]);
+});
+
+builder.Services.AddApiRateLimiting();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -198,6 +207,7 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();   // Phải đứng TRƯỚC UseAuthorization()
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapControllers();
 

@@ -15,11 +15,13 @@ namespace AuthenticationAPI.Controllers
     {
         private readonly IUserService _userService;
         private readonly IConfiguration _configuration;
+        private readonly IAuditLogClient _auditLog;
 
-        public InternalSessionController(IUserService userService, IConfiguration configuration)
+        public InternalSessionController(IUserService userService, IConfiguration configuration, IAuditLogClient auditLog)
         {
             _userService = userService;
             _configuration = configuration;
+            _auditLog = auditLog;
         }
 
         // POST api/internal/users/5/revoke-sessions
@@ -32,6 +34,9 @@ namespace AuthenticationAPI.Controllers
                 return Unauthorized();
 
             var revoked = await _userService.RevokeAllSessionsAsync(userId);
+            await _auditLog.LogAsync(null, "system", "USER_SESSIONS_REVOKED", "User", userId.ToString(),
+                newValue: new { revoked, source = "AdminAPI" },
+                ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString());
             return Ok(new { revoked });
         }
     }

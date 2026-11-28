@@ -18,11 +18,20 @@ namespace AuthenticationAPI.Controllers
     {
         private const string StaffRoleName = "Staff";
         private readonly AuthenticationDbContext _context;
+        private readonly AuthenticationAPI.Services.IAuditLogClient _auditLog;
 
-        public OrganizerStaffController(AuthenticationDbContext context)
+        public OrganizerStaffController(AuthenticationDbContext context, AuthenticationAPI.Services.IAuditLogClient auditLog)
         {
             _context = context;
+            _auditLog = auditLog;
         }
+
+        private Task AuditAsync(string action, int staffUserId, object? newValue = null) =>
+            _auditLog.LogAsync(GetCurrentUserId() is var id and > 0 ? id : null,
+                User.IsInRole("Admin") || User.IsInRole("admin") ? "admin" : "organizer",
+                action, "User", staffUserId.ToString(), newValue: newValue,
+                ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                userAgent: Request.Headers.UserAgent.ToString());
 
         private int GetCurrentUserId()
         {
@@ -245,6 +254,8 @@ namespace AuthenticationAPI.Controllers
                 AuthProvider = newUser.AuthProvider
             };
 
+            await AuditAsync("ORG_STAFF_CREATED", newUser.UserId, new { email = newUser.Email });
+
             return CreatedAtAction(nameof(GetStaffList), new { id = newUser.UserId }, new { success = true, data = result, message = "Staff account created successfully." });
         }
 
@@ -325,6 +336,13 @@ namespace AuthenticationAPI.Controllers
                 user.IsActive = dto.IsActive.Value;
 
             await _context.SaveChangesAsync();
+            await AuditAsync("ORG_STAFF_UPDATED", staffUserId, new
+            {
+                fullName = dto.FullName,
+                phoneChanged = dto.PhoneNumber != null,
+                passwordReset = !string.IsNullOrWhiteSpace(dto.Password),
+                isActive = dto.IsActive
+            });
 
             return Ok(new
             {
@@ -391,6 +409,7 @@ namespace AuthenticationAPI.Controllers
                 catch { }
             }
 
+            await AuditAsync("ORG_STAFF_REMOVED", staffUserId);
             return Ok(new { success = true, message = "Staff account deactivated successfully." });
         }
     }

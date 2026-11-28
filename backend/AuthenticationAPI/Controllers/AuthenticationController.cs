@@ -4,6 +4,7 @@ using AuthenticationAPI.Risk;
 using AuthenticationAPI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AuthenticationAPI.Controllers
 {
@@ -28,6 +29,7 @@ namespace AuthenticationAPI.Controllers
         private string? ClientIp => RiskRequestContext.ResolveIp(HttpContext) ?? HttpContext.Connection.RemoteIpAddress?.ToString();
         private string? ClientUserAgent => Request.Headers.UserAgent.ToString();
 
+        [EnableRateLimiting(AuthRateLimitPolicies.Login)]
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDTO dto)
         {
@@ -77,6 +79,7 @@ namespace AuthenticationAPI.Controllers
             }
         }
 
+        [EnableRateLimiting(AuthRateLimitPolicies.Login)]
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDTO dto)
         {
@@ -157,6 +160,7 @@ namespace AuthenticationAPI.Controllers
             }
         }
 
+        [EnableRateLimiting(AuthRateLimitPolicies.Otp)]
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDTO dto)
         {
@@ -172,6 +176,7 @@ namespace AuthenticationAPI.Controllers
             }
         }
 
+        [EnableRateLimiting(AuthRateLimitPolicies.Otp)]
         [HttpPost("verify-reset-otp")]
         public async Task<IActionResult> VerifyResetOtp([FromBody] VerifyResetOtpDTO dto)
         {
@@ -218,6 +223,7 @@ namespace AuthenticationAPI.Controllers
             }
         }
 
+        [EnableRateLimiting(AuthRateLimitPolicies.Login)]
         [HttpPost("google")]
         public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginDTO dto)
         {
@@ -242,6 +248,56 @@ namespace AuthenticationAPI.Controllers
             {
                 _logger.LogError(ex, "Unexpected error during Google login");
                 return StatusCode(500, new { message = "An unexpected error occurred while logging in with Google. Please try again later." });
+            }
+        }
+
+        [EnableRateLimiting(AuthRateLimitPolicies.Otp)]
+        [HttpPost("step-up/send-otp")]
+        [Authorize]
+        public async Task<IActionResult> SendStepUpOtp()
+        {
+            var userIdText = (User.FindFirst("userId") ?? User.FindFirst(ClaimTypes.NameIdentifier))?.Value;
+            if (!int.TryParse(userIdText, out var userId))
+                return Unauthorized(new { message = "Invalid token" });
+
+            try
+            {
+                await _authService.SendStepUpOtpAsync(userId);
+                return Ok(new { message = "A verification code has been sent to your email." });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error sending step-up OTP for user {UserId}", userId);
+                return StatusCode(500, new { message = "An unexpected error occurred. Please try again later." });
+            }
+        }
+
+        [EnableRateLimiting(AuthRateLimitPolicies.Otp)]
+        [HttpPost("step-up/verify-otp")]
+        [Authorize]
+        public async Task<IActionResult> VerifyStepUpOtp([FromBody] VerifyStepUpOtpDTO dto)
+        {
+            var userIdText = (User.FindFirst("userId") ?? User.FindFirst(ClaimTypes.NameIdentifier))?.Value;
+            if (!int.TryParse(userIdText, out var userId))
+                return Unauthorized(new { message = "Invalid token" });
+
+            try
+            {
+                var result = await _authService.VerifyStepUpOtpAsync(userId, dto);
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error verifying step-up OTP for user {UserId}", userId);
+                return StatusCode(500, new { message = "An unexpected error occurred. Please try again later." });
             }
         }
 

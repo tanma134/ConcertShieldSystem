@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using TicketAPI.DTOs;
 using TicketAPI.Risk;
 using TicketAPI.Services;
@@ -30,6 +31,7 @@ namespace TicketAPI.Controllers
             _risk = risk;
         }
 
+        [EnableRateLimiting(TicketRateLimitPolicies.Hold)]
         [HttpPost("session")]
         public async Task<IActionResult> CreateHoldSession([FromBody] CreateHoldSessionRequest request)
         {
@@ -42,8 +44,8 @@ namespace TicketAPI.Controllers
                 });
 
             // eKYC gate + fraud rules before any seat is reserved.
-            //var verdict = await _risk.CheckHoldAsync(HttpContext, userId.Value, request);
-            //if (!verdict.Allowed) return verdict.ToActionResult();
+            var verdict = await _risk.CheckHoldAsync(HttpContext, userId.Value, request);
+            if (!verdict.Allowed) return verdict.ToActionResult();
 
             try
             {
@@ -263,6 +265,7 @@ namespace TicketAPI.Controllers
             }
         }
 
+        [EnableRateLimiting(TicketRateLimitPolicies.Hold)]
         [HttpPost("session/{holdId}/cancel")]
         public async Task<IActionResult> CancelHoldSession(string holdId)
         {
@@ -323,6 +326,7 @@ namespace TicketAPI.Controllers
             }
         }
 
+        [EnableRateLimiting(TicketRateLimitPolicies.Hold)]
         [HttpPut("session/{holdId}/seats")]
         public async Task<IActionResult> ChangeSeats(
             string holdId,

@@ -13,11 +13,14 @@ namespace PaymentAPI.Controllers
     public class PaymentReconciliationController : BaseApiController
     {
         private readonly IPaymentReconciliationService _service;
+        private readonly IAuditLogClient _auditLog;
 
         public PaymentReconciliationController(
-            IPaymentReconciliationService service)
+            IPaymentReconciliationService service,
+            IAuditLogClient auditLog)
         {
             _service = service;
+            _auditLog = auditLog;
         }
 
         [HttpGet]
@@ -67,6 +70,11 @@ namespace PaymentAPI.Controllers
                     paymentTransactionId,
                     request,
                     CurrentUserId);
+
+                _ = _auditLog.LogAsync(CurrentUserId, AuditActorType, "PAYMENT_RECON_RESOLVED", "PaymentTransaction",
+                    paymentTransactionId.ToString(), null,
+                    new { request.ResolutionAction, request.ResolutionStatus, request.ResolutionNote },
+                    HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString(), HttpContext.TraceIdentifier);
 
                 return Ok(new
                 {

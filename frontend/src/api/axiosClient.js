@@ -1,5 +1,6 @@
 import axios from "axios";
 import { riskHeaders } from "../utils/riskSignals";
+import { requestChallenge, getStepUpToken } from "../utils/challenge";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://localhost:7164/api";
 
@@ -35,6 +36,11 @@ axiosClient.interceptors.request.use((config) => {
   }
   // Attach risk signals to every request, including public auth endpoints
   Object.assign(config.headers, riskHeaders());
+  // Reuse a still-valid OTP step-up token (backend TTL ~10 minutes)
+  const stepUp = getStepUpToken();
+  if (stepUp && !config.headers["X-StepUp-Token"]) {
+    config.headers["X-StepUp-Token"] = stepUp;
+  }
   if (!isPublicEndpoint(config.url)) {
     const token = localStorage.getItem("accessToken");
     if (token) {
@@ -51,6 +57,36 @@ axiosClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     const invalidQueueToken = error.response?.data?.code === "TOKEN_INVALID";
+
+    // 428 RISK_CHALLENGE: open the CAPTCHA / OTP modal, then replay the request
+    // with the resulting token. Never for the step-up endpoints themselves.
+    const isChallenge =
+      error.response?.status === 428 &&
+      error.response?.data?.code === "RISK_CHALLENGE" &&
+      originalRequest &&
+      !originalRequest._challengeRetry &&
+      !/step-?up/i.test(originalRequest.url || "");
+
+    if (isChallenge) {
+      originalRequest._challengeRetry = true;
+      const type =
+        String(error.response.data.challengeType || "").toUpperCase() === "OTP"
+          ? "OTP"
+          : "CAPTCHA";
+      let result;
+      try {
+        result = await requestChallenge(type);
+      } catch {
+        return Promise.reject(error); // user cancelled or no modal mounted
+      }
+      if (result?.captchaToken) {
+        originalRequest.headers["X-Challenge-Token"] = result.captchaToken;
+      }
+      if (result?.stepUpToken) {
+        originalRequest.headers["X-StepUp-Token"] = result.stepUpToken;
+      }
+      return axiosClient(originalRequest);
+    }
 
     const shouldTryRefresh =
       error.response?.status === 401 &&

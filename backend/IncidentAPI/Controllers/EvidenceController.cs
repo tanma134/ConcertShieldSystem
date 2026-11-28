@@ -14,12 +14,20 @@ public class EvidenceController : ControllerBase
 {
     private readonly IEvidenceService _evidenceService;
     private readonly ILogger<EvidenceController> _logger;
+    private readonly IAuditLogClient _auditLog;
 
-    public EvidenceController(IEvidenceService evidenceService, ILogger<EvidenceController> logger)
+    public EvidenceController(IEvidenceService evidenceService, ILogger<EvidenceController> logger, IAuditLogClient auditLog)
     {
         _evidenceService = evidenceService;
         _logger = logger;
+        _auditLog = auditLog;
     }
+
+    private Task AuditAsync(int userId, string action, int incidentId, string? entityId, object? newValue = null) =>
+        _auditLog.LogAsync(userId, User.IsInRole("Admin") ? "admin" : "staff", action, "IncidentEvidence", entityId,
+            newValue: newValue is null ? new { incidentId } : newValue,
+            ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+            userAgent: Request.Headers.UserAgent.ToString());
 
     [HttpGet]
     [Authorize(Policy = "CanManageIncidents")]
@@ -50,6 +58,8 @@ public class EvidenceController : ControllerBase
             var isAdmin = User.IsInRole("Admin");
             var result = await _evidenceService.UploadEvidenceAsync(
                 incidentId, file, finalCaption, userId, userName, isAdmin);
+            await AuditAsync(userId, "INCIDENT_EVIDENCE_ADDED", incidentId, incidentId.ToString(),
+                new { incidentId, fileName = file.FileName, size = file.Length, contentType = file.ContentType });
             return Ok(result);
         });
 
@@ -61,6 +71,7 @@ public class EvidenceController : ControllerBase
             var userId = GetCurrentUserId();
             var isAdmin = User.IsInRole("Admin");
             await _evidenceService.DeleteEvidenceAsync(incidentId, evidenceId, userId, isAdmin);
+            await AuditAsync(userId, "INCIDENT_EVIDENCE_DELETED", incidentId, evidenceId.ToString());
             return Ok(new { message = "Evidence deleted successfully." });
         });
 

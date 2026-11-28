@@ -10,9 +10,11 @@ public class InternalTicketsRiskController : ControllerBase
 {
     private readonly IRiskTicketAdminService _service;
     private readonly IConfiguration _config;
+    private readonly IAuditLogClient _auditLog;
 
-    public InternalTicketsRiskController(IRiskTicketAdminService service, IConfiguration config)
+    public InternalTicketsRiskController(IRiskTicketAdminService service, IConfiguration config, IAuditLogClient auditLog)
     {
+        _auditLog = auditLog;
         _service = service;
         _config = config;
     }
@@ -34,6 +36,8 @@ public class InternalTicketsRiskController : ControllerBase
         try
         {
             await _service.BlockAsync(ticketId, input.UserId, input.Reason ?? "Blocked by risk review", input.StaffId, ct);
+            await _auditLog.LogAsync(input.StaffId, "system", "TICKET_BLOCKED", "Ticket", ticketId.ToString(),
+                newValue: new { status = "Blocked", ownerUserId = input.UserId, reason = input.Reason, expiresAt = input.ExpiresAt });
             return Ok(new { success = true, ticketId, status = "Blocked", expiresAt = input.ExpiresAt });
         }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
@@ -47,6 +51,8 @@ public class InternalTicketsRiskController : ControllerBase
         try
         {
             await _service.UnblockAsync(ticketId, input.UserId, input.Reason ?? "Unblocked by risk review", input.StaffId, ct);
+            await _auditLog.LogAsync(input.StaffId, "system", "TICKET_UNBLOCKED", "Ticket", ticketId.ToString(),
+                oldValue: new { status = "Blocked" }, newValue: new { status = "Unblocked", ownerUserId = input.UserId, reason = input.Reason });
             return Ok(new { success = true, ticketId, status = "Unblocked" });
         }
         catch (KeyNotFoundException ex) { return NotFound(new { message = ex.Message }); }
@@ -61,6 +67,9 @@ public class InternalTicketsRiskController : ControllerBase
             var result = await _service.RevokeAndRefundAsync(
                 ticketId, input.UserId, input.AppealId, input.StaffId,
                 input.Reason ?? "Risk appeal rejected", ct);
+
+            await _auditLog.LogAsync(input.StaffId, "system", "TICKET_REVOKED_REFUNDED", "Ticket", ticketId.ToString(),
+                newValue: new { status = result.Status, ownerUserId = input.UserId, appealId = input.AppealId, refundStatus = result.RefundStatus, refundAmount = result.RefundAmount });
 
             return Ok(new
             {

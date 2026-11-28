@@ -8,7 +8,6 @@ namespace AdminAPI.Controllers
 {
     [ApiController]
     [Route("api/admin/fraud-alerts")]
-    // Admin and Staff may view alert details (read-only). All block/restore actions live in RiskBlockAdminController (Admin only).
     [Authorize(Policy = "CanReviewFraudCases")]
     public class FraudAlertAdminController : ControllerBase
     {

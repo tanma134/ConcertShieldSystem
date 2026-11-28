@@ -11,11 +11,23 @@ namespace AuthenticationAPI.Controllers
     public class UserController : ControllerBase
     {
         private readonly IUserService _userService;
+        private readonly IAuditLogClient _auditLog;
 
-        public UserController(IUserService userService)
+        public UserController(IUserService userService, IAuditLogClient auditLog)
         {
             _userService = userService;
+            _auditLog = auditLog;
         }
+
+        private int? ActorId =>
+            int.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                ?? User.FindFirst("sub")?.Value, out var id) ? id : null;
+
+        private Task AuditAsync(string action, int targetUserId, object? newValue = null) =>
+            _auditLog.LogAsync(ActorId, "admin", action, "User", targetUserId.ToString(),
+                newValue: newValue,
+                ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                userAgent: Request.Headers.UserAgent.ToString());
 
         // View List User
         [HttpGet("users")]
@@ -64,6 +76,7 @@ namespace AuthenticationAPI.Controllers
                 return BadRequest(new { message = result.Message });
             }
 
+            await AuditAsync("USER_UPDATED_BY_ADMIN", id, new { fields = dto });
             return NoContent();
         }
 
@@ -87,6 +100,7 @@ namespace AuthenticationAPI.Controllers
                 return BadRequest(new { message = result.Message });
             }
 
+            await AuditAsync("USER_ROLE_ASSIGNED", id, new { roleId = dto.RoleId });
             return Ok(result.Data);
         }
 
@@ -107,6 +121,7 @@ namespace AuthenticationAPI.Controllers
                 return BadRequest(new { message = result.Message });
             }
 
+            await AuditAsync("USER_ROLE_ADDED", id, new { roleName = dto.RoleName });
             return Ok(new
             {
                 message = result.Message,
@@ -137,6 +152,8 @@ namespace AuthenticationAPI.Controllers
                 return BadRequest(new { message = result.Message });
             }
 
+            await AuditAsync(result.IsActive == true ? "USER_UNLOCKED" : "USER_LOCKED", id,
+                new { status, isActive = result.IsActive });
             return Ok(new
             {
                 message = result.Message,

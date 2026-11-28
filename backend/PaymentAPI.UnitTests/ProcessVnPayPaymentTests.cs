@@ -502,7 +502,8 @@ public class ProcessVnPayPaymentTests
             ticketApi,
             Mock.Of<IPaymentTransactionRepository>(),
             Microsoft.Extensions.Logging.Abstractions
-                .NullLogger<VnPayController>.Instance);
+                .NullLogger<VnPayController>.Instance,
+            Mock.Of<PaymentAPI.Services.IAuditLogClient>());
 
         controller.ControllerContext = new ControllerContext
         {

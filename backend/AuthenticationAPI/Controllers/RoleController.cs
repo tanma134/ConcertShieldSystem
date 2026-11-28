@@ -11,11 +11,21 @@ namespace AuthenticationAPI.Controllers
     public class RoleController : ControllerBase
     {
         private readonly IRoleService _roleService;
+        private readonly IAuditLogClient _auditLog;
 
-        public RoleController(IRoleService roleService)
+        public RoleController(IRoleService roleService, IAuditLogClient auditLog)
         {
             _roleService = roleService;
+            _auditLog = auditLog;
         }
+
+        private Task AuditAsync(string action, string? roleId, object? newValue = null) =>
+            _auditLog.LogAsync(
+                int.TryParse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                    ?? User.FindFirst("sub")?.Value, out var uid) ? uid : null,
+                "admin", action, "Role", roleId, newValue: newValue,
+                ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                userAgent: Request.Headers.UserAgent.ToString());
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
@@ -55,6 +65,7 @@ namespace AuthenticationAPI.Controllers
             if (result.Data is not null)
             {
                 var roleId = ((dynamic)result.Data).RoleId;
+                await AuditAsync("ROLE_CREATED", roleId.ToString(), dto);
                 return CreatedAtAction(nameof(Get), new { id = roleId }, result.Data);
             }
 
@@ -93,6 +104,7 @@ namespace AuthenticationAPI.Controllers
                 });
             }
 
+            await AuditAsync("ROLE_UPDATED", id.ToString(), dto);
             return Ok(result.Data);
         }
 
@@ -117,6 +129,7 @@ namespace AuthenticationAPI.Controllers
                 });
             }
 
+            await AuditAsync("ROLE_DELETED", id.ToString());
             return NoContent();
         }
     }

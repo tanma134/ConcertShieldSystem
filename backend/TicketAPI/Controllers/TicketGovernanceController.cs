@@ -14,11 +14,14 @@ namespace TicketAPI.Controllers
     {
         private readonly ITicketGovernanceService _governanceService;
         private readonly ILogger<TicketGovernanceController> _logger;
+        private readonly IAuditLogClient _auditLog;
 
         public TicketGovernanceController(
             ITicketGovernanceService governanceService,
-            ILogger<TicketGovernanceController> logger)
+            ILogger<TicketGovernanceController> logger,
+            IAuditLogClient auditLog)
         {
+            _auditLog = auditLog;
             _governanceService = governanceService;
             _logger = logger;
         }
@@ -38,6 +41,10 @@ namespace TicketAPI.Controllers
                 var adminName = CurrentUserName;
 
                 var result = await _governanceService.BulkRevokeTicketsAsync(request, adminId, adminName);
+
+                await _auditLog.LogAsync(adminId, AuditActorType, "TICKET_BULK_REVOKED", "Event", request?.EventId.ToString(),
+                    newValue: new { eventId = request?.EventId, message = result.Message }, ipAddress: ClientIp);
+
                 return Success(result, result.Message);
             }
             catch (Exception ex)

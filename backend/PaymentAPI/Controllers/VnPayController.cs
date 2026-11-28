@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using PaymentAPI.API;
 using PaymentAPI.DTOs;
 using PaymentAPI.Repositories;
@@ -18,18 +19,21 @@ namespace PaymentAPI.Controllers
         private readonly ITicketApiClient _ticketApiClient;
         private readonly IPaymentTransactionRepository _transactions;
         private readonly ILogger<VnPayController> _logger;
+        private readonly IAuditLogClient _auditLog;
 
         public VnPayController(IVnPayService vnPayService, IPaymentTransactionService paymentTransactionService, ITicketApiClient ticketApiClient,
-            IPaymentTransactionRepository transactions, ILogger<VnPayController> logger)
+            IPaymentTransactionRepository transactions, ILogger<VnPayController> logger, IAuditLogClient auditLog)
         {
             _vnPayService = vnPayService;
             _paymentTransactionService = paymentTransactionService;
             _ticketApiClient = ticketApiClient;
             _transactions = transactions;
             _logger = logger;
+            _auditLog = auditLog;
         }
 
         [Authorize(Roles = "Customer")]
+        [EnableRateLimiting(PaymentRateLimitPolicies.Payment)]
         [HttpPost("reconcile/{orderId:int}")]
         public async Task<IActionResult> Reconcile(int orderId)
         {
@@ -51,6 +55,15 @@ namespace PaymentAPI.Controllers
                     TransactionRef = transaction.GatewayTransactionRef
                 });
 
+            if (ok)
+            {
+                var raw = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+                _ = _auditLog.LogAsync(int.TryParse(raw, out var uid) ? uid : null, "user", "PAYMENT_RECONCILED", "Order",
+                    orderId.ToString(), null,
+                    new { OrderId = orderId, transaction.Amount, TransactionRef = transaction.GatewayTransactionRef },
+                    HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString(), HttpContext.TraceIdentifier);
+            }
+
             return Ok(new
             {
                 success = ok,
@@ -59,6 +72,7 @@ namespace PaymentAPI.Controllers
         }
 
         [AllowAnonymous]
+        [EnableRateLimiting(PaymentRateLimitPolicies.Payment)]
         [HttpPost("create-payment")]
         public async Task<ActionResult<CreateVnPayPaymentResponseDto>> CreatePayment([FromBody] CreateVnPayPaymentRequestDto request)
         {

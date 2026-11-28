@@ -45,6 +45,13 @@ builder.Services.AddHttpClient<IEventApiClient, EventApiClient>(client =>
     client.BaseAddress = new Uri(eventApiUrl);
 });
 
+builder.Services.AddHttpClient<IAuditLogClient, AuditLogClient>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["AdminApi:BaseUrl"]
+        ?? "https://localhost:7076");
+    client.DefaultRequestHeaders.Add("X-Internal-Api-Key", builder.Configuration["InternalApi:Key"]);
+});
+
 builder.Services.AddScoped<IVoucherRepository, VoucherRepository>();
 builder.Services.AddScoped<IVoucherService, VoucherService>();
 builder.Services.Configure<VnPayConfig>(
@@ -149,6 +156,8 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+builder.Services.AddApiRateLimiting();
+
 var app = builder.Build();
 
 try
@@ -227,6 +236,7 @@ app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapControllers();
 

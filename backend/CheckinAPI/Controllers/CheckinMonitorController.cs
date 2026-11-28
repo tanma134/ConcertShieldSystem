@@ -16,11 +16,13 @@ namespace CheckinAPI.Controllers
     {
         private readonly ICheckinMonitorService _monitorService;
         private readonly ILogger<CheckinMonitorController> _logger;
+        private readonly IAuditLogClient _auditLog;
 
-        public CheckinMonitorController(ICheckinMonitorService monitorService, ILogger<CheckinMonitorController> logger)
+        public CheckinMonitorController(ICheckinMonitorService monitorService, ILogger<CheckinMonitorController> logger, IAuditLogClient auditLog)
         {
             _monitorService = monitorService;
             _logger = logger;
+            _auditLog = auditLog;
         }
 
         private int GetCurrentUserId()
@@ -103,6 +105,16 @@ namespace CheckinAPI.Controllers
                 var userId = GetCurrentUserId();
                 var userName = User.Identity?.Name ?? $"Staff #{userId}";
                 var result = await _monitorService.ManualCheckinAsync(request, userId, userName);
+                if (result.Success)
+                {
+                    var actor = User.IsInRole("Admin") || User.IsInRole("admin") ? "admin"
+                        : User.IsInRole("Organizer") || User.IsInRole("organizer") ? "organizer" : "staff";
+                    await _auditLog.LogAsync(userId > 0 ? userId : null, actor, "CHECKIN_MANUAL_OVERRIDE", "Ticket",
+                        request.TicketCode,
+                        newValue: new { ticketCode = request.TicketCode },
+                        ipAddress: HttpContext.Connection.RemoteIpAddress?.ToString(),
+                        userAgent: Request.Headers.UserAgent.ToString());
+                }
                 return Ok(new { success = result.Success, data = result });
             }
             catch (Exception ex)
