@@ -17,6 +17,7 @@ namespace PaymentAPI.DTOs
     // Body of POST api/internal/refunds/manual (records a completed manual bank transfer from TicketAPI).
     public class RecordManualRefundDto
     {
+        public bool IsSimulation { get; set; }
         public int ReturnRequestId { get; set; }
         public int OrderId { get; set; }
         public long Amount { get; set; }
@@ -100,6 +101,7 @@ namespace PaymentAPI.DTOs
     // Refund Reconciliation Report
     public class RefundReconciliationReportDto
     {
+        public int SimulatedRefunds { get; set; }
         public int TotalRefunds { get; set; }
         public long TotalAmount { get; set; }
         public int PendingReconciliation { get; set; }

@@ -213,6 +213,11 @@
   font-size: 13px;
 }
 
+.ticket-detail-footer .ticket-refund-warning {
+  color: #9a5b00;
+  line-height: 1.5;
+}
+
 .ticket-show-qr-button {
   min-height: 44px;
   padding: 10px 18px;

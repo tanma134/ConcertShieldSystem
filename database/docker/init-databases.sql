@@ -1,0 +1,10 @@
+CREATE DATABASE authentication_db;
+CREATE DATABASE event_db;
+CREATE DATABASE ticket_db;
+CREATE DATABASE payment_db;
+CREATE DATABASE notification_db;
+CREATE DATABASE incident_db;
+CREATE DATABASE admin_db;
+CREATE DATABASE checkin_db;
+CREATE DATABASE queue_db;
+CREATE DATABASE review_db;

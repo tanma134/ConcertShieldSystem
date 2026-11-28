@@ -3,7 +3,8 @@ namespace AuthenticationAPI.Services
     public enum EmailPurpose
     {
         Register,
-        ForgotPassword
+        ForgotPassword,
+        StepUp
     }
 
     public interface IEmailService

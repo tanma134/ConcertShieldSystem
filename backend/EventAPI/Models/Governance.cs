@@ -41,6 +41,8 @@ public class EventChangeRequest
     public int EventVersion { get; set; }
     public int SubmittedBy { get; set; }
     public DateTime SubmittedAt { get; set; }
+    // Supporting legal document uploaded with the request (Cloudinary URL), if any.
+    public string? EvidenceUrl { get; set; }
     public int? ReviewedBy { get; set; }
     public DateTime? ReviewedAt { get; set; }
     public string? ReviewNotes { get; set; }

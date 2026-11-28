@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using QueueAPI.DTOs;
+using QueueAPI.Models;
 using Xunit;
 
 namespace QueueAPI.UnitTests;
@@ -49,5 +50,26 @@ public sealed class QueueSessionDateFilterTests
             toDate: new DateOnly(2026, 11, 10));
 
         Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public async Task Sessions_ReturnsAllSessionsWhenMoreThan500Exist()
+    {
+        using var context = new QueueAdminTestContext();
+        context.Db.QueueSessions.AddRange(Enumerable.Range(1, 2000).Select(userId => new QueueSession
+        {
+            EventId = 12,
+            UserId = userId,
+            SessionId = $"SESS{userId}",
+            QueueToken = $"TOKEN{userId:D4}",
+            Status = "WAITING"
+        }));
+        await context.Db.SaveChangesAsync();
+
+        var result = await context.Controller.Sessions();
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var sessions = Assert.IsAssignableFrom<IEnumerable<QueueAdminSessionResponse>>(ok.Value);
+        Assert.Equal(2000, sessions.Count());
     }
 }

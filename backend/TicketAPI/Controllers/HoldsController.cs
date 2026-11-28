@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using TicketAPI.DTOs;
 using TicketAPI.Risk;
 using TicketAPI.Services;
@@ -30,6 +31,7 @@ namespace TicketAPI.Controllers
             _risk = risk;
         }
 
+        [EnableRateLimiting(TicketRateLimitPolicies.Hold)]
         [HttpPost("session")]
         public async Task<IActionResult> CreateHoldSession([FromBody] CreateHoldSessionRequest request)
         {
@@ -50,6 +52,15 @@ namespace TicketAPI.Controllers
                 var eligibility = await _eligibility.GetAsync(request.EventId, HttpContext.RequestAborted);
                 if (!eligibility.CanSell)
                     throw new InvalidOperationException(eligibility.Reason);
+
+                if (eligibility.RequiresVirtualQueue)
+                {
+                    await _queueAdmission.EnsureAdmittedAsync(
+                        request.EventId,
+                        Request.Headers.Authorization.ToString(),
+                        Request.Headers["X-Queue-Token"].ToString(),
+                        HttpContext.RequestAborted);
+                }
 
                 var session = await _holdService.CreateHoldSessionAsync(
                     userId.Value,
@@ -77,11 +88,21 @@ namespace TicketAPI.Controllers
                     message = ex.Message
                 });
             }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    code = "QUEUE_ADMISSION_REQUIRED",
+                    message = ex.Message
+                });
+            }
             catch (TicketAPI.API.QueueAdmissionRequiredException ex)
             {
                 return StatusCode(StatusCodes.Status403Forbidden, new
                 {
                     success = false,
+                    code = "QUEUE_ADMISSION_REQUIRED",
                     message = ex.Message
                 });
             }
@@ -91,6 +112,7 @@ namespace TicketAPI.Controllers
                 return StatusCode(StatusCodes.Status503ServiceUnavailable, new
                 {
                     success = false,
+                    code = "QUEUE_API_UNAVAILABLE",
                     message = ex.Message
                 });
             }
@@ -243,6 +265,7 @@ namespace TicketAPI.Controllers
             }
         }
 
+        [EnableRateLimiting(TicketRateLimitPolicies.Hold)]
         [HttpPost("session/{holdId}/cancel")]
         public async Task<IActionResult> CancelHoldSession(string holdId)
         {
@@ -303,6 +326,7 @@ namespace TicketAPI.Controllers
             }
         }
 
+        [EnableRateLimiting(TicketRateLimitPolicies.Hold)]
         [HttpPut("session/{holdId}/seats")]
         public async Task<IActionResult> ChangeSeats(
             string holdId,

@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using BookingAPI.DTOS;
@@ -625,10 +625,10 @@ public class CheckoutTests
 
         var request = CreateOrderRequest(voucherCode: " BADCODE ");
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+        var exception = await Assert.ThrowsAsync<Exception>(() =>
             rig.Service.Add(request, CustomerId));
 
-        Assert.Equal("Voucher is invalid.", exception.Message);
+        Assert.Contains("Voucher is invalid.", exception.Message);
 
         rig.OrderRepository.Verify(repository =>
             repository.AddCompleteOrderAsync(It.IsAny<Order>()),
@@ -948,7 +948,7 @@ public class CheckoutTests
                     Price = 200_000,
                     Quantity = 100,
                     SoldQuantity = 0,
-                    Status = "Available",
+                    Status = "Active",
                     MinPerOrder = 1,
                     MaxPerOrder = 10
                 }

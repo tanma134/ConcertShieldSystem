@@ -77,6 +77,9 @@ namespace EventAPI.DTOs
         public bool HasSeatingChart { get; set; }
         public string SeatingMode { get; set; } = Common.SeatingMode.ReservedSeating;
         public bool IsFeatured { get; set; }
+        // Same rule as EventResponseDTO.CanSell, so list pages can filter by sale status
+        // without guessing from AvailableTickets alone.
+        public bool CanSell { get; set; }
         public int ViewCount { get; set; }
         public int TotalTickets { get; set; }
         public int SoldTickets { get; set; }

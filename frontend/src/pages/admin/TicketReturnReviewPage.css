@@ -1,0 +1,54 @@
+.refund-review-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  position: relative;
+  isolation: isolate;
+}
+
+.refund-review-table-wrap .ow-table {
+  min-width: 1100px;
+  table-layout: fixed;
+}
+
+.refund-review-table-wrap .ow-table th:nth-child(1) { width: 5%; }
+.refund-review-table-wrap .ow-table th:nth-child(2) { width: 12%; }
+.refund-review-table-wrap .ow-table th:nth-child(3) { width: 11%; }
+.refund-review-table-wrap .ow-table th:nth-child(4) { width: 9%; }
+.refund-review-table-wrap .ow-table th:nth-child(5) { width: 13%; }
+.refund-review-table-wrap .ow-table th:nth-child(6) { width: 10%; }
+.refund-review-table-wrap .ow-table th:nth-child(7) { width: 13%; }
+.refund-review-table-wrap .ow-table th:nth-child(8) { width: 9%; }
+
+.refund-review-table-wrap .ow-table td {
+  min-width: 0 !important;
+  max-width: none !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
+
+.refund-review-table-wrap .ow-table td:nth-child(7) > * {
+  max-width: 100%;
+  white-space: normal !important;
+  box-sizing: border-box;
+}
+
+.refund-review-table-wrap .ow-table th:last-child,
+.refund-review-table-wrap .ow-table td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  min-width: 190px;
+  width: 18%;
+  background: #fff;
+  box-shadow: -5px 0 10px -6px #64748b;
+}
+
+.refund-review-table-wrap .ow-table th:last-child {
+  z-index: 3;
+}
+
+.refund-review-table-wrap .ow-table td:last-child .tb-btn {
+  max-width: 190px;
+  white-space: normal;
+  text-align: left;
+}

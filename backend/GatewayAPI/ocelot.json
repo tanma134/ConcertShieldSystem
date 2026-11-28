@@ -488,6 +488,115 @@
             }
         },
         {
+            "Key": "event-staff-duty-toggle",
+            "DownstreamPathTemplate": "/api/events/{id}/staff/{staffUserId}/duty/{dutyType}",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7289
+                }
+            ],
+            "UpstreamPathTemplate": "/api/events/{id}/staff/{staffUserId}/duty/{dutyType}",
+            "UpstreamHttpMethod": [
+                "Put"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "event-staff-duties-update",
+            "DownstreamPathTemplate": "/api/events/{id}/staff/{staffUserId}/duties",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7289
+                }
+            ],
+            "UpstreamPathTemplate": "/api/events/{id}/staff/{staffUserId}/duties",
+            "UpstreamHttpMethod": [
+                "Put"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "identity-admin-assign-role",
+            "DownstreamPathTemplate": "/api/auth/users/{id}/assign-role",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7058
+                }
+            ],
+            "UpstreamPathTemplate": "/api/auth/users/{id}/assign-role",
+            "UpstreamHttpMethod": [
+                "Post"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "review-admin-visibility",
+            "DownstreamPathTemplate": "/api/Reviews/admin/{reviewId}/visibility",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7290
+                }
+            ],
+            "UpstreamPathTemplate": "/api/reviews/admin/{reviewId}/visibility",
+            "UpstreamHttpMethod": [
+                "Put",
+                "Patch"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "event-governance-change-evidence",
+            "DownstreamPathTemplate": "/api/events/{eventId}/governance/changes/evidence",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7289
+                }
+            ],
+            "UpstreamPathTemplate": "/api/events/{eventId}/governance/changes/evidence",
+            "UpstreamHttpMethod": [
+                "Post"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "event-governance-change-admin-direct",
+            "DownstreamPathTemplate": "/api/events/{eventId}/governance/changes/admin-direct",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7289
+                }
+            ],
+            "UpstreamPathTemplate": "/api/events/{eventId}/governance/changes/admin-direct",
+            "UpstreamHttpMethod": [
+                "Post"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
             "Key": "event-organizer-revenue",
             "DownstreamPathTemplate": "/api/organizer/events/{id}/revenue",
             "DownstreamScheme": "https",
@@ -3607,7 +3716,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7108
+                    "Port": 7227
                 }
             ],
             "UpstreamPathTemplate": "/api/VNPay/create-payment/{everything}",
@@ -3623,7 +3732,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7108
+                    "Port": 7227
                 }
             ],
             "UpstreamPathTemplate": "/api/VNPay/vnpay-return",
@@ -4827,6 +4936,17 @@
             ]
         },
         {
+            "Key": "return-request-verify-refund-account",
+            "DownstreamPathTemplate": "/api/ticket-returns/{id}/verify-refund-account",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                { "Host": "localhost", "Port": 7268 }
+            ],
+            "UpstreamPathTemplate": "/api/ticket-returns/{id}/verify-refund-account",
+            "UpstreamHttpMethod": [ "Post" ],
+            "AuthenticationOptions": { "AuthenticationProviderKey": "Bearer" }
+        },
+        {
             "Key": "return-request-confirm-manual-refund",
             "DownstreamPathTemplate": "/api/ticket-returns/{id}/confirm-manual-refund",
             "DownstreamScheme": "https",
@@ -4887,7 +5007,7 @@
             "DownstreamHostAndPorts": [
                 {
                     "Host": "localhost",
-                    "Port": 7108
+                    "Port": 7227
                 }
             ],
             "UpstreamPathTemplate": "/api/VnPay/reconcile/{orderId}",

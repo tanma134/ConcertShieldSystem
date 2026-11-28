@@ -208,7 +208,14 @@ namespace TicketAPI.Services
             var approved = await _reportRepository.GetRefundableReturnRequestsAsync(eventId);
 
             return approved
-                .Select(r => new RefundLine(r.ReviewedAt ?? r.UpdatedAt, r.Ticket?.TicketTypeId ?? 0, r.RefundAmount))
+                // A refund belongs to the day the money actually went back. ReviewedAt is
+                // only the day staff approved the request, which can be a different day (or,
+                // for a return approved earlier, a later one) than the transfer itself.
+                // Falls back to approval, then last update, when no transfer date exists.
+                .Select(r => new RefundLine(
+                    r.RefundedAt ?? r.ReviewedAt ?? r.UpdatedAt,
+                    r.Ticket?.TicketTypeId ?? 0,
+                    r.RefundAmount))
                 .ToList();
         }
 

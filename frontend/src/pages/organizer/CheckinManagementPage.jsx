@@ -1442,10 +1442,10 @@ const getShiftScheduleWarning = (ev, shiftStartDtStr, shiftEndDtStr) => {
               </div>
             )}
 
-            {/* ================= TAB 3: ADMISSION ATTENDANCE REPORT ================= */}
+{/* ================= TAB 3: ADMISSION ATTENDANCE REPORT ================= */}
             {activeTab === "REPORT" && (
               <div style={{ background: "#ffffff", padding: "28px", borderRadius: "14px", border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
-                <div style={{ marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", flexWrap: "wrap", marginBottom: "20px" }}>
                   <div>
                     <h2 style={{ margin: "0 0 4px 0", fontSize: "1.35rem", fontWeight: 700, color: "#111827" }}>
                       Attendance & Admission Summary
@@ -1456,21 +1456,21 @@ const getShiftScheduleWarning = (ev, shiftStartDtStr, shiftEndDtStr) => {
                   </div>
                   <button
                     type="button"
-                    disabled={busy || !effectiveId}
                     onClick={exportCsv}
+                    disabled={busy || !effectiveId}
                     style={{
-                      padding: "9px 18px",
-                      borderRadius: "8px",
+                      padding: "10px 18px",
+                      borderRadius: "10px",
+                      border: "1px solid #be185d",
+                      background: busy || !effectiveId ? "#f9d4e4" : "#be185d",
+                      color: busy || !effectiveId ? "#9d174d" : "#ffffff",
                       fontWeight: 600,
                       fontSize: "0.9rem",
-                      background: "linear-gradient(135deg, #d61f6e, #be185d)",
-                      color: "#ffffff",
-                      border: "none",
                       cursor: busy || !effectiveId ? "not-allowed" : "pointer",
-                      boxShadow: "0 2px 6px rgba(190, 24, 93, 0.3)"
+                      whiteSpace: "nowrap",
                     }}
                   >
-                    Export Check-in Report (CSV)
+                    {busy ? "Exporting…" : "Export Check-in Report (CSV)"}
                   </button>
                 </div>
 

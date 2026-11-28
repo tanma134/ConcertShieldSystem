@@ -109,12 +109,42 @@ public class IncidentService : IIncidentService
         return await _incidentRepository.SearchIncidentsAsync(query, requestingUserId, isAdmin, ct);
     }
 
+    // An incident is finished once it is Resolved or Closed. Editing it afterwards would
+    // rewrite the record an admin relies on when reviewing what happened.
+    private static bool IsFinalStatus(string? status)
+    {
+        return string.Equals(status, "Resolved", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(status, "Closed", StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Statuses an incident may hold. Free text let a caller set any string, including
+    // ones no screen understands.
+    private static readonly string[] AllowedStatuses =
+    {
+        "Reported", "InProgress", "Escalated", "Resolved", "Closed"
+    };
+
+    private static string NormalizeStatus(string raw)
+    {
+        var value = (raw ?? string.Empty).Trim();
+        var match = AllowedStatuses.FirstOrDefault(
+            s => string.Equals(s, value, StringComparison.OrdinalIgnoreCase));
+        if (match == null)
+            throw new IncidentServiceException(400,
+                $"Unknown incident status '{value}'. Allowed: {string.Join(", ", AllowedStatuses.Distinct())}.");
+        return match;
+    }
+
     public async Task<IncidentDetailDto> UpdateIncidentAsync(
         int id, UpdateIncidentRequest req, int updatedBy, string updaterName, bool isAdmin, CancellationToken ct = default)
     {
         var incident = await _incidentRepository.GetIncidentByIdAsync(id, ct);
         if (incident == null)
             throw new IncidentServiceException(404, $"Incident #{id} not found.");
+
+        if (IsFinalStatus(incident.Status))
+            throw new IncidentServiceException(409,
+                $"Incident #{id} is already {incident.Status} and can no longer be edited.");
 
         var now = DateTime.UtcNow;
         var prevStatus = incident.Status;
@@ -135,7 +165,7 @@ public class IncidentService : IIncidentService
             incident.Description = req.Description.Trim();
 
         if (!string.IsNullOrWhiteSpace(req.Status))
-            incident.Status = req.Status.Trim();
+            incident.Status = NormalizeStatus(req.Status);
 
         incident.UpdatedAt = now;
 
@@ -168,8 +198,13 @@ public class IncidentService : IIncidentService
         if (incident == null)
             throw new IncidentServiceException(404, $"Incident #{id} not found.");
 
+        // A resolved or closed incident must not be reopened by a status call.
+        if (IsFinalStatus(incident.Status))
+            throw new IncidentServiceException(409,
+                $"Incident #{id} is already {incident.Status} and its status can no longer be changed.");
+
         var prevStatus = incident.Status;
-        incident.Status = req.Status.Trim();
+        incident.Status = NormalizeStatus(req.Status);
         incident.UpdatedAt = DateTime.UtcNow;
 
         var updateRecord = new IncidentUpdate
@@ -235,7 +270,9 @@ public class IncidentService : IIncidentService
             try
             {
                 var client = _httpClientFactory?.CreateClient() ?? new HttpClient();
-                var baseUrl = _configuration?["NotificationApi:BaseUrl"] ?? "http://localhost:7197";
+                // NotificationAPI listens on HTTPS 7197 and HTTP 7186; the scheme must match
+                // the port, otherwise the escalate notice was silently dropped every time.
+                var baseUrl = _configuration?["NotificationApi:BaseUrl"] ?? "https://localhost:7197";
                 var notifPayload = new
                 {
                     userId = targetAdminId,

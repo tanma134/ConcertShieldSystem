@@ -525,11 +525,11 @@ export default function StepReview({ eventId, event, onRefresh, onSaved, onBack,
             </p>
           )}
 
-          {event.refundPolicies?.length > 0 && (
-            <p className="ow-hint">
-              Refund policies: {event.refundPolicies.length} rules configured.
-            </p>
-          )}
+          <p className="ow-hint">
+            {event.refundPolicies?.length > 0
+              ? `Refund policies: ${event.refundPolicies.length} rules configured.`
+              : "Customer-requested ticket refunds: not offered."}
+          </p>
         </div>
       )}
 

@@ -8,6 +8,7 @@ import eventApi from "../api/eventApi";
 import wishlistApi from "../api/wishlistApi";
 import { useAuth } from "../context/AuthContext";
 import { formatDateRange, formatPrice } from "../utils/format";
+import { getCustomerRefundWarning } from "../utils/refundPolicy";
 import "../styles/theme-dark.css";
 import "./EventDetailPage.css";
 
@@ -120,6 +121,8 @@ export default function EventDetailPage() {
   useEffect(() => {
     setNow(Date.now());
   }, [event]);
+
+  const refundWarning = getCustomerRefundWarning(event, now);
 
   const timingStatus = useMemo(() => {
     if (!event?.startsAt) return null;
@@ -247,6 +250,17 @@ export default function EventDetailPage() {
                 </section>
               )}
 
+              {!event.refundPolicies?.length && (
+                <section className="tb-detail-block">
+                  <h2>Refund Policy</h2>
+                  <p>This event does not offer customer-requested ticket refunds.</p>
+                </section>
+              )}
+              {refundWarning && (
+                <div className="tb-refund-warning" role="alert">
+                  {refundWarning}
+                </div>
+              )}
               {event.refundPolicies?.length > 0 && (
                 <section className="tb-detail-block">
                   <h2>Refund Policy</h2>

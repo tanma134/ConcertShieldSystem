@@ -331,13 +331,17 @@ public partial class TicketDbContext : DbContext
             entity.Property(e => e.RefundedAt).HasColumnName("refunded_at");
             entity.Property(e => e.RefundReference).HasMaxLength(100).HasColumnName("refund_reference");
             entity.Property(e => e.RefundError).HasMaxLength(500).HasColumnName("refund_error");
-            entity.Property(e => e.BankAccountName).HasMaxLength(200).HasColumnName("bank_account_name");
-            entity.Property(e => e.BankAccountNumber).HasMaxLength(50).HasColumnName("bank_account_number");
+            // These lengths match the live columns. They used to be 200/50 here while the
+            // live table held 100/30, so a long account name passed EF validation and then
+            // failed at the database with a 22001 truncation error.
+            entity.Property(e => e.BankAccountName).HasMaxLength(100).HasColumnName("bank_account_name");
+            entity.Property(e => e.BankAccountNumber).HasMaxLength(30).HasColumnName("bank_account_number");
             entity.Property(e => e.BankName).HasMaxLength(100).HasColumnName("bank_name");
             entity.Property(e => e.ManualRefundReference).HasMaxLength(100).HasColumnName("manual_refund_reference");
             entity.Property(e => e.ManualRefundProcessedBy).HasColumnName("manual_refund_processed_by");
             entity.Property(e => e.ManualRefundProcessedAt).HasColumnName("manual_refund_processed_at");
             entity.Property(e => e.ProofUrl).HasColumnName("proof_url");
+            entity.Property(e => e.BankVerificationJson).HasColumnName("bank_verification_json").HasColumnType("jsonb");
 
             entity.HasOne(d => d.Ticket).WithMany()
                 .HasForeignKey(d => d.TicketId)

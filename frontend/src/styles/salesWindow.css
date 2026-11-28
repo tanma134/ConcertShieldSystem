@@ -1,0 +1,64 @@
+.ow-sales-window-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 16px;
+}
+
+.ow-sales-window-grid .ow-field {
+  min-width: 0;
+}
+
+.ow-sales-window-grid input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.ow-sales-window-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding-bottom: 2px;
+}
+
+.ow-sales-window-actions button {
+  white-space: nowrap;
+}
+
+.ow-sales-window-default {
+  margin: 12px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+@media (max-width: 1000px) {
+  .ow-sales-window-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .ow-sales-window-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 600px) {
+  .ow-sales-window-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ow-sales-window-actions {
+    flex-wrap: wrap;
+  }
+}
+.ow-warning {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 1px solid #f4c76b;
+  border-radius: 8px;
+  background: #fff8e6;
+  color: #7a4b00;
+  line-height: 1.5;
+}

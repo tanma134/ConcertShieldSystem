@@ -44,7 +44,6 @@ public sealed class AppealService : IAppealService
         return ToPublicDto(cfg, d, canAppeal, cannotReason, existing);
     }
 
-    // Danh sách decision (BLOCK/HOLD, không phải shadow) của chính user, 30 ngày gần nhất - hiển thị ở My Profile.
     public async Task<List<RiskDecisionPublicDto>> GetMyDecisionsAsync(int userId, CancellationToken ct = default)
     {
         var cfg = await _config.GetAsync(ct);

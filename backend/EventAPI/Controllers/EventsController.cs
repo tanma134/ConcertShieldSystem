@@ -35,12 +35,19 @@ namespace EventAPI.Controllers
         }
 
         [HttpGet("staff/{staffId:int}")]
-        [AllowAnonymous]
+        [Authorize]
         public async Task<IActionResult> GetEventsByStaff(int staffId)
         {
             try
             {
-                var targetId = staffId > 0 ? staffId : (CurrentUserIdOrNull ?? 0);
+                // This lists which events a staff member is posted to, so it must not be
+                // readable anonymously. A staff account may read its own list; admins may
+                // read anyone's; nobody else may read another account's postings.
+                var callerId = CurrentUserIdOrNull ?? 0;
+                if (!IsAdmin && staffId != callerId)
+                    return Forbid();
+
+                var targetId = staffId > 0 ? staffId : callerId;
                 var result = await _eventStaffService.GetAssignmentsByStaffAsync(targetId);
                 return Ok(ApiResponseDTO<List<StaffEventAssignmentDTO>>.SuccessResponse(result));
             }
@@ -113,8 +120,19 @@ namespace EventAPI.Controllers
         {
             try
             {
-                var result = await _eventService.GetByIdAsync(id, incrementView: true, publicOnly: false);
+                var result = await _eventService.GetByIdAsync(id, incrementView: true, publicOnly: true);
                 return Ok(ApiResponseDTO<EventResponseDTO>.SuccessResponse(result));
+            }
+            catch (KeyNotFoundException) when ((CurrentUserIdOrNull ?? 0) > 0)
+            {
+                // Not public: only the organizer who owns it (or an admin) may read it.
+                // Anyone else still gets the same "not found" answer as an anonymous caller.
+                try
+                {
+                    var mine = await _eventService.GetMineByIdAsync(id, CurrentUserId, IsAdmin);
+                    return Ok(ApiResponseDTO<EventResponseDTO>.SuccessResponse(mine));
+                }
+                catch (Exception ex) { return HandleException(ex); }
             }
             catch (Exception ex) { return HandleException(ex); }
         }
@@ -230,11 +248,28 @@ namespace EventAPI.Controllers
 
         [HttpPost("{id:int}/cancel")]
         [Authorize(Policy = "RequireOrganizer")]
-        public async Task<IActionResult> Cancel(int id)
+        public async Task<IActionResult> Cancel(
+            int id,
+            [FromForm] string? reason,
+            [FromForm] string? evidenceUrl,
+            IFormFile? evidenceFile,
+            [FromServices] ICloudinaryService cloudinary)
         {
             try
             {
-                var result = await _eventService.CancelAsync(id, CurrentUserId, IsAdmin);
+                // Admin cancellations require an official reason; a supporting document is
+                // uploaded to storage first so its URL can be stored with the decision.
+                string? uploadedUrl = evidenceUrl?.Trim();
+                if (evidenceFile is { Length: > 0 })
+                {
+                    await _eventService.GetOwnedEntityAsync(id, CurrentUserId, IsAdmin);
+                    await using var stream = evidenceFile.OpenReadStream();
+                    var upload = await cloudinary.UploadImageAsync(
+                        stream, evidenceFile.FileName, $"events/{id}/cancellation");
+                    uploadedUrl = upload.SecureUrl;
+                }
+
+                var result = await _eventService.CancelAsync(id, CurrentUserId, IsAdmin, reason, uploadedUrl);
                 await AuditAsync(_audit, "EVENT_CANCELLED", "Event", id, newValue: new { status = result.Status });
                 return Ok(ApiResponseDTO<EventResponseDTO>.SuccessResponse(result, "Concert cancelled"));
             }

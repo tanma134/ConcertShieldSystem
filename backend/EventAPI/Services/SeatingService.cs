@@ -593,16 +593,24 @@ namespace EventAPI.Services
 
         private async Task EnsureZoneNotSoldAsync(SeatZone zone, List<TicketType> ticketTypes, string action)
         {
+            // Tickets sold is the source of truth for "this zone is in use". Seat rows carry
+            // a status column, but nothing in the system ever writes it, so counting it
+            // always returned zero and a zone with sold tickets could be rebuilt or deleted
+            // while its issued seats were still attached to live tickets.
+            var ticketType = ticketTypes.FirstOrDefault(t => t.TicketTypeId == zone.TicketTypeId);
+            var sold = ticketType?.SoldQuantity ?? 0;
+
             if (SeatZoneType.IsSeated(zone.ZoneType))
             {
+                // A seated zone can also be occupied by a held seat, which is not yet sold.
                 var occupied = await _seatingRepository.CountOccupiedSeatsAsync(zone.SeatZoneId);
-                if (occupied > 0)
+                var inUse = Math.Max(sold, occupied);
+                if (inUse > 0)
                     throw new InvalidOperationException(
-                        $"{action}: {occupied} seat(s) in '{zone.ZoneName}' are already held, reserved or sold.");
+                        $"{action}: {inUse} seat(s) in '{zone.ZoneName}' are already held, reserved or sold.");
             }
             else
             {
-                var sold = ticketTypes.FirstOrDefault(t => t.TicketTypeId == zone.TicketTypeId)?.SoldQuantity ?? 0;
                 if (sold > 0)
                     throw new InvalidOperationException(
                         $"{action}: {sold} ticket(s) have already been sold for the standing zone '{zone.ZoneName}'.");

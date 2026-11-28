@@ -29,11 +29,11 @@ public static class TicketReturnPolicy
     public const int MinReasonLength = 10;
     public const int MaxReasonLength = 500;
 
-    // Tier used when the organizer has not configured any active refund policy.
+    // Legacy tier for callers that explicitly request the cutoff-based overload.
     public static readonly RefundTier DefaultTier = new(DefaultCutoffHours, 100m);
 
     // Decides whether a ticket may enter the return flow right now, using the
-    // default tier. Kept for callers that have no organizer policy.
+    // explicitly supplied cutoff. Event flows must use the organizer-tier overload.
     public static ReturnEligibility Evaluate(
         TicketReturnFacts facts,
         DateTime nowUtc,
@@ -46,7 +46,7 @@ public static class TicketReturnPolicy
     // refund tiers the organizer configured for the event.
     // Rules are checked from the most specific to the most general so the
     // customer always sees the most useful message.
-    // A null/empty tier list means the organizer set nothing, so the default applies.
+    // A null/empty tier list means customer-requested refunds are not offered.
     public static ReturnEligibility Evaluate(
         TicketReturnFacts facts,
         DateTime nowUtc,
@@ -68,13 +68,26 @@ public static class TicketReturnPolicy
         if (!string.Equals(facts.TicketStatus, TicketStatuses.Active, StringComparison.Ordinal))
             return Reject("TICKET_NOT_ACTIVE", "This ticket is not active, so it cannot be returned.");
 
-        var effective = tiers is { Count: > 0 } ? tiers : new[] { DefaultTier };
+        // A null list means the organizer's policy could not be read (EventAPI error);
+        // an empty list means the event genuinely does not offer customer refunds.
+        // Reporting the second reason for the first case would tell a customer their
+        // event never allows refunds when in fact we just failed to ask.
+        if (tiers is null)
+            return Reject("REFUND_POLICY_UNAVAILABLE",
+                "Refund availability could not be checked right now. Please try again later.");
+
+        if (tiers.Count == 0)
+            return Reject("REFUNDS_NOT_ALLOWED", "This event does not offer customer-requested ticket refunds.");
+
+        var effective = tiers;
         var tier = SelectTier(effective, facts.EventStartsAtUtc - nowUtc);
         if (tier == null)
         {
-            var widest = effective.Max(t => t.DeadlineHours);
+            // Returns stay open as long as ANY tier still applies, so the window really
+            // closes at the smallest deadline, not the largest one.
+            var closesAt = effective.Min(t => t.DeadlineHours);
             return Reject("RETURN_WINDOW_CLOSED",
-                $"Returns close {widest} hours before the event starts.");
+                $"Returns close {closesAt} hours before the event starts.");
         }
 
         return new ReturnEligibility(true, "OK", "This ticket can be returned.", tier.RefundPercent);

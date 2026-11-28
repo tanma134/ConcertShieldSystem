@@ -252,7 +252,7 @@ namespace EventAPI.Services
 
                 if (dto.StartsAt.HasValue || dto.EndsAt.HasValue)
                 {
-                    throw new GovernanceConflictException("SCHEDULE_CHANGE_NOT_ALLOWED_AFTER_PUBLICATION: Published concerts cannot change schedule directly. A Postpone or Reschedule change request must be submitted.");
+                    throw new GovernanceConflictException("SCHEDULE_CHANGE_NOT_ALLOWED_AFTER_PUBLICATION: Published concerts cannot change schedule directly. A Postpone, Reschedule or Cancel change request must be submitted.");
                 }
             }
 
@@ -467,7 +467,7 @@ namespace EventAPI.Services
             return await MapToResponseWithSeatingAsync(reloaded!);
         }
 
-        public async Task<EventResponseDTO> CancelAsync(int id, int callerId, bool isAdmin)
+        public async Task<EventResponseDTO> CancelAsync(int id, int callerId, bool isAdmin, string? reason = null, string? evidenceUrl = null)
         {
             var entity = await GetOwnedEntityAsync(id, callerId, isAdmin);
 
@@ -482,14 +482,28 @@ namespace EventAPI.Services
             if (status != EventStatus.Published && status != EventStatus.Pending)
                 throw new InvalidOperationException($"Only Pending or Published concerts can be cancelled. Current status: '{status}'.");
 
+            // Admin cancellations carry an official reason + supporting document; keep both
+            // so the decision stays auditable (cleanReason() strips the tag for the UI).
+            var cleanReason = reason?.Trim();
+            if (!string.IsNullOrWhiteSpace(cleanReason))
+            {
+                var stored = string.IsNullOrWhiteSpace(evidenceUrl)
+                    ? cleanReason
+                    : $"{cleanReason} [Official Proof Document: {evidenceUrl}]";
+                entity.RejectedReason = stored.Length > 500 ? stored[..500] : stored;
+            }
+
             entity.Status = EventStatus.Cancelled;
             entity.SalesFrozen = true;
             entity.ScheduleVersion += 1;
             entity.UpdatedBy = callerId;
             entity.UpdatedAt = DateTime.UtcNow;
 
+            var queuedReason = string.IsNullOrWhiteSpace(cleanReason)
+                ? "Concert cancelled by " + (isAdmin ? "Admin" : "Organizer")
+                : cleanReason;
             _governance.Queue("CancelEvent", new NotificationMessage(entity.OrganizerId, "Concert cancelled", $"{entity.Title} has been cancelled.", "event_cancelled", $"/organizer/events/{entity.EventId}"));
-            _governance.Queue("ApplyChange", new ApplyChangeMessage(0, id, "Cancel", null, null, entity.ScheduleVersion, "Concert cancelled by " + (isAdmin ? "Admin" : "Organizer"), entity.Title, entity.Slug));
+            _governance.Queue("ApplyChange", new ApplyChangeMessage(0, id, "Cancel", null, null, entity.ScheduleVersion, queuedReason, entity.Title, entity.Slug));
 
             await _eventRepository.UpdateAsync(entity);
 
@@ -579,11 +593,27 @@ namespace EventAPI.Services
             return await MapToResponseWithSeatingAsync(reloaded!);
         }
 
+        // Single source of truth for "is this concert buyable right now" — used by both
+        // the detail DTO and the list DTO so the two views can never disagree.
+        public static bool CanSell(Event e)
+        {
+            var now = DateTime.UtcNow;
+            return EventStatus.Normalize(e.Status) == EventStatus.Published
+                && !e.SalesFrozen
+                && GovernanceRules.ComplianceApproved(e)
+                && e.StartsAt > now
+                && e.TicketTypes.Any(t => !t.IsDeleted
+                    && t.Status == "Active"
+                    && t.Quantity > t.SoldQuantity
+                    && (!t.SalesStartsAt.HasValue || t.SalesStartsAt <= now)
+                    && TicketSalesWindow.EndsAt(t.SalesEndsAt, e.StartsAt) > now);
+        }
+
         public static EventResponseDTO MapToResponse(Event e) => new()
         {
             ComplianceStatus = e.ComplianceStatus,
             ScheduleAnnounced = e.Status != EventStatus.Postponed,
-            CanSell = EventStatus.Normalize(e.Status) == EventStatus.Published && !e.SalesFrozen && GovernanceRules.ComplianceApproved(e) && e.StartsAt > DateTime.UtcNow && e.TicketTypes.Any(t => !t.IsDeleted && t.Status == "Active" && t.Quantity > t.SoldQuantity && (!t.SalesStartsAt.HasValue || t.SalesStartsAt <= DateTime.UtcNow) && (!t.SalesEndsAt.HasValue || t.SalesEndsAt > DateTime.UtcNow)),
+            CanSell = CanSell(e),
             EventId = e.EventId,
             OrganizerId = e.OrganizerId,
             CategoryId = e.CategoryId,
@@ -647,6 +677,7 @@ namespace EventAPI.Services
             HasSeatingChart = e.HasSeatingChart,
             SeatingMode = SeatingMode.Normalize(e.SeatingMode),
             IsFeatured = e.IsFeatured,
+            CanSell = CanSell(e),
             ViewCount = e.ViewCount,
             TotalTickets = e.TicketTypes?.Where(t => !t.IsDeleted).Sum(t => t.Quantity) ?? e.TotalTickets,
             SoldTickets = e.TicketTypes?.Where(t => !t.IsDeleted).Sum(t => t.SoldQuantity) ?? e.SoldTickets,

@@ -15,10 +15,14 @@ namespace TicketAPI.Repositories
 
         public async Task<List<Order>> GetPaidOrdersWithDetailsAsync(int eventId)
         {
+            // A fully returned order has its status flipped to "Refunded", but it still
+            // counts as money that came in: the revenue summary subtracts its refund
+            // separately. Loading only "Paid" dropped the gross while keeping the
+            // refund, which made the net total negative.
             return await _context.Orders
                 .AsNoTracking()
                 .Include(o => o.OrderDetails)
-                .Where(o => o.EventId == eventId && o.Status == "Paid" && !o.IsDeleted)
+                .Where(o => o.EventId == eventId && !o.IsDeleted && (o.Status == "Paid" || o.Status == "Refunded"))
                 .ToListAsync();
         }
 

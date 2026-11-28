@@ -14,5 +14,7 @@ namespace AuthenticationAPI.Services
         Task ResetPasswordAsync(ResetPasswordDTO dto, string? ipAddress = null, string? userAgent = null);
         Task<LoginResponseDTO> GoogleLoginAsync(GoogleLoginDTO dto, string? ipAddress = null, string? userAgent = null);
         Task ChangePasswordAsync(int userId, ChangePasswordDTO dto, string? ipAddress = null, string? userAgent = null);
+        Task SendStepUpOtpAsync(int userId);
+        Task<StepUpTokenResponseDTO> VerifyStepUpOtpAsync(int userId, VerifyStepUpOtpDTO dto);
     }
 }

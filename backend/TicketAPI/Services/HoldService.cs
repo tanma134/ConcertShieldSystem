@@ -300,7 +300,7 @@ namespace TicketAPI.Services
                         $"Ticket type {ticket.TicketTypeId} does not belong to this event.");
                 }
 
-                if (ticketInfo.Status != "Active" || ticketInfo.SalesStartsAt > DateTime.UtcNow || ticketInfo.SalesEndsAt <= DateTime.UtcNow)
+                if (ticketInfo.Status != "Active" || ticketInfo.SalesStartsAt > DateTime.UtcNow || (ticketInfo.SalesEndsAt ?? eventInfo.StartsAt.AddHours(-5)) <= DateTime.UtcNow)
                     throw new InvalidOperationException("This ticket type is not currently on sale.");
                 ticketCapacities[ticket.TicketTypeId] =
                     Math.Max(0, ticketInfo.Quantity - ticketInfo.SoldQuantity);

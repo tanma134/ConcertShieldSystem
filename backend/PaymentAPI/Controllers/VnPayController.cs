@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using PaymentAPI.API;
 using PaymentAPI.DTOs;
 using PaymentAPI.Repositories;
@@ -32,6 +33,7 @@ namespace PaymentAPI.Controllers
         }
 
         [Authorize(Roles = "Customer")]
+        [EnableRateLimiting(PaymentRateLimitPolicies.Payment)]
         [HttpPost("reconcile/{orderId:int}")]
         public async Task<IActionResult> Reconcile(int orderId)
         {
@@ -70,6 +72,7 @@ namespace PaymentAPI.Controllers
         }
 
         [AllowAnonymous]
+        [EnableRateLimiting(PaymentRateLimitPolicies.Payment)]
         [HttpPost("create-payment")]
         public async Task<ActionResult<CreateVnPayPaymentResponseDto>> CreatePayment([FromBody] CreateVnPayPaymentRequestDto request)
         {

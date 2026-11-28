@@ -54,6 +54,19 @@ public class GovernanceController(GovernanceService service, IAuditLogClient aud
         return Data(new { id = await service.SubmitChangeAsync(eventId, CurrentUserId, input, ct) });
     }
 
+    // Supporting legal document for a schedule/cancellation request. This is NOT a
+    // compliance document, so it bypasses Compliance:RequiredTypes entirely.
+    [HttpPost("changes/evidence")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(22 * 1024 * 1024)]
+    public async Task<IActionResult> UploadChangeEvidence(int eventId, IFormFile file, CancellationToken ct)
+    {
+        if (!IsOrganizer) return Forbid();
+        if (file == null || file.Length == 0)
+            return BadRequest(new { success = false, message = "Please select a file to upload." });
+        return Data(new { url = await service.UploadChangeEvidenceAsync(eventId, CurrentUserId, file, ct) });
+    }
+
     [HttpGet("changes")]
     public async Task<IActionResult> Changes(int eventId, CancellationToken ct) => Data(await service.ChangesAsync(eventId, CurrentUserId, IsAdmin, ct));
 

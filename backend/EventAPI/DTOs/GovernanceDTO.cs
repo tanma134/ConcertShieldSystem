@@ -1,6 +1,8 @@
 namespace EventAPI.DTOs;
 
-public record ChangeInput(string Type, string Reason, DateTimeOffset? NewStartsAt, DateTimeOffset? NewEndsAt);
+// EvidenceUrl is optional: the organizer uploads the file through
+// changes/evidence first, then submits the returned URL with the request.
+public record ChangeInput(string Type, string Reason, DateTimeOffset? NewStartsAt, DateTimeOffset? NewEndsAt, string? EvidenceUrl = null);
 
 public record AdminDirectChangeInput(string Type, string Reason, DateTimeOffset? NewStartsAt, DateTimeOffset? NewEndsAt);
 

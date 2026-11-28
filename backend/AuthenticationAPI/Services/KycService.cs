@@ -10,7 +10,6 @@ using Microsoft.IdentityModel.Tokens;
 namespace AuthenticationAPI.Services
 {
 
-    /// <summary> thrown when the account's eKYC function is locked after 3 consecutive failures.</summary>
     public class EkycLockedException : Exception
     {
         public DateTime LockedUntilUtc { get; }
@@ -155,11 +154,10 @@ namespace AuthenticationAPI.Services
             record.CccdNumberHash = _cccdProtector.Hash(idNumber);
             record.OcrRawData = OcrDataSanitizer.Sanitize(ocrResult.RawResponseJson); // CCCD number already masked
 
-            // -- Block one CCCD from being used for multiple accounts (checked first to save VNPT face API calls) ---
+           
             if (await _repository.IsCccdUsedByAnotherUserAsync(record.CccdNumberHash, record.UserId))
                 return await FailAsync(record, DuplicateCccdMessage, identity);
 
-            // -- Face liveness + Face matching (VNPT) ---
             frontStream.Position = 0;
             selfieStream.Position = 0;
             await _accessLog.LogAsync(record.UserId, record.EkycId, null, KycActorTypes.System,
@@ -242,11 +240,7 @@ namespace AuthenticationAPI.Services
             return dto;
         }
 
-        /// <summary>
-        /// counts consecutive failed submissions (newest first). Every 3rd consecutive failure locks the
-        /// function for 24h; after the lock expires the counter starts again (a 4th failure alone does not re-lock).
-        /// System errors are not the user's fault and are ignored.
-        /// </summary>
+      
         private async Task EnsureNotLockedAsync(int userId)
         {
             var recent = await _repository.GetRecentByUserAsync(userId, 60);
@@ -272,11 +266,6 @@ namespace AuthenticationAPI.Services
             record.Status = "Failed";
             record.FailReason = reason;
             record.VerifiedAt = null;
-
-            // A failed submission is not a verification: keeping the ID photos for the
-            // whole retention window would be more data than the purpose requires.
-            // Delete them now; the record keeps only the outcome and (optionally)
-            // the document hash used for duplicate detection.
             await PurgeImagesAsync(record);
 
             await _repository.UpdateAsync(record, "Failed");
