@@ -370,6 +370,7 @@ scratch/
 # Database temporary dumps & backups
 database/backups_pre_recreate/
 database/schema_dumps/
+database/import/*.dump
 *.sql.bak
 *.dmp
 
@@ -380,6 +381,8 @@ database/schema_dumps/
 frontend/public/uploads/*
 !frontend/public/uploads/.gitkeep
 
+# Local deployment secrets
+.env
 # Claude Code — do NOT push (machine-specific)
 **/.claude/
 

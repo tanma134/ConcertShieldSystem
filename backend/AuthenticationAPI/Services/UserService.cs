@@ -37,6 +37,9 @@ namespace AuthenticationAPI.Services
             if (user == null)
                 return (false, "User not found.");
 
+            if (IsAdminAccount(user))
+                return (false, "Admin accounts cannot be modified.");
+
             if (!string.IsNullOrWhiteSpace(dto.Email) &&
                 !dto.Email.Equals(user.Email, StringComparison.OrdinalIgnoreCase))
             {
@@ -70,12 +73,6 @@ namespace AuthenticationAPI.Services
 
                 if (requestedRoleNames == null)
                     return (false, "Role update is not allowed for this account.");
-
-                if (currentUserId == id && user.UserRoles.Any(ur => ur.Role.RoleName.Equals("Admin", StringComparison.OrdinalIgnoreCase)))
-                    return (false, "You cannot change your own administrator role.");
-
-                if (user.UserRoles.Any(ur => ur.Role.RoleName.Equals("Admin", StringComparison.OrdinalIgnoreCase)))
-                    return (false, "Admin accounts cannot be modified.");
 
                 var normalized = requestedRoleNames
                     .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -119,7 +116,7 @@ namespace AuthenticationAPI.Services
             if (user == null)
                 return (false, "User not found.", null);
 
-            if (user.UserRoles.Any(ur => ur.Role.RoleName.Equals("Admin", StringComparison.OrdinalIgnoreCase)))
+            if (IsAdminAccount(user))
                 return (false, "Admin accounts cannot be blocked or unblocked.", null);
 
             if (status == 1)
@@ -186,6 +183,9 @@ namespace AuthenticationAPI.Services
             if (user == null)
                 return (false, "User not found.", null);
 
+            if (IsAdminAccount(user))
+                return (false, "Admin accounts cannot be modified.", null);
+
             var normalizedRoleName = roleName?.Trim();
             if (string.IsNullOrWhiteSpace(normalizedRoleName))
                 return (false, "RoleName is required.", null);
@@ -238,6 +238,10 @@ namespace AuthenticationAPI.Services
                 IsActive = user.IsActive
             };
         }
+
+        private static bool IsAdminAccount(User user) =>
+            user.UserRoles.Any(ur =>
+                string.Equals(ur.Role?.RoleName, "Admin", StringComparison.OrdinalIgnoreCase));
 
         private static List<string> GetAllowedRoleNames()
         {

@@ -15,8 +15,6 @@ public sealed class QueueService(IQueueRepository repository, IRedisQueueStore r
     public async Task<ConfigureQueueResponse> ConfigureAsync(int eventId, ConfigureQueueRequest request, int userId)
     {
         await ValidateEventAsync(eventId);
-        // A value without an offset is a Vietnam local wall-clock value.
-        // Values received with Z/UTC are preserved as UTC.
         var start = QueueTimeZone.ToVietnam(request.PreQueueStartTime);
         var end = QueueTimeZone.ToVietnam(request.PreQueueEndTime);
         if (start >= end) throw new ArgumentException("Pre-queue start time must be before end time.");

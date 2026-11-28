@@ -3,7 +3,7 @@ using Microsoft.IdentityModel.Tokens;
 using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
 using System.Text;
-using Microsoft.IdentityModel.Logging;
+using System.Text.Json.Nodes;
 
 namespace GatewayAPI
 {
@@ -11,21 +11,36 @@ namespace GatewayAPI
     {
         public static async Task Main(string[] args)
         {
-            IdentityModelEventSource.ShowPII = true;
-
             var builder = WebApplication.CreateBuilder(args);
-            Console.WriteLine("===== CONFIG SOURCES =====");
-            Console.WriteLine(File.ReadAllText("appsettings.json"));
-            foreach (var s in ((IConfigurationRoot)builder.Configuration).Providers)
-            {
-                Console.WriteLine(s);
-            }
-            Console.WriteLine(builder.Environment.ContentRootPath);
             var ocelotFile = builder.Environment.IsDevelopment()
                 ? "ocelot.json"
                 : "ocelot.json";
 
-            builder.Configuration.AddJsonFile(ocelotFile, optional: false, reloadOnChange: true);
+            var ocelotConfiguration = JsonNode.Parse(await File.ReadAllTextAsync(ocelotFile))
+                ?? throw new InvalidOperationException($"Could not parse {ocelotFile}.");
+            if (string.Equals(Environment.GetEnvironmentVariable("DOCKER_MODE"), "true", StringComparison.OrdinalIgnoreCase))
+            {
+                var routes = ocelotConfiguration["Routes"]?.AsArray();
+                if (routes is not null)
+                {
+                    foreach (var route in routes)
+                    {
+                        var downstream = route?["DownstreamHostAndPorts"]?.AsArray()?.FirstOrDefault();
+                        if (downstream?["Port"] is not JsonValue portValue ||
+                            !portValue.TryGetValue<int>(out var port))
+                        {
+                            continue;
+                        }
+
+                        route!["DownstreamScheme"] = "http";
+                        downstream["Host"] = GetDockerDownstreamHost(port);
+                        downstream["Port"] = 8080;
+                    }
+                }
+            }
+
+            builder.Configuration.AddJsonStream(
+                new MemoryStream(Encoding.UTF8.GetBytes(ocelotConfiguration.ToJsonString())));
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowFrontend", policy =>
@@ -123,5 +138,20 @@ namespace GatewayAPI
             await app.UseOcelot();
             app.Run();
         }
+
+        private static string GetDockerDownstreamHost(int port) => port switch
+        {
+            7058 or 7243 => "authentication-api",
+            7076 => "admin-api",
+            7084 or 7227 => "payment-api",
+            7108 or 7268 or 7320 => "ticket-api",
+            7186 or 7197 => "notification-api",
+            7289 or 7020 => "event-api",
+            7290 => "review-api",
+            7310 => "queue-api",
+            7330 => "checkin-api",
+            7340 => "incident-api",
+            _ => "unavailable-service"
+        };
     }
 }

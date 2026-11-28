@@ -89,6 +89,15 @@ namespace AuthenticationAPI.Controllers
                     });
                 }
 
+                if (result.Message == "The Admin role cannot be modified.")
+                {
+                    return Conflict(new
+                    {
+                        code = "ADMIN_ROLE_PROTECTED",
+                        message = result.Message
+                    });
+                }
+
                 return BadRequest(new
                 {
                     message = result.Message

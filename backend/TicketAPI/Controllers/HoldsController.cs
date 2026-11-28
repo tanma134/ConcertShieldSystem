@@ -53,6 +53,15 @@ namespace TicketAPI.Controllers
                 if (!eligibility.CanSell)
                     throw new InvalidOperationException(eligibility.Reason);
 
+                if (eligibility.RequiresVirtualQueue)
+                {
+                    await _queueAdmission.EnsureAdmittedAsync(
+                        request.EventId,
+                        Request.Headers.Authorization.ToString(),
+                        Request.Headers["X-Queue-Token"].ToString(),
+                        HttpContext.RequestAborted);
+                }
+
                 var session = await _holdService.CreateHoldSessionAsync(
                     userId.Value,
                     request);
@@ -79,11 +88,21 @@ namespace TicketAPI.Controllers
                     message = ex.Message
                 });
             }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    code = "QUEUE_ADMISSION_REQUIRED",
+                    message = ex.Message
+                });
+            }
             catch (TicketAPI.API.QueueAdmissionRequiredException ex)
             {
                 return StatusCode(StatusCodes.Status403Forbidden, new
                 {
                     success = false,
+                    code = "QUEUE_ADMISSION_REQUIRED",
                     message = ex.Message
                 });
             }
@@ -93,6 +112,7 @@ namespace TicketAPI.Controllers
                 return StatusCode(StatusCodes.Status503ServiceUnavailable, new
                 {
                     success = false,
+                    code = "QUEUE_API_UNAVAILABLE",
                     message = ex.Message
                 });
             }

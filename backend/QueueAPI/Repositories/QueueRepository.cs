@@ -58,7 +58,6 @@ public sealed class QueueRepository(QueueDbContext db) : IQueueRepository
 
         return await query
             .OrderByDescending(x => x.UpdatedAt)
-            .Take(500)
             .ToListAsync(cancellationToken);
     }
 
@@ -142,7 +141,7 @@ public sealed class QueueRepository(QueueDbContext db) : IQueueRepository
         db.AbuseAlerts.AddAsync(alert, cancellationToken).AsTask();
 
     public void DetachAbuseAlert(AbuseAlert alert) =>
-        db.Entry(alert).State = EntityState.Detached;
+        db.Entry(alert).State = EntityState.Detached; // gỡ entity khỏi sự theo dõi của DbContext
 
     public Task<int> ExpireAdmittedSessionAsync(
         long queueSessionId,

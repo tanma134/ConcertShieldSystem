@@ -1,12 +1,12 @@
 # ConcertShield — SQL Database Initialization & Bootstrap Guide
 
-Toàn bộ các file SQL dưới đây đã được kiểm thử chạy lại từ đầu (from scratch) trên các cơ sở dữ liệu trắng và đảm bảo thành công 100%, không phát sinh lỗi.
+Các file dưới đây là bootstrap/migration PostgreSQL được ghép từ nhiều nguồn và không đồng nhất về khả năng chạy lại. Một số script có `DROP TABLE` hoặc thay đổi dữ liệu mẫu; chỉ chạy trên database trắng hoặc sau khi đã sao lưu và kiểm tra nội dung.
 
 | File | Contents | Caution |
 | --- | --- | --- |
 | event_db.sql | event_db.sql + ALL_IN_ONE/1_event_db_ALL.sql | Original event seed contains data-changing statements; review before applying to an existing DB |
 | ticket_db.sql | 05_ticket_db_FULL_RERUN_SAFE.sql + ALL_IN_ONE/2_ticket_db_ALL.sql | Leading ROLLBACK removed; includes demo/test data updates; review before running |
-| payment_db.sql | ALL_IN_ONE/4_payment_db_ALL.sql | **Only payment_refunds extension**. No base payment schema found in ZIP. Do not treat as complete payment DB bootstrap |
+| payment_db.sql | Local payment schema bootstrap | Creates payment transactions, vouchers/usages, refunds, and reconciliation tables |
 | notification_db.sql | ALL_IN_ONE/3_notification_db_ALL.sql | Notification schema extension |
 | authentication_db.sql | init_authen_db.sql + avatar migration | **DROP TABLE statements: destructive** |
 | checkin_db.sql | 07_checkin_db.sql | Existing checkin script |
@@ -29,7 +29,7 @@ Toàn bộ các file SQL dưới đây đã được kiểm thử chạy lại t
 
 ### 2. File Seed & Dữ Liệu Bổ Sung
 
-Missing source: payment_db base creation SQL; only refund table migration is available. Dedicated Queue/Review table initialization scripts are listed below.
+PaymentAPI's checked-in `payment_db.sql` creates its five core tables. `backend/PaymentAPI/appsettings.json` names the legacy database `04_payment_db`; Docker Compose overrides it to `payment_db` to match the existing database name exported from the user's PostgreSQL server.
 
 ## Khởi tạo `queue_db` và `review_db`
 

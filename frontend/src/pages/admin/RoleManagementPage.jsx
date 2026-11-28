@@ -166,31 +166,34 @@ export default function RoleManagementPage() {
                     <td>{role.roleName}</td>
                     <td>
                       <div className="table-actions">
-                        <button
-                          type="button"
-                          className="text-button"
-                          onClick={() => {
-                            setSelectedRole(role);
-                            setRoleName(role.roleName || "");
-                            setModal("edit");
-                          }}
-                        >
-                          Edit
-                        </button>
                         {isAdminRole(role) ? (
-                          <span>Cannot delete system role</span>
+                          <span>Protected system role</span>
                         ) : (
-                          <button
-                            type="button"
-                            className="danger-button"
-                            onClick={() => {
-                              setSelectedRole(role);
-                              setDeleteError("");
-                              setModal("delete");
-                            }}
-                          >
-                            Delete
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              className="text-button"
+                              onClick={() => {
+                                setSelectedRole(role);
+                                setRoleName(role.roleName || "");
+                                setModal("edit");
+                              }}
+                            >
+                              Edit
+                            </button>
+
+                            <button
+                              type="button"
+                              className="danger-button"
+                              onClick={() => {
+                                setSelectedRole(role);
+                                setDeleteError("");
+                                setModal("delete");
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>

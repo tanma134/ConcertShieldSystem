@@ -41,6 +41,10 @@ namespace AuthenticationAPI.Controllers
             return int.TryParse(value, out var id) ? id : 0;
         }
 
+        private static bool UserHasRole(User user, string roleName) =>
+            user.UserRoles.Any(ur =>
+                string.Equals(ur.Role?.RoleName, roleName, StringComparison.OrdinalIgnoreCase));
+
         private bool IsAuthorizedOrganizerOrAdmin()
         {
             return User.IsInRole("Organizer") || User.IsInRole("organizer")
@@ -122,7 +126,9 @@ namespace AuthenticationAPI.Controllers
 
             var query = _context.Users
                 .AsNoTracking()
-                .Where(u => u.UserRoles.Any(ur => ur.Role.RoleName == StaffRoleName));
+                .Where(u =>
+                    u.UserRoles.Any(ur => ur.Role.RoleName == StaffRoleName) &&
+                    !u.UserRoles.Any(ur => ur.Role.RoleName.ToLower() == "admin"));
 
             if (!isAdmin)
             {
@@ -271,7 +277,13 @@ namespace AuthenticationAPI.Controllers
                 .ThenInclude(ur => ur.Role)
                 .FirstOrDefaultAsync(u => u.UserId == staffUserId);
 
-            if (user == null || !user.UserRoles.Any(ur => ur.Role.RoleName == StaffRoleName))
+            if (user == null)
+                return NotFound(new { success = false, message = "Staff user not found." });
+
+            if (UserHasRole(user, "Admin"))
+                return Conflict(new { success = false, code = "ADMIN_ACCOUNT_PROTECTED", message = "Admin accounts cannot be modified." });
+
+            if (!UserHasRole(user, StaffRoleName))
                 return NotFound(new { success = false, message = "Staff user not found." });
 
             await EnsureOrganizerStaffTableAsync();
@@ -367,7 +379,13 @@ namespace AuthenticationAPI.Controllers
                 .ThenInclude(ur => ur.Role)
                 .FirstOrDefaultAsync(u => u.UserId == staffUserId);
 
-            if (user == null || !user.UserRoles.Any(ur => ur.Role.RoleName == StaffRoleName))
+            if (user == null)
+                return NotFound(new { success = false, message = "Staff user not found." });
+
+            if (UserHasRole(user, "Admin"))
+                return Conflict(new { success = false, code = "ADMIN_ACCOUNT_PROTECTED", message = "Admin accounts cannot be deleted." });
+
+            if (!UserHasRole(user, StaffRoleName))
                 return NotFound(new { success = false, message = "Staff user not found." });
 
             // Đặt IsActive = false (soft-delete / khoá tài khoản)

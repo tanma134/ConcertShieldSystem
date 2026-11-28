@@ -5,13 +5,15 @@ namespace QueueAPI.Services;
 
 public static class QueueAbuseDetection
 {
-    public const int MultipleRegistrationAttemptsThreshold = 3;
-    public const int AutomatedRequestThreshold = 30;
-    public const int TokenReplayThreshold = 25;
-    public const int AutomatedRequestWindowSeconds = 60;
-    public const int MultipleRegistrationWindowSeconds = 300;
-    public const int TokenReplayWindowSeconds = 120;
-    public const double AutomatedRequestMaxCoefficientOfVariation = 0.10;
+    public const int MultipleRegistrationAttemptsThreshold = 3; //gưỡng 3 lần đăng ký lặp lại.
+    public const int AutomatedRequestThreshold = 30; //Cần ít nhất 30 yêu cầu để xét mẫu gửi tự động
+    public const int TokenReplayThreshold = 25;//ngưỡng 25 lần thử dùng lại token đã bị thu hồi.
+    public const int AutomatedRequestWindowSeconds = 60;//xét các yêu cầu tự động trong 60 giây.
+    public const int MultipleRegistrationWindowSeconds = 300;//xét đăng ký lặp lại trong 300 giây (5 phút)
+    public const int TokenReplayWindowSeconds = 120;//xét việc dùng lại token trong 120 giây (2 phút).
+    public const double AutomatedRequestMaxCoefficientOfVariation = 0.10;//hệ số biến thiên tối đa 0,10 (10%); (CV)
+    // yêu cầu phải có khoảng cách thời gian tương đối đều nhau mới bị đánh dấu là mẫu tự động.
+
 
     public static string TokenFingerprint(string token) =>
         "sha256:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token))).ToLowerInvariant();
@@ -20,6 +22,7 @@ public static class QueueAbuseDetection
         IReadOnlyList<long> timestamps,
         out double coefficientOfVariation)
     {
+        //(CV)
         coefficientOfVariation = double.PositiveInfinity;
         if (timestamps.Count < AutomatedRequestThreshold)
             return false;
