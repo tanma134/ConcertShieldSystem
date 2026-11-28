@@ -98,6 +98,7 @@ namespace CheckinAPI.Controllers
         /// BR-290, BR-292, BR-293
         /// </summary>
         [HttpPost("manual-checkin")]
+        [HttpPost("manual")]
         public async Task<IActionResult> ManualCheckin([FromBody] ManualCheckinRequestDTO request)
         {
             try

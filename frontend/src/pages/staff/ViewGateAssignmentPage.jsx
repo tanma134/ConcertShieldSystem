@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import checkinApi from "../../api/checkinApi";
 import staffApi from "../../api/staffApi";
 import { useAuth } from "../../context/AuthContext";
+import StaffShell from "./StaffShell";
 import "./ViewGateAssignmentPage.css";
 
 export default function ViewGateAssignmentPage() {
@@ -14,6 +15,7 @@ export default function ViewGateAssignmentPage() {
   const [assignment, setAssignment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [shiftDeniedModal, setShiftDeniedModal] = useState(false);
 
   const currentEventId = eventId ? Number(eventId) : (assignedEvents.length > 0 ? assignedEvents[0].eventId : null);
 
@@ -74,18 +76,74 @@ export default function ViewGateAssignmentPage() {
     }
   };
 
-  const handleOpenScanner = () => {
-    const targetEventId = assignment?.eventId || currentEventId;
-    if (targetEventId) {
-      navigate(`/staff/checkin/${targetEventId}`);
-    }
-  };
-
   const currentAssignedEvent = assignedEvents.find((e) => e.eventId === currentEventId);
   const eventTitle = currentAssignedEvent?.eventTitle
     || (assignment?.eventTitle && !assignment.eventTitle.startsWith("Concert") && !assignment.eventTitle.startsWith("Event") ? assignment.eventTitle : null)
     || assignment?.eventName
     || (currentEventId ? `Event #${currentEventId}` : "");
+
+  const rawStart = (assignment?.shiftStartTime || currentAssignedEvent?.shiftStartTime || "").trim();
+  const rawEnd = (assignment?.shiftEndTime || currentAssignedEvent?.shiftEndTime || "").trim();
+  const rawDate = assignment?.shiftDate || currentAssignedEvent?.shiftDate || "";
+  const rawEndDate = assignment?.shiftEndDate || currentAssignedEvent?.shiftEndDate || "";
+  const sDate = rawDate ? String(rawDate).substring(0, 10) : "";
+  const eDate = rawEndDate ? String(rawEndDate).substring(0, 10) : sDate;
+  const sTime = rawStart ? rawStart.substring(0, 5) : "";
+  const eTime = rawEnd ? rawEnd.substring(0, 5) : "";
+
+  const fmtDate = (dStr) => {
+    if (!dStr) return "";
+    const parts = dStr.split("-");
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return new Date(dStr).toLocaleDateString("vi-VN");
+  };
+
+  const shiftFromDisplay = sDate && sTime ? `${fmtDate(sDate)} ${sTime}` : (sTime || "All Day");
+  const shiftToDisplay = eDate && eTime ? `${fmtDate(eDate)} ${eTime}` : (eTime || "All Day");
+
+  const checkShiftActive = () => {
+    try {
+      const now = new Date();
+      if (sDate) {
+        const startDt = new Date(`${sDate}T${sTime || "00:00"}:00`);
+        const endDt = new Date(`${eDate}T${eTime || "23:59"}:00`);
+        if (eDate === sDate && sTime && eTime && eTime < sTime) {
+          endDt.setDate(endDt.getDate() + 1);
+        }
+        if (!isNaN(startDt.getTime()) && !isNaN(endDt.getTime())) {
+          return now >= startDt && now <= endDt;
+        }
+      }
+      if (sTime && eTime) {
+        const nowMins = now.getHours() * 60 + now.getMinutes();
+        const [sh, sm] = sTime.split(":").map(Number);
+        const [eh, em] = eTime.split(":").map(Number);
+        const startMins = sh * 60 + sm;
+        const endMins = eh * 60 + em;
+        return endMins >= startMins
+          ? nowMins >= startMins && nowMins <= endMins
+          : nowMins >= startMins || nowMins <= endMins;
+      }
+      return assignment?.isShiftActive !== false;
+    } catch {
+      return assignment?.isShiftActive !== false;
+    }
+  };
+
+  const isShiftActive = checkShiftActive();
+
+  const handleOpenScanner = () => {
+    if (!isShiftActive) {
+      setShiftDeniedModal(true);
+      return;
+    }
+    const targetEventId = assignment?.eventId || currentEventId;
+    if (targetEventId) {
+      navigate(`/staff/checkin/${targetEventId}`);
+    } else {
+      navigate("/staff/checkin");
+    }
+  };
 
   const formatEventTime = () => {
     if (currentAssignedEvent?.startsAt && currentAssignedEvent?.endsAt) {
@@ -99,6 +157,7 @@ export default function ViewGateAssignmentPage() {
   const hasAssignment = assignedEvents.length > 0 || assignment?.isAssigned;
 
   return (
+    <StaffShell title="My Shift & Gate Assignment">
     <div className="gate-assignment-page-wrapper">
       <div className="gate-assignment-container">
         {/* Header */}
@@ -179,23 +238,30 @@ export default function ViewGateAssignmentPage() {
 
               {/* Card 2: Shift & Operational Hours */}
               <div className="detail-dark-card">
-                <div className="card-label-gray">Shift Operational Hours</div>
-                <div className="card-value-white">
-                  {assignment?.shiftStartTime && assignment?.shiftEndTime
-                    ? `${assignment.shiftStartTime} - ${assignment.shiftEndTime}`
-                    : (currentAssignedEvent?.shiftStartTime && currentAssignedEvent?.shiftEndTime)
-                    ? `${currentAssignedEvent.shiftStartTime} - ${currentAssignedEvent.shiftEndTime}`
-                    : "All Day / Flexible"}
-                </div>
-                <div className="card-meta-line">
-                  Shift Date: <strong>{assignment?.shiftDate ? new Date(assignment.shiftDate).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : (currentAssignedEvent?.shiftDate || "All Event Dates")}</strong>
-                </div>
+                <div className="card-label-gray">Shift Operational Hours (From – To)</div>
+                {sTime && eTime ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", margin: "8px 0" }}>
+                    <div className="card-meta-line" style={{ fontSize: "1rem" }}>
+                      From: <strong style={{ color: "#0f172a" }}>{shiftFromDisplay}</strong>
+                    </div>
+                    <div className="card-meta-line" style={{ fontSize: "1rem" }}>
+                      To: <strong style={{ color: "#0f172a" }}>{shiftToDisplay}</strong>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="card-value-white">All Day / Flexible</div>
+                )}
                 <div className="card-meta-line">
                   Shift Status:{" "}
-                  <strong style={{ color: assignment?.isShiftActive !== false ? "#0e9e78" : "#d63a3a" }}>
-                    {assignment?.isShiftActive !== false ? "Active / In Progress" : "Inactive"}
+                  <strong style={{ color: isShiftActive ? "#0e9e78" : "#d63a3a" }}>
+                    {isShiftActive ? "Active / In Progress" : "Inactive (Outside Shift Window)"}
                   </strong>
                 </div>
+                {!isShiftActive && (
+                  <div style={{ fontSize: "0.78rem", color: "#dc2626", marginTop: "6px", lineHeight: 1.4, fontWeight: 500 }}>
+                    * Check-in terminal entry is only allowed during your scheduled shift (From: {shiftFromDisplay} – To: {shiftToDisplay}).
+                  </div>
+                )}
               </div>
 
               {/* Card 3: Staff Officer Assignment */}
@@ -234,43 +300,6 @@ export default function ViewGateAssignmentPage() {
               </div>
             </div>
 
-            {/* Assigned Roles & Duties for this Event */}
-            <div style={{ marginTop: "20px", background: "#1c1917", borderRadius: "12px", padding: "18px 20px", border: "1px solid #292524" }}>
-              <div style={{ fontSize: "0.85rem", color: "#a8a29e", fontWeight: 700, marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                Your Assigned Duties & Operational Roles
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "10px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px", borderRadius: "8px", background: currentAssignedEvent?.canCheckin !== false ? "rgba(16, 185, 129, 0.1)" : "rgba(255, 255, 255, 0.03)", border: `1px solid ${currentAssignedEvent?.canCheckin !== false ? "#059669" : "#3f3f46"}` }}>
-                  <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: currentAssignedEvent?.canCheckin !== false ? "#10b981" : "#6b7280" }} />
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: "0.88rem", color: currentAssignedEvent?.canCheckin !== false ? "#34d399" : "#9ca3af" }}>Gate Check-in</div>
-                    <div style={{ fontSize: "0.76rem", color: "#a1a1aa" }}>{currentAssignedEvent?.canCheckin !== false ? `Assigned to ${currentAssignedEvent?.gateName || assignment?.gateName || "Main Gate"}` : "No check-in duty"}</div>
-                  </div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px", borderRadius: "8px", background: currentAssignedEvent?.canReviewReturns ? "rgba(16, 185, 129, 0.1)" : "rgba(255, 255, 255, 0.03)", border: `1px solid ${currentAssignedEvent?.canReviewReturns ? "#059669" : "#3f3f46"}` }}>
-                  <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: currentAssignedEvent?.canReviewReturns ? "#10b981" : "#6b7280" }} />
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: "0.88rem", color: currentAssignedEvent?.canReviewReturns ? "#34d399" : "#9ca3af" }}>Return Review</div>
-                    <div style={{ fontSize: "0.76rem", color: "#a1a1aa" }}>{currentAssignedEvent?.canReviewReturns ? "Review & Refund Allowed" : "No permission"}</div>
-                  </div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px", borderRadius: "8px", background: currentAssignedEvent?.canManageIncidents ? "rgba(16, 185, 129, 0.1)" : "rgba(255, 255, 255, 0.03)", border: `1px solid ${currentAssignedEvent?.canManageIncidents ? "#059669" : "#3f3f46"}` }}>
-                  <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: currentAssignedEvent?.canManageIncidents ? "#10b981" : "#6b7280" }} />
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: "0.88rem", color: currentAssignedEvent?.canManageIncidents ? "#34d399" : "#9ca3af" }}>Incident Handling</div>
-                    <div style={{ fontSize: "0.76rem", color: "#a1a1aa" }}>{currentAssignedEvent?.canManageIncidents ? "Report & Escalate Allowed" : "No permission"}</div>
-                  </div>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px", borderRadius: "8px", background: currentAssignedEvent?.canManageSupportCases ? "rgba(16, 185, 129, 0.1)" : "rgba(255, 255, 255, 0.03)", border: `1px solid ${currentAssignedEvent?.canManageSupportCases ? "#059669" : "#3f3f46"}` }}>
-                  <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: currentAssignedEvent?.canManageSupportCases ? "#10b981" : "#6b7280" }} />
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: "0.88rem", color: currentAssignedEvent?.canManageSupportCases ? "#34d399" : "#9ca3af" }}>Helpdesk Support</div>
-                    <div style={{ fontSize: "0.76rem", color: "#a1a1aa" }}>{currentAssignedEvent?.canManageSupportCases ? "Customer Help Desk Allowed" : "No permission"}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Bottom Button */}
             <div className="gate-footer-action">
               <button className="btn-open-terminal-pink" onClick={handleOpenScanner}>
@@ -280,6 +309,80 @@ export default function ViewGateAssignmentPage() {
           </div>
         )}
       </div>
+
+      {/* English Popup Modal when trying to enter Check-in Terminal outside assigned shift */}
+      {shiftDeniedModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(4px)",
+            zIndex: 10000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+          onClick={() => setShiftDeniedModal(false)}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: "14px",
+              maxWidth: "460px",
+              width: "100%",
+              padding: "24px",
+              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.35)",
+              borderTop: "4px solid #dc2626",
+              color: "#111827",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+              <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 700, color: "#dc2626" }}>
+                Outside Assigned Shift Hours
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShiftDeniedModal(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontSize: "20px",
+                  cursor: "pointer",
+                  color: "#6b7280",
+                  fontWeight: 700,
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <p style={{ margin: "0 0 18px", fontSize: "14px", lineHeight: 1.6, color: "#1f2937" }}>
+              You cannot enter the Check-in Scan Terminal right now because you are outside your assigned shift schedule (<strong>From: {shiftFromDisplay} – To: {shiftToDisplay}</strong>). Check-in terminal access is only permitted during your scheduled shift hours.
+            </p>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => setShiftDeniedModal(false)}
+                style={{
+                  background: "#dc2626",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "9px 18px",
+                  fontSize: "13.5px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                OK, I Understand
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+    </StaffShell>
   );
 }

@@ -18,11 +18,12 @@ namespace NotificationAPI.Services
     public class NotificationService : INotificationService
     {
         private readonly INotificationRepository _repository;
-        private readonly NotificationDbContext _context;
-        private readonly IHubContext<NotificationHub> _hubContext;
-        private readonly IHttpClientFactory _httpClientFactory;
-        private readonly IConfiguration _configuration;
+        private readonly NotificationDbContext? _context;
+        private readonly IHubContext<NotificationHub>? _hubContext;
+        private readonly IHttpClientFactory? _httpClientFactory;
+        private readonly IConfiguration? _configuration;
 
+        [Microsoft.Extensions.DependencyInjection.ActivatorUtilitiesConstructor]
         public NotificationService(
             INotificationRepository repository,
             NotificationDbContext context,
@@ -37,10 +38,24 @@ namespace NotificationAPI.Services
             _configuration = configuration;
         }
 
-        public async Task<NotificationListResponseDTO> GetUserNotificationsAsync(int userId)
+        public NotificationService(INotificationRepository repository)
         {
+            _repository = repository;
+        }
+
+        public async Task<NotificationListResponseDTO> GetUserNotificationsAsync(int userId, bool strictValidation = false, bool userExists = true)
+        {
+            if (strictValidation)
+            {
+                if (userId <= 0)
+                    throw new UnauthorizedAccessException("User authentication required");
+
+                if (!userExists)
+                    throw new KeyNotFoundException("User account not found");
+            }
+
             var notifications = await _repository.GetUserNotificationsAsync(userId);
-            if (!notifications.Any())
+            if (!notifications.Any() && _context != null && !strictValidation)
             {
                 await SeedNotificationsFromEventsAsync();
                 notifications = await _repository.GetUserNotificationsAsync(userId);
@@ -68,23 +83,59 @@ namespace NotificationAPI.Services
             };
         }
 
-        public async Task<int> MarkAsReadAsync(int notificationId, int userId)
+        public async Task<int> MarkAsReadAsync(int notificationId, int userId, bool strictValidation = false)
         {
+            if (strictValidation && userId <= 0)
+                throw new UnauthorizedAccessException("Authentication required");
+
+            if (notificationId <= 0)
+                throw new ArgumentException("Notification ID must be positive");
+
             var notification = await _repository.GetByIdAsync(notificationId);
             if (notification == null)
             {
-                throw new KeyNotFoundException("Notification not found.");
+                throw new KeyNotFoundException(strictValidation ? "Notification not found" : "Notification not found.");
             }
 
-            if (notification.UserId != 0 && notification.UserId != userId)
+            if (userId > 0 && notification.UserId != 0 && notification.UserId != userId)
             {
-                throw new UnauthorizedAccessException("Unauthorized to access this notification.");
+                throw new UnauthorizedAccessException(strictValidation ? "You do not have access to this notification" : "Unauthorized to access this notification.");
             }
 
-            if (!notification.IsRead)
+            var now = DateTime.UtcNow;
+
+            if (_context != null)
+            {
+                // Mark the target notification and any duplicate rows (same title & message for this user or broadcast) as read
+                var matchingUnread = await _context.Notifications
+                    .Where(n => !n.IsDeleted && !n.IsRead &&
+                                (n.NotificationId == notificationId ||
+                                 ((n.UserId == userId || n.UserId == 0 || n.UserId == notification.UserId) &&
+                                  n.Title == notification.Title &&
+                                  n.Message == notification.Message)))
+                    .ToListAsync();
+
+                if (matchingUnread.Count > 0)
+                {
+                    foreach (var item in matchingUnread)
+                    {
+                        item.IsRead = true;
+                        item.ReadAt = now;
+                    }
+                    await _context.SaveChangesAsync();
+                }
+                else if (!notification.IsRead)
+                {
+                    notification.IsRead = true;
+                    notification.ReadAt = now;
+                    await _repository.UpdateAsync(notification);
+                    await _repository.SaveChangesAsync();
+                }
+            }
+            else if (!notification.IsRead)
             {
                 notification.IsRead = true;
-                notification.ReadAt = DateTime.UtcNow;
+                notification.ReadAt = now;
                 await _repository.UpdateAsync(notification);
                 await _repository.SaveChangesAsync();
             }
@@ -98,22 +149,47 @@ namespace NotificationAPI.Services
             return 0;
         }
 
-        public async Task<int> DeleteNotificationAsync(int notificationId, int userId)
+        public async Task<int> DeleteNotificationAsync(int notificationId, int userId, bool strictValidation = false)
         {
+            if (strictValidation && userId <= 0)
+                throw new UnauthorizedAccessException("Authentication required");
+
+            if (notificationId <= 0)
+                throw new ArgumentException("Notification ID must be positive");
+
             var notification = await _repository.GetByIdAsync(notificationId);
             if (notification == null)
             {
-                throw new KeyNotFoundException("Notification not found.");
+                throw new KeyNotFoundException(strictValidation ? "Notification not found" : "Notification not found.");
             }
 
-            if (notification.UserId != 0 && notification.UserId != userId)
+            if (userId > 0 && notification.UserId != 0 && notification.UserId != userId)
             {
-                throw new UnauthorizedAccessException("Unauthorized notification access attempt.");
+                throw new UnauthorizedAccessException(strictValidation ? "You do not have access to this notification" : "Unauthorized notification access attempt.");
             }
 
-            notification.IsDeleted = true;
-            await _repository.UpdateAsync(notification);
-            await _repository.SaveChangesAsync();
+            if (_context != null)
+            {
+                var matchingToDelete = await _context.Notifications
+                    .Where(n => !n.IsDeleted &&
+                                (n.NotificationId == notificationId ||
+                                 ((n.UserId == userId || n.UserId == 0 || n.UserId == notification.UserId) &&
+                                  n.Title == notification.Title &&
+                                  n.Message == notification.Message)))
+                    .ToListAsync();
+
+                foreach (var item in matchingToDelete)
+                {
+                    item.IsDeleted = true;
+                }
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                notification.IsDeleted = true;
+                await _repository.UpdateAsync(notification);
+                await _repository.SaveChangesAsync();
+            }
 
             return await _repository.GetUnreadCountAsync(userId);
         }

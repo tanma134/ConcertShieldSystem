@@ -8,7 +8,7 @@ namespace TicketAPI.Services
     {
         Task<BulkRevokeResponseDTO> BulkRevokeTicketsAsync(BulkRevokeRequestDTO request, int adminId, string adminName);
         Task<RevocationHistoryResponseDTO> GetRevocationHistoryAsync(int? eventId, string? search, string? reasonType, int page, int pageSize);
-        Task<ReissueHistoryResponseDTO> GetReissueHistoryAsync(int? eventId, string? search, int page, int pageSize);
+        Task<ReissueHistoryResponseDTO> GetReissueHistoryAsync(int? eventId, string? search, int page, int pageSize, string callerRole = "Admin");
         Task<List<ReconciliationRecordDTO>> GetReconciliationRecordsAsync(int? eventId);
         Task<GovernanceStatsDTO> GetGovernanceStatsAsync();
         Task<List<EventSelectionDTO>> GetEventsForGovernanceAsync();

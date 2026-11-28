@@ -16,13 +16,52 @@ namespace TicketAPI.Controllers
         private readonly IEventApiClient _eventApiClient;
         private readonly ITicketRiskService _risk;
         private readonly IAuditLogClient _auditLog;
+        private readonly IStatusHistoryService _statusHistoryService;
 
-        public TicketReturnsController(ITicketReturnService service, IEventApiClient eventApiClient, ITicketRiskService risk, IAuditLogClient auditLog)
+        public TicketReturnsController(
+            ITicketReturnService service,
+            IEventApiClient eventApiClient,
+            ITicketRiskService risk,
+            IAuditLogClient auditLog,
+            IStatusHistoryService statusHistoryService)
         {
             _auditLog = auditLog;
             _risk = risk;
             _service = service;
             _eventApiClient = eventApiClient;
+            _statusHistoryService = statusHistoryService;
+        }
+
+        [HttpGet("status-histories")]
+        [Authorize(Roles = "Staff,Admin")]
+        public async Task<IActionResult> GetStatusHistories(
+            [FromQuery] int? eventId,
+            [FromQuery] string? targetType,
+            [FromQuery] DateTime? from,
+            [FromQuery] DateTime? to,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            try
+            {
+                var result = await _statusHistoryService.GetAdminHistoryAsync(
+                    eventId,
+                    targetType,
+                    from,
+                    to,
+                    page,
+                    pageSize);
+
+                return Ok(new
+                {
+                    success = true,
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return Fail(ex);
+            }
         }
 
         // Admin sees every event (null). Staff only see events whose organizer gave them the

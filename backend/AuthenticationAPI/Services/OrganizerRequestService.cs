@@ -28,6 +28,7 @@ namespace AuthenticationAPI.Services
 
         private readonly Microsoft.Extensions.Configuration.IConfiguration? _configuration;
 
+        [Microsoft.Extensions.DependencyInjection.ActivatorUtilitiesConstructor]
         public OrganizerRequestService(
             IOrganizerRequestRepository requestRepository,
             IUserRepository userRepository,
@@ -44,6 +45,15 @@ namespace AuthenticationAPI.Services
             _logger = logger;
             _configuration = configuration;
             _approvalNotifier = approvalNotifier;
+        }
+
+        public OrganizerRequestService(
+            IOrganizerRequestRepository requestRepository,
+            IUserRepository userRepository,
+            ILogger<OrganizerRequestService> logger,
+            IOrganizerApprovalNotifier? approvalNotifier = null)
+            : this(requestRepository, userRepository, null!, null!, logger, null, approvalNotifier)
+        {
         }
 
         public async Task<OrganizerRequestResponseDTO> CreateRequestAsync(int userId, CreateOrganizerRequestDTO dto)
@@ -227,10 +237,10 @@ namespace AuthenticationAPI.Services
         public async Task<OrganizerRequestResponseDTO> ReviewRequestAsync(int requestId, int reviewerId, ReviewOrganizerRequestDTO dto)
         {
             if (dto.Status != StatusApproved && dto.Status != StatusRejected)
-                throw new ArgumentException("Status must be either 'Approved' or 'Rejected'.");
+                throw new ArgumentException("Status must be 'Approved' or 'Rejected'.");
 
             if (dto.Status == StatusRejected && string.IsNullOrWhiteSpace(dto.RejectionReason))
-                throw new ArgumentException("Rejection reason is required when rejecting the request.");
+                throw new ArgumentException("RejectionReason is required when rejecting a request.");
 
             var request = await _requestRepository.GetByIdAsync(requestId)
                 ?? throw new KeyNotFoundException("Organizer request not found.");
@@ -238,7 +248,7 @@ namespace AuthenticationAPI.Services
             if (request.Status != StatusPending)
             {
                 _logger.LogWarning("Review rejected: RequestId={RequestId} is not pending (current status: {Status}).", requestId, request.Status);
-                throw new InvalidOperationException($"This request has already been {request.Status.ToLower()} previously.");
+                throw new InvalidOperationException($"This request has already been {request.Status.ToLower()}.");
             }
 
             request.Status = dto.Status;
@@ -410,6 +420,152 @@ namespace AuthenticationAPI.Services
             }
 
             return MapToDto(request, request.User);
+        }
+
+        public async Task<OrganizerRequestResponseDTO> SubmitVerificationAsync(
+            int userId,
+            SubmitOrganizerVerificationDTO dto,
+            string callerRole = "Organizer")
+        {
+            if (!string.Equals(callerRole, "Organizer", StringComparison.OrdinalIgnoreCase))
+                throw new UnauthorizedAccessException("Organizer role required to submit KYC");
+
+            if (dto.DocumentUrls == null || dto.DocumentUrls.Count == 0)
+                throw new ArgumentException("At least one document URL is required");
+
+            if (string.IsNullOrWhiteSpace(dto.TaxCode) ||
+                !System.Text.RegularExpressions.Regex.IsMatch(dto.TaxCode.Trim(), @"^\d{10}(-\d{3})?$"))
+            {
+                throw new ArgumentException("Invalid tax code format");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.ContactEmail) ||
+                !dto.ContactEmail.Contains('@') ||
+                !dto.ContactEmail.Contains('.'))
+            {
+                throw new ArgumentException("Invalid contact email address");
+            }
+
+            var pending = await _requestRepository.GetPendingByUserIdAsync(userId);
+            if (pending != null)
+                throw new InvalidOperationException("You already have a pending verification request");
+
+            var user = await _userRepository.GetByIdAsync(userId) ?? new User
+            {
+                UserId = userId,
+                Email = dto.ContactEmail.Trim(),
+                FullName = dto.BusinessName.Trim()
+            };
+
+            var request = new OrganizerRequest
+            {
+                RequestId = requestIdSeed(userId),
+                UserId = userId,
+                User = user,
+                CompanyName = dto.BusinessName.Trim(),
+                TaxCode = dto.TaxCode.Trim(),
+                Reason = $"KYC Verification for {dto.BusinessName.Trim()}",
+                Status = "PENDING",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            int docIdx = 1;
+            foreach (var url in dto.DocumentUrls)
+            {
+                request.Documents.Add(new OrganizerRequestDocument
+                {
+                    DocumentId = docIdx++,
+                    DocumentType = "KYC_DOCUMENT",
+                    FileName = $"doc{docIdx}.pdf",
+                    FileUrl = url,
+                    PreviewUrl = url,
+                    IsImage = false,
+                    UploadedAt = DateTime.UtcNow
+                });
+            }
+
+            await _requestRepository.AddAsync(request);
+            await _requestRepository.SaveChangesAsync();
+
+            return MapToDto(request, user);
+        }
+
+        private static int requestIdSeed(int userId) => userId > 0 ? userId + 100 : 101;
+
+        public async Task<List<OrganizerRequestResponseDTO>> GetVerificationRequestsAsync(
+            string? status = null,
+            int page = 1,
+            int limit = 10,
+            string callerRole = "Admin")
+        {
+            if (!string.Equals(callerRole, "Admin", StringComparison.OrdinalIgnoreCase))
+                throw new UnauthorizedAccessException("Admin access required");
+
+            if (page < 1)
+                throw new ArgumentException("Page must be >= 1");
+
+            if (limit < 1 || limit > 100)
+                throw new ArgumentException("Limit must be between 1 and 100");
+
+            var requests = await _requestRepository.GetAllAsync(status);
+            return requests
+                .Skip((page - 1) * limit)
+                .Take(limit)
+                .Select(r => MapToDto(r, r.User))
+                .ToList();
+        }
+
+        public async Task<OrganizerRequestResponseDTO> ReviewVerificationAsync(
+            int requestId,
+            int reviewerId,
+            ReviewOrganizerRequestDTO dto,
+            string callerRole = "Admin")
+        {
+            if (!string.Equals(callerRole, "Admin", StringComparison.OrdinalIgnoreCase))
+                throw new UnauthorizedAccessException("Admin privilege required");
+
+            var decision = (dto.Decision ?? dto.Status ?? string.Empty).Trim().ToUpperInvariant();
+            string normalizedStatus;
+            if (decision == "APPROVE" || decision == "APPROVED")
+                normalizedStatus = StatusApproved;
+            else if (decision == "REJECT" || decision == "REJECTED")
+                normalizedStatus = StatusRejected;
+            else
+                throw new ArgumentException("Invalid decision value");
+
+            if (normalizedStatus == StatusRejected && string.IsNullOrWhiteSpace(dto.RejectionReason))
+                throw new ArgumentException("RejectionReason is required when rejecting");
+
+            var request = await _requestRepository.GetByIdAsync(requestId)
+                ?? throw new KeyNotFoundException("Verification request not found");
+
+            if (!string.Equals(request.Status, StatusPending, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Request has already been processed");
+
+            request.Status = normalizedStatus == StatusApproved ? "APPROVED" : "REJECTED";
+            request.ReviewedBy = reviewerId;
+            request.ReviewedAt = DateTime.UtcNow;
+            request.ReviewNote = dto.ReviewNote;
+            request.RejectionReason = normalizedStatus == StatusRejected ? dto.RejectionReason : null;
+            request.UpdatedAt = DateTime.UtcNow;
+
+            if (normalizedStatus == StatusApproved)
+            {
+                var role = await _userRepository.GetRoleByNameAsync(RoleOrganizer);
+                if (role != null && request.User != null && !request.User.UserRoles.Any(ur => ur.RoleId == role.RoleId))
+                {
+                    await _userRepository.AddUserRoleAsync(new UserRole
+                    {
+                        UserId = request.UserId,
+                        RoleId = role.RoleId,
+                        AssignedAt = DateTime.UtcNow
+                    });
+                }
+            }
+
+            await _requestRepository.SaveChangesAsync();
+            return MapToDto(request, request.User ?? new User { UserId = request.UserId, Email = "organizer@example.com", FullName = "Organizer" });
         }
 
         private static OrganizerRequestResponseDTO MapToDto(OrganizerRequest request, User user)

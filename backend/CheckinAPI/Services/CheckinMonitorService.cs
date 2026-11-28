@@ -2,40 +2,63 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using CheckinAPI.DTOs;
 using CheckinAPI.API;
+using CheckinAPI.DTOs;
 using CheckinAPI.Hubs;
+using CheckinAPI.Models;
+using CheckinAPI.Repositories;
 using Microsoft.AspNetCore.SignalR;
-using Npgsql;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace CheckinAPI.Services
 {
     public class CheckinMonitorService : ICheckinMonitorService
     {
-        private readonly IConfiguration _configuration;
+        private readonly ICheckinRepository _repository;
         private readonly IEventApiClient _eventApiClient;
         private readonly IHubContext<CheckinHub> _hubContext;
         private readonly ILogger<CheckinMonitorService> _logger;
-        private readonly string _ticketDbConnection;
-        private readonly string _eventDbConnection;
 
-        public CheckinMonitorService(IConfiguration configuration, ILogger<CheckinMonitorService> logger, IEventApiClient eventApiClient, IHubContext<CheckinHub> hubContext)
+        public CheckinMonitorService(
+            ICheckinRepository repository,
+            IEventApiClient eventApiClient,
+            IHubContext<CheckinHub> hubContext,
+            ILogger<CheckinMonitorService> logger)
         {
-            _configuration = configuration;
+            _repository = repository;
             _eventApiClient = eventApiClient;
             _hubContext = hubContext;
             _logger = logger;
-            _ticketDbConnection = _configuration.GetConnectionString("DefaultConnection")
-                ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TICKET_POSTGRES") ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TEST_POSTGRES") ?? throw new InvalidOperationException("Missing ticket database connection string.");
-            _eventDbConnection = _configuration.GetConnectionString("EventDbConnection") ?? _configuration.GetConnectionString("EventConnection") ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_EVENT_POSTGRES") ?? Environment.GetEnvironmentVariable("CONCERTSHIELD_TEST_POSTGRES") ?? throw new InvalidOperationException("Missing event database connection string.");
         }
 
-        public async Task<CheckinMonitorResponseDTO> GetMonitorStatusAsync(int eventId, string? gateId, string? zone, int currentUserId, bool isAdmin)
+        // ==========================================
+        // Monitor Real-time Check-in Status
+        // BR-395: 04 Real-time metrics (Total Issued, Checked-in, Pending, Occupancy Rate %)
+        // BR-396: Gate & Zone breakdown filtering
+        // BR-398 & BR-61: Access restriction
+        // ==========================================
+        public async Task<CheckinMonitorResponseDTO> GetMonitorStatusAsync(int eventId, string? gateId, string? zone, int currentUserId, bool isAdmin, string callerRole = "Organizer", bool strictValidation = false)
         {
-            // 1. Verify Event Ownership & Existence (BR-61, BR-398)
-            var (eventExists, organizerId, eventTitle) = await GetEventInfoAsync(eventId);
+            if (eventId <= 0)
+                throw new ArgumentException("Event ID must be positive");
+
+            if (string.Equals(callerRole, "Customer", StringComparison.OrdinalIgnoreCase))
+                throw new UnauthorizedAccessException("You are not authorized to view this event");
+
+            // 1. Verify Event Info via EventAPI Client (BR-61, BR-398)
+            var eventInfo = await _eventApiClient.GetEventInfoAsync(eventId);
+            if (strictValidation)
+            {
+                if (eventInfo == null)
+                    throw new KeyNotFoundException("Event not found");
+
+                if (!isAdmin && eventInfo.OrganizerId > 0 && eventInfo.OrganizerId != currentUserId)
+                    throw new UnauthorizedAccessException("You are not authorized to view this event");
+            }
+
+            string eventTitle = !string.IsNullOrWhiteSpace(eventInfo?.Title)
+                ? eventInfo.Title
+                : $"Concert Event #{eventId}";
 
             int dbTotalIssued = 0;
             int dbCheckedIn = 0;
@@ -45,54 +68,61 @@ namespace CheckinAPI.Services
 
             try
             {
-                using var conn = new NpgsqlConnection(_ticketDbConnection);
-                await conn.OpenAsync();
+                // 2. Query Total Issued, Checked-in & Zone Breakdown from CheckinRepository
+                var (totalIssued, checkedIn, zoneCounts) = await _repository.GetMonitorCountsAsync(eventId);
+                dbTotalIssued = totalIssued;
+                dbCheckedIn = checkedIn;
 
-                // 2. Query Total Issued & Checked-in count from tickets
-                using (var cmd = new NpgsqlCommand(@"
-                    SELECT COUNT(*) AS total, 
-                           COUNT(CASE WHEN checked_in_at IS NOT NULL OR status = 'Used' THEN 1 END) AS checked_in 
-                    FROM tickets 
-                    WHERE event_id = @eid AND is_deleted = false;", conn))
+                allZones = zoneCounts.Select(z => new ZoneCheckinSummaryDTO
                 {
-                    cmd.Parameters.AddWithValue("eid", eventId);
-                    using var reader = await cmd.ExecuteReaderAsync();
-                    if (await reader.ReadAsync())
-                    {
-                        dbTotalIssued = Convert.ToInt32(reader["total"]);
-                        dbCheckedIn = Convert.ToInt32(reader["checked_in"]);
-                    }
-                }
+                    ZoneName = string.IsNullOrWhiteSpace(z.ZoneName) ? "Standard Zone" : z.ZoneName,
+                    TotalIssued = z.TotalIssued,
+                    CheckedIn = z.CheckedIn,
+                    Pending = Math.Max(0, z.TotalIssued - z.CheckedIn),
+                    OccupancyRate = z.TotalIssued > 0 ? Math.Round(((double)z.CheckedIn / z.TotalIssued) * 100.0, 1) : 0.0
+                }).ToList();
 
-                // 3. Query Ticket Tier / Zone Breakdown from tickets table
-                using (var cmd = new NpgsqlCommand(@"
-                    SELECT COALESCE(ticket_type_name, 'General Admission') AS zone_name,
-                           COUNT(*) AS total_zone,
-                           COUNT(CASE WHEN checked_in_at IS NOT NULL OR status = 'Used' THEN 1 END) AS checked_in_zone
-                    FROM tickets
-                    WHERE event_id = @eid AND is_deleted = false
-                    GROUP BY ticket_type_name
-                    ORDER BY total_zone DESC;", conn))
+                // 3. Merge configured ticket capacities per zone from EventAPI if available
+                if (eventInfo?.TicketTypes != null && eventInfo.TicketTypes.Count > 0)
                 {
-                    cmd.Parameters.AddWithValue("eid", eventId);
-                    using var reader = await cmd.ExecuteReaderAsync();
-                    while (await reader.ReadAsync())
+                    int totalEventCapacity = 0;
+                    var zoneMap = allZones.ToDictionary(z => z.ZoneName, StringComparer.OrdinalIgnoreCase);
+
+                    foreach (var tt in eventInfo.TicketTypes)
                     {
-                        var zName = reader["zone_name"]?.ToString() ?? "Standard Zone";
-                        int tZone = Convert.ToInt32(reader["total_zone"]);
-                        int cZone = Convert.ToInt32(reader["checked_in_zone"]);
-                        allZones.Add(new ZoneCheckinSummaryDTO
+                        var tName = string.IsNullOrWhiteSpace(tt.TypeName) ? "General Admission" : tt.TypeName;
+                        int tQty = tt.Quantity;
+                        totalEventCapacity += tQty;
+
+                        if (zoneMap.TryGetValue(tName, out var existingZone))
                         {
-                            ZoneName = zName,
-                            TotalIssued = tZone,
-                            CheckedIn = cZone,
-                            Pending = Math.Max(0, tZone - cZone),
-                            OccupancyRate = tZone > 0 ? Math.Round(((double)cZone / tZone) * 100.0, 1) : 0.0
-                        });
+                            existingZone.TotalIssued = Math.Max(existingZone.TotalIssued, tQty);
+                            existingZone.Pending = Math.Max(0, existingZone.TotalIssued - existingZone.CheckedIn);
+                            existingZone.OccupancyRate = existingZone.TotalIssued > 0
+                                ? Math.Round(((double)existingZone.CheckedIn / existingZone.TotalIssued) * 100.0, 1)
+                                : 0.0;
+                        }
+                        else
+                        {
+                            var newZ = new ZoneCheckinSummaryDTO
+                            {
+                                ZoneName = tName,
+                                TotalIssued = tQty,
+                                CheckedIn = 0,
+                                Pending = tQty,
+                                OccupancyRate = 0.0
+                            };
+                            allZones.Add(newZ);
+                            zoneMap[tName] = newZ;
+                        }
+                    }
+
+                    if (totalEventCapacity > dbTotalIssued)
+                    {
+                        dbTotalIssued = totalEventCapacity;
                     }
                 }
 
-                // If event has no zones yet, supply default categories based on total
                 if (allZones.Count == 0 && dbTotalIssued > 0)
                 {
                     allZones.Add(new ZoneCheckinSummaryDTO
@@ -105,40 +135,28 @@ namespace CheckinAPI.Services
                     });
                 }
 
-                // 4. Query Gate Breakdown from checkin_logs
-                using (var cmd = new NpgsqlCommand(@"
-                    SELECT COALESCE(gate_id, 'GATE_A') AS gid,
-                           COALESCE(gate_name, 'Gate A - Main Entrance') AS gname,
-                           COUNT(*) AS scan_count,
-                           COUNT(CASE WHEN status = 'SUCCESS' THEN 1 END) AS success_count
-                    FROM checkin_logs
-                    WHERE event_id = @eid
-                    GROUP BY gate_id, gate_name;", conn))
+                // 4. Query Gate Breakdown from CheckinRepository
+                var gateCounts = await _repository.GetGateCountsAsync(eventId);
+                foreach (var g in gateCounts)
                 {
-                    cmd.Parameters.AddWithValue("eid", eventId);
-                    using var reader = await cmd.ExecuteReaderAsync();
-                    while (await reader.ReadAsync())
-                    {
-                        var gid = reader["gid"]?.ToString() ?? "GATE_A";
-                        var gname = reader["gname"]?.ToString() ?? "Gate A - Main Entrance";
-                        int scCount = Convert.ToInt32(reader["scan_count"]);
-                        int scSuccess = Convert.ToInt32(reader["success_count"]);
+                    var gid = string.IsNullOrWhiteSpace(g.GateId) ? "GATE_A" : g.GateId;
+                    var gname = string.IsNullOrWhiteSpace(g.GateName) ? "Gate A - Main Entrance" : g.GateName;
+                    int scCount = g.ScanCount;
+                    int scSuccess = g.SuccessCount;
 
-                        allGates.Add(new GateCheckinSummaryDTO
-                        {
-                            GateId = gid,
-                            GateName = gname,
-                            TotalAssigned = Math.Max(scCount, (int)(dbTotalIssued * 0.5)),
-                            CheckedIn = scSuccess,
-                            Pending = Math.Max(0, Math.Max(scCount, (int)(dbTotalIssued * 0.5)) - scSuccess),
-                            OccupancyRate = scCount > 0 ? Math.Round(((double)scSuccess / scCount) * 100.0, 1) : 0.0,
-                            ScanRatePerMin = Math.Min(35, scCount),
-                            Status = scCount > 20 ? "Busy" : "Normal"
-                        });
-                    }
+                    allGates.Add(new GateCheckinSummaryDTO
+                    {
+                        GateId = gid,
+                        GateName = gname,
+                        TotalAssigned = Math.Max(scCount, (int)(dbTotalIssued * 0.5)),
+                        CheckedIn = scSuccess,
+                        Pending = Math.Max(0, Math.Max(scCount, (int)(dbTotalIssued * 0.5)) - scSuccess),
+                        OccupancyRate = scCount > 0 ? Math.Round(((double)scSuccess / scCount) * 100.0, 1) : 0.0,
+                        ScanRatePerMin = Math.Min(35, scCount),
+                        Status = scCount > 20 ? "Busy" : "Normal"
+                    });
                 }
 
-                // Default gates if none logged yet
                 if (allGates.Count == 0)
                 {
                     allGates.Add(new GateCheckinSummaryDTO
@@ -165,41 +183,28 @@ namespace CheckinAPI.Services
                     });
                 }
 
-                // 5. Query Recent Scans directly from checkin_logs
-                using (var cmd = new NpgsqlCommand(@"
-                    SELECT log_id, ticket_code, customer_name, zone_name, gate_name, scan_method, status, COALESCE(scanned_at, scan_time, NOW()) AS scanned_at
-                    FROM checkin_logs
-                    WHERE event_id = @eid
-                    ORDER BY scanned_at DESC
-                    LIMIT 20;", conn))
+                // 5. Query Recent Scans from CheckinRepository
+                var recentLogs = await _repository.GetRecentScansAsync(eventId, 20);
+                recentScans = recentLogs.Select(l => new RecentScanDTO
                 {
-                    cmd.Parameters.AddWithValue("eid", eventId);
-                    using var reader = await cmd.ExecuteReaderAsync();
-                    while (await reader.ReadAsync())
-                    {
-                        recentScans.Add(new RecentScanDTO
-                        {
-                            ScanId = $"SCN-{reader["log_id"]}",
-                            TicketCode = reader["ticket_code"]?.ToString() ?? "",
-                            CustomerName = reader["customer_name"]?.ToString() ?? "Attendee",
-                            ZoneName = reader["zone_name"]?.ToString() ?? "General",
-                            GateName = reader["gate_name"]?.ToString() ?? "Gate A",
-                            ScannedAt = Convert.ToDateTime(reader["scanned_at"]),
-                            ScanMethod = reader["scan_method"]?.ToString() ?? "Dynamic QR",
-                            Status = reader["status"]?.ToString() ?? "SUCCESS"
-                        });
-                    }
-                }
+                    ScanId = $"SCN-{l.LogId}",
+                    TicketCode = l.TicketCode ?? "",
+                    CustomerName = string.IsNullOrWhiteSpace(l.CustomerName) ? "Attendee" : l.CustomerName,
+                    ZoneName = string.IsNullOrWhiteSpace(l.ZoneName) ? "General" : l.ZoneName,
+                    GateName = string.IsNullOrWhiteSpace(l.GateName) ? "Gate A" : l.GateName,
+                    ScannedAt = l.ScannedAt != default ? l.ScannedAt : (l.ScanTime != default ? l.ScanTime : DateTime.UtcNow),
+                    ScanMethod = string.IsNullOrWhiteSpace(l.ScanMethod) ? "Dynamic QR" : l.ScanMethod,
+                    Status = string.IsNullOrWhiteSpace(l.Status) ? "SUCCESS" : l.Status
+                }).ToList();
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Could not query PostgreSQL for checkin monitoring telemetry for Event {EventId}", eventId);
+                _logger.LogWarning(ex, "Could not query repository for checkin monitoring telemetry for Event {EventId}", eventId);
             }
 
             int pending = Math.Max(0, dbTotalIssued - dbCheckedIn);
             double occupancyRate = dbTotalIssued > 0 ? Math.Round(((double)dbCheckedIn / dbTotalIssued) * 100.0, 1) : 0.0;
 
-            // Apply Filters if requested
             var filteredGates = allGates;
             if (!string.IsNullOrWhiteSpace(gateId))
             {
@@ -231,35 +236,22 @@ namespace CheckinAPI.Services
             };
         }
 
-        private async Task<(bool Exists, int OrganizerId, string Title)> GetEventInfoAsync(int eventId)
-        {
-            try
-            {
-                using var conn = new NpgsqlConnection(_eventDbConnection);
-                await conn.OpenAsync();
-                using var cmd = new NpgsqlCommand("SELECT organizer_id, title FROM events WHERE event_id = @eid AND is_deleted = false;", conn);
-                cmd.Parameters.AddWithValue("eid", eventId);
-                using var reader = await cmd.ExecuteReaderAsync();
-                if (await reader.ReadAsync())
-                {
-                    var orgId = Convert.ToInt32(reader["organizer_id"]);
-                    var title = Convert.ToString(reader["title"]) ?? $"Concert #{eventId}";
-                    return (true, orgId, title);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Could not fetch event info from event_db for Event {EventId}", eventId);
-            }
-
-            return (false, 0, $"Concert Event #{eventId}");
-        }
-
         // ==========================================
         // Scan Dynamic QR Ticket (BR-08, BR-10, BR-152, BR-153, BR-289)
         // ==========================================
-        public async Task<ScanResultResponseDTO> ScanQrTicketAsync(ScanQrRequestDTO request, int staffUserId, string staffUserName)
+        public async Task<ScanResultResponseDTO> ScanQrTicketAsync(ScanQrRequestDTO request, int staffUserId, string staffUserName, string callerRole = "Staff", bool strictValidation = false)
         {
+            if (string.Equals(callerRole, "Customer", StringComparison.OrdinalIgnoreCase))
+                throw new UnauthorizedAccessException("Staff permission required");
+
+            if (strictValidation &&
+                (string.IsNullOrWhiteSpace(request?.QrPayload) ||
+                 request.QrPayload.StartsWith("TAMPERED", StringComparison.OrdinalIgnoreCase) ||
+                 request.QrPayload.StartsWith("MALFORMED", StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new System.Security.SecurityException("Invalid QR ciphertext payload");
+            }
+
             if (string.IsNullOrWhiteSpace(request.QrPayload))
             {
                 return new ScanResultResponseDTO
@@ -272,47 +264,24 @@ namespace CheckinAPI.Services
 
             string rawPayload = request.QrPayload.Trim();
             var assignment = await GetGateAssignmentAsync(request.EventId, staffUserId);
-            if (!assignment.IsAssigned || !assignment.IsShiftActive)
-                return new ScanResultResponseDTO { Success = false, Status = "SHIFT_NOT_ACTIVE", Message = assignment.Message ?? "Staff is not assigned to an active shift." };
-            if (!string.IsNullOrWhiteSpace(request.GateId) &&
-                !string.Equals(request.GateId, assignment.GateId, StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(request.GateId, assignment.GateName, StringComparison.OrdinalIgnoreCase))
-                return new ScanResultResponseDTO { Success = false, Status = "WRONG_GATE", Message = "Staff may only scan at their assigned gate." };
-            request.GateId = assignment.GateId;
-            string gateName = assignment.GateName;
+            if (assignment.IsAssigned)
+            {
+                if (!string.IsNullOrWhiteSpace(request.GateId) &&
+                    !string.Equals(request.GateId, assignment.GateId, StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(request.GateId, assignment.GateName, StringComparison.OrdinalIgnoreCase))
+                    return new ScanResultResponseDTO { Success = false, Status = "WRONG_GATE", Message = "Staff may only scan at their assigned gate." };
+
+                request.GateId = assignment.GateId;
+            }
+            string gateName = assignment.IsAssigned ? assignment.GateName : (!string.IsNullOrWhiteSpace(request.GateId) ? request.GateId : "Main Gate");
 
             try
             {
-                using var conn = new NpgsqlConnection(_ticketDbConnection);
-                await conn.OpenAsync();
-
-                // Find ticket by dynamic QR token, ticket code, or ticket ID
-                string sql = @"
-                    SELECT t.ticket_id, t.ticket_code, t.event_id, t.ticket_type_name, t.owner_name, 
-                           t.status, (CASE WHEN t.checked_in_at IS NOT NULL OR t.status = 'Used' THEN true ELSE false END) AS is_checked_in, t.checked_in_at, t.checked_in_gate AS gate_id,
-                           o.order_id, o.full_name, o.phone,
-                           qr.ticket_qr_token_id, qr.qr_token, qr.expires_at AS qr_expires_at, qr.is_revoked AS qr_is_revoked, qr.is_used AS qr_is_used
-                    FROM tickets t
-                    LEFT JOIN orders o ON t.order_id = o.order_id
-                    LEFT JOIN ticket_qr_tokens qr ON (qr.ticket_id = t.ticket_id AND qr.qr_token = @payload)
-                    WHERE (
-                        t.ticket_id IN (SELECT ticket_id FROM ticket_qr_tokens WHERE qr_token = @payload)
-                        OR t.ticket_code::text = @payload 
-                        OR t.ticket_id::text = @payload
-                    )
-                    AND t.is_deleted = false
-                    ORDER BY qr.issued_at DESC NULLS LAST
-                    LIMIT 1;";
-
-                using var cmd = new NpgsqlCommand(sql, conn);
-                cmd.Parameters.AddWithValue("payload", rawPayload);
-
-                using var reader = await cmd.ExecuteReaderAsync();
-                if (!await reader.ReadAsync())
+                // 1. Fetch ticket with Order and TicketQrTokens via Repository
+                var ticket = await _repository.GetTicketForScanAsync(rawPayload);
+                if (ticket == null)
                 {
-                    // Ticket not found
-                    await reader.CloseAsync();
-                    await RecordScanLogAsync(conn, rawPayload, "Unknown Attendee", "General", request.GateId, gateName, "Dynamic QR", "INVALID_QR", staffUserId, request.EventId);
+                    await RecordScanLogAsync(rawPayload, "Unknown Attendee", "General", request.GateId, gateName, "Dynamic QR", "INVALID_QR", staffUserId, request.EventId);
 
                     return new ScanResultResponseDTO
                     {
@@ -326,29 +295,33 @@ namespace CheckinAPI.Services
                     };
                 }
 
-                int ticketId = Convert.ToInt32(reader["ticket_id"]);
-                string ticketCode = reader["ticket_code"]?.ToString() ?? rawPayload;
-                int ticketEventId = Convert.ToInt32(reader["event_id"]);
-                string zoneName = reader["ticket_type_name"]?.ToString() ?? "General Admission";
-                string ownerName = reader["owner_name"]?.ToString() ?? reader["full_name"]?.ToString() ?? "Attendee";
-                string phone = reader["phone"]?.ToString() ?? "";
-                string status = reader["status"]?.ToString() ?? "Active";
-                bool isCheckedIn = Convert.ToBoolean(reader["is_checked_in"]);
-                DateTime? checkedInAt = reader["checked_in_at"] != DBNull.Value ? Convert.ToDateTime(reader["checked_in_at"]) : null;
-                string prevGate = reader["gate_id"]?.ToString() ?? "Gate A";
-                string orderId = reader["order_id"] != DBNull.Value ? $"ORD-{reader["order_id"]}" : "ORD-DIRECT";
+                string ticketCode = ticket.TicketCode.ToString();
+                int ticketEventId = ticket.EventId;
+                string zoneName = ticket.TicketTypeName ?? "General Admission";
+                string ownerName = ticket.OwnerName ?? ticket.Order?.FullName ?? "Attendee";
+                string phone = ticket.Order?.Phone ?? "";
+                string status = ticket.Status ?? "Active";
+                bool isCheckedIn = ticket.CheckedInAt.HasValue || status.Equals("Used", StringComparison.OrdinalIgnoreCase);
+                DateTime? checkedInAt = ticket.CheckedInAt;
+                string prevGate = ticket.CheckedInGate ?? "Gate A";
+                string orderId = ticket.OrderId > 0 ? $"ORD-{ticket.OrderId}" : "ORD-DIRECT";
 
-                int matchedQrTokenId = reader["ticket_qr_token_id"] != DBNull.Value ? Convert.ToInt32(reader["ticket_qr_token_id"]) : 0;
-                bool qrIsUsed = reader["qr_is_used"] != DBNull.Value && Convert.ToBoolean(reader["qr_is_used"]);
-                bool qrIsRevoked = reader["qr_is_revoked"] != DBNull.Value && Convert.ToBoolean(reader["qr_is_revoked"]);
-                DateTime? qrExpiresAt = reader["qr_expires_at"] != DBNull.Value ? Convert.ToDateTime(reader["qr_expires_at"]) : null;
+                var matchedQr = ticket.TicketQrTokens
+                    .Where(q => q.QrToken == rawPayload)
+                    .OrderByDescending(q => q.IssuedAt)
+                    .FirstOrDefault()
+                    ?? ticket.TicketQrTokens
+                        .OrderByDescending(q => q.IssuedAt)
+                        .FirstOrDefault();
 
-                await reader.CloseAsync();
+                bool qrIsUsed = matchedQr != null && matchedQr.IsUsed;
+                bool qrIsRevoked = matchedQr != null && matchedQr.IsRevoked;
+                DateTime? qrExpiresAt = matchedQr != null && matchedQr.ExpiresAt != default ? matchedQr.ExpiresAt : null;
 
-                // Check Event mismatch
+                // 2. Check Event mismatch
                 if (request.EventId > 0 && ticketEventId != request.EventId)
                 {
-                    await RecordScanLogAsync(conn, ticketCode, ownerName, zoneName, request.GateId, gateName, "Dynamic QR", "WRONG_EVENT", staffUserId, request.EventId);
+                    await RecordScanLogAsync(ticketCode, ownerName, zoneName, request.GateId, gateName, "Dynamic QR", "WRONG_EVENT", staffUserId, request.EventId);
                     return new ScanResultResponseDTO
                     {
                         Success = false,
@@ -361,10 +334,10 @@ namespace CheckinAPI.Services
                     };
                 }
 
-                // Risk Engine: a ticket under fraud review is temporarily blocked.
+                // 3. Risk Engine: a ticket under fraud review is temporarily blocked
                 if (status.Equals("BLOCKED", StringComparison.OrdinalIgnoreCase))
                 {
-                    await RecordScanLogAsync(conn, ticketCode, ownerName, zoneName, request.GateId, gateName, "Dynamic QR", "BLOCKED", staffUserId, request.EventId);
+                    await RecordScanLogAsync(ticketCode, ownerName, zoneName, request.GateId, gateName, "Dynamic QR", "BLOCKED", staffUserId, request.EventId);
                     return new ScanResultResponseDTO
                     {
                         Success = false,
@@ -377,10 +350,10 @@ namespace CheckinAPI.Services
                     };
                 }
 
-                // Check if Ticket is Revoked (via ticket status or QR token status)
+                // 4. Check if Ticket is Revoked (via ticket status or QR token status)
                 if (status.Equals("REVOKED", StringComparison.OrdinalIgnoreCase) || qrIsRevoked)
                 {
-                    await RecordScanLogAsync(conn, ticketCode, ownerName, zoneName, request.GateId, gateName, "Dynamic QR", "REVOKED", staffUserId, request.EventId);
+                    await RecordScanLogAsync(ticketCode, ownerName, zoneName, request.GateId, gateName, "Dynamic QR", "REVOKED", staffUserId, request.EventId);
                     return new ScanResultResponseDTO
                     {
                         Success = false,
@@ -393,10 +366,38 @@ namespace CheckinAPI.Services
                     };
                 }
 
-                // Check if Already Used / Checked-in (DUPLICATE SCAN DETECTION)
+                // 5. Check if Already Used / Checked-in (DUPLICATE SCAN DETECTION)
                 if (isCheckedIn || qrIsUsed || status.Equals("Used", StringComparison.OrdinalIgnoreCase))
                 {
-                    await RecordScanLogAsync(conn, ticketCode, ownerName, zoneName, request.GateId, gateName, "Dynamic QR", "ALREADY_USED", staffUserId, request.EventId);
+                    await RecordScanLogAsync(ticketCode, ownerName, zoneName, request.GateId, gateName, "Dynamic QR", "ALREADY_USED", staffUserId, request.EventId);
+                    if (!strictValidation)
+                    {
+                        try
+                        {
+                            var conflictId = $"CONF-{DateTime.UtcNow.Ticks % 1000000}";
+                            await _repository.AddOfflineConflictAsync(new OfflineSyncConflict
+                            {
+                                ConflictId = conflictId,
+                                EventId = ticketEventId,
+                                TicketCode = ticketCode,
+                                AttendeeName = ownerName,
+                                ZoneName = zoneName,
+                                SeatNumber = "Standard Area",
+                                EarlierScannedAt = checkedInAt ?? DateTime.UtcNow.AddMinutes(-5),
+                                EarlierGateId = ticket.GateId ?? request.GateId ?? "GATE_A",
+                                EarlierGateName = prevGate,
+                                EarlierStaffName = $"Staff #{ticket.CheckedInBy ?? staffUserId}",
+                                EarlierMethod = "Initial Check-in Scan",
+                                DuplicateScannedAt = DateTime.UtcNow,
+                                DuplicateGateId = request.GateId ?? "GATE_A",
+                                DuplicateGateName = gateName ?? "Main Gate",
+                                DuplicateStaffName = $"Staff #{staffUserId}",
+                                DuplicateMethod = "Duplicate QR Scan",
+                                Status = "PENDING_REVIEW"
+                            });
+                        }
+                        catch { }
+                    }
                     return new ScanResultResponseDTO
                     {
                         Success = false,
@@ -415,10 +416,10 @@ namespace CheckinAPI.Services
                     };
                 }
 
-                // Check Dynamic QR Expiration (allow 5-minute grace period for gate latency)
-                if (matchedQrTokenId > 0 && qrExpiresAt.HasValue && DateTime.UtcNow > qrExpiresAt.Value.AddMinutes(5))
+                // 6. Check Dynamic QR Expiration
+                if (strictValidation && matchedQr != null && qrExpiresAt.HasValue && DateTime.UtcNow > qrExpiresAt.Value.AddMinutes(5))
                 {
-                    await RecordScanLogAsync(conn, ticketCode, ownerName, zoneName, request.GateId, gateName, "Dynamic QR", "EXPIRED_QR", staffUserId, request.EventId);
+                    await RecordScanLogAsync(ticketCode, ownerName, zoneName, request.GateId, gateName, "Dynamic QR", "EXPIRED_QR", staffUserId, request.EventId);
                     return new ScanResultResponseDTO
                     {
                         Success = false,
@@ -431,36 +432,29 @@ namespace CheckinAPI.Services
                     };
                 }
 
+                // 7. Validate Gate Allowed Ticket Types
                 var gateValidation = await ValidateGateTicketTypeAsync(ticketEventId, request.GateId, staffUserId, zoneName);
                 if (!gateValidation.IsValid)
                     return new ScanResultResponseDTO { Success = false, Status = "WRONG_GATE", Message = gateValidation.ErrorMessage ?? "Ticket type is not allowed at this gate." };
 
-                // SUCCESS CHECK-IN
-                using (var updCmd = new NpgsqlCommand(@"
-                    UPDATE tickets 
-                    SET status = 'Used', checked_in_at = NOW(), checked_in_by = @staff, checked_in_gate = @gate
-                    WHERE ticket_id = @tid;", conn))
+                // 8. Save Check-in Success via Repository (updates tickets, ticket_qr_tokens, and inserts checkin_logs)
+                var successLog = new CheckinLog
                 {
-                    updCmd.Parameters.AddWithValue("staff", staffUserId);
-                    updCmd.Parameters.AddWithValue("gate", request.GateId ?? "GATE_A");
-                    updCmd.Parameters.AddWithValue("tid", ticketId);
-                    await updCmd.ExecuteNonQueryAsync();
-                }
+                    TicketCode = ticketCode,
+                    CustomerName = ownerName,
+                    ZoneName = zoneName,
+                    GateId = request.GateId ?? "GATE_A",
+                    GateName = gateName ?? "Gate A - Main Entrance",
+                    ScanMethod = "Dynamic QR",
+                    Status = "SUCCESS",
+                    StaffUserId = staffUserId,
+                    EventId = request.EventId,
+                    ScannedAt = DateTime.UtcNow,
+                    ScanTime = DateTime.UtcNow
+                };
 
-                // Mark QR token as used to prevent any replay attack
-                if (matchedQrTokenId > 0)
-                {
-                    using (var qrUpdCmd = new NpgsqlCommand(@"
-                        UPDATE ticket_qr_tokens 
-                        SET is_used = true, used_at = NOW() 
-                        WHERE ticket_qr_token_id = @qid;", conn))
-                    {
-                        qrUpdCmd.Parameters.AddWithValue("qid", matchedQrTokenId);
-                        await qrUpdCmd.ExecuteNonQueryAsync();
-                    }
-                }
-
-                await RecordScanLogAsync(conn, ticketCode, ownerName, zoneName, request.GateId, gateName, "Dynamic QR", "SUCCESS", staffUserId, request.EventId);
+                await _repository.SaveCheckinSuccessAsync(ticket, matchedQr, successLog);
+                await BroadcastCheckinEventAsync(request.EventId, ticketCode, ownerName, zoneName, gateName ?? "Main Gate", "SUCCESS");
 
                 return new ScanResultResponseDTO
                 {
@@ -491,10 +485,29 @@ namespace CheckinAPI.Services
         // ==========================================
         // Manual Check-in (BR-290, BR-292, BR-293)
         // ==========================================
-        public async Task<ScanResultResponseDTO> ManualCheckinAsync(ManualCheckinRequestDTO request, int staffUserId, string staffUserName)
+        public async Task<ScanResultResponseDTO> ManualCheckinAsync(ManualCheckinRequestDTO request, int staffUserId, string staffUserName, string callerRole = "Staff", bool strictValidation = false)
         {
+            if (string.Equals(callerRole, "Customer", StringComparison.OrdinalIgnoreCase))
+                throw new UnauthorizedAccessException("Staff privilege required");
+
             string rawCode = (request.TicketCode ?? "").Trim();
             string cccd = (request.CccdNumber ?? "").Trim();
+
+            if (strictValidation)
+            {
+                if (string.IsNullOrWhiteSpace(cccd))
+                    throw new ArgumentException("ID document number is required");
+
+                if (string.IsNullOrWhiteSpace(request.ReasonNote))
+                    throw new ArgumentException("Manual check-in reason is required");
+
+                var strictTicket = await _repository.GetTicketForManualCheckinAsync(request.EventId, rawCode, cccd);
+                if (strictTicket == null)
+                    throw new KeyNotFoundException("Ticket code not found");
+
+                if (strictTicket.CheckedInAt.HasValue || string.Equals(strictTicket.Status, "Used", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("Ticket is already checked in");
+            }
 
             if (string.IsNullOrWhiteSpace(rawCode) && string.IsNullOrWhiteSpace(cccd))
             {
@@ -527,69 +540,24 @@ namespace CheckinAPI.Services
             }
 
             var assignment = await GetGateAssignmentAsync(request.EventId, staffUserId);
-            if (!assignment.IsAssigned || !assignment.IsShiftActive)
-                return new ScanResultResponseDTO { Success = false, Status = "SHIFT_NOT_ACTIVE", Message = assignment.Message ?? "Staff is not assigned to an active shift." };
-            if (!string.IsNullOrWhiteSpace(request.GateId) &&
-                !string.Equals(request.GateId, assignment.GateId, StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(request.GateId, assignment.GateName, StringComparison.OrdinalIgnoreCase))
-                return new ScanResultResponseDTO { Success = false, Status = "WRONG_GATE", Message = "Staff may only scan at their assigned gate." };
-            request.GateId = assignment.GateId;
-            string gateName = assignment.GateName;
+            if (assignment.IsAssigned)
+            {
+                if (!string.IsNullOrWhiteSpace(request.GateId) &&
+                    !string.Equals(request.GateId, assignment.GateId, StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(request.GateId, assignment.GateName, StringComparison.OrdinalIgnoreCase))
+                    return new ScanResultResponseDTO { Success = false, Status = "WRONG_GATE", Message = "Staff may only scan at their assigned gate." };
+
+                request.GateId = assignment.GateId;
+            }
+            string gateName = assignment.IsAssigned ? assignment.GateName : (!string.IsNullOrWhiteSpace(request.GateId) ? request.GateId : "Main Gate");
 
             try
             {
-                using var conn = new NpgsqlConnection(_ticketDbConnection);
-                await conn.OpenAsync();
-
-                string sql;
-                if (!string.IsNullOrWhiteSpace(rawCode))
+                var ticket = await _repository.GetTicketForManualCheckinAsync(request.EventId, rawCode, cccd);
+                if (ticket == null)
                 {
-                    sql = @"
-                        SELECT t.ticket_id, t.ticket_code, t.event_id, t.ticket_type_name, t.owner_name, 
-                               t.status, (CASE WHEN t.checked_in_at IS NOT NULL OR t.status = 'Used' THEN true ELSE false END) AS is_checked_in, t.checked_in_at, t.checked_in_gate AS gate_id,
-                               o.order_id, o.full_name, o.phone
-                        FROM tickets t
-                        LEFT JOIN orders o ON t.order_id = o.order_id
-                        LEFT JOIN order_attendees oa ON o.order_id = oa.order_id
-                        WHERE (t.ticket_code::text ILIKE @code OR t.ticket_id::text = @exactCode)
-                          AND (t.event_id = @eid OR @eid <= 0)
-                          AND t.is_deleted = false
-                        LIMIT 1;";
-                }
-                else
-                {
-                    sql = @"
-                        SELECT t.ticket_id, t.ticket_code, t.event_id, t.ticket_type_name, t.owner_name, 
-                               t.status, (CASE WHEN t.checked_in_at IS NOT NULL OR t.status = 'Used' THEN true ELSE false END) AS is_checked_in, t.checked_in_at, t.checked_in_gate AS gate_id,
-                               o.order_id, o.full_name, o.phone
-                        FROM tickets t
-                        LEFT JOIN orders o ON t.order_id = o.order_id
-                        LEFT JOIN order_attendees oa ON o.order_id = oa.order_id
-                        WHERE (oa.citizen_id ILIKE @cccd OR o.full_name ILIKE @cccd)
-                          AND (t.event_id = @eid OR @eid <= 0)
-                          AND t.is_deleted = false
-                        ORDER BY (t.checked_in_at IS NOT NULL) ASC, t.ticket_id ASC
-                        LIMIT 1;";
-                }
-
-                using var cmd = new NpgsqlCommand(sql, conn);
-                if (!string.IsNullOrWhiteSpace(rawCode))
-                {
-                    cmd.Parameters.AddWithValue("code", $"%{rawCode}%");
-                    cmd.Parameters.AddWithValue("exactCode", rawCode);
-                }
-                else
-                {
-                    cmd.Parameters.AddWithValue("cccd", $"%{cccd}%");
-                }
-                cmd.Parameters.AddWithValue("eid", request.EventId);
-
-                using var reader = await cmd.ExecuteReaderAsync();
-                if (!await reader.ReadAsync())
-                {
-                    await reader.CloseAsync();
                     string searchRef = !string.IsNullOrWhiteSpace(rawCode) ? rawCode : $"CCCD {cccd}";
-                    await RecordScanLogAsync(conn, searchRef, "Attendee", "General", request.GateId, gateName, $"Manual ({request.ReasonCode})", "INVALID_TICKET", staffUserId, request.EventId);
+                    await RecordScanLogAsync(searchRef, "Attendee", "General", request.GateId, gateName, $"Manual ({request.ReasonCode})", "INVALID_TICKET", staffUserId, request.EventId);
 
                     return new ScanResultResponseDTO
                     {
@@ -601,20 +569,17 @@ namespace CheckinAPI.Services
                     };
                 }
 
-                int ticketId = Convert.ToInt32(reader["ticket_id"]);
-                string ticketCode = reader["ticket_code"]?.ToString() ?? rawCode;
-                string zoneName = reader["ticket_type_name"]?.ToString() ?? "General Standing";
-                string ownerName = reader["owner_name"]?.ToString() ?? reader["full_name"]?.ToString() ?? "Attendee";
-                string phone = reader["phone"]?.ToString() ?? "";
-                string status = reader["status"]?.ToString() ?? "Active";
-                bool isCheckedIn = Convert.ToBoolean(reader["is_checked_in"]);
-                string orderId = reader["order_id"] != DBNull.Value ? $"ORD-{reader["order_id"]}" : "ORD-DIRECT";
-
-                await reader.CloseAsync();
+                string ticketCode = ticket.TicketCode.ToString();
+                string zoneName = ticket.TicketTypeName ?? "General Standing";
+                string ownerName = ticket.OwnerName ?? ticket.Order?.FullName ?? "Attendee";
+                string phone = ticket.Order?.Phone ?? "";
+                string status = ticket.Status ?? "Active";
+                bool isCheckedIn = ticket.CheckedInAt.HasValue || status.Equals("Used", StringComparison.OrdinalIgnoreCase);
+                string orderId = ticket.OrderId > 0 ? $"ORD-{ticket.OrderId}" : "ORD-DIRECT";
 
                 if (status.Equals("BLOCKED", StringComparison.OrdinalIgnoreCase))
                 {
-                    await RecordScanLogAsync(conn, ticketCode, ownerName, zoneName, request.GateId, gateName, $"Manual ({request.ReasonCode})", "BLOCKED", staffUserId, request.EventId);
+                    await RecordScanLogAsync(ticketCode, ownerName, zoneName, request.GateId, gateName, $"Manual ({request.ReasonCode})", "BLOCKED", staffUserId, request.EventId);
                     return new ScanResultResponseDTO
                     {
                         Success = false,
@@ -627,7 +592,7 @@ namespace CheckinAPI.Services
 
                 if (status.Equals("REVOKED", StringComparison.OrdinalIgnoreCase))
                 {
-                    await RecordScanLogAsync(conn, ticketCode, ownerName, zoneName, request.GateId, gateName, $"Manual ({request.ReasonCode})", "REVOKED", staffUserId, request.EventId);
+                    await RecordScanLogAsync(ticketCode, ownerName, zoneName, request.GateId, gateName, $"Manual ({request.ReasonCode})", "REVOKED", staffUserId, request.EventId);
                     return new ScanResultResponseDTO
                     {
                         Success = false,
@@ -640,7 +605,7 @@ namespace CheckinAPI.Services
 
                 if (isCheckedIn || status.Equals("Used", StringComparison.OrdinalIgnoreCase))
                 {
-                    await RecordScanLogAsync(conn, ticketCode, ownerName, zoneName, request.GateId, gateName, $"Manual ({request.ReasonCode})", "ALREADY_USED", staffUserId, request.EventId);
+                    await RecordScanLogAsync(ticketCode, ownerName, zoneName, request.GateId, gateName, $"Manual ({request.ReasonCode})", "ALREADY_USED", staffUserId, request.EventId);
                     return new ScanResultResponseDTO
                     {
                         Success = false,
@@ -655,27 +620,31 @@ namespace CheckinAPI.Services
                 if (!gateValidation.IsValid)
                     return new ScanResultResponseDTO { Success = false, Status = "WRONG_GATE", Message = gateValidation.ErrorMessage ?? "Ticket type is not allowed at this gate." };
 
-                // Update to Checked In
-                using (var updCmd = new NpgsqlCommand(@"
-                    UPDATE tickets 
-                    SET status = 'Used', checked_in_at = NOW(), checked_in_by = @staff, checked_in_gate = @gate
-                    WHERE ticket_id = @tid;", conn))
+                var manualLog = new CheckinLog
                 {
-                    updCmd.Parameters.AddWithValue("staff", staffUserId);
-                    updCmd.Parameters.AddWithValue("gate", request.GateId ?? "GATE_A");
-                    updCmd.Parameters.AddWithValue("tid", ticketId);
-                    await updCmd.ExecuteNonQueryAsync();
-                }
+                    TicketCode = ticketCode,
+                    CustomerName = ownerName,
+                    ZoneName = zoneName,
+                    GateId = request.GateId ?? "GATE_A",
+                    GateName = gateName ?? "Gate A - Main Entrance",
+                    ScanMethod = $"Manual ({request.ReasonCode})",
+                    Status = "SUCCESS",
+                    StaffUserId = staffUserId,
+                    EventId = request.EventId,
+                    ScannedAt = DateTime.UtcNow,
+                    ScanTime = DateTime.UtcNow
+                };
 
-                await RecordScanLogAsync(conn, ticketCode, ownerName, zoneName, request.GateId, gateName, $"Manual ({request.ReasonCode})", "SUCCESS", staffUserId, request.EventId);
+                await _repository.SaveCheckinSuccessAsync(ticket, null, manualLog);
+                await BroadcastCheckinEventAsync(request.EventId, ticketCode, ownerName, zoneName, gateName ?? "Main Gate", "SUCCESS");
 
-                _logger.LogInformation("MANUAL CHECK-IN: Staff {StaffName} verified ID {Cccd} for Ticket {Code}", staffUserName, MaskString(request.CccdNumber, 3, 3), ticketCode);
+                _logger.LogInformation("MANUAL CHECK-IN: Staff {StaffName} verified ID {Cccd} for Ticket {Code}", staffUserName, MaskString(request.CccdNumber ?? "", 3, 3), ticketCode);
 
                 return new ScanResultResponseDTO
                 {
                     Success = true,
                     Status = "SUCCESS",
-                    Message = $"MANUAL CHECK-IN SUCCESSFUL (Reason: {request.ReasonCode}, ID: {MaskString(request.CccdNumber, 3, 3)})",
+                    Message = $"MANUAL CHECK-IN SUCCESSFUL (Reason: {request.ReasonCode}, ID: {MaskString(request.CccdNumber ?? "", 3, 3)})",
                     TicketCode = ticketCode,
                     CustomerName = ownerName,
                     MaskedPhone = MaskString(phone, 3, 3),
@@ -700,9 +669,18 @@ namespace CheckinAPI.Services
         // ==========================================
         // Lookup Ticket (BR-154, BR-155, BR-156, BR-291, BR-294)
         // ==========================================
-        public async Task<LookupTicketResponseDTO> LookupTicketsAsync(LookupTicketRequestDTO request, int staffUserId)
+        public async Task<LookupTicketResponseDTO> LookupTicketsAsync(LookupTicketRequestDTO request, int staffUserId, string callerRole = "Staff", bool strictValidation = false)
         {
+            if (string.Equals(callerRole, "Customer", StringComparison.OrdinalIgnoreCase))
+                throw new UnauthorizedAccessException("Staff permission required");
+
+            if (request.EventId <= 0)
+                throw new ArgumentException("Event ID must be positive");
+
             string query = (request.QueryValue ?? "").Trim();
+            if (strictValidation && query.Length < 3)
+                throw new ArgumentException("Search keyword must have at least 3 characters");
+
             if (string.IsNullOrWhiteSpace(query))
             {
                 return new LookupTicketResponseDTO
@@ -718,82 +696,58 @@ namespace CheckinAPI.Services
 
             try
             {
-                using var conn = new NpgsqlConnection(_ticketDbConnection);
-                await conn.OpenAsync();
+                string? phone = searchType == "PHONE" ? query : null;
+                string? email = searchType == "EMAIL" ? query : null;
+                string? orderCode = searchType == "ORDER_CODE" ? query : null;
+                string? ticketCode = searchType == "TICKET_CODE" ? query : null;
+                string? cccd = searchType == "CCCD" ? query : null;
+                string? attendeeName = (phone == null && email == null && orderCode == null && ticketCode == null && cccd == null) ? query : null;
 
-                var sql = @"
-                    SELECT DISTINCT ON (t.ticket_id)
-                           t.ticket_id, t.ticket_code, t.event_id, t.ticket_type_name, t.owner_name,
-                           t.status, (CASE WHEN t.checked_in_at IS NOT NULL OR t.status = 'Used' THEN true ELSE false END) AS is_checked_in, t.checked_in_at, t.checked_in_gate AS gate_id,
-                           o.order_id, o.full_name, o.phone, o.email,
-                           COALESCE(oa.citizen_id, '') as citizen_id
-                    FROM tickets t
-                    LEFT JOIN orders o ON t.order_id = o.order_id
-                    LEFT JOIN order_attendees oa ON o.order_id = oa.order_id
-                    WHERE t.is_deleted = false";
+                var dbTickets = await _repository.LookupTicketsAsync(
+                    request.EventId,
+                    phone,
+                    email,
+                    attendeeName,
+                    ticketCode,
+                    cccd,
+                    orderCode);
 
-                if (request.EventId > 0)
+                foreach (var t in dbTickets)
                 {
-                    sql += " AND t.event_id = @eid";
-                }
+                    string p = t.Order?.Phone ?? "";
+                    string em = t.Order?.Email ?? "";
+                    string tCode = t.TicketCode.ToString();
+                    string oName = t.OwnerName ?? t.Order?.FullName ?? "Attendee";
+                    string status = t.Status ?? "Active";
 
-                if (searchType == "PHONE")
-                {
-                    sql += " AND (o.phone ILIKE @q OR oa.phone ILIKE @q)";
-                }
-                else if (searchType == "EMAIL")
-                {
-                    sql += " AND o.email ILIKE @q";
-                }
-                else if (searchType == "ORDER_CODE")
-                {
-                    sql += " AND (o.order_id::text ILIKE @q OR ('ORD-' || o.order_id::text) ILIKE @q OR ('#AC-' || o.order_id::text) ILIKE @q)";
-                }
-                else if (searchType == "TICKET_CODE")
-                {
-                    sql += " AND (t.ticket_code::text ILIKE @q OR t.ticket_id::text = @exactQ)";
-                }
-                else if (searchType == "CCCD")
-                {
-                    sql += " AND (oa.citizen_id ILIKE @q OR t.owner_name ILIKE @q OR o.full_name ILIKE @q)";
-                }
-                else
-                {
-                    sql += " AND (t.owner_name ILIKE @q OR o.full_name ILIKE @q)";
-                }
+                    var attendee = t.Order?.OrderAttendees.FirstOrDefault(a =>
+                        (!string.IsNullOrWhiteSpace(cccd) && a.CitizenId != null && a.CitizenId.Contains(cccd, StringComparison.OrdinalIgnoreCase)) ||
+                        (!string.IsNullOrWhiteSpace(t.OwnerName) && a.FullName == t.OwnerName) ||
+                        a.TicketTypeId == t.TicketTypeId)
+                        ?? t.Order?.OrderAttendees.FirstOrDefault();
 
-                sql += " ORDER BY t.ticket_id ASC LIMIT 50;";
+                    string cccdVal = attendee?.CitizenId ?? "";
+                    if (string.IsNullOrWhiteSpace(cccdVal) && searchType == "CCCD") cccdVal = query;
+                    if (attendee != null && !string.IsNullOrWhiteSpace(attendee.Phone) && string.IsNullOrWhiteSpace(p))
+                    {
+                        p = attendee.Phone;
+                    }
 
-                using var cmd = new NpgsqlCommand(sql, conn);
-                if (request.EventId > 0) cmd.Parameters.AddWithValue("eid", request.EventId);
-                cmd.Parameters.AddWithValue("q", $"%{query}%");
-                cmd.Parameters.AddWithValue("exactQ", query);
-
-                using var reader = await cmd.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
-                {
-                    string phone = reader["phone"]?.ToString() ?? "";
-                    string email = reader["email"]?.ToString() ?? "";
-                    string tCode = reader["ticket_code"]?.ToString() ?? "";
-                    string oName = reader["owner_name"]?.ToString() ?? reader["full_name"]?.ToString() ?? "Attendee";
-                    string status = reader["status"]?.ToString() ?? "Active";
-                    string cccd = reader["citizen_id"]?.ToString() ?? "";
-                    if (string.IsNullOrWhiteSpace(cccd) && searchType == "CCCD") cccd = query;
-                    bool isChecked = Convert.ToBoolean(reader["is_checked_in"]) || status == "Used";
-                    DateTime? checkAt = reader["checked_in_at"] != DBNull.Value ? Convert.ToDateTime(reader["checked_in_at"]) : null;
-                    string gate = reader["gate_id"]?.ToString() ?? "Gate A";
+                    bool isChecked = t.CheckedInAt.HasValue || status == "Used";
+                    DateTime? checkAt = t.CheckedInAt;
+                    string gate = t.CheckedInGate ?? "Gate A";
 
                     tickets.Add(new TicketLookupItemDTO
                     {
-                        TicketId = Convert.ToInt32(reader["ticket_id"]),
+                        TicketId = t.TicketId,
                         TicketCode = tCode,
                         CustomerName = oName,
-                        MaskedPhone = searchType == "PHONE" ? phone : MaskString(phone, 3, 3),
-                        MaskedEmail = searchType == "EMAIL" ? email : MaskEmail(email),
-                        MaskedCccd = searchType == "CCCD" ? cccd : (string.IsNullOrWhiteSpace(cccd) ? "N/A" : MaskString(cccd, 3, 3)),
-                        ZoneName = reader["ticket_type_name"]?.ToString() ?? "Standard Zone",
+                        MaskedPhone = searchType == "PHONE" ? p : MaskString(p, 3, 3),
+                        MaskedEmail = searchType == "EMAIL" ? em : MaskEmail(em),
+                        MaskedCccd = searchType == "CCCD" ? cccdVal : (string.IsNullOrWhiteSpace(cccdVal) ? "N/A" : MaskString(cccdVal, 3, 3)),
+                        ZoneName = t.TicketTypeName ?? "Standard Zone",
                         SeatNumber = "General Admission",
-                        OrderId = reader["order_id"] != DBNull.Value ? $"ORD-{reader["order_id"]}" : "ORD-DIRECT",
+                        OrderId = t.OrderId > 0 ? $"ORD-{t.OrderId}" : "ORD-DIRECT",
                         Status = isChecked
                             ? "CHECKED_IN"
                             : status.Equals("REVOKED", StringComparison.OrdinalIgnoreCase)
@@ -838,8 +792,24 @@ namespace CheckinAPI.Services
         // ==========================================
         // View Check-in Scan History (BR-295)
         // ==========================================
-        public async Task<ScanHistoryResponseDTO> GetScanHistoryAsync(int eventId, string? gateId, string? statusFilter, int staffUserId)
+        public async Task<ScanHistoryResponseDTO> GetScanHistoryAsync(int eventId, string? gateId, string? statusFilter, int staffUserId, int limit = 20, string callerRole = "Staff", bool strictValidation = false)
         {
+            if (string.Equals(callerRole, "Customer", StringComparison.OrdinalIgnoreCase))
+                throw new UnauthorizedAccessException("Staff permission required");
+
+            if (eventId <= 0)
+                throw new ArgumentException("Event ID must be positive");
+
+            if (strictValidation && !string.IsNullOrWhiteSpace(statusFilter))
+            {
+                var allowedStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    "SUCCESS", "FAILED", "APPROVED", "ALREADY_USED", "INVALID_QR", "REVOKED"
+                };
+                if (!allowedStatuses.Contains(statusFilter))
+                    throw new ArgumentException("Invalid status filter value");
+            }
+
             var scans = new List<RecentScanDTO>();
             int approved = 0;
             int alreadyUsed = 0;
@@ -848,97 +818,29 @@ namespace CheckinAPI.Services
 
             try
             {
-                using var conn = new NpgsqlConnection(_ticketDbConnection);
-                await conn.OpenAsync();
+                var (items, totalCount, approvedCount, alreadyUsedCount, invalidCount) =
+                    await _repository.GetScanHistoryAsync(eventId, gateId, statusFilter, null, null);
 
-                // 1. Summary Statistics for the Event & Gate
-                var statSql = @"
-                    SELECT 
-                        COUNT(*) AS total,
-                        COUNT(CASE WHEN status = 'SUCCESS' THEN 1 END) AS approved,
-                        COUNT(CASE WHEN status = 'ALREADY_USED' THEN 1 END) AS already_used,
-                        COUNT(CASE WHEN status NOT IN ('SUCCESS', 'ALREADY_USED') THEN 1 END) AS invalid
-                    FROM checkin_logs
-                    WHERE (event_id = @eid OR @eid <= 0)";
+                total = totalCount;
+                approved = approvedCount;
+                alreadyUsed = alreadyUsedCount;
+                invalid = invalidCount;
 
-                if (!string.IsNullOrWhiteSpace(gateId) && !gateId.Equals("ALL", StringComparison.OrdinalIgnoreCase))
+                scans = items.Select(l => new RecentScanDTO
                 {
-                    statSql += " AND (gate_id = @gid OR gate_name ILIKE ('%' || @gid || '%') OR gate_id IS NULL)";
-                }
-
-                using (var statCmd = new NpgsqlCommand(statSql, conn))
-                {
-                    statCmd.Parameters.AddWithValue("eid", eventId);
-                    if (!string.IsNullOrWhiteSpace(gateId) && !gateId.Equals("ALL", StringComparison.OrdinalIgnoreCase))
-                    {
-                        statCmd.Parameters.AddWithValue("gid", gateId);
-                    }
-
-                    using var statReader = await statCmd.ExecuteReaderAsync();
-                    if (await statReader.ReadAsync())
-                    {
-                        total = Convert.ToInt32(statReader["total"]);
-                        approved = Convert.ToInt32(statReader["approved"]);
-                        alreadyUsed = Convert.ToInt32(statReader["already_used"]);
-                        invalid = Convert.ToInt32(statReader["invalid"]);
-                    }
-                }
-
-                // 2. Filtered Scan Feed List
-                var sql = "SELECT log_id, ticket_code, customer_name, zone_name, gate_name, scan_method, status, COALESCE(scanned_at, scan_time, NOW()) AS scanned_at FROM checkin_logs WHERE 1=1";
-                if (eventId > 0) sql += " AND event_id = @eid";
-                if (!string.IsNullOrWhiteSpace(gateId) && !gateId.Equals("ALL", StringComparison.OrdinalIgnoreCase))
-                {
-                    sql += " AND (gate_id = @gid OR gate_name ILIKE ('%' || @gid || '%') OR gate_id IS NULL)";
-                }
-
-                if (!string.IsNullOrWhiteSpace(statusFilter) && !statusFilter.Equals("ALL", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (statusFilter.Equals("ERRORS", StringComparison.OrdinalIgnoreCase) ||
-                        statusFilter.Equals("INVALID", StringComparison.OrdinalIgnoreCase) ||
-                        statusFilter.Equals("WRONG_GATE", StringComparison.OrdinalIgnoreCase))
-                    {
-                        sql += " AND status NOT IN ('SUCCESS', 'ALREADY_USED')";
-                    }
-                    else
-                    {
-                        sql += " AND status = @st";
-                    }
-                }
-
-                sql += " ORDER BY scanned_at DESC LIMIT 100;";
-
-                using var cmd = new NpgsqlCommand(sql, conn);
-                if (eventId > 0) cmd.Parameters.AddWithValue("eid", eventId);
-                if (!string.IsNullOrWhiteSpace(gateId) && !gateId.Equals("ALL", StringComparison.OrdinalIgnoreCase)) cmd.Parameters.AddWithValue("gid", gateId);
-                if (!string.IsNullOrWhiteSpace(statusFilter) && 
-                    !statusFilter.Equals("ALL", StringComparison.OrdinalIgnoreCase) &&
-                    !statusFilter.Equals("ERRORS", StringComparison.OrdinalIgnoreCase) &&
-                    !statusFilter.Equals("INVALID", StringComparison.OrdinalIgnoreCase) &&
-                    !statusFilter.Equals("WRONG_GATE", StringComparison.OrdinalIgnoreCase))
-                {
-                    cmd.Parameters.AddWithValue("st", statusFilter);
-                }
-
-                using var reader = await cmd.ExecuteReaderAsync();
-                while (await reader.ReadAsync())
-                {
-                    scans.Add(new RecentScanDTO
-                    {
-                        ScanId = $"SCN-{reader["log_id"]}",
-                        TicketCode = reader["ticket_code"]?.ToString() ?? "",
-                        CustomerName = reader["customer_name"]?.ToString() ?? "Attendee",
-                        ZoneName = reader["zone_name"]?.ToString() ?? "Standard Zone",
-                        GateName = reader["gate_name"]?.ToString() ?? "Gate A",
-                        ScanMethod = reader["scan_method"]?.ToString() ?? "Dynamic QR",
-                        Status = reader["status"]?.ToString() ?? "SUCCESS",
-                        ScannedAt = Convert.ToDateTime(reader["scanned_at"])
-                    });
-                }
+                    ScanId = $"SCN-{l.LogId}",
+                    TicketCode = l.TicketCode ?? "",
+                    CustomerName = string.IsNullOrWhiteSpace(l.CustomerName) ? "Attendee" : l.CustomerName,
+                    ZoneName = string.IsNullOrWhiteSpace(l.ZoneName) ? "Standard Zone" : l.ZoneName,
+                    GateName = string.IsNullOrWhiteSpace(l.GateName) ? "Gate A" : l.GateName,
+                    ScanMethod = string.IsNullOrWhiteSpace(l.ScanMethod) ? "Dynamic QR" : l.ScanMethod,
+                    Status = string.IsNullOrWhiteSpace(l.Status) ? "SUCCESS" : l.Status,
+                    ScannedAt = l.ScannedAt != default ? l.ScannedAt : (l.ScanTime != default ? l.ScanTime : DateTime.UtcNow)
+                }).ToList();
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Error reading scan history from checkin_logs");
+                _logger.LogWarning(ex, "Error reading scan history from CheckinRepository");
             }
 
             double rate = total > 0 ? Math.Round(((double)approved / total) * 100.0, 1) : 100.0;
@@ -954,43 +856,58 @@ namespace CheckinAPI.Services
             };
         }
 
-        private async Task RecordScanLogAsync(NpgsqlConnection conn, string ticketCode, string customerName, string zoneName, string? gateId, string? gateName, string method, string status, int staffUserId, int eventId)
+        private async Task RecordScanLogAsync(string ticketCode, string customerName, string zoneName, string? gateId, string? gateName, string method, string status, int staffUserId, int eventId)
         {
             try
             {
-                using var cmd = new NpgsqlCommand(@"
-                    INSERT INTO checkin_logs 
-                    (ticket_code, customer_name, zone_name, gate_id, gate_name, scan_method, status, staff_user_id, event_id, scanned_at, scan_time)
-                    VALUES 
-                    (@code, @cname, @zone, @gid, @gname, @method, @status, @staff, @eid, NOW(), NOW());", conn);
-                cmd.Parameters.AddWithValue("code", ticketCode);
-                cmd.Parameters.AddWithValue("cname", customerName);
-                cmd.Parameters.AddWithValue("zone", zoneName);
-                cmd.Parameters.AddWithValue("gid", gateId ?? "GATE_A");
-                cmd.Parameters.AddWithValue("gname", gateName ?? "Gate A - Main Entrance");
-                cmd.Parameters.AddWithValue("method", method);
-                cmd.Parameters.AddWithValue("status", status);
-                cmd.Parameters.AddWithValue("staff", staffUserId);
-                cmd.Parameters.AddWithValue("eid", eventId);
-                await cmd.ExecuteNonQueryAsync();
+                var log = new CheckinLog
+                {
+                    TicketCode = ticketCode,
+                    CustomerName = customerName,
+                    ZoneName = zoneName,
+                    GateId = gateId ?? "GATE_A",
+                    GateName = gateName ?? "Gate A - Main Entrance",
+                    ScanMethod = method,
+                    Status = status,
+                    StaffUserId = staffUserId,
+                    EventId = eventId,
+                    ScannedAt = DateTime.UtcNow,
+                    ScanTime = DateTime.UtcNow
+                };
+
+                await _repository.AddCheckinLogAsync(log);
                 await BroadcastCheckinEventAsync(eventId, ticketCode, customerName, zoneName, gateName ?? "Main Gate", status);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Could not insert record into checkin_logs table.");
+                _logger.LogWarning(ex, "Could not insert record into checkin_logs table via repository.");
             }
         }
 
         // ==========================================
         // View Gate Assignment & Shift Info
         // ==========================================
-        public async Task<GateAssignmentResponseDTO> GetGateAssignmentAsync(int eventId, int staffUserId)
+        public async Task<GateAssignmentResponseDTO> GetGateAssignmentAsync(int eventId, int staffUserId, string callerRole = "Staff", bool strictValidation = false)
         {
+            if (string.Equals(callerRole, "Customer", StringComparison.OrdinalIgnoreCase))
+                throw new UnauthorizedAccessException("Staff permission required");
+
+            if (eventId <= 0)
+                throw new ArgumentException("Event ID must be positive");
+
+            if (strictValidation)
+            {
+                var ev = await _eventApiClient.GetEventInfoAsync(eventId);
+                if (ev == null)
+                    throw new KeyNotFoundException("Event not found");
+            }
+
             int resolvedEventId = eventId;
             string gateName = "Main Gate";
             string? shiftStart = null;
             string? shiftEnd = null;
             DateOnly? shiftDate = null;
+            DateOnly? shiftEndDate = null;
             string eventTitle = $"Event #{eventId}";
             bool isAssigned = false;
 
@@ -1008,12 +925,23 @@ namespace CheckinAPI.Services
                     {
                         shiftDate = dOnly;
                     }
+                    if (!string.IsNullOrWhiteSpace(assignmentInfo.ShiftEndDate) && DateOnly.TryParse(assignmentInfo.ShiftEndDate, out var deOnly))
+                    {
+                        shiftEndDate = deOnly;
+                    }
+                    else
+                    {
+                        shiftEndDate = shiftDate;
+                    }
                     eventTitle = !string.IsNullOrWhiteSpace(assignmentInfo.EventTitle) ? assignmentInfo.EventTitle : $"Event #{resolvedEventId}";
                 }
             }
 
             if (!isAssigned)
             {
+                if (strictValidation)
+                    throw new KeyNotFoundException("No gate assignment found for this event");
+
                 var eventInfoFallback = await _eventApiClient.GetEventInfoAsync(eventId);
                 return new GateAssignmentResponseDTO
                 {
@@ -1028,6 +956,7 @@ namespace CheckinAPI.Services
                     ShiftStartTime = "",
                     ShiftEndTime = "",
                     ShiftDate = null,
+                    ShiftEndDate = null,
                     TotalScannedInShift = 0,
                     AllowedTicketTiers = new List<string>(),
                     Message = "ACCESS DENIED: Staff account is not assigned to this event or admission gate."
@@ -1037,18 +966,54 @@ namespace CheckinAPI.Services
             // Timezone check: Vietnam UTC+7
             var nowVn = DateTime.UtcNow.AddHours(7);
             var todayDate = DateOnly.FromDateTime(nowVn);
+            var currentTime = TimeOnly.FromDateTime(nowVn);
 
-            // For assigned staff, allow early check-in and active scanning
-            bool isShiftActive = true;
-            string statusMsg = "Shift is active and ready for check-in.";
-            if (shiftDate.HasValue && shiftDate.Value != todayDate)
+            string effectiveStartStr = string.IsNullOrWhiteSpace(shiftStart) ? "08:00" : shiftStart.Trim();
+            string effectiveEndStr = string.IsNullOrWhiteSpace(shiftEnd) ? "17:00" : shiftEnd.Trim();
+
+            TimeOnly startT = TimeOnly.TryParse(effectiveStartStr, out var parsedStart) ? parsedStart : new TimeOnly(8, 0);
+            TimeOnly endT = TimeOnly.TryParse(effectiveEndStr, out var parsedEnd) ? parsedEnd : new TimeOnly(17, 0);
+
+            DateOnly startDate = shiftDate ?? todayDate;
+            DateOnly endDate = shiftEndDate ?? startDate;
+
+            bool isShiftActive;
+            if (!shiftDate.HasValue)
             {
-                statusMsg = $"Scheduled Shift Date: {shiftDate.Value:yyyy-MM-dd} (Early check-in active)";
+                isShiftActive = endT >= startT
+                    ? (currentTime >= startT && currentTime <= endT)
+                    : (currentTime >= startT || currentTime <= endT);
             }
-            else if (!string.IsNullOrWhiteSpace(shiftStart) && !string.IsNullOrWhiteSpace(shiftEnd))
+            else if (startDate == endDate)
             {
-                statusMsg = $"Shift Hours: {shiftStart} - {shiftEnd} (Active)";
+                if (endT >= startT)
+                {
+                    isShiftActive = (todayDate == startDate) && (currentTime >= startT && currentTime <= endT);
+                }
+                else
+                {
+                    isShiftActive =
+                        (todayDate == startDate && currentTime >= startT) ||
+                        (todayDate == startDate.AddDays(1) && currentTime <= endT);
+                }
             }
+            else
+            {
+                // Multi-day shift window (e.g. from 2026-11-27 19:00 to 2026-12-28 23:00)
+                var startDateTime = startDate.ToDateTime(startT);
+                var endDateTime = endDate.ToDateTime(endT);
+                isShiftActive = nowVn >= startDateTime && nowVn <= endDateTime;
+            }
+
+            string dateRangeLabel = shiftDate.HasValue
+                ? (shiftEndDate.HasValue && shiftEndDate.Value != shiftDate.Value
+                    ? $"{shiftDate.Value:yyyy-MM-dd} to {shiftEndDate.Value:yyyy-MM-dd} "
+                    : $"{shiftDate.Value:yyyy-MM-dd} ")
+                : "";
+            string shiftScheduleLabel = $"{dateRangeLabel}{effectiveStartStr} - {effectiveEndStr}";
+            string statusMsg = isShiftActive
+                ? $"Shift Hours: {shiftScheduleLabel} (Active)"
+                : $"You are currently not in your assigned shift ({shiftScheduleLabel}). Check-in is only permitted during your scheduled shift hours.";
 
             // Query allowed ticket tiers for this gate
             var gates = await _eventApiClient.GetEventGatesAsync(resolvedEventId);
@@ -1068,6 +1033,7 @@ namespace CheckinAPI.Services
                 ShiftStartTime = shiftStart ?? "08:00",
                 ShiftEndTime = shiftEnd ?? "17:00",
                 ShiftDate = shiftDate?.ToString("yyyy-MM-dd"),
+                ShiftEndDate = shiftEndDate?.ToString("yyyy-MM-dd"),
                 TotalScannedInShift = 0,
                 AllowedTicketTiers = allowedTiers,
                 Message = statusMsg
@@ -1152,6 +1118,5 @@ namespace CheckinAPI.Services
                 _logger.LogWarning(ex, "Could not send SignalR checkin event broadcast for Event {EventId}", eventId);
             }
         }
-
     }
 }

@@ -18,5 +18,11 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <ProjectReference Include="..\TicketAPI\TicketAPI.csproj" />
+    <Reference Include="CheckinAPI">
+      <HintPath>..\CheckinAPI\bin\Debug\net8.0\CheckinAPI.dll</HintPath>
+    </Reference>
+    <Reference Include="NotificationAPI">
+      <HintPath>..\NotificationAPI\bin\Debug\net8.0\NotificationAPI.dll</HintPath>
+    </Reference>
   </ItemGroup>
 </Project>

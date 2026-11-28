@@ -1,4 +1,6 @@
 import AdminShell from "./AdminShell";
+import StaffShell from "../staff/StaffShell";
+import { useAuth } from "../../context/AuthContext";
 import "./fraudRisk.css";
 
 export const fmt = (v) => (v ? new Date(v).toLocaleString("en-GB") : "—");
@@ -22,10 +24,12 @@ export const errMsg = (e, fallback) => {
 export const dash = (v) => (v == null || v === "" ? "—" : String(v));
 
 export function Shell({ title, children }) {
+  const { isAdmin, isStaff } = useAuth();
+  const ActiveShell = !isAdmin && isStaff ? StaffShell : AdminShell;
   return (
-    <AdminShell title={title}>
+    <ActiveShell title={title}>
       <div className="fr-page">{children}</div>
-    </AdminShell>
+    </ActiveShell>
   );
 }
 

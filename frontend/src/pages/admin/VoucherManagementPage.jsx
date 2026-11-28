@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import voucherApi from "../../api/voucherApi";
+import eventApi from "../../api/eventApi";
+import adminApi from "../../api/adminApi";
 import { useAuth } from "../../context/AuthContext";
 import AdminShell from "./AdminShell";
 import OrganizerShell from "../organizer/OrganizerShell";
@@ -41,6 +43,26 @@ export default function VoucherManagementPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  // Events & Organizers Lists for Dropdowns
+  const [eventsList, setEventsList] = useState([]);
+  const [organizersList, setOrganizersList] = useState([]);
+
+  // Popup Notification Modal State
+  const [popupNotice, setPopupNotice] = useState({
+    open: false,
+    type: "info", // "success" | "error" | "warning" | "info"
+    title: "",
+    message: "",
+  });
+
+  const showPopup = (type, title, message) => {
+    setPopupNotice({ open: true, type, title, message });
+  };
+
+  const closePopup = () => {
+    setPopupNotice((prev) => ({ ...prev, open: false }));
+  };
 
   // Filters & Pagination
   const [page, setPage] = useState(1);
@@ -120,6 +142,74 @@ export default function VoucherManagementPage() {
     loadVouchers();
   }, [loadVouchers]);
 
+  useEffect(() => {
+    const loadDropdownOptions = async () => {
+      try {
+        if (isAdminView) {
+          const [evRes, usersRes] = await Promise.all([
+            eventApi.getAllAdmin({ page: 1, pageSize: 500 }).catch(() => eventApi.getList({ page: 1, pageSize: 500 })),
+            adminApi.getUsers().catch(() => ({ data: [] })),
+          ]);
+
+          const rawEvents = evRes?.data?.data?.items || evRes?.data?.data || evRes?.data || [];
+          const normalizedEvents = (Array.isArray(rawEvents) ? rawEvents : [])
+            .filter((ev) => ev.status !== "Draft")
+            .map((ev) => ({
+              eventId: ev.eventId ?? ev.id,
+              title: ev.title ?? ev.eventName ?? `Event #${ev.eventId ?? ev.id}`,
+              organizerId: ev.organizerId ?? ev.organizer_id,
+              organizerName: ev.organizerName ?? ev.organizer_name,
+            }));
+          setEventsList(normalizedEvents);
+
+          const rawUsers = Array.isArray(usersRes?.data) ? usersRes.data : (usersRes?.data?.data || []);
+          const orgMap = new Map();
+          rawUsers.forEach((u) => {
+            const uid = u.userId ?? u.id;
+            const roles = Array.isArray(u.roles)
+              ? u.roles
+              : u.roleName
+                ? [{ roleName: u.roleName }]
+                : [];
+            const isOrg = roles.some(
+              (r) => String(r?.roleName || r || "").toLowerCase() === "organizer"
+            );
+            if (isOrg && uid) {
+              orgMap.set(Number(uid), {
+                userId: Number(uid),
+                fullName: u.fullName || u.name || u.email || `Organizer #${uid}`,
+                email: u.email || "",
+              });
+            }
+          });
+          normalizedEvents.forEach((ev) => {
+            if (ev.organizerId && !orgMap.has(Number(ev.organizerId))) {
+              orgMap.set(Number(ev.organizerId), {
+                userId: Number(ev.organizerId),
+                fullName: ev.organizerName || `Organizer #${ev.organizerId}`,
+                email: "",
+              });
+            }
+          });
+          setOrganizersList(Array.from(orgMap.values()));
+        } else {
+          const evRes = await eventApi.getMine().catch(() => ({ data: { data: [] } }));
+          const rawEvents = evRes?.data?.data || evRes?.data || [];
+          const normalizedEvents = (Array.isArray(rawEvents) ? rawEvents : []).map((ev) => ({
+            eventId: ev.eventId ?? ev.id,
+            title: ev.title ?? ev.eventName ?? `Event #${ev.eventId ?? ev.id}`,
+            organizerId: ev.organizerId ?? currentUserId,
+          }));
+          setEventsList(normalizedEvents);
+        }
+      } catch (e) {
+        console.warn("Could not load events or organizers for voucher form:", e);
+      }
+    };
+
+    loadDropdownOptions();
+  }, [isAdminView, currentUserId]);
+
   // Real-time validator
   const validateForm = (data, isEdit = false, voucher = null) => {
     const errors = {};
@@ -136,12 +226,12 @@ export default function VoucherManagementPage() {
     // Scope & Scope specifics
     if (data.scope === "ORGANIZER") {
       if (isAdminView && (!data.organizer_id || parseInt(data.organizer_id) <= 0)) {
-        errors.organizer_id = "Please enter a valid Organizer User ID.";
+        errors.organizer_id = "Please select an Organizer from the list.";
       }
     }
     if (data.scope === "EVENT") {
       if (!data.event_id || parseInt(data.event_id) <= 0) {
-        errors.event_id = "Organizers can only create vouchers for their own events.";
+        errors.event_id = "Please select an Event from the list.";
       }
     }
 
@@ -224,6 +314,12 @@ export default function VoucherManagementPage() {
 
   const handleFieldChange = (field, value) => {
     const updated = { ...formData, [field]: value };
+    if (field === "event_id" && value) {
+      const matchedEv = eventsList.find((ev) => String(ev.eventId) === String(value));
+      if (matchedEv?.organizerId) {
+        updated.organizer_id = String(matchedEv.organizerId);
+      }
+    }
     setFormData(updated);
     const errors = validateForm(updated, modal === "edit", selectedVoucher);
     setFieldErrors(errors);
@@ -233,10 +329,14 @@ export default function VoucherManagementPage() {
     try {
       const nextStatus = !voucher.isActive;
       await voucherApi.updateVoucherStatus(voucher.voucherId, nextStatus);
-      setSuccess(`Voucher '${voucher.code}' has been ${nextStatus ? "activated" : "paused"}.`);
+      const msg = `Voucher '${voucher.code}' has been ${nextStatus ? "activated" : "paused"} successfully.`;
+      setSuccess(msg);
+      showPopup("success", "Voucher Status Updated", msg);
       loadVouchers();
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to update voucher status.");
+      const msg = err.response?.data?.message || "Failed to update voucher status.";
+      setError(msg);
+      showPopup("error", "Status Update Failed", msg);
     }
   };
 
@@ -256,6 +356,12 @@ export default function VoucherManagementPage() {
 
   const handleOpenEdit = (voucher) => {
     const norm = normalizeVoucher(voucher);
+    if (norm.usedQuantity > 0) {
+      const msg = `Cannot edit voucher '${norm.code}' because it has already been used ${norm.usedQuantity} time(s). You can pause or deactivate it instead.`;
+      setError(msg);
+      showPopup("error", "Cannot Edit Voucher", msg);
+      return;
+    }
     setSelectedVoucher(norm);
     const initialData = {
       code: norm.code || "",
@@ -278,20 +384,39 @@ export default function VoucherManagementPage() {
     setModal("edit");
   };
 
+  const handleOpenDelete = (voucher) => {
+    const norm = normalizeVoucher(voucher);
+    if (norm.usedQuantity > 0) {
+      const msg = `Cannot delete voucher '${norm.code}' because it has already been used ${norm.usedQuantity} time(s). You can pause or deactivate it instead.`;
+      setError(msg);
+      showPopup("error", "Cannot Delete Voucher", msg);
+      return;
+    }
+    setSelectedVoucher(norm);
+    setModal("delete");
+  };
+
   const handleDeleteVoucher = async () => {
     if (!selectedVoucher) return;
     if (selectedVoucher.usedQuantity > 0) {
-      setError(`Cannot delete voucher '${selectedVoucher.code}' because it has already been used ${selectedVoucher.usedQuantity} time(s). You can pause/deactivate it instead.`);
+      const msg = `Cannot delete voucher '${selectedVoucher.code}' because it has already been used ${selectedVoucher.usedQuantity} time(s). You can pause or deactivate it instead.`;
+      setError(msg);
       closeModal();
+      showPopup("error", "Cannot Delete Voucher", msg);
       return;
     }
     try {
       await voucherApi.deleteVoucher(selectedVoucher.voucherId);
-      setSuccess(`Voucher '${selectedVoucher.code}' marked as deleted successfully.`);
+      const msg = `Voucher '${selectedVoucher.code}' has been deleted successfully.`;
+      setSuccess(msg);
       closeModal();
+      showPopup("success", "Voucher Deleted", msg);
       loadVouchers();
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to delete voucher.");
+      const msg = err.response?.data?.message || "Failed to delete voucher.";
+      setError(msg);
+      closeModal();
+      showPopup("error", "Delete Voucher Failed", msg);
     }
   };
 
@@ -302,7 +427,9 @@ export default function VoucherManagementPage() {
     const errors = validateForm(formData, isEdit, selectedVoucher);
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
-      setError("Please fix all errors before submitting.");
+      const firstErr = Object.values(errors)[0] || "Please fix all validation errors before submitting.";
+      setError(firstErr);
+      showPopup("error", "Validation Error", firstErr);
       return;
     }
 
@@ -312,14 +439,19 @@ export default function VoucherManagementPage() {
       const startsDate = new Date(formData.starts_at);
       const endsDate = new Date(formData.ends_at);
 
+      const selectedEventObj = eventsList.find((ev) => String(ev.eventId) === String(formData.event_id));
+      const resolvedOrganizerId = !isAdminView
+        ? (currentUserId ? parseInt(currentUserId) : null)
+        : formData.scope === "ORGANIZER" && formData.organizer_id
+          ? parseInt(formData.organizer_id)
+          : formData.scope === "EVENT"
+            ? (selectedEventObj?.organizerId ? parseInt(selectedEventObj.organizerId) : (formData.organizer_id ? parseInt(formData.organizer_id) : null))
+            : null;
+
       const payload = {
         code: formData.code.trim().toUpperCase(),
         scope: formData.scope,
-        organizer_id: !isAdminView
-          ? (currentUserId ? parseInt(currentUserId) : null)
-          : (formData.scope === "ORGANIZER" || formData.scope === "EVENT") && formData.organizer_id
-            ? parseInt(formData.organizer_id)
-            : null,
+        organizer_id: resolvedOrganizerId,
         event_id: formData.scope === "EVENT" && formData.event_id ? parseInt(formData.event_id) : null,
         discount_type: formData.discount_type,
         discount_amount: formData.discount_type === "FIXED" ? parseInt(formData.discount_amount || 0) : null,
@@ -334,10 +466,14 @@ export default function VoucherManagementPage() {
 
       if (isEdit) {
         await voucherApi.updateVoucher(selectedVoucher.voucherId, payload);
-        setSuccess(`Voucher '${payload.code}' updated successfully!`);
+        const msg = `Voucher '${payload.code}' has been updated successfully!`;
+        setSuccess(msg);
+        closeModal();
+        showPopup("success", "Voucher Updated", msg);
       } else {
         await voucherApi.createVoucher(payload);
-        setSuccess(`Voucher '${payload.code}' created successfully!`);
+        const msg = `Voucher '${payload.code}' has been created successfully!`;
+        setSuccess(msg);
 
         const notifPayload = {
           title: `New Voucher: ${payload.code}`,
@@ -364,13 +500,16 @@ export default function VoucherManagementPage() {
         window.dispatchEvent(new CustomEvent("show-notification-toast", {
           detail: notifPayload
         }));
+
+        closeModal();
+        showPopup("success", "Voucher Created", msg);
       }
 
-      closeModal();
       loadVouchers();
     } catch (err) {
       const msg = err.response?.data?.message || err.response?.data?.errors?.[0] || `Failed to ${isEdit ? "update" : "create"} voucher.`;
       setError(msg);
+      showPopup("error", isEdit ? "Update Voucher Failed" : "Create Voucher Failed", msg);
     } finally {
       setSubmitting(false);
     }
@@ -414,7 +553,7 @@ export default function VoucherManagementPage() {
     setFieldErrors({});
   };
 
-  const isIssued = modal === "edit";
+  const isIssued = modal === "edit" && (selectedVoucher?.usedQuantity ?? 0) > 0;
 
   const mainContent = (
     <div>
@@ -594,8 +733,10 @@ export default function VoucherManagementPage() {
                           {v.scope === "SYSTEM"
                             ? "System-wide"
                             : v.scope === "ORGANIZER"
-                              ? (isAdminView ? `Organizer #${v.organizerId}` : "All My Events")
-                              : `Event #${v.eventId}`}
+                              ? (isAdminView
+                                  ? (organizersList.find((o) => Number(o.userId) === Number(v.organizerId))?.fullName || `Organizer #${v.organizerId}`)
+                                  : "All My Events")
+                              : (eventsList.find((ev) => Number(ev.eventId) === Number(v.eventId))?.title || `Event #${v.eventId}`)}
                         </span>
                       </td>
                       <td>
@@ -663,16 +804,12 @@ export default function VoucherManagementPage() {
                           <button
                             type="button"
                             className={`danger-button ${v.usedQuantity > 0 ? "disabled" : ""}`}
-                            disabled={v.usedQuantity > 0}
                             title={
                               v.usedQuantity > 0
                                 ? `Cannot delete voucher with ${v.usedQuantity} usage(s). Pause it instead.`
                                 : "Delete voucher"
                             }
-                            onClick={() => {
-                              setSelectedVoucher(v);
-                              setModal("delete");
-                            }}
+                            onClick={() => handleOpenDelete(v)}
                           >
                             Delete
                           </button>
@@ -776,43 +913,66 @@ export default function VoucherManagementPage() {
                 {fieldErrors.scope && <span className="field-error-text">{fieldErrors.scope}</span>}
               </label>
 
-              {/* Scope ORGANIZER: Admin inputs Organizer ID, Organizer sees informational text */}
+              {/* Scope ORGANIZER: Admin selects Organizer from list, Organizer sees informational text */}
               {formData.scope === "ORGANIZER" && (
                 isAdminView ? (
                   <label>
-                    <span>Organizer User ID *</span>
-                    <input
-                      type="number"
+                    <span>Select Organizer *</span>
+                    <select
                       required
                       disabled={isIssued}
                       className={fieldErrors.organizer_id ? "input-error" : ""}
-                      placeholder="Enter Organizer User ID"
                       value={formData.organizer_id}
                       onChange={(e) => handleFieldChange("organizer_id", e.target.value)}
-                    />
+                      style={{
+                        padding: "9px 10px",
+                        border: "1px solid var(--admin-line, #8b83a0)",
+                        borderRadius: "6px",
+                        fontSize: "13px",
+                      }}
+                    >
+                      <option value="">-- Select an Organizer --</option>
+                      {organizersList.map((org) => (
+                        <option key={org.userId} value={String(org.userId)}>
+                          {org.fullName}{org.email ? ` (${org.email})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="form-hint">Choose the organizer whose events will accept this voucher.</span>
                     {fieldErrors.organizer_id && <span className="field-error-text">{fieldErrors.organizer_id}</span>}
                   </label>
                 ) : (
                   <div className="full-width" style={{ padding: "10px 14px", background: "#f8f1fe", borderRadius: "8px", border: "1px solid #e3d6f0", fontSize: "13px", color: "#574f72" }}>
-                    ✓ This voucher will automatically apply to <strong>all events</strong> hosted under your organizer account (User ID: #{currentUserId || "..."}).
+                    ✓ This voucher will automatically apply to <strong>all events</strong> hosted under your organizer account ({user?.fullName || user?.email || "Your Account"}).
                   </div>
                 )
               )}
 
-              {/* Scope EVENT: Event ID input */}
+              {/* Scope EVENT: Select Event from list */}
               {formData.scope === "EVENT" && (
                 <label className={!isAdminView ? "full-width" : ""}>
-                  <span>Event ID *</span>
-                  <input
-                    type="number"
+                  <span>Select Event *</span>
+                  <select
                     required
                     disabled={isIssued}
                     className={fieldErrors.event_id ? "input-error" : ""}
-                    placeholder="Enter the Event ID to apply this voucher"
                     value={formData.event_id}
                     onChange={(e) => handleFieldChange("event_id", e.target.value)}
-                  />
-                  <span className="form-hint">Enter your numeric Event ID.</span>
+                    style={{
+                      padding: "9px 10px",
+                      border: "1px solid var(--admin-line, #8b83a0)",
+                      borderRadius: "6px",
+                      fontSize: "13px",
+                    }}
+                  >
+                    <option value="">-- Select an Event --</option>
+                    {eventsList.map((ev) => (
+                      <option key={ev.eventId} value={String(ev.eventId)}>
+                        {ev.title}{isAdminView && ev.organizerName ? ` — ${ev.organizerName}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="form-hint">Select the event to apply this voucher.</span>
                   {fieldErrors.event_id && <span className="field-error-text">{fieldErrors.event_id}</span>}
                 </label>
               )}
@@ -1071,6 +1231,40 @@ export default function VoucherManagementPage() {
                 onClick={handleDeleteVoucher}
               >
                 Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: POPUP NOTIFICATION */}
+      {popupNotice.open && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }} onClick={closePopup}>
+          <div
+            className="modal-card small"
+            style={{ maxWidth: "440px", borderTop: `4px solid ${popupNotice.type === "error" ? "#dc2626" : "#16a34a"}` }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h3 style={{ color: popupNotice.type === "error" ? "#dc2626" : "#16a34a", margin: 0 }}>
+                {popupNotice.title || (popupNotice.type === "error" ? "Action Failed" : "Notification")}
+              </h3>
+              <button type="button" className="icon-button" onClick={closePopup}>
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <p style={{ margin: 0, fontSize: "14px", color: "#1e1b2e", lineHeight: 1.6 }}>
+                {popupNotice.message}
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="admin-button"
+                onClick={closePopup}
+              >
+                OK
               </button>
             </div>
           </div>

@@ -45,8 +45,8 @@ namespace CheckinAPI.Data
                 entity.Property(e => e.IsDeleted).HasColumnName("is_deleted").HasDefaultValue(false);
                 entity.Property(e => e.DeletedAt).HasColumnName("deleted_at");
                 entity.Property(e => e.DeletedBy).HasColumnName("deleted_by");
-                entity.Property(e => e.IsCheckedIn).HasColumnName("is_checked_in").HasDefaultValue(false);
-                entity.Property(e => e.GateId).HasMaxLength(50).HasColumnName("gate_id");
+                entity.Ignore(e => e.IsCheckedIn);
+                entity.Ignore(e => e.GateId);
 
                 entity.HasOne(e => e.Order)
                     .WithMany(o => o.Tickets)

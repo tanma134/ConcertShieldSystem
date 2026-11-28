@@ -194,9 +194,9 @@ function ReviewModal({ request, onClose, onDone }) {
             </div>
 
             {request.bankName && (
-              <div style={{ gridColumn: "1 / -1", background: "rgba(139, 92, 246, 0.08)", padding: "10px 12px", borderRadius: "8px", border: "1px solid rgba(139, 92, 246, 0.2)" }}>
-                <span style={{ color: "#c4b5fd", fontSize: "11px", fontWeight: "700", display: "block", marginBottom: "4px" }}>
-                  💳 PAYOUT BANK ACCOUNT DETAILS
+              <div style={{ gridColumn: "1 / -1", background: "#f3e8ff", padding: "10px 12px", borderRadius: "8px", border: "1px solid #c084fc" }}>
+                <span style={{ color: "#111827", fontSize: "11px", fontWeight: "700", display: "block", marginBottom: "4px" }}>
+                  PAYOUT BANK ACCOUNT DETAILS
                 </span>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", fontSize: "13px" }}>
                   <div>
@@ -205,7 +205,7 @@ function ReviewModal({ request, onClose, onDone }) {
                   </div>
                   <div>
                     <span style={{ color: "var(--org-text-faint)", fontSize: "11px", display: "block" }}>ACCOUNT NUMBER</span>
-                    <strong style={{ color: "#38bdf8" }}>{request.bankAccountNumber}</strong>
+                    <strong style={{ color: "#111827" }}>{request.bankAccountNumber}</strong>
                   </div>
                   <div>
                     <span style={{ color: "var(--org-text-faint)", fontSize: "11px", display: "block" }}>ACCOUNT HOLDER</span>

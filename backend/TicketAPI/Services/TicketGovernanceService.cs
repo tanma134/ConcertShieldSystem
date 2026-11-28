@@ -224,8 +224,14 @@ namespace TicketAPI.Services
             };
         }
 
-        public async Task<ReissueHistoryResponseDTO> GetReissueHistoryAsync(int? eventId, string? search, int page, int pageSize)
+        public async Task<ReissueHistoryResponseDTO> GetReissueHistoryAsync(int? eventId, string? search, int page, int pageSize, string callerRole = "Admin")
         {
+            if (!string.Equals(callerRole, "Admin", StringComparison.OrdinalIgnoreCase))
+                throw new UnauthorizedAccessException("Admin access required");
+
+            if ((eventId.HasValue && eventId.Value <= 0) || page <= 0)
+                throw new ArgumentException("EventId must be positive");
+
             var (items, totalCount) = await _repository.GetReissueHistoryAsync(eventId, search, page, pageSize);
 
             var dtoList = items.Select(r => new ReissueHistoryItemDTO

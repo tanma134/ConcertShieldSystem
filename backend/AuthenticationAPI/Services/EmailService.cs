@@ -232,21 +232,18 @@ namespace AuthenticationAPI.Services
                             </p>
                             {reviewNoteHtml}
                             <div style='background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 24px 0;'>
-                                <h3 style='margin: 0 0 8px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280;'>What's next?</h3>
-                                <ul style='margin: 0; padding-left: 20px; color: #4b5563; font-size: 14px; line-height: 1.6;'>
-                                    <li>Access your <strong>Organizer Dashboard</strong> to create and manage events.</li>
+                                <h3 style='margin: 0 0 8px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; color: #111827;'>What's next?</h3>
+                                <ul style='margin: 0; padding-left: 20px; color: #1f2937; font-size: 14px; line-height: 1.6;'>
+                                    <li>Log in to your ConcertShield account and open the <strong>Organizer Dashboard</strong> to create and manage events.</li>
                                     <li>Configure ticket types, pricing, and anti-scalping shield policies.</li>
                                     <li>Monitor real-time sales and attendee check-ins.</li>
                                 </ul>
                             </div>
-                            <div style='text-align: center; margin: 32px 0 16px;'>
-                                <a href='https://localhost:5173/organizer/dashboard' style='display: inline-block; background: #4f46e5; color: #ffffff; padding: 14px 28px; font-size: 15px; font-weight: 600; text-decoration: none; border-radius: 8px;'>Go to Organizer Dashboard</a>
-                            </div>
-                            <p style='margin: 24px 0 0; font-size: 13px; color: #9ca3af; text-align: center;'>
-                                If you did not make this request or need assistance, please contact our support team.
+                            <p style='margin: 24px 0 0; font-size: 13px; color: #4b5563; text-align: center;'>
+                                This is an automated notification email. If you did not make this request or need assistance, please contact our support team.
                             </p>
                         </div>
-                        <div style='background: #f9fafb; padding: 16px 24px; text-align: center; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af;'>
+                        <div style='background: #f9fafb; padding: 16px 24px; text-align: center; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;'>
                             © {DateTime.UtcNow.Year} ConcertShield. All rights reserved.
                         </div>
                     </div>"
@@ -255,15 +252,15 @@ namespace AuthenticationAPI.Services
                             <h1 style='margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;'>ConcertShield</h1>
                             <p style='margin: 8px 0 0; font-size: 15px; opacity: 0.9;'>Event Management & Anti-Scalping Platform</p>
                         </div>
-                        <div style='padding: 32px 24px; color: #1f2937;'>
+                        <div style='padding: 32px 24px; color: #111827;'>
                             <div style='text-align: center; margin-bottom: 24px;'>
                                 <span style='display: inline-block; width: 56px; height: 56px; line-height: 56px; border-radius: 50%; background: #fee2e2; color: #ef4444; font-size: 28px;'>✕</span>
                             </div>
                             <h2 style='margin: 0 0 16px; font-size: 20px; font-weight: 700; color: #111827; text-align: center;'>Organizer Request Declined</h2>
-                            <p style='margin: 0 0 16px; font-size: 15px; line-height: 1.6; color: #374151;'>
+                            <p style='margin: 0 0 16px; font-size: 15px; line-height: 1.6; color: #111827;'>
                                 Dear <strong>{safeName}</strong>,
                             </p>
-                            <p style='margin: 0 0 16px; font-size: 15px; line-height: 1.6; color: #374151;'>
+                            <p style='margin: 0 0 16px; font-size: 15px; line-height: 1.6; color: #1f2937;'>
                                 Thank you for your interest in becoming an Event Organizer on ConcertShield. After reviewing the business information and legal documents you provided, we are unable to approve your application at this time.
                             </p>
                             <div style='background: #fef2f2; border: 1px solid #fecaca; border-left: 4px solid #ef4444; border-radius: 6px; padding: 14px 16px; margin: 20px 0;'>
@@ -271,17 +268,14 @@ namespace AuthenticationAPI.Services
                                 <div style='font-size: 14px; color: #7f1d1d; line-height: 1.5;'>{safeReason}</div>
                             </div>
                             {reviewNoteHtml}
-                            <p style='margin: 20px 0 16px; font-size: 14px; line-height: 1.6; color: #4b5563;'>
-                                You are welcome to resolve the points mentioned above, update your documentation, and submit a new organizer registration request at any time.
+                            <p style='margin: 20px 0 16px; font-size: 14px; line-height: 1.6; color: #1f2937;'>
+                                Please review the feedback above for details regarding your application decision.
                             </p>
-                            <div style='text-align: center; margin: 28px 0 16px;'>
-                                <a href='https://localhost:5173/organizer/request' style='display: inline-block; background: #374151; color: #ffffff; padding: 12px 24px; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 8px;'>Submit New Request</a>
-                            </div>
-                            <p style='margin: 24px 0 0; font-size: 13px; color: #9ca3af; text-align: center;'>
-                                If you believe this decision was made in error, please contact our support team.
+                            <p style='margin: 24px 0 0; font-size: 13px; color: #4b5563; text-align: center;'>
+                                This is an automated notification email. If you believe this decision was made in error, please contact our support team.
                             </p>
                         </div>
-                        <div style='background: #f9fafb; padding: 16px 24px; text-align: center; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af;'>
+                        <div style='background: #f9fafb; padding: 16px 24px; text-align: center; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;'>
                             © {DateTime.UtcNow.Year} ConcertShield. All rights reserved.
                         </div>
                     </div>";

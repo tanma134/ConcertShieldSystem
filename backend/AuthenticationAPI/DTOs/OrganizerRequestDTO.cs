@@ -64,6 +64,16 @@ namespace AuthenticationAPI.DTOs
 
         [MaxLength(1000)]
         public string? RejectionReason { get; set; }
+
+        public string? Decision { get; set; }
+    }
+
+    public class SubmitOrganizerVerificationDTO
+    {
+        public string BusinessName { get; set; } = string.Empty;
+        public string TaxCode { get; set; } = string.Empty;
+        public List<string>? DocumentUrls { get; set; }
+        public string ContactEmail { get; set; } = string.Empty;
     }
 
     public class OrganizerRequestDocumentDTO

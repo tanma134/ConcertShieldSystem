@@ -65,7 +65,7 @@ function extractPayloadCode(rawPayload) {
     if (prefix) return prefix;
   }
 
-  // 3. If payload is URL format, e.g. https://domain.com/verify?token=XYZ or ?code=XYZ
+  // 3. If payload is URL format, e.g.
   if (trimmed.includes("://") || trimmed.includes("?") || trimmed.includes("/")) {
     try {
       const url = new URL(trimmed.includes("://") ? trimmed : `https://dummy.local/${trimmed}`);
@@ -206,33 +206,9 @@ export const offlineCheckinDb = {
     const cleanedCode = extractPayloadCode(rawPayload);
     const upperCode = cleanedCode.toUpperCase();
 
-    // Fetch package metadata first to check shift and gate restrictions
+    // Fetch package metadata first to check gate restrictions
     const meta = await this.getPackageMeta(eventIdNum);
     const allowedTypes = meta?.allowedTicketTypes || [];
-
-    // 0.1 Dynamic QR Expiration Check (Anti-Screenshot Protection in Offline Mode)
-    if (rawTrimmed.includes(":")) {
-      const parts = rawTrimmed.split(":");
-      // Format: {ticketCode}:{timestamp}:{randomToken}
-      if (parts.length >= 3) {
-        const qrTimestamp = parseInt(parts[1], 10);
-        if (!isNaN(qrTimestamp) && qrTimestamp > 0) {
-          const nowSec = Math.floor(Date.now() / 1000);
-          // 60s rotation + 30s buffer for clock skew = 90s
-          if (Math.abs(nowSec - qrTimestamp) > 90) {
-            return {
-              success: false,
-              status: "EXPIRED_QR",
-              message: "Dynamic QR code has expired. Please ask attendee to refresh their ticket.",
-              ticketCode: cleanedCode || parts[0],
-              customerName: "Attendee",
-              zoneName: "N/A",
-              isOffline: true,
-            };
-          }
-        }
-      }
-    }
 
     return new Promise((resolve, reject) => {
       const tx = db.transaction(["cachedTickets", "offlineQueue"], "readwrite");
@@ -369,18 +345,34 @@ export const offlineCheckinDb = {
           }
         }
 
-        // 3. Ticket already used / checked-in
+        // 3. Ticket already used / checked-in -> Enqueue duplicate offline scan so sync records the conflict
         if (ticket.isCheckedIn || ticket.status === "Used" || ticket.status === "USED") {
-          resolve({
-            success: false,
-            status: "ALREADY_USED",
-            message: "This ticket has already been checked in.",
+          const dupScanId = `OFFLINE_DUP_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+          queueStore.put({
+            scanId: dupScanId,
             ticketCode: actualTicketCode,
+            eventId: eventIdNum,
+            gateId: currentGateName || "Main Gate",
+            scannedAt: new Date().toISOString(),
+            scanMethod: "Offline Duplicate QR Scan",
+            staffUserId,
             customerName: ticket.attendeeName,
             zoneName: ticketZone,
             seatNumber: ticket.seatNumber,
-            isOffline: true,
           });
+
+          tx.oncomplete = () => {
+            resolve({
+              success: false,
+              status: "ALREADY_USED",
+              message: "This ticket has already been checked in. Duplicate offline scan queued for conflict synchronization.",
+              ticketCode: actualTicketCode,
+              customerName: ticket.attendeeName,
+              zoneName: ticketZone,
+              seatNumber: ticket.seatNumber,
+              isOffline: true,
+            });
+          };
           return;
         }
 
@@ -398,11 +390,23 @@ export const offlineCheckinDb = {
           return;
         }
 
-        // 5. Valid Ticket: Update local record to Used & enqueue into offlineQueue
+        // 5. Valid Ticket: Update local record (and primary record if alias) to Used & enqueue into offlineQueue
         ticket.isCheckedIn = true;
         ticket.status = "Used";
         ticket.updatedAt = new Date().toISOString();
         ticketStore.put(ticket);
+        if (ticket.primaryTicketCode && ticket.primaryTicketCode !== ticket.ticketCode) {
+          const primaryReq = ticketStore.get(ticket.primaryTicketCode);
+          primaryReq.onsuccess = () => {
+            if (primaryReq.result) {
+              const pRec = primaryReq.result;
+              pRec.isCheckedIn = true;
+              pRec.status = "Used";
+              pRec.updatedAt = ticket.updatedAt;
+              ticketStore.put(pRec);
+            }
+          };
+        }
 
         const scanId = `OFFLINE_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
         const scanRecord = {

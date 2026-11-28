@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import incidentApi from "../../api/incidentApi";
 import eventApi from "../../api/eventApi";
 import staffApi from "../../api/staffApi";
@@ -23,18 +23,20 @@ const TrashIcon = () => (
 export default function IncidentReportPage() {
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const routeLocation = useLocation();
+  const prefill = routeLocation.state?.prefillIncident;
   const toast = useToast();
 
   const [events, setEvents] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [selectedDropdownValue, setSelectedDropdownValue] = useState("");
-  const [selectedEventId, setSelectedEventId] = useState("");
+  const [selectedEventId, setSelectedEventId] = useState(prefill?.eventId ? String(prefill.eventId) : "");
   const [customEventName, setCustomEventName] = useState("");
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(prefill?.title || "");
   const [category, setCategory] = useState("Security");
   const [severity, setSeverity] = useState("Medium");
   const [location, setLocation] = useState("");
-  const [description, setDescription] = useState("");
+  const [description, setDescription] = useState(prefill?.description || "");
 
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);

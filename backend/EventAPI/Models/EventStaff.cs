@@ -13,6 +13,7 @@ namespace EventAPI.Models
 
         // Shift date & hours (e.g. "2026-11-18", "08:00", "17:00")
         public DateOnly? ShiftDate { get; set; }
+        public DateOnly? ShiftEndDate { get; set; }
         public string? ShiftStartTime { get; set; }
         public string? ShiftEndTime { get; set; }
 

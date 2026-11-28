@@ -181,8 +181,9 @@
 
 /* Velocity Telemetry Banner */
 .rcm-telemetry-banner {
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
-  border: 1px solid #ffffff;
+  background: #ffffff;
+  border: 1px solid #ece0f8;
+  box-shadow: 0 4px 20px rgba(80, 50, 120, 0.08);
   border-radius: 14px;
   padding: 16px 24px;
   margin-bottom: 28px;

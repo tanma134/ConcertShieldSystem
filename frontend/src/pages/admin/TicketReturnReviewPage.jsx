@@ -5,6 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../components/ToastProvider";
 import PanelShell from "../../components/PanelShell";
 import AdminShell from "./AdminShell";
+import StaffShell from "../staff/StaffShell";
 import { formatPrice } from "../../utils/format";
 import "../../styles/reportPages.css";
 
@@ -711,9 +712,9 @@ export default function TicketReturnReviewPage() {
   }
   if (isStaff) {
     return (
-      <PanelShell title="Return Requests" links={STAFF_LINKS} roleLabel="Staff" logoutPath="/login" navLabel="Staff navigation">
+      <StaffShell title="Process Full/Partial Refund — Return Requests">
         <ReturnQueue isAdmin={false} />
-      </PanelShell>
+      </StaffShell>
     );
   }
   return <div className="tb-empty" style={{ margin: 40 }}>Only Staff or Admin can review ticket returns.</div>;

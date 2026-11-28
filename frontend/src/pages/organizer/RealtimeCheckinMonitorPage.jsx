@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import OrganizerShell from "./OrganizerShell";
 import checkinApi from "../../api/checkinApi";
 import eventApi from "../../api/eventApi";
+import reportApi, { saveBlob } from "../../api/reportApi";
 import { useAuth } from "../../context/AuthContext";
 import OfflineConflictModal from "../../components/OfflineConflictModal";
 import "./RealtimeCheckinMonitorPage.css";
@@ -31,6 +32,7 @@ export default function RealtimeCheckinMonitorPage() {
   const [refreshIntervalSec, setRefreshIntervalSec] = useState(4);
   const [lastRefreshedAt, setLastRefreshedAt] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const isInitialMount = useRef(true);
 
@@ -152,6 +154,78 @@ export default function RealtimeCheckinMonitorPage() {
     fetchMonitorData(true);
   };
 
+  // Export Check-in Report CSV (UC-14.2) — Exports structured Real-time Check-in Monitor data
+  const handleExportReport = async () => {
+    if (!activeEventId) return;
+    setExporting(true);
+    try {
+      let d = monitorData;
+      if (!d) {
+        const res = await checkinApi.getMonitorStatus(activeEventId, {});
+        d = res?.data?.data || {};
+      }
+
+      const esc = (val) => {
+        const str = val == null ? "" : String(val);
+        if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+      };
+
+      const exportedAt = new Date().toLocaleString("en-US");
+      const gatesRows = Array.isArray(d.gates) ? d.gates : [];
+      const zonesRows = Array.isArray(d.zones) ? d.zones : [];
+      const scansRows = Array.isArray(d.recentScans) ? d.recentScans : [];
+
+      const lines = [
+        "=== 1. REAL-TIME CHECK-IN OVERVIEW ===",
+        "Metric,Value",
+        `Event ID,${esc(activeEventId)}`,
+        `Event Title,${esc(d.eventTitle || `Concert #${activeEventId}`)}`,
+        `Exported At,${esc(exportedAt)}`,
+        `Total Tickets Issued,${d.totalIssued ?? 0}`,
+        `Checked-in Tickets (Used),${d.checkedIn ?? 0}`,
+        `Total / Used Ratio,${esc(`${d.totalIssued ?? 0} / ${d.checkedIn ?? 0}`)}`,
+        `Pending Admission,${d.pending ?? 0}`,
+        `Occupancy Rate (%),${esc(`${d.occupancyRate ?? 0}%`)}`,
+        "",
+        "=== 2. GATE ADMISSION BREAKDOWN ===",
+        "Gate ID,Gate Name,Total Assigned,Checked-in (Used),Pending,Occupancy Rate (%),Gate Status",
+        ...(gatesRows.length > 0
+          ? gatesRows.map(
+              (g) =>
+                `${esc(g.gateId)},${esc(g.gateName)},${g.totalAssigned ?? 0},${g.checkedIn ?? 0},${g.pending ?? Math.max(0, (g.totalAssigned ?? 0) - (g.checkedIn ?? 0))},${esc(`${g.occupancyRate ?? 0}%`)},${esc(g.status || "Normal")}`
+            )
+          : ["No gate data available,,,,"]),
+        "",
+        "=== 3. TICKET TIER & SEATING ZONE BREAKDOWN ===",
+        "Ticket Tier / Zone Name,Total Issued,Checked-in (Used),Pending,Occupancy Rate (%)",
+        ...(zonesRows.length > 0
+          ? zonesRows.map(
+              (z) =>
+                `${esc(z.zoneName)},${z.totalIssued ?? 0},${z.checkedIn ?? 0},${z.pending ?? Math.max(0, (z.totalIssued ?? 0) - (z.checkedIn ?? 0))},${esc(`${z.occupancyRate ?? 0}%`)}`
+            )
+          : ["No zone data available,,,,"]),
+        "",
+        "=== 4. RECENT SCAN TELEMETRY STREAM (SCAN HISTORY) ===",
+        "Scan ID,Attendee Name,Ticket Tier / Zone,Entrance Gate,Scan Time,Scan Method,Status",
+        ...(scansRows.length > 0
+          ? scansRows.map(
+              (s) =>
+                `${esc(s.scanId)},${esc(s.customerName)},${esc(s.zoneName)},${esc(s.gateName)},${esc(s.scannedAt ? new Date(s.scannedAt).toLocaleString("en-US") : "")},${esc(s.scanMethod)},${esc(s.status)}`
+            )
+          : ["No scan events logged yet,,,,,,"]),
+      ];
+
+      const csvContent = "\uFEFF" + lines.join("\r\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      saveBlob({ data: blob, headers: {} }, `realtime-checkin-event-${activeEventId}.csv`);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (!loading && eventList.length === 0) {
     return (
       <div className="rcm-container" style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
@@ -251,6 +325,15 @@ export default function RealtimeCheckinMonitorPage() {
 
           <button
             className="rcm-btn"
+            onClick={handleExportReport}
+            disabled={exporting || !activeEventId}
+            title="Export Check-in Report as CSV"
+          >
+            {exporting ? "Exporting..." : "Export Check-in Report"}
+          </button>
+
+          <button
+            className="rcm-btn"
             style={{
               background: pendingConflictsCount > 0 ? "rgba(245, 158, 11, 0.25)" : undefined,
               borderColor: pendingConflictsCount > 0 ? "#d98f14" : undefined,
@@ -301,15 +384,17 @@ export default function RealtimeCheckinMonitorPage() {
 
         {/* 4 CORE REAL-TIME METRICS (BR-395) */}
         <div className="rcm-metrics-grid">
-          {/* Card 1: Total Issued */}
+          {/* Card 1: Total Issued / Used */}
           <div className="rcm-metric-card">
             <div className="rcm-metric-label">
               <span>1. Total Tickets Issued</span>
             </div>
-            <div className="rcm-metric-value">{totalIssued.toLocaleString()}</div>
-            <div style={{ fontSize: "12px", color: "#7a7392" }}>Total sold/issued tickets</div>
+            <div className="rcm-metric-value">
+              {totalIssued.toLocaleString()} / {checkedIn.toLocaleString()}
+            </div>
+            <div style={{ fontSize: "12px", color: "#7a7392" }}>Total Tickets / Used Tickets</div>
             <div className="rcm-progress-bar-bg">
-              <div className="rcm-progress-bar-fill fill-purple" style={{ width: "100%" }}></div>
+              <div className="rcm-progress-bar-fill fill-purple" style={{ width: `${totalIssued > 0 ? Math.min(100, (checkedIn / totalIssued) * 100) : 0}%` }}></div>
             </div>
           </div>
 
@@ -400,7 +485,7 @@ export default function RealtimeCheckinMonitorPage() {
                     </span>
                   </div>
                   <div className="rcm-gate-stats">
-                    <span>Checked-in: <strong>{g.checkedIn}</strong> / {g.totalAssigned}</span>
+                    <span>Total / Used: <strong>{g.totalAssigned} / {g.checkedIn}</strong></span>
                     <span>Occupancy: <strong>{g.occupancyRate}%</strong></span>
                   </div>
                   <div className="rcm-progress-bar-bg">
@@ -437,7 +522,7 @@ export default function RealtimeCheckinMonitorPage() {
                   <div className="rcm-gate-top">
                     <span className="rcm-gate-name">{z.zoneName}</span>
                     <span style={{ fontSize: "12px", color: "#a855f7", fontWeight: 700 }}>
-                      {z.checkedIn} / {z.totalIssued} checked in
+                      {z.totalIssued} / {z.checkedIn} (Total / Used)
                     </span>
                   </div>
                   <div className="rcm-gate-stats">
@@ -467,7 +552,6 @@ export default function RealtimeCheckinMonitorPage() {
               <thead>
                 <tr>
                   <th>Scan ID</th>
-                  <th>Ticket Code</th>
                   <th>Attendee Name</th>
                   <th>Ticket Tier / Zone</th>
                   <th>Entrance Gate</th>
@@ -479,7 +563,7 @@ export default function RealtimeCheckinMonitorPage() {
               <tbody>
                 {recentScans.length === 0 ? (
                   <tr>
-                    <td colSpan="8" style={{ textAlign: "center", padding: "20px", color: "#7a7392" }}>
+                    <td colSpan="7" style={{ textAlign: "center", padding: "20px", color: "#7a7392" }}>
                       No scan events logged yet.
                     </td>
                   </tr>
@@ -487,7 +571,6 @@ export default function RealtimeCheckinMonitorPage() {
                   recentScans.map((s) => (
                     <tr key={s.scanId}>
                       <td style={{ fontFamily: "monospace", color: "#a855f7" }}>{s.scanId}</td>
-                      <td style={{ fontWeight: 700 }}>{s.ticketCode}</td>
                       <td>{s.customerName}</td>
                       <td>{s.zoneName}</td>
                       <td>{s.gateName}</td>
@@ -514,6 +597,7 @@ export default function RealtimeCheckinMonitorPage() {
           fetchPendingConflictsCount();
         }}
         eventId={activeEventId}
+        hideIncidentReport={true}
         onConflictResolved={() => {
           fetchPendingConflictsCount();
           fetchMonitorData(true);

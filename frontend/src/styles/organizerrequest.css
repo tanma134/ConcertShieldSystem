@@ -1,22 +1,22 @@
 :root {
   --org-bg: #f8f4fc;
   --org-card: #ffffff;
-  --org-line: #e3d6f0;
+  --org-line: #d1c4e9;
   --org-field-bg: #f4ecfa;
-  --org-primary: #e051a0;
-  --org-primary-dark: #c2185b;
-  --org-primary-light: rgba(255, 111, 181, 0.16);
-  --org-text: #565462;
-  --org-text-muted: #5a5470;
-  --org-text-faint: #b8aed0;
+  --org-primary: #d91a63;
+  --org-primary-dark: #b0124e;
+  --org-primary-light: rgba(217, 26, 99, 0.16);
+  --org-text: #111827;
+  --org-text-muted: #111827;
+  --org-text-faint: #374151;
   --org-radius: 16px;
 
-  --org-success: #2cb565;
-  --org-success-bg: rgba(34, 197, 94, 0.08);
-  --org-warning: #d99a16;
-  --org-warning-bg: rgba(251, 191, 36, 0.1);
-  --org-danger: #ff9ccb;
-  --org-danger-bg: rgba(232, 67, 147, 0.08);
+  --org-success: #15803d;
+  --org-success-bg: rgba(34, 197, 94, 0.12);
+  --org-warning: #b45309;
+  --org-warning-bg: rgba(251, 191, 36, 0.16);
+  --org-danger: #b91c1c;
+  --org-danger-bg: rgba(239, 68, 68, 0.1);
 }
 
 .org-page {
@@ -69,14 +69,14 @@
 
 .org-field label {
   font-size: 13px;
-  color: var(--org-text-muted);
-  font-weight: 500;
+  color: #111827;
+  font-weight: 700;
 }
 
 .org-field .optional {
   font-size: 11px;
-  color: var(--org-text-faint);
-  font-weight: 400;
+  color: #374151;
+  font-weight: 500;
 }
 
 .org-field input,
@@ -112,7 +112,7 @@
   border: none;
   border-radius: 8px;
   background: var(--org-primary);
-  color: #3c3552;
+  color: #ffffff;
   font-size: 14.5px;
   font-weight: 600;
   cursor: pointer;

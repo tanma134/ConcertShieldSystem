@@ -10,6 +10,7 @@ namespace EventAPI.DTOs
         public bool CanManageIncidents { get; set; }
         public bool CanManageSupportCases { get; set; }
         public string? ShiftDate { get; set; }
+        public string? ShiftEndDate { get; set; }
         public string? ShiftStartTime { get; set; }
         public string? ShiftEndTime { get; set; }
     }
@@ -19,6 +20,7 @@ namespace EventAPI.DTOs
     {
         public string? GateName { get; set; }
         public string? ShiftDate { get; set; }
+        public string? ShiftEndDate { get; set; }
         public string? ShiftStartTime { get; set; }
         public string? ShiftEndTime { get; set; }
     }
@@ -48,6 +50,7 @@ namespace EventAPI.DTOs
         public string Email { get; set; } = string.Empty;
         public string GateName { get; set; } = "Main Gate";
         public string? ShiftDate { get; set; }
+        public string? ShiftEndDate { get; set; }
         public string? ShiftStartTime { get; set; }
         public string? ShiftEndTime { get; set; }
         public bool CanCheckin { get; set; } = true;
@@ -75,6 +78,7 @@ namespace EventAPI.DTOs
         public int StaffUserId { get; set; }
         public string GateName { get; set; } = "Main Gate";
         public string? ShiftDate { get; set; }
+        public string? ShiftEndDate { get; set; }
         public string? ShiftStartTime { get; set; }
         public string? ShiftEndTime { get; set; }
         public string EventTitle { get; set; } = string.Empty;

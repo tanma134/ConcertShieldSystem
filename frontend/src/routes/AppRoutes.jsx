@@ -225,7 +225,15 @@ export default function AppRoutes() {
       <Route
         path="/admin/ticket-status-history"
         element={
-          <ProtectedRoute adminOnly>
+          <StaffRoute>
+            <TicketStatusHistoryPage />
+          </StaffRoute>
+        }
+      />
+      <Route
+        path="/staff/ticket-status-history"
+        element={
+          <ProtectedRoute>
             <TicketStatusHistoryPage />
           </ProtectedRoute>
         }
@@ -276,7 +284,7 @@ export default function AppRoutes() {
       {/* Gate Check-in & Re-entry Terminal.
           NOTE: /staff/checkin/:eventId (StaffCheckinTerminalPage) is declared in the
           "Staff Check-in & Gate Assignment" block below. */}
-      <Route path="/staff/checkin" element={<ProtectedRoute><CheckinScanTerminalPage /></ProtectedRoute>} />
+      <Route path="/staff/checkin" element={<ProtectedRoute><StaffCheckinTerminalPage /></ProtectedRoute>} />
       <Route path="/admin/checkin" element={<AdminRoute><CheckinScanTerminalPage /></AdminRoute>} />
 
       {/* On-site Incident Management ( - ) */}

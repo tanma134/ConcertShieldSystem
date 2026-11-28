@@ -24,7 +24,7 @@ namespace CheckinAPI.Repositories
                 .Where(t => t.EventId == eventId && !t.IsDeleted);
 
             var totalIssued = await baseQuery.CountAsync();
-            var checkedIn = await baseQuery.CountAsync(t => t.IsCheckedIn || t.Status == "Used");
+            var checkedIn = await baseQuery.CountAsync(t => t.CheckedInAt != null || t.Status == "Used");
 
             var zoneGroups = await baseQuery
                 .GroupBy(t => t.TicketTypeName ?? "General Admission")
@@ -32,12 +32,32 @@ namespace CheckinAPI.Repositories
                 {
                     ZoneName = g.Key,
                     TotalIssued = g.Count(),
-                    CheckedIn = g.Count(t => t.IsCheckedIn || t.Status == "Used")
+                    CheckedIn = g.Count(t => t.CheckedInAt != null || t.Status == "Used")
                 })
                 .OrderByDescending(z => z.TotalIssued)
                 .ToListAsync();
 
             return (totalIssued, checkedIn, zoneGroups);
+        }
+
+        public async Task<List<GateCheckinCount>> GetGateCountsAsync(int eventId)
+        {
+            return await _context.CheckinLogs
+                .AsNoTracking()
+                .Where(l => l.EventId == eventId)
+                .GroupBy(l => new
+                {
+                    GateId = l.GateId ?? "GATE_A",
+                    GateName = l.GateName ?? "Gate A - Main Entrance"
+                })
+                .Select(g => new GateCheckinCount
+                {
+                    GateId = g.Key.GateId,
+                    GateName = g.Key.GateName,
+                    ScanCount = g.Count(),
+                    SuccessCount = g.Count(l => l.Status == "SUCCESS" || l.Status == "APPROVED")
+                })
+                .ToListAsync();
         }
 
         public async Task<List<CheckinLog>> GetRecentScansAsync(int eventId, int limit)
@@ -56,20 +76,32 @@ namespace CheckinAPI.Repositories
                 return null;
 
             var codeClean = ticketCode.Trim();
+            var codeOnly = codeClean.Contains(':') ? codeClean.Split(':')[0].Trim() : codeClean;
 
-            // Support both GUID format and string matching
-            if (Guid.TryParse(codeClean, out var guidCode))
+            if (Guid.TryParse(codeOnly, out var guidCode))
             {
-                return await _context.Tickets
+                var ticket = await _context.Tickets
                     .Include(t => t.Order)
                     .Include(t => t.TicketQrTokens)
                     .FirstOrDefaultAsync(t => t.TicketCode == guidCode && !t.IsDeleted);
+                if (ticket != null) return ticket;
+            }
+
+            if (int.TryParse(codeOnly, out var idCode))
+            {
+                var ticket = await _context.Tickets
+                    .Include(t => t.Order)
+                    .Include(t => t.TicketQrTokens)
+                    .FirstOrDefaultAsync(t => t.TicketId == idCode && !t.IsDeleted);
+                if (ticket != null) return ticket;
             }
 
             return await _context.Tickets
                 .Include(t => t.Order)
                 .Include(t => t.TicketQrTokens)
-                .FirstOrDefaultAsync(t => t.TicketCode.ToString() == codeClean && !t.IsDeleted);
+                .Where(t => !t.IsDeleted &&
+                    t.TicketQrTokens.Any(q => q.QrToken == codeClean || q.QrToken == codeOnly || q.QrToken.Contains(codeOnly)))
+                .FirstOrDefaultAsync();
         }
 
         public async Task<Ticket?> GetTicketByIdAsync(int ticketId)
@@ -111,10 +143,55 @@ namespace CheckinAPI.Repositories
             return await _context.Tickets
                 .Include(t => t.Order)
                 .Include(t => t.TicketQrTokens)
-                .Where(t => !t.IsDeleted && (
-                    t.TicketCode.ToString() == codeOnly ||
-                    t.TicketQrTokens.Any(q => q.QrToken == clean || q.QrToken == codeOnly || q.QrToken.Contains(codeOnly))))
+                .Where(t => !t.IsDeleted &&
+                    t.TicketQrTokens.Any(q => q.QrToken == clean || q.QrToken == codeOnly || q.QrToken.Contains(codeOnly)))
                 .FirstOrDefaultAsync();
+        }
+
+        public async Task<Ticket?> GetTicketForManualCheckinAsync(int eventId, string? ticketCode, string? cccd)
+        {
+            var query = _context.Tickets
+                .Include(t => t.Order!)
+                    .ThenInclude(o => o.OrderAttendees)
+                .Include(t => t.TicketQrTokens)
+                .Where(t => !t.IsDeleted && (eventId <= 0 || t.EventId == eventId));
+
+            if (!string.IsNullOrWhiteSpace(ticketCode))
+            {
+                var rawCode = ticketCode.Trim();
+                var codeOnly = rawCode.Contains(':') ? rawCode.Split(':')[0].Trim() : rawCode;
+
+                if (Guid.TryParse(codeOnly, out var guidCode))
+                {
+                    var byGuid = await query.FirstOrDefaultAsync(t => t.TicketCode == guidCode);
+                    if (byGuid != null) return byGuid;
+                }
+
+                if (int.TryParse(codeOnly, out var intId))
+                {
+                    var byId = await query.FirstOrDefaultAsync(t => t.TicketId == intId);
+                    if (byId != null) return byId;
+                }
+
+                var byQr = await query
+                    .FirstOrDefaultAsync(t => t.TicketQrTokens.Any(q => q.QrToken == rawCode || q.QrToken == codeOnly || EF.Functions.ILike(q.QrToken, $"%{codeOnly}%")));
+                if (byQr != null) return byQr;
+            }
+
+            if (!string.IsNullOrWhiteSpace(cccd))
+            {
+                var rawCccd = cccd.Trim();
+                return await query
+                    .Where(t =>
+                        (t.Order != null && t.Order.OrderAttendees.Any(oa => oa.CitizenId != null && EF.Functions.ILike(oa.CitizenId, $"%{rawCccd}%"))) ||
+                        (t.Order != null && t.Order.Phone != null && EF.Functions.ILike(t.Order.Phone, $"%{rawCccd}%")) ||
+                        (t.Order != null && t.Order.FullName != null && EF.Functions.ILike(t.Order.FullName, $"%{rawCccd}%")))
+                    .OrderBy(t => t.CheckedInAt != null)
+                    .ThenBy(t => t.TicketId)
+                    .FirstOrDefaultAsync();
+            }
+
+            return null;
         }
 
         public async Task AddCheckinLogAsync(CheckinLog log)
@@ -131,7 +208,7 @@ namespace CheckinAPI.Repositories
             ticket.Status = "Used";
             ticket.CheckedInAt = now;
             ticket.CheckedInBy = log.StaffUserId;
-            ticket.CheckedInGate = log.GateName;
+            ticket.CheckedInGate = log.GateId ?? log.GateName;
             ticket.GateId = log.GateId;
             ticket.IsInside = true;
             ticket.ReEntryCount += 1;
@@ -168,29 +245,64 @@ namespace CheckinAPI.Repositories
             string? email,
             string? attendeeName,
             string? ticketCode,
-            string? cccd = null)
+            string? cccd = null,
+            string? orderCode = null)
         {
             var query = _context.Tickets
                 .AsNoTracking()
                 .Include(t => t.Order!)
                     .ThenInclude(o => o.OrderAttendees)
-                .Where(t => t.EventId == eventId && !t.IsDeleted);
+                .Where(t => !t.IsDeleted && (eventId <= 0 || t.EventId == eventId));
 
             if (!string.IsNullOrWhiteSpace(cccd))
             {
                 var term = cccd.Trim();
-                query = query.Where(t => t.Order != null && t.Order.OrderAttendees.Any(a => a.CitizenId != null && EF.Functions.ILike(a.CitizenId, $"%{term}%")));
+                query = query.Where(t =>
+                    (t.Order != null && t.Order.OrderAttendees.Any(a => a.CitizenId != null && EF.Functions.ILike(a.CitizenId, $"%{term}%"))) ||
+                    (t.OwnerName != null && EF.Functions.ILike(t.OwnerName, $"%{term}%")) ||
+                    (t.Order != null && t.Order.FullName != null && EF.Functions.ILike(t.Order.FullName, $"%{term}%")));
+            }
+            else if (!string.IsNullOrWhiteSpace(orderCode))
+            {
+                var term = orderCode.Trim();
+                var numericPart = term
+                    .Replace("ORD-", "", StringComparison.OrdinalIgnoreCase)
+                    .Replace("#AC-", "", StringComparison.OrdinalIgnoreCase)
+                    .Trim();
+
+                if (int.TryParse(numericPart, out var parsedOrderId))
+                {
+                    query = query.Where(t => t.OrderId == parsedOrderId);
+                }
+                else
+                {
+                    query = query.Where(t => t.OrderId == -1);
+                }
             }
             else if (!string.IsNullOrWhiteSpace(ticketCode))
             {
                 var term = ticketCode.Trim();
-                query = query.Where(t => EF.Functions.ILike(t.TicketCode.ToString(), $"%{term}%"));
+                var codeOnly = term.Contains(':') ? term.Split(':')[0].Trim() : term;
+
+                if (Guid.TryParse(codeOnly, out var parsedGuid))
+                {
+                    query = query.Where(t => t.TicketCode == parsedGuid);
+                }
+                else if (int.TryParse(codeOnly, out var parsedTicketId))
+                {
+                    query = query.Where(t => t.TicketId == parsedTicketId);
+                }
+                else
+                {
+                    query = query.Where(t => t.TicketQrTokens.Any(q => EF.Functions.ILike(q.QrToken, $"%{codeOnly}%")));
+                }
             }
             else if (!string.IsNullOrWhiteSpace(phone))
             {
                 var term = phone.Trim();
-                query = query.Where(t => (t.Order != null && t.Order.Phone != null && EF.Functions.ILike(t.Order.Phone, $"%{term}%")) ||
-                                         (t.Order != null && t.Order.OrderAttendees.Any(a => a.Phone != null && EF.Functions.ILike(a.Phone, $"%{term}%"))));
+                query = query.Where(t =>
+                    (t.Order != null && t.Order.Phone != null && EF.Functions.ILike(t.Order.Phone, $"%{term}%")) ||
+                    (t.Order != null && t.Order.OrderAttendees.Any(a => a.Phone != null && EF.Functions.ILike(a.Phone, $"%{term}%"))));
             }
             else if (!string.IsNullOrWhiteSpace(email))
             {
@@ -218,11 +330,14 @@ namespace CheckinAPI.Repositories
         {
             var query = _context.CheckinLogs
                 .AsNoTracking()
-                .Where(l => l.EventId == eventId);
+                .Where(l => eventId <= 0 || l.EventId == eventId);
 
-            if (!string.IsNullOrWhiteSpace(gateId) && gateId != "ALL")
+            if (!string.IsNullOrWhiteSpace(gateId) && !gateId.Equals("ALL", StringComparison.OrdinalIgnoreCase))
             {
-                query = query.Where(l => l.GateId == gateId);
+                query = query.Where(l =>
+                    l.GateId == gateId ||
+                    (l.GateName != null && EF.Functions.ILike(l.GateName, $"%{gateId}%")) ||
+                    l.GateId == null);
             }
 
             if (staffUserId.HasValue && staffUserId.Value > 0)
@@ -236,18 +351,35 @@ namespace CheckinAPI.Repositories
             }
 
             var totalCount = await query.CountAsync();
-            var approvedCount = await query.CountAsync(l => l.Status == "APPROVED");
-            var alreadyUsedCount = await query.CountAsync(l => l.Status == "ALREADY_CHECKED_IN");
-            var invalidCount = await query.CountAsync(l => l.Status != "APPROVED" && l.Status != "ALREADY_CHECKED_IN");
+            var approvedCount = await query.CountAsync(l => l.Status == "SUCCESS" || l.Status == "APPROVED");
+            var alreadyUsedCount = await query.CountAsync(l => l.Status == "ALREADY_USED" || l.Status == "ALREADY_CHECKED_IN");
+            var invalidCount = await query.CountAsync(l =>
+                l.Status != "SUCCESS" &&
+                l.Status != "APPROVED" &&
+                l.Status != "ALREADY_USED" &&
+                l.Status != "ALREADY_CHECKED_IN");
 
-            if (!string.IsNullOrWhiteSpace(statusFilter) && statusFilter != "ALL")
+            if (!string.IsNullOrWhiteSpace(statusFilter) && !statusFilter.Equals("ALL", StringComparison.OrdinalIgnoreCase))
             {
-                query = query.Where(l => l.Status == statusFilter);
+                if (statusFilter.Equals("ERRORS", StringComparison.OrdinalIgnoreCase) ||
+                    statusFilter.Equals("INVALID", StringComparison.OrdinalIgnoreCase) ||
+                    statusFilter.Equals("WRONG_GATE", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(l =>
+                        l.Status != "SUCCESS" &&
+                        l.Status != "APPROVED" &&
+                        l.Status != "ALREADY_USED" &&
+                        l.Status != "ALREADY_CHECKED_IN");
+                }
+                else
+                {
+                    query = query.Where(l => l.Status == statusFilter);
+                }
             }
 
             var items = await query
                 .OrderByDescending(l => l.ScannedAt)
-                .Take(200)
+                .Take(100)
                 .ToListAsync();
 
             return (items, totalCount, approvedCount, alreadyUsedCount, invalidCount);

@@ -4039,6 +4039,25 @@
         },
         {
             "Key": "checkinops-manual-checkin",
+            "DownstreamPathTemplate": "/api/checkin/manual-checkin",
+            "DownstreamScheme": "https",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 7330
+                }
+            ],
+            "UpstreamPathTemplate": "/api/checkin/manual-checkin",
+            "UpstreamHttpMethod": [
+                "Post",
+                "Options"
+            ],
+            "AuthenticationOptions": {
+                "AuthenticationProviderKey": "Bearer"
+            }
+        },
+        {
+            "Key": "checkinops-manual-checkin-legacy",
             "DownstreamPathTemplate": "/api/checkin/manual",
             "DownstreamScheme": "https",
             "DownstreamHostAndPorts": [
@@ -4049,7 +4068,8 @@
             ],
             "UpstreamPathTemplate": "/api/checkin/manual",
             "UpstreamHttpMethod": [
-                "Post"
+                "Post",
+                "Options"
             ],
             "AuthenticationOptions": {
                 "AuthenticationProviderKey": "Bearer"

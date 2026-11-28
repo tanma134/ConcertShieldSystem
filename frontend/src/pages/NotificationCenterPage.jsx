@@ -34,10 +34,17 @@ export default function NotificationCenterPage() {
       .getNotifications()
       .then((res) => {
         const rawItems = res.data?.items || res.data?.Items || res.data?.data?.items || res.data?.data?.Items || [];
-        const rawUnread = res.data?.unreadCount ?? res.data?.UnreadCount ?? res.data?.data?.unreadCount ?? res.data?.data?.UnreadCount ?? 0;
-        const normalized = rawItems.map(normalizeNotification);
+        const seen = new Set();
+        const normalized = [];
+        for (const raw of rawItems) {
+          const item = normalizeNotification(raw);
+          const key = `${item.title}::${item.message}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          normalized.push(item);
+        }
         setNotifications(normalized);
-        setUnreadCount(rawUnread);
+        setUnreadCount(normalized.filter((n) => !n.isRead).length);
       })
       .catch((err) => {
         console.error("Fetch notifications error", err);
@@ -74,6 +81,7 @@ export default function NotificationCenterPage() {
       } catch (err) {
         console.warn("Background mark read warning:", err?.message);
       }
+      window.dispatchEvent(new Event("notification-updated"));
     }
     if (notif.targetUrl) {
       navigate(notif.targetUrl);
@@ -89,6 +97,7 @@ export default function NotificationCenterPage() {
     } catch (err) {
       console.warn("Background mark all read warning:", err?.message);
     }
+    window.dispatchEvent(new Event("notification-updated"));
   };
 
   const handleDelete = async (id, e) => {

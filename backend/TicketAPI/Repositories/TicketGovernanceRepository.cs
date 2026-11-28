@@ -254,106 +254,231 @@ namespace TicketAPI.Repositories
             page = Math.Max(1, page);
             pageSize = pageSize <= 0 ? 10 : Math.Min(100, pageSize);
 
-            var query = from h in _context.StatusHistories.AsNoTracking()
-                        where h.TargetType == "Ticket" && h.Action == "TicketReissued" && h.NewStatus == "Revoked"
-                        join oldTicket in _context.Tickets.AsNoTracking() on h.TargetId equals oldTicket.TicketId into oldTicketGroup
-                        from oldTicket in oldTicketGroup.DefaultIfEmpty()
-                        join order in _context.Orders.AsNoTracking() on h.OrderId equals order.OrderId into orderGroup
-                        from order in orderGroup.DefaultIfEmpty()
-                        select new
-                        {
-                            History = h,
-                            OldTicket = oldTicket,
-                            Order = order
-                        };
+            // 1. Optional table ticket_reissues (if present in DB)
+            var tableItems = new List<TicketReissue>();
+            try
+            {
+                var tableQuery = _context.TicketReissues.AsNoTracking().AsQueryable();
+                if (eventId.HasValue && eventId.Value > 0)
+                {
+                    tableQuery = tableQuery.Where(r => r.EventId == eventId.Value);
+                }
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    var term = search.Trim();
+                    tableQuery = tableQuery.Where(r =>
+                        EF.Functions.ILike(r.OldTicketCode, $"%{term}%") ||
+                        EF.Functions.ILike(r.NewTicketCode, $"%{term}%") ||
+                        EF.Functions.ILike(r.EventTitle, $"%{term}%") ||
+                        EF.Functions.ILike(r.CustomerName, $"%{term}%") ||
+                        EF.Functions.ILike(r.CustomerEmail, $"%{term}%") ||
+                        EF.Functions.ILike(r.Reason, $"%{term}%"));
+                }
+                tableItems = await tableQuery.OrderByDescending(r => r.ReissuedAt).ToListAsync();
+            }
+            catch
+            {
+                // ticket_reissues table is optional; ignore if not created
+            }
+
+            // 2. Query from status_histories
+            var histQuery = _context.StatusHistories
+                .AsNoTracking()
+                .Where(h =>
+                    h.TargetType == "Ticket" &&
+                    (h.Action == "TicketReissued" || h.Action == "TICKET_REISSUED" || h.Action == "Reissued"));
 
             if (eventId.HasValue && eventId.Value > 0)
             {
-                query = query.Where(x => x.History.EventId == eventId.Value);
+                histQuery = histQuery.Where(h => h.EventId == eventId.Value);
             }
 
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                var term = search.Trim();
-                Guid? termGuid = Guid.TryParse(term, out var g) ? g : null;
-                int? termId = int.TryParse(term, out var id) ? id : null;
-
-                query = query.Where(x =>
-                    (x.History.Reason != null && EF.Functions.ILike(x.History.Reason, $"%{term}%")) ||
-                    (x.Order != null && x.Order.FullName != null && EF.Functions.ILike(x.Order.FullName, $"%{term}%")) ||
-                    (x.Order != null && x.Order.Email != null && EF.Functions.ILike(x.Order.Email, $"%{term}%")) ||
-                    (x.OldTicket != null && x.OldTicket.OwnerName != null && EF.Functions.ILike(x.OldTicket.OwnerName, $"%{term}%")) ||
-                    (x.Order != null && x.Order.EventName != null && EF.Functions.ILike(x.Order.EventName, $"%{term}%")) ||
-                    (termGuid.HasValue && x.OldTicket != null && x.OldTicket.TicketCode == termGuid.Value) ||
-                    (termId.HasValue && x.History.TargetId == termId.Value));
-            }
-
-            var totalCount = await query.CountAsync();
-
-            var rows = await query
-                .OrderByDescending(x => x.History.CreatedAt)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
+            var rawHistories = await histQuery
+                .OrderByDescending(h => h.CreatedAt)
                 .ToListAsync();
 
-            var replacementIds = new List<int>();
-            foreach (var r in rows)
-            {
-                var repId = ExtractReplacementTicketId(r.History.Metadata);
-                if (repId.HasValue && !replacementIds.Contains(repId.Value))
+            // Prefer the 'Revoked' rows (on oldTicket), fallback to 'Active' rows (on newTicket) if unpaired
+            var revokedHistories = rawHistories
+                .Where(h => string.Equals(h.NewStatus, "Revoked", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            var pairedOldIds = new HashSet<int>(
+                revokedHistories.Select(h => h.TicketId ?? h.TargetId));
+
+            var activeHistories = rawHistories
+                .Where(h => string.Equals(h.NewStatus, "Active", StringComparison.OrdinalIgnoreCase))
+                .Where(h =>
                 {
-                    replacementIds.Add(repId.Value);
-                }
+                    var oldId = ExtractReplacedTicketId(h.Metadata);
+                    return !oldId.HasValue || !pairedOldIds.Contains(oldId.Value);
+                })
+                .ToList();
+
+            var allCandidateHistories = revokedHistories.Concat(activeHistories)
+                .OrderByDescending(h => h.CreatedAt)
+                .ToList();
+
+            // Gather all referenced Ticket IDs and Order IDs
+            var ticketIdsToLoad = new HashSet<int>();
+            var orderIdsToLoad = new HashSet<int>();
+            var eventIdsToLoad = new HashSet<int>();
+
+            foreach (var h in allCandidateHistories)
+            {
+                var tId = h.TicketId ?? h.TargetId;
+                if (tId > 0) ticketIdsToLoad.Add(tId);
+
+                var repId = ExtractReplacementTicketId(h.Metadata);
+                if (repId.HasValue && repId.Value > 0) ticketIdsToLoad.Add(repId.Value);
+
+                var oldId = ExtractReplacedTicketId(h.Metadata);
+                if (oldId.HasValue && oldId.Value > 0) ticketIdsToLoad.Add(oldId.Value);
+
+                if (h.OrderId.HasValue && h.OrderId.Value > 0) orderIdsToLoad.Add(h.OrderId.Value);
+                if (h.EventId > 0) eventIdsToLoad.Add(h.EventId);
             }
 
-            var newTickets = replacementIds.Count > 0
+            var ticketsDict = ticketIdsToLoad.Count > 0
                 ? await _context.Tickets.AsNoTracking()
-                    .Where(t => replacementIds.Contains(t.TicketId))
+                    .Where(t => ticketIdsToLoad.Contains(t.TicketId))
                     .ToDictionaryAsync(t => t.TicketId)
                 : new Dictionary<int, Ticket>();
 
-            var items = rows.Select(r =>
+            foreach (var t in ticketsDict.Values)
             {
-                var repId = ExtractReplacementTicketId(r.History.Metadata);
-                Ticket? newTicket = null;
-                if (repId.HasValue)
+                if (t.OrderId > 0) orderIdsToLoad.Add(t.OrderId);
+                if (t.EventId > 0) eventIdsToLoad.Add(t.EventId);
+            }
+
+            var ordersDict = orderIdsToLoad.Count > 0
+                ? await _context.Orders.AsNoTracking()
+                    .Where(o => orderIdsToLoad.Contains(o.OrderId))
+                    .ToDictionaryAsync(o => o.OrderId)
+                : new Dictionary<int, Order>();
+
+            // Also resolve event titles from revocations/reconciliations/orders if missing
+            var eventTitleMap = new Dictionary<int, string>();
+            foreach (var o in ordersDict.Values)
+            {
+                if (o.EventId > 0 && !string.IsNullOrWhiteSpace(o.EventName) && !eventTitleMap.ContainsKey(o.EventId))
                 {
-                    newTickets.TryGetValue(repId.Value, out newTicket);
+                    eventTitleMap[o.EventId] = o.EventName;
                 }
-
-                var oldCode = r.OldTicket != null ? r.OldTicket.TicketCode.ToString() : $"TICKET-{r.History.TargetId}";
-                var newCode = newTicket != null ? newTicket.TicketCode.ToString() : (repId.HasValue ? $"TICKET-{repId.Value}" : "REPLACED");
-
-                var customerName = !string.IsNullOrWhiteSpace(r.OldTicket?.OwnerName)
-                    ? r.OldTicket.OwnerName
-                    : (!string.IsNullOrWhiteSpace(r.Order?.FullName) ? r.Order.FullName : "Customer");
-
-                var customerEmail = r.Order?.Email ?? "";
-                var eventTitle = !string.IsNullOrWhiteSpace(r.Order?.EventName) ? r.Order.EventName : $"Event #{r.History.EventId}";
-                var seatOrZone = r.OldTicket?.TicketTypeName ?? "";
-
-                return new TicketReissue
+            }
+            if (eventIdsToLoad.Count > 0)
+            {
+                var revTitles = await _context.TicketRevocations.AsNoTracking()
+                    .Where(r => eventIdsToLoad.Contains(r.EventId) && !string.IsNullOrEmpty(r.EventTitle))
+                    .Select(r => new { r.EventId, r.EventTitle })
+                    .Distinct()
+                    .ToListAsync();
+                foreach (var rt in revTitles)
                 {
-                    ReissueId = r.History.StatusHistoryId,
+                    if (!eventTitleMap.ContainsKey(rt.EventId))
+                        eventTitleMap[rt.EventId] = rt.EventTitle;
+                }
+            }
+
+            var existingOldCodes = new HashSet<string>(
+                tableItems.Select(t => t.OldTicketCode),
+                StringComparer.OrdinalIgnoreCase);
+
+            var histItems = new List<TicketReissue>();
+            foreach (var h in allCandidateHistories)
+            {
+                bool isRevokedRow = string.Equals(h.NewStatus, "Revoked", StringComparison.OrdinalIgnoreCase);
+                int? oldTicketId = isRevokedRow
+                    ? (h.TicketId ?? h.TargetId)
+                    : ExtractReplacedTicketId(h.Metadata);
+                int? newTicketId = isRevokedRow
+                    ? ExtractReplacementTicketId(h.Metadata)
+                    : (h.TicketId ?? h.TargetId);
+
+                Ticket? oldTicket = oldTicketId.HasValue && ticketsDict.TryGetValue(oldTicketId.Value, out var ot) ? ot : null;
+                Ticket? newTicket = newTicketId.HasValue && ticketsDict.TryGetValue(newTicketId.Value, out var nt) ? nt : null;
+
+                int? resolvedOrderId = h.OrderId ?? oldTicket?.OrderId ?? newTicket?.OrderId;
+                Order? order = resolvedOrderId.HasValue && ordersDict.TryGetValue(resolvedOrderId.Value, out var ord) ? ord : null;
+
+                var oldCode = oldTicket != null
+                    ? oldTicket.TicketCode.ToString()
+                    : (oldTicketId.HasValue ? $"TICKET-{oldTicketId.Value}" : $"TICKET-{h.TargetId}");
+
+                if (existingOldCodes.Contains(oldCode))
+                    continue;
+
+                var newCode = newTicket != null
+                    ? newTicket.TicketCode.ToString()
+                    : (newTicketId.HasValue ? $"TICKET-{newTicketId.Value}" : "REPLACED");
+
+                var customerName = !string.IsNullOrWhiteSpace(oldTicket?.OwnerName)
+                    ? oldTicket.OwnerName
+                    : !string.IsNullOrWhiteSpace(newTicket?.OwnerName)
+                        ? newTicket.OwnerName
+                        : (!string.IsNullOrWhiteSpace(order?.FullName) ? order.FullName : "Customer");
+
+                var customerEmail = order?.Email ?? "";
+                var evId = h.EventId > 0 ? h.EventId : (oldTicket?.EventId ?? newTicket?.EventId ?? order?.EventId ?? 0);
+                var eventTitle = !string.IsNullOrWhiteSpace(order?.EventName)
+                    ? order.EventName
+                    : (eventTitleMap.TryGetValue(evId, out var et) ? et : $"Event #{evId}");
+                var seatOrZone = oldTicket?.TicketTypeName ?? newTicket?.TicketTypeName ?? "";
+
+                histItems.Add(new TicketReissue
+                {
+                    ReissueId = h.StatusHistoryId,
                     OldTicketCode = oldCode,
                     NewTicketCode = newCode,
-                    EventId = r.History.EventId,
+                    EventId = evId,
                     EventTitle = eventTitle,
-                    ReissuedByAdminId = r.History.ActorUserId ?? 0,
-                    ReissuedByName = $"Admin #{r.History.ActorUserId ?? 0}",
-                    ReissuedAt = r.History.CreatedAt,
-                    Reason = r.History.Reason ?? "Ticket Reissued",
+                    ReissuedByAdminId = h.ActorUserId ?? 0,
+                    ReissuedByName = $"Admin #{h.ActorUserId ?? 1}",
+                    ReissuedAt = h.CreatedAt,
+                    Reason = h.Reason ?? "Ticket Reissued",
                     CustomerName = customerName,
                     CustomerEmail = customerEmail,
                     SeatOrZone = seatOrZone,
                     DynamicQrStatus = newTicket != null ? "ACTIVE" : "REPLACED"
-                };
-            }).ToList();
+                });
+            }
 
-            return (items, totalCount);
+            var combined = tableItems.Concat(histItems)
+                .OrderByDescending(r => r.ReissuedAt)
+                .ToList();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.Trim();
+                combined = combined.Where(r =>
+                    (r.OldTicketCode != null && r.OldTicketCode.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                    (r.NewTicketCode != null && r.NewTicketCode.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                    (r.EventTitle != null && r.EventTitle.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                    (r.CustomerName != null && r.CustomerName.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                    (r.CustomerEmail != null && r.CustomerEmail.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                    (r.Reason != null && r.Reason.Contains(term, StringComparison.OrdinalIgnoreCase))
+                ).ToList();
+            }
+
+            var totalCount = combined.Count;
+            var paged = combined
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return (paged, totalCount);
         }
 
         private static int? ExtractReplacementTicketId(string? metadata)
+        {
+            return ExtractJsonInt(metadata, "replacementTicketId", "ReplacementTicketId");
+        }
+
+        private static int? ExtractReplacedTicketId(string? metadata)
+        {
+            return ExtractJsonInt(metadata, "replacedTicketId", "ReplacedTicketId");
+        }
+
+        private static int? ExtractJsonInt(string? metadata, params string[] keys)
         {
             if (string.IsNullOrWhiteSpace(metadata))
                 return null;
@@ -361,9 +486,15 @@ namespace TicketAPI.Repositories
             try
             {
                 using var doc = JsonDocument.Parse(metadata);
-                if (doc.RootElement.TryGetProperty("replacementTicketId", out var prop) && prop.TryGetInt32(out var id))
+                foreach (var key in keys)
                 {
-                    return id;
+                    if (doc.RootElement.TryGetProperty(key, out var prop))
+                    {
+                        if (prop.ValueKind == JsonValueKind.Number && prop.TryGetInt32(out var id))
+                            return id;
+                        if (prop.ValueKind == JsonValueKind.String && int.TryParse(prop.GetString(), out var strId))
+                            return strId;
+                    }
                 }
             }
             catch
@@ -397,8 +528,24 @@ namespace TicketAPI.Repositories
             var singleRevocationsFromHist = await _context.StatusHistories
                 .CountAsync(h => h.TargetType == "Ticket" && h.Action == "AdminRevoke" && h.NewStatus == "Revoked");
             var singleRevocations = Math.Max(singleRevocationsFromTable, singleRevocationsFromHist);
-            var reissues = await _context.StatusHistories
-                .CountAsync(h => h.TargetType == "Ticket" && h.Action == "TicketReissued" && h.NewStatus == "Revoked");
+
+            var reissuesFromHist = await _context.StatusHistories
+                .CountAsync(h =>
+                    h.TargetType == "Ticket" &&
+                    (h.Action == "TicketReissued" || h.Action == "TICKET_REISSUED" || h.Action == "Reissued") &&
+                    (h.NewStatus == "Revoked" || h.NewStatus == "REVOKED"));
+
+            var reissuesFromTable = 0;
+            try
+            {
+                reissuesFromTable = await _context.TicketReissues.CountAsync();
+            }
+            catch
+            {
+                // optional table
+            }
+
+            var reissues = Math.Max(reissuesFromTable, reissuesFromHist);
             var refundQueued = await _context.TicketReconciliations
                 .Where(r => EF.Functions.ILike(r.RefundStatus, "%queue%"))
                 .SumAsync(r => (int?)r.TotalTicketsRevoked) ?? 0;

@@ -5,6 +5,7 @@ import { BrowserMultiFormatReader, BrowserQRCodeReader } from "@zxing/library";
 import checkinApi from "../../api/checkinApi";
 import staffApi from "../../api/staffApi";
 import { useAuth } from "../../context/AuthContext";
+import StaffShell from "./StaffShell";
 import offlineCheckinDb from "../../utils/offlineCheckinDb";
 import OfflineConflictModal from "../../components/OfflineConflictModal";
 import "./StaffCheckinTerminalPage.css";
@@ -99,7 +100,14 @@ export default function StaffCheckinTerminalPage() {
   const [showConflictModal, setShowConflictModal] = useState(false);
   const [pendingConflictsCount, setPendingConflictsCount] = useState(0);
   const manualInputRef = useRef(null);
+  const qrFileInputRef = useRef(null);
+  const handleProcessScanRef = useRef(null);
+  const isOfflineModeRef = useRef(false);
   const syncingOfflineRef = useRef(false);
+
+  useEffect(() => {
+    isOfflineModeRef.current = isOfflineMode;
+  }, [isOfflineMode]);
 
   const checkConflicts = useCallback(async () => {
     try {
@@ -162,9 +170,9 @@ export default function StaffCheckinTerminalPage() {
       handleSyncOfflineScans(true);
     }
 
-    // Periodic heartbeat auto-sync every 15 seconds if items are queued
+    // Periodic heartbeat auto-sync every 15 seconds ONLY when Online Mode is active
     const syncInterval = setInterval(() => {
-      if (navigator.onLine) {
+      if (navigator.onLine && !isOfflineModeRef.current) {
         handleSyncOfflineScans(true);
       }
     }, 15000);
@@ -176,8 +184,15 @@ export default function StaffCheckinTerminalPage() {
     };
   }, [currentEventId]);
 
+  // Refresh offline package once gateAssignment is loaded so packageMeta reflects the assigned gate
+  useEffect(() => {
+    if (currentEventId && gateAssignment?.gateName && navigator.onLine && !isOfflineMode) {
+      autoPreloadOfflinePackage(currentEventId, gateAssignment.gateName);
+    }
+  }, [currentEventId, gateAssignment?.gateName]);
+
   // Always auto-preload and keep offline ticket package ready in IndexedDB
-  const autoPreloadOfflinePackage = async (evtId) => {
+  const autoPreloadOfflinePackage = async (evtId, explicitGateName = "") => {
     setDownloadingPackage(true);
     try {
       // Check existing cached package in IndexedDB
@@ -188,7 +203,7 @@ export default function StaffCheckinTerminalPage() {
 
       // Fetch fresh package from server in background if network is available
       if (navigator.onLine) {
-        const res = await checkinApi.getOfflinePackage(evtId, gateAssignment?.gateName || "");
+        const res = await checkinApi.getOfflinePackage(evtId, explicitGateName || gateAssignment?.gateName || "");
         if (res?.data?.data) {
           const pkg = res.data.data;
           await offlineCheckinDb.saveOfflinePackage(evtId, pkg);
@@ -419,7 +434,78 @@ export default function StaffCheckinTerminalPage() {
     }
   };
 
-  // Submit Scan Request (Camera or HID Scanner)
+  // Check whether the current date/time is within the staff member's assigned shift schedule (From -> To)
+  const evaluateCurrentShiftStatus = useCallback(() => {
+    const matchedEv = assignedEvents.find((e) => Number(e.eventId) === Number(currentEventId));
+    const rawStart = (gateAssignment?.shiftStartTime || matchedEv?.shiftStartTime || "").trim();
+    const rawEnd = (gateAssignment?.shiftEndTime || matchedEv?.shiftEndTime || "").trim();
+    const rawDate = gateAssignment?.shiftDate || matchedEv?.shiftDate || "";
+    const rawEndDate = gateAssignment?.shiftEndDate || matchedEv?.shiftEndDate || "";
+    const shiftDateStr = rawDate ? String(rawDate).substring(0, 10) : "";
+    const shiftEndDateStr = rawEndDate ? String(rawEndDate).substring(0, 10) : shiftDateStr;
+
+    const shiftStart = rawStart ? rawStart.substring(0, 5) : "";
+    const shiftEnd = rawEnd ? rawEnd.substring(0, 5) : "";
+
+    const fmtDate = (dStr) => {
+      if (!dStr) return "";
+      const parts = dStr.split("-");
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      return dStr;
+    };
+
+    const fromLabel = shiftDateStr ? `${fmtDate(shiftDateStr)} ${shiftStart || "00:00"}` : (shiftStart || "All Day");
+    const toLabel = shiftEndDateStr ? `${fmtDate(shiftEndDateStr)} ${shiftEnd || "23:59"}` : (shiftEnd || "All Day");
+
+    if (shiftDateStr) {
+      const now = new Date();
+      const sTime = shiftStart || "00:00";
+      const eTime = shiftEnd || "23:59";
+      const startDt = new Date(`${shiftDateStr}T${sTime}:00`);
+      const endDt = new Date(`${shiftEndDateStr}T${eTime}:00`);
+      if (shiftEndDateStr === shiftDateStr && sTime && eTime && eTime < sTime) {
+        endDt.setDate(endDt.getDate() + 1);
+      }
+
+      if (!isNaN(startDt.getTime()) && !isNaN(endDt.getTime())) {
+        const isWithin = now >= startDt && now <= endDt;
+        if (!isWithin) {
+          return {
+            active: false,
+            fromLabel,
+            toLabel,
+            message: `You cannot enter the Check-in Scan Terminal right now because you are outside your assigned shift schedule (From: ${fromLabel} – To: ${toLabel}). Check-in terminal access is only permitted during your scheduled shift hours.`,
+          };
+        }
+      }
+    } else if (shiftStart && shiftEnd) {
+      const [sh, sm] = shiftStart.split(":").map(Number);
+      const [eh, em] = shiftEnd.split(":").map(Number);
+      if (!isNaN(sh) && !isNaN(sm) && !isNaN(eh) && !isNaN(em)) {
+        const now = new Date();
+        const nowMins = now.getHours() * 60 + now.getMinutes();
+        const startMins = sh * 60 + sm;
+        const endMins = eh * 60 + em;
+
+        const isWithinShift = endMins >= startMins
+          ? nowMins >= startMins && nowMins <= endMins
+          : nowMins >= startMins || nowMins <= endMins;
+
+        if (!isWithinShift) {
+          return {
+            active: false,
+            fromLabel,
+            toLabel,
+            message: `You cannot enter the Check-in Scan Terminal right now because you are outside your assigned shift schedule (From: ${fromLabel} – To: ${toLabel}). Check-in terminal access is only permitted during your scheduled shift hours.`,
+          };
+        }
+      }
+    }
+
+    return { active: true, fromLabel, toLabel, message: "" };
+  }, [assignedEvents, currentEventId, gateAssignment]);
+
+  // Submit Scan Request (Camera or HID Scanner) — No shift check during scanning itself
   const handleProcessScan = useCallback(
     async (codeToScan) => {
       const payload = codeToScan || ticketInput;
@@ -506,6 +592,98 @@ export default function StaffCheckinTerminalPage() {
     [currentEventId, gateAssignment, ticketInput, isOfflineMode, user]
   );
 
+  useEffect(() => {
+    handleProcessScanRef.current = handleProcessScan;
+  }, [handleProcessScan]);
+
+  // Decode an uploaded QR Code Image file (supports PNG/JPG screenshots & downloaded QR images)
+  const handleQrImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    try {
+      const imgUrl = URL.createObjectURL(file);
+      const img = new Image();
+      img.src = imgUrl;
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+
+      let decodedText = null;
+
+      // 1. Native BarcodeDetector
+      if (typeof window !== "undefined" && "BarcodeDetector" in window) {
+        try {
+          const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+          const results = await detector.detect(img);
+          if (results && results.length > 0 && results[0].rawValue) {
+            decodedText = results[0].rawValue.trim();
+          }
+        } catch (err) {}
+      }
+
+      // 2. jsQR on padded white canvas at multiple scales
+      if (!decodedText) {
+        const decodeQR = typeof jsQR === "function" ? jsQR : (jsQR?.default || window.jsQR);
+        if (decodeQR) {
+          const scales = [1, 1.5, 0.75, 2];
+          for (const scale of scales) {
+            const pad = 40;
+            const w = Math.round(img.naturalWidth * scale) + pad * 2;
+            const h = Math.round(img.naturalHeight * scale) + pad * 2;
+            const tempCanvas = document.createElement("canvas");
+            tempCanvas.width = w;
+            tempCanvas.height = h;
+            const tempCtx = tempCanvas.getContext("2d");
+            tempCtx.fillStyle = "#ffffff";
+            tempCtx.fillRect(0, 0, w, h);
+            tempCtx.drawImage(img, pad, pad, w - pad * 2, h - pad * 2);
+            const imgData = tempCtx.getImageData(0, 0, w, h);
+            const res = decodeQR(imgData.data, w, h, { inversionAttempts: "attemptBoth" });
+            if (res && res.data) {
+              decodedText = res.data.trim();
+              break;
+            }
+          }
+        }
+      }
+
+      // 3. ZXing BrowserQRCodeReader fallback
+      if (!decodedText) {
+        try {
+          const reader = new BrowserQRCodeReader();
+          const res = await reader.decodeFromImageElement(img);
+          if (res && res.getText()) {
+            decodedText = res.getText().trim();
+          }
+        } catch (err) {}
+      }
+
+      URL.revokeObjectURL(imgUrl);
+
+      if (decodedText) {
+        setAutoScannedFlash(true);
+        setTimeout(() => setAutoScannedFlash(false), 800);
+        handleProcessScan(decodedText);
+      } else {
+        setTerminalDialog({
+          type: "WARNING",
+          title: "Could Not Read QR Image",
+          message: "No valid QR code was detected in the uploaded image. Please upload a clear QR code image or paste the QR code string below.",
+        });
+      }
+    } catch (err) {
+      console.error("Failed to decode uploaded QR image:", err);
+      setTerminalDialog({
+        type: "ERROR",
+        title: "QR Image Upload Error",
+        message: "Could not read the selected image file.",
+      });
+    }
+  };
+
   const stopWebcam = useCallback(() => {
     if (fallbackIntervalRef.current) {
       clearInterval(fallbackIntervalRef.current);
@@ -526,31 +704,31 @@ export default function StaffCheckinTerminalPage() {
       } catch (e) {}
       mediaStreamRef.current = null;
     }
-    if (videoRef.current) {
+    if (videoRef.current && videoRef.current.srcObject) {
+      try {
+        const s = videoRef.current.srcObject;
+        if (s && typeof s.getTracks === "function") {
+          s.getTracks().forEach((track) => track.stop());
+        }
+      } catch (e) {}
       videoRef.current.srcObject = null;
     }
   }, []);
 
-  // Enumerate camera input devices on mount
+  // Enumerate camera input devices on mount (without forcing a camera restart)
   useEffect(() => {
     try {
-      const reader = new BrowserMultiFormatReader();
-      reader
-        .listVideoInputDevices()
-        .then((devices) => {
-          if (devices && devices.length > 0) {
-            setVideoDevices(devices);
-            const backCam = devices.find((d) =>
-              d.label?.toLowerCase().includes("back") ||
-              d.label?.toLowerCase().includes("environment") ||
-              d.label?.toLowerCase().includes("rear")
-            );
-            setSelectedDeviceId(backCam ? backCam.deviceId : devices[0].deviceId);
-          }
-        })
-        .catch((e) => {
-          console.warn("Could not list video devices:", e);
-        });
+      if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+        navigator.mediaDevices
+          .enumerateDevices()
+          .then((devices) => {
+            const cams = (devices || []).filter((d) => d.kind === "videoinput");
+            if (cams.length > 0) {
+              setVideoDevices(cams);
+            }
+          })
+          .catch(() => {});
+      }
     } catch (e) {}
   }, []);
 
@@ -567,12 +745,13 @@ export default function StaffCheckinTerminalPage() {
       .trim();
   };
 
-  // Real-time Dual-Engine QR Scanner (ZXing + Native BarcodeDetector + jsQR)
+  // Real-time Multi-Engine QR Scanner (Direct WebRTC getUserMedia + Native BarcodeDetector + jsQR Multi-Crop + ZXing)
   useEffect(() => {
     let active = true;
 
     async function startScanner() {
-      if (activeTab !== "SCAN" || !cameraActive) {
+      const shiftStatus = evaluateCurrentShiftStatus();
+      if (activeTab !== "SCAN" || !cameraActive || !shiftStatus.active) {
         stopWebcam();
         return;
       }
@@ -581,42 +760,39 @@ export default function StaffCheckinTerminalPage() {
       stopWebcam();
 
       try {
-        const codeReader = new BrowserQRCodeReader();
-        zxingReaderRef.current = codeReader;
+        const constraints = {
+          video: selectedDeviceId
+            ? { deviceId: { exact: selectedDeviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
+            : { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
+        };
 
-        const deviceId = selectedDeviceId || undefined;
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        if (!active) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
 
-        // Primary: ZXing continuous hardware/webcam decoder
-        await codeReader.decodeFromVideoDevice(
-          deviceId,
-          videoRef.current,
-          (result, err) => {
-            if (!active) return;
-            if (result) {
-              const codeTrimmed = result.getText()?.trim();
-              if (!codeTrimmed) return;
+        mediaStreamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          try {
+            await videoRef.current.play();
+          } catch (e) {}
+        }
 
-              const now = Date.now();
-              if (scanCooldownUntilRef.current && now < scanCooldownUntilRef.current) return;
-              if (
-                lastScannedQrRef.current.code === codeTrimmed &&
-                now - lastScannedQrRef.current.timestamp < 2500
-              ) {
-                return;
-              }
+        // Refresh camera list labels once permission is granted
+        if (navigator.mediaDevices?.enumerateDevices) {
+          navigator.mediaDevices.enumerateDevices().then((devices) => {
+            const cams = (devices || []).filter((d) => d.kind === "videoinput");
+            if (cams.length > 0) setVideoDevices(cams);
+          }).catch(() => {});
+        }
 
-              lastScannedQrRef.current = { code: codeTrimmed, timestamp: now };
-              console.log("ZXing Live Auto-Detected QR Code:", codeTrimmed);
-              setAutoScannedFlash(true);
-              setTimeout(() => setAutoScannedFlash(false), 800);
-              handleProcessScan(codeTrimmed);
-            }
-          }
-        );
-
-        // Secondary Backup: Throttled Frame Analyzer (200ms) with BarcodeDetector + jsQR
         const canvas = canvasRef.current;
         const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        const zxingReader = new BrowserQRCodeReader();
+        zxingReaderRef.current = zxingReader;
 
         fallbackIntervalRef.current = setInterval(async () => {
           if (!active) return;
@@ -652,14 +828,25 @@ export default function StaffCheckinTerminalPage() {
               } catch (e) {}
             }
 
-            // 2. jsQR fallback
-            if (!detected) {
+            // 2. jsQR Full Frame + Center Crop Zoom (for phone screens held up to webcam)
+            const decodeQR = typeof jsQR === "function" ? jsQR : (jsQR?.default || window.jsQR);
+            if (!detected && decodeQR) {
               try {
                 const imgData = ctx.getImageData(0, 0, targetW, targetH);
-                const decodeQR = typeof jsQR === "function" ? jsQR : (jsQR?.default || window.jsQR);
-                if (decodeQR) {
-                  const res = decodeQR(imgData.data, targetW, targetH, { inversionAttempts: "attemptBoth" });
-                  if (res && res.data) detected = res.data;
+                const res = decodeQR(imgData.data, targetW, targetH, { inversionAttempts: "attemptBoth" });
+                if (res && res.data) {
+                  detected = res.data;
+                } else {
+                  // Center 60% crop for smaller QR codes held in front of laptop webcam
+                  const cropW = Math.floor(targetW * 0.6);
+                  const cropH = Math.floor(targetH * 0.6);
+                  const startX = Math.floor((targetW - cropW) / 2);
+                  const startY = Math.floor((targetH - cropH) / 2);
+                  const cropData = ctx.getImageData(startX, startY, cropW, cropH);
+                  const cropRes = decodeQR(cropData.data, cropW, cropH, { inversionAttempts: "attemptBoth" });
+                  if (cropRes && cropRes.data) {
+                    detected = cropRes.data;
+                  }
                 }
               } catch (e) {}
             }
@@ -673,18 +860,18 @@ export default function StaffCheckinTerminalPage() {
                 return;
               }
               lastScannedQrRef.current = { code: codeTrimmed, timestamp: now };
-              console.log("jsQR / BarcodeDetector Auto-Detected QR Code:", codeTrimmed);
               setAutoScannedFlash(true);
               setTimeout(() => setAutoScannedFlash(false), 800);
-              handleProcessScan(codeTrimmed);
+              if (handleProcessScanRef.current) {
+                handleProcessScanRef.current(codeTrimmed);
+              }
             }
           } catch (e) {}
-        }, 200);
-
+        }, 160);
       } catch (err) {
         console.warn("Camera start error:", err);
         setCameraError(
-          "Could not activate webcam stream (" + (err.message || "Busy or no permission") + "). You can upload a QR image or use a handheld barcode scanner."
+          "Could not activate webcam stream (" + (err.message || "Busy or no permission") + "). You can upload a QR image or use the direct QR / Ticket Code input below."
         );
       }
     }
@@ -695,7 +882,7 @@ export default function StaffCheckinTerminalPage() {
       active = false;
       stopWebcam();
     };
-  }, [activeTab, cameraActive, gateAssignment, selectedDeviceId, handleProcessScan, stopWebcam]);
+  }, [activeTab, cameraActive, selectedDeviceId, stopWebcam]);
 
   // Support physical USB/Bluetooth handheld barcode scanner (auto-detects fast keystrokes + Enter)
   useEffect(() => {
@@ -811,7 +998,7 @@ export default function StaffCheckinTerminalPage() {
     }
   };
 
-  // Submit Manual Check-in
+  // Submit Manual Check-in — No shift check during scanning itself
   const handleManualCheckinSubmit = async (e) => {
     e.preventDefault();
     if (!manualForm.cccdNumber.trim() || manualForm.cccdNumber.trim().length < 9) {
@@ -855,6 +1042,7 @@ export default function StaffCheckinTerminalPage() {
           return;
         }
         setScanResult(result);
+        triggerScanAlert(result);
         playAudioFeedback(result.status === "SUCCESS" ? "SUCCESS" : "ERROR");
         setShowManualModal(false);
         setManualForm({
@@ -932,6 +1120,7 @@ export default function StaffCheckinTerminalPage() {
   };
 
   return (
+    <StaffShell title="Gate Check-in Terminal">
     <div className="terminal-container">
       {/* Header Banner */}
       <header className="terminal-header">
@@ -973,14 +1162,38 @@ export default function StaffCheckinTerminalPage() {
             </div>
             <p className="shift-sub">
               {assignedEvents.length > 0 || gateAssignment?.isAssigned || currentEventId ? (
-                <>
-                  Shift: <strong>{gateAssignment?.shiftStartTime && gateAssignment?.shiftEndTime ? `${gateAssignment.shiftStartTime} - ${gateAssignment.shiftEndTime}` : (assignedEvents.find(e => e.eventId === currentEventId)?.shiftStartTime ? `${assignedEvents.find(e => e.eventId === currentEventId).shiftStartTime} - ${assignedEvents.find(e => e.eventId === currentEventId).shiftEndTime}` : "19:30 - 22:30")}</strong> | Gate: <strong>{gateAssignment?.gateName && gateAssignment.gateName !== "Unassigned" ? gateAssignment.gateName : (assignedEvents.find(e => e.eventId === currentEventId)?.gateName || "Main Gate")}</strong> | Staff: <strong>{user?.fullName || user?.email || "Check-in Staff"}</strong>
-                  {((gateAssignment?.allowedTicketTiers && gateAssignment.allowedTicketTiers.length > 0) || (assignedEvents.find(e => e.eventId === currentEventId)?.allowedTicketTypes && assignedEvents.find(e => e.eventId === currentEventId).allowedTicketTypes.length > 0)) && (
-                    <span style={{ marginLeft: "8px", color: "#38bdf8" }}>
-                      | Permitted: <strong>{(gateAssignment?.allowedTicketTiers?.length > 0 ? gateAssignment.allowedTicketTiers : [assignedEvents.find(e => e.eventId === currentEventId)?.allowedTicketTypes]).join(", ")}</strong>
-                    </span>
-                  )}
-                </>
+                (() => {
+                  const matchedEv = assignedEvents.find((e) => e.eventId === currentEventId);
+                  const gate = (gateAssignment?.gateName && gateAssignment.gateName !== "Unassigned")
+                    ? gateAssignment.gateName
+                    : (matchedEv?.gateName || "Main Gate");
+                  const staffName = user?.fullName || user?.email || "Check-in Staff";
+                  const shiftStatus = evaluateCurrentShiftStatus();
+
+                  return (
+                    <>
+                      <span>From: <strong style={{ color: "#38bdf8" }}>{shiftStatus.fromLabel}</strong></span>
+                      <span style={{ margin: "0 6px", opacity: 0.5 }}>–</span>
+                      <span>To: <strong style={{ color: "#38bdf8" }}>{shiftStatus.toLabel}</strong></span>
+                      <span style={{ margin: "0 6px", opacity: 0.5 }}>|</span>
+                      <span>Gate: <strong>{gate}</strong></span>
+                      <span style={{ margin: "0 6px", opacity: 0.5 }}>|</span>
+                      <span>Staff: <strong>{staffName}</strong></span>
+                      <span style={{ margin: "0 6px", opacity: 0.5 }}>|</span>
+                      <span>
+                        Status:{" "}
+                        <strong style={{ color: shiftStatus.active ? "#22c55e" : "#f43f5e" }}>
+                          {shiftStatus.active ? "● On Shift" : "○ Inactive"}
+                        </strong>
+                      </span>
+                      {((gateAssignment?.allowedTicketTiers && gateAssignment.allowedTicketTiers.length > 0) || (matchedEv?.allowedTicketTypes && matchedEv.allowedTicketTypes.length > 0)) && (
+                        <span style={{ marginLeft: "8px", color: "#38bdf8" }}>
+                          | Permitted: <strong>{(gateAssignment?.allowedTicketTiers?.length > 0 ? gateAssignment.allowedTicketTiers : [matchedEv?.allowedTicketTypes]).join(", ")}</strong>
+                        </span>
+                      )}
+                    </>
+                  );
+                })()
               ) : (
                 <span style={{ color: "#ef4444" }}>No event assigned yet</span>
               )}
@@ -1033,6 +1246,126 @@ export default function StaffCheckinTerminalPage() {
         </div>
       </header>
 
+      {/* Gate Entry Check: If outside assigned shift (From -> To), block entering the Scan Terminal */}
+      {currentEventId && !evaluateCurrentShiftStatus().active ? (
+        (() => {
+          const shiftStatus = evaluateCurrentShiftStatus();
+          return (
+            <>
+              <div
+                style={{
+                  margin: "32px auto",
+                  maxWidth: "640px",
+                  background: "#ffffff",
+                  border: "1px solid #fecaca",
+                  borderTop: "5px solid #dc2626",
+                  borderRadius: "14px",
+                  padding: "32px 28px",
+                  textAlign: "center",
+                  boxShadow: "0 10px 25px rgba(0, 0, 0, 0.08)",
+                  color: "#0f172a",
+                }}
+              >
+                <h2 style={{ margin: "0 0 12px", fontSize: "1.35rem", fontWeight: 800, color: "#dc2626" }}>
+                  Outside Assigned Shift Hours — Check-in Terminal Locked
+                </h2>
+                <p style={{ margin: "0 0 18px", fontSize: "0.96rem", lineHeight: 1.6, color: "#334155" }}>
+                  You cannot enter the Check-in Scan Terminal right now because you are outside your assigned shift schedule:
+                </p>
+                <div
+                  style={{
+                    background: "#fef2f2",
+                    border: "1px solid #fecaca",
+                    borderRadius: "10px",
+                    padding: "14px 18px",
+                    marginBottom: "22px",
+                    display: "inline-block",
+                    fontSize: "0.95rem",
+                    color: "#991b1b",
+                  }}
+                >
+                  <div><strong>From:</strong> {shiftStatus.fromLabel}</div>
+                  <div style={{ marginTop: "4px" }}><strong>To:</strong> {shiftStatus.toLabel}</div>
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/staff/gate-assignment")}
+                    style={{
+                      background: "#dc2626",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "8px",
+                      padding: "11px 24px",
+                      fontSize: "0.95rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Return to My Shift & Gate
+                  </button>
+                </div>
+              </div>
+
+              {/* English Popup Modal when trying to enter Check-in Terminal outside assigned shift */}
+              <div
+                style={{
+                  position: "fixed",
+                  inset: 0,
+                  background: "rgba(15, 23, 42, 0.65)",
+                  backdropFilter: "blur(4px)",
+                  zIndex: 10000,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "20px",
+                }}
+              >
+                <div
+                  style={{
+                    background: "#ffffff",
+                    borderRadius: "14px",
+                    maxWidth: "460px",
+                    width: "100%",
+                    padding: "24px",
+                    boxShadow: "0 20px 40px rgba(0, 0, 0, 0.35)",
+                    borderTop: "4px solid #dc2626",
+                    color: "#111827",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                    <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 700, color: "#dc2626" }}>
+                      Outside Assigned Shift Hours
+                    </h3>
+                  </div>
+                  <p style={{ margin: "0 0 18px", fontSize: "14px", lineHeight: 1.6, color: "#1f2937" }}>
+                    You cannot enter the Check-in Scan Terminal right now because you are outside your assigned shift schedule (<strong>From: {shiftStatus.fromLabel} – To: {shiftStatus.toLabel}</strong>). Check-in terminal access is only permitted during your scheduled shift hours.
+                  </p>
+                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <button
+                      type="button"
+                      onClick={() => navigate("/staff/gate-assignment")}
+                      style={{
+                        background: "#dc2626",
+                        color: "#ffffff",
+                        border: "none",
+                        borderRadius: "8px",
+                        padding: "9px 18px",
+                        fontSize: "13.5px",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Return to My Shift & Gate
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          );
+        })()
+      ) : (
+        <>
       {/* 5 Main Subtabs Bar */}
       <div className="terminal-nav-tabs">
         <button
@@ -1160,6 +1493,8 @@ export default function StaffCheckinTerminalPage() {
                   ? "SUCCESS"
                   : activeScanAlert.status === "ALREADY_USED"
                   ? "ALREADY USED"
+                  : activeScanAlert.status === "SHIFT_NOT_ACTIVE"
+                  ? "NOT IN SHIFT"
                   : "INVALID QR"}
               </span>
               {activeScanAlert.isOffline && (
@@ -1263,6 +1598,7 @@ export default function StaffCheckinTerminalPage() {
                   </select>
                 )}
                 <button
+                  type="button"
                   className="btn-toggle-cam"
                   onClick={() => setCameraActive(!cameraActive)}
                 >
@@ -1288,7 +1624,7 @@ export default function StaffCheckinTerminalPage() {
               ) : (
                 <div className="camera-off-msg">
                   <span>Camera Paused</span>
-                  <p>Click Activate Camera, upload a QR image, or use a handheld barcode scanner</p>
+                  <p>Click Activate Camera or use a handheld barcode scanner</p>
                 </div>
               )}
             </div>
@@ -1354,7 +1690,6 @@ export default function StaffCheckinTerminalPage() {
                 <thead>
                   <tr>
                     <th>Time</th>
-                    <th>Ticket Code</th>
                     <th>Attendee</th>
                     <th>Ticket Type</th>
                     <th>Gate</th>
@@ -1365,7 +1700,7 @@ export default function StaffCheckinTerminalPage() {
                 <tbody>
                   {scanFeed.length === 0 ? (
                     <tr>
-                      <td colSpan="7" style={{ textAlign: "center", padding: "2rem", color: "#6b6480" }}>
+                      <td colSpan="6" style={{ textAlign: "center", padding: "2rem", color: "#6b6480" }}>
                         No admissions recorded yet for this shift.
                       </td>
                     </tr>
@@ -1374,9 +1709,6 @@ export default function StaffCheckinTerminalPage() {
                       <tr key={item.scanId || idx}>
                         <td style={{ color: "#7a7392", fontFamily: "monospace" }}>
                           {new Date(item.scannedAt).toLocaleTimeString()}
-                        </td>
-                        <td>
-                          <strong style={{ color: "#1e1b2e", fontFamily: "monospace" }}>{item.ticketCode}</strong>
                         </td>
                         <td>
                           <strong style={{ color: "#1e1b2e" }}>{item.customerName || "N/A"}</strong>
@@ -1456,7 +1788,7 @@ export default function StaffCheckinTerminalPage() {
                     onClick={() => searchTicketsByCccd(manualForm.cccdNumber)}
                     disabled={searchingManualTickets || !manualForm.cccdNumber.trim()}
                   >
-                    {searchingManualTickets ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Tìm vé theo CCCD"}
+                    {searchingManualTickets ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Find Tickets by ID / CCCD"}
                   </button>
                 </div>
               </div>
@@ -1464,7 +1796,7 @@ export default function StaffCheckinTerminalPage() {
               {/* Real-time DB lookup results for this CCCD */}
               {searchingManualTickets && (
                 <div className="cccd-box-full" style={{ color: "#2fa4e0", padding: "0.5rem 0", fontStyle: "italic" }}>
-                  Đang tra cứu vé từ cơ sở dữ liệu...
+                  Searching tickets in database...
                 </div>
               )}
 
@@ -1476,8 +1808,8 @@ export default function StaffCheckinTerminalPage() {
 
               {manualLookupTickets.length > 0 && (
                 <div className="cccd-box-full manual-tickets-preview-box" style={{ margin: "0.5rem 0" }}>
-                  <label style={{ fontSize: "0.875rem", color: "#7a7392", display: "block", marginBottom: "0.5rem" }}>
-                    Vé tìm thấy trong Database ({manualLookupTickets.length} vé) - Chọn vé cần check-in:
+                  <label style={{ fontSize: "0.875rem", color: "#475569", fontWeight: 600, display: "block", marginBottom: "0.5rem" }}>
+                    Tickets Found in Database ({manualLookupTickets.length} ticket(s)) — Select a ticket to check in:
                   </label>
                   <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                     {manualLookupTickets.map((t) => {
@@ -1498,8 +1830,8 @@ export default function StaffCheckinTerminalPage() {
                             justifyContent: "space-between",
                             padding: "0.75rem 1rem",
                             borderRadius: "8px",
-                            background: isSelected ? "rgba(255, 45, 117, 0.15)" : "rgba(30, 41, 59, 0.7)",
-                            border: isSelected ? "2px solid #d91a63" : "1px solid #dcd3e8",
+                            background: isSelected ? "#fdf2f8" : "#f8fafc",
+                            border: isSelected ? "2px solid #d91a63" : "1px solid #cbd5e1",
                             cursor: isAvailable ? "pointer" : "not-allowed",
                             opacity: isAvailable ? 1 : 0.65,
                             transition: "all 0.2s ease",
@@ -1519,11 +1851,10 @@ export default function StaffCheckinTerminalPage() {
                             />
                             <div>
                               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-                                <span className="t-code-badge" style={{ fontSize: "0.85rem" }}>{t.ticketCode}</span>
-                                <strong style={{ color: "#1e1b2e" }}>{t.customerName || "Khán giả"}</strong>
+                                <strong style={{ color: "#1e1b2e" }}>{t.customerName || "Attendee"}</strong>
                               </div>
                               <div style={{ fontSize: "0.8rem", color: "#7a7392", marginTop: "0.2rem" }}>
-                                Khu vực: <span style={{ color: "#d99a16" }}>{t.zoneName}</span> • Ghế: {t.seatNumber || "General"}
+                                Zone: <span style={{ color: "#d99a16" }}>{t.zoneName}</span> • Seat: {t.seatNumber || "General"}
                               </div>
                             </div>
                           </div>
@@ -1586,9 +1917,9 @@ export default function StaffCheckinTerminalPage() {
                 <button
                   type="submit"
                   className="btn-validate-ticket-pink"
-                  disabled={!manualForm.cccdVerified || !manualForm.cccdNumber.trim() || (!selectedManualTicket && !manualForm.ticketCode.trim()) || scanning}
+                  disabled={!manualForm.cccdVerified || !manualForm.cccdNumber.trim() || scanning}
                 >
-                  {scanning ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Xác nhận Check-in Vé"}
+                  {scanning ? <span className="app-loading-spinner" role="status" aria-label="Loading" /> : "Confirm Manual Check-in"}
                 </button>
               </div>
             </form>
@@ -1613,7 +1944,6 @@ export default function StaffCheckinTerminalPage() {
                       <span>Attendee: <strong>{scanResult.customerName}</strong></span>
                       <span>Zone: <strong>{scanResult.zoneName}</strong></span>
                       <span>Seat: <strong>{scanResult.seatNumber || "Standing"}</strong></span>
-                      <span>Ticket: <strong>{scanResult.ticketCode}</strong></span>
                     </div>
                   )}
                 </div>
@@ -1814,7 +2144,6 @@ export default function StaffCheckinTerminalPage() {
                 <thead>
                   <tr>
                     <th>Time</th>
-                    <th>Ticket Code</th>
                     <th>Attendee Name</th>
                     <th>Ticket Type</th>
                     <th>Order ID</th>
@@ -1825,7 +2154,7 @@ export default function StaffCheckinTerminalPage() {
                 <tbody>
                   {scanFeed.length === 0 ? (
                     <tr>
-                      <td colSpan="7" style={{ textAlign: "center", padding: "2rem", color: "#6b6480" }}>
+                      <td colSpan="6" style={{ textAlign: "center", padding: "2rem", color: "#6b6480" }}>
                         No scan records found matching this filter.
                       </td>
                     </tr>
@@ -1834,9 +2163,6 @@ export default function StaffCheckinTerminalPage() {
                       <tr key={item.scanId || idx}>
                         <td style={{ color: "#7a7392", fontFamily: "monospace" }}>
                           {new Date(item.scannedAt).toLocaleTimeString()}
-                        </td>
-                        <td>
-                          <strong style={{ color: "#1e1b2e", fontFamily: "monospace" }}>{item.ticketCode}</strong>
                         </td>
                         <td>
                           <strong style={{ color: "#1e1b2e" }}>{item.customerName || "N/A"}</strong>
@@ -1942,6 +2268,8 @@ export default function StaffCheckinTerminalPage() {
           </div>
         </div>
       )}
+        </>
+      )}
 
       {/* Universal Terminal Modal Dialog (Replaces raw browser alert) */}
       <OfflineConflictModal
@@ -2033,5 +2361,6 @@ export default function StaffCheckinTerminalPage() {
         </div>
       )}
     </div>
+    </StaffShell>
   );
 }

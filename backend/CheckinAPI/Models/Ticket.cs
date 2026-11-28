@@ -24,8 +24,24 @@ namespace CheckinAPI.Models
         public bool IsDeleted { get; set; }
         public DateTime? DeletedAt { get; set; }
         public int? DeletedBy { get; set; }
-        public bool IsCheckedIn { get; set; }
-        public string? GateId { get; set; }
+
+        public bool IsCheckedIn
+        {
+            get => CheckedInAt.HasValue || string.Equals(Status, "Used", StringComparison.OrdinalIgnoreCase);
+            set
+            {
+                if (value && !CheckedInAt.HasValue)
+                {
+                    CheckedInAt = DateTime.UtcNow;
+                }
+            }
+        }
+
+        public string? GateId
+        {
+            get => CheckedInGate;
+            set => CheckedInGate = value;
+        }
 
         public virtual Order? Order { get; set; }
         public virtual ICollection<TicketQrToken> TicketQrTokens { get; set; } = new List<TicketQrToken>();

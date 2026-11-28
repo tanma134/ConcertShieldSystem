@@ -38,7 +38,9 @@ const ticketApi = {
     axiosClient.get("/admin/tickets", { params }),
 
   getAdminStatusHistories: (params) =>
-    axiosClient.get("/admin/status-histories", { params }),
+    axiosClient
+      .get("/ticket-returns/status-histories", { params })
+      .catch(() => axiosClient.get("/admin/status-histories", { params })),
 
   getAdminTicketDetails: (ticketId) =>
     axiosClient.get(

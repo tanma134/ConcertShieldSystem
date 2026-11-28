@@ -57,7 +57,8 @@ namespace EventAPI.Controllers
                     dto.ShiftDate,
                     dto.CanManageIncidents,
                     dto.CanManageSupportCases,
-                    dto.CanCheckin);
+                    dto.CanCheckin,
+                    dto.ShiftEndDate);
                 return Ok(ApiResponseDTO<EventStaffDTO>.SuccessResponse(result, "Staff member assigned."));
             }
             catch (Exception ex) { return HandleException(ex); }
@@ -69,7 +70,7 @@ namespace EventAPI.Controllers
         {
             try
             {
-                var result = await _service.UpdateShiftAsync(eventId, staffUserId, dto.GateName, dto.ShiftStartTime, dto.ShiftEndTime, CurrentUserId, IsAdmin, BearerToken, dto.ShiftDate);
+                var result = await _service.UpdateShiftAsync(eventId, staffUserId, dto.GateName, dto.ShiftStartTime, dto.ShiftEndTime, CurrentUserId, IsAdmin, BearerToken, dto.ShiftDate, dto.ShiftEndDate);
                 return Ok(ApiResponseDTO<EventStaffDTO>.SuccessResponse(result, "Staff shift assignment updated."));
             }
             catch (Exception ex) { return HandleException(ex); }

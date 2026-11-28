@@ -23,6 +23,8 @@ namespace AdminAPI.DTOs
     public class CreatePolicyVersionRequestDTO
     {
         public string Category { get; set; } = "PRICE_TICKETING";
+        public string? VersionNumber { get; set; }
+        public string? RulesJson { get; set; }
         public string Title { get; set; } = string.Empty;
         public string Scope { get; set; } = "Toàn bộ người dùng & Ban tổ chức";
         public string ChangeSummary { get; set; } = string.Empty;
